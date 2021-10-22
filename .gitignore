@@ -1,0 +1,14 @@
+*build*/*
+
+*.o
+*.obj
+*.d
+*.a
+*.so
+*.dylib
+
+*.swp
+.idea
+.vscode
+
+.DS_Store
