@@ -1,3 +1,9 @@
 [submodule "libs/appbase"]
 	path = libs/appbase
 	url = https://github.com/noir-protocol/appbase
+[submodule "libs/fc"]
+	path = libs/fc
+	url = https://github.com/eosio/fc
+[submodule "libs/quadrable"]
+	path = libs/quadrable
+	url = https://github.com/hoytech/quadrable

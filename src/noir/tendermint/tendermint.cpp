@@ -2,10 +2,13 @@
 
 #include <tendermint/tendermint.h>
 
+extern noir::app* tm_app;
+
 namespace noir {
 
 void tendermint::plugin_initialize(const variables_map &options) {
   tm_ilog("tendermint init");
+  tm_app = appbase::app().find_plugin<app>();
 }
 
 void tendermint::plugin_startup() {

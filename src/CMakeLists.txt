@@ -1,8 +1,11 @@
 add_library(noir STATIC)
 target_include_directories(noir PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(noir appbase tendermint)
+target_link_libraries(noir appbase fc quadrable tendermint)
 if(APPLE)
-  target_link_libraries(noir "-framework CoreFoundation" "-framework Security")
+  add_library(lmdb STATIC IMPORTED GLOBAL)
+  set_target_properties(lmdb PROPERTIES IMPORTED_LOCATION /usr/local/opt/lmdb/lib/liblmdb.a)
+  target_include_directories(lmdb INTERFACE /usr/local/opt/lmdb/include)
+  target_link_libraries(noir lmdb "-framework CoreFoundation" "-framework Security")
 endif()
 
 add_subdirectory(noir)

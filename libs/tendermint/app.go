@@ -38,16 +38,13 @@ func (NoirApp) VerifyVoteExtension(req abci.RequestVerifyVoteExtension) abci.Res
 
 func (NoirApp) Info(req abci.RequestInfo) abci.ResponseInfo {
 	info := C.info()
-	if info != nil {
-		defer C.free(unsafe.Pointer(info))
-		last_block_app_hash, err := hex.DecodeString(C.GoString(info.last_block_app_hash))
-		if err != nil {
-			panic(err)
-		}
-		logger.Info(fmt.Sprintf(" *** Info: last_block_height=%v, last_block_app_hash=%v", int64(info.last_block_height), C.GoString(info.last_block_app_hash)))
-		return abci.ResponseInfo{LastBlockHeight: int64(info.last_block_height), LastBlockAppHash: last_block_app_hash}
+	defer C.free(unsafe.Pointer(info))
+	last_block_app_hash, err := hex.DecodeString(C.GoString(info.last_block_app_hash))
+	if err != nil {
+		panic(err)
 	}
-	return abci.ResponseInfo{}
+	logger.Info(fmt.Sprintf(" *** Info: last_block_height=%v, last_block_app_hash=%v", int64(info.last_block_height), C.GoString(info.last_block_app_hash)))
+	return abci.ResponseInfo{LastBlockHeight: int64(info.last_block_height), LastBlockAppHash: last_block_app_hash}
 }
 
 func (NoirApp) DeliverTx(req abci.RequestDeliverTx) abci.ResponseDeliverTx {
@@ -65,17 +62,14 @@ func (NoirApp) CheckTx(req abci.RequestCheckTx) abci.ResponseCheckTx {
 
 func (NoirApp) Commit() abci.ResponseCommit {
 	cApphash := C.commit()
-	if cApphash != nil {
-		defer C.free(unsafe.Pointer(cApphash)) // frees memory allocated in C
-		apphash := C.GoString(cApphash)
-		apphashBytes, err := hex.DecodeString(apphash)
-		if err != nil {
-			panic(err)
-		}
-		logger.Info(fmt.Sprintf(" *** Commit: apphash=%v", apphash))
-		return abci.ResponseCommit{Data: apphashBytes}
+	defer C.free(unsafe.Pointer(cApphash)) // frees memory allocated in C
+	apphash := C.GoString(cApphash)
+	apphashBytes, err := hex.DecodeString(apphash)
+	if err != nil {
+		panic(err)
 	}
-	return abci.ResponseCommit{}
+	logger.Info(fmt.Sprintf(" *** Commit: apphash=%v", apphash))
+	return abci.ResponseCommit{Data: apphashBytes}
 }
 
 func (NoirApp) Query(req abci.RequestQuery) abci.ResponseQuery {
