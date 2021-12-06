@@ -1,0 +1,3 @@
+[submodule "libs/appbase"]
+	path = libs/appbase
+	url = https://github.com/noir-protocol/appbase
