@@ -7,6 +7,7 @@
 *.so
 *.dylib
 
+.cache
 *.swp
 .idea
 .vscode
