@@ -4,7 +4,7 @@
 
 namespace noir {
 
-void tendermint::plugin_initialize(const variables_map &options) {
+void tendermint::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
   tm_ilog("tendermint init");
 }
 
