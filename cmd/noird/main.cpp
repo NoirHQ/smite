@@ -1,27 +1,34 @@
 #include <noir/tendermint/tendermint.h>
+#include <noir/commands/commands.hpp>
 
 #include <appbase/application.hpp>
 
-using appbase::app;
+namespace cmd = noir::commands;
+
+using tendermint = noir::tendermint::tendermint;
 
 int main(int argc, char** argv) {
-  app().cli().name("noird");
-  app().cli().description("NOIR Protocol App");
+  auto& app = appbase::app();
+
+  // set default configuration
+  app.cli().require_subcommand();
+  app.cli().failure_message(CLI::FailureMessage::help);
+  app.cli().name("noird");
+  app.cli().description("NOIR Protocol App");
   std::filesystem::path home_dir;
   if (auto arg = std::getenv("HOME")) {
     home_dir = arg;
   }
-  app().set_home_dir(home_dir / ".noir");
-  app().set_config_file("app.toml");
-  app().register_plugin<noir::tendermint>();
-  if (!app().initialize<noir::tendermint>(argc, argv)) {
-    const auto& opts = app().cli();
-    if (opts.count("--help") || opts.count("--print-default-config")) {
-      return 0;
-    }
-    return 1;
-  }
-  app().startup();
-  app().exec();
-  return 0;
+  app.set_home_dir(home_dir / ".noir");
+  app.set_config_file("app.toml");
+
+  // add subcommands
+  cmd::add_command(app.cli(), &cmd::init);
+  cmd::add_command(app.cli(), &cmd::start);
+  cmd::add_command(app.cli(), &cmd::version);
+
+  // register plugins
+  app.register_plugin<tendermint>();
+
+  return app.run(argc, argv);
 }
