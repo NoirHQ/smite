@@ -1,7 +1,10 @@
 #pragma once
+#include <noir/tendermint/config.h>
+#include <noir/tendermint/log.h>
+#include <noir/tendermint/node.h>
 #include <appbase/application.hpp>
 
-namespace noir {
+namespace noir::tendermint {
 
 class tendermint : public appbase::plugin<tendermint> {
 public:
@@ -14,4 +17,4 @@ public:
   void plugin_shutdown();
 };
 
-}
+} // namespace noir::tendermint
