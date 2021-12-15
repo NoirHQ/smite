@@ -8,8 +8,6 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-// #cgo darwin LDFLAGS: -Wl,-undefined,dynamic_lookup -flat_namespace
-// #cgo linux LDFLAGS: -Wl,-undefined,dynamic_lookup
 // #include <tendermint/abci.h>
 import "C"
 
