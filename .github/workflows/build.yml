@@ -31,7 +31,7 @@ jobs:
     name: MacOS
     runs-on: macos-latest
     steps:
-      - run: brew install boost go
+      - run: brew install boost
       - uses: actions/checkout@v2
         with:
           submodules: recursive
