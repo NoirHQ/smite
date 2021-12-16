@@ -24,4 +24,4 @@ CLI::App* init(CLI::App& root) {
   return cmd;
 }
 
-} // namespace noir::conmmands
+} // namespace noir::commands
