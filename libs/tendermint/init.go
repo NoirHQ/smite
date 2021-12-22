@@ -21,7 +21,7 @@ func initFilesWithConfig(config *cfg.Config) error {
 	)
 
 	config.Mode = viper.GetString("mode")
-	keyType := viper.GetString("key_type")
+	keyType := viper.GetString("key")
 
 	if config.Mode == cfg.ModeValidator {
 		// private validator

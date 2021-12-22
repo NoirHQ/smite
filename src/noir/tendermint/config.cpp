@@ -1,10 +1,9 @@
-#include <noir/tendermint/config.h>
 #include <tendermint/tendermint.h>
 
 namespace noir::tendermint::config {
 
-bool load(const char* config_file) {
-  return tm_config_load(config_file);
+bool load() {
+  return tm_config_load();
 }
 
 bool save() {

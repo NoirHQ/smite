@@ -8,8 +8,9 @@ CLI::App* start(CLI::App& root) {
     using noir::tendermint::tendermint;
 
     auto& app = appbase::app();
-    auto config_file = app.config_file();
-    noir::tendermint::config::load(config_file.c_str());
+    auto home_dir = app.home_dir();
+    noir::tendermint::config::set("home", home_dir.c_str());
+    noir::tendermint::config::load();
 
     if (!app.initialize<tendermint>()) {
       throw CLI::Success();

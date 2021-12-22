@@ -1,4 +1,3 @@
-#include <noir/tendermint/node.h>
 #include <tendermint/tendermint.h>
 
 namespace noir::tendermint::node {
