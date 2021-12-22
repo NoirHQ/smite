@@ -1,6 +1,10 @@
 file(GLOB HEADERS "*.h")
+file(GLOB CONSENSUS_HEADERS "consensus/*.h")
+file(GLOB MEMPOOL_HEADERS "mempool/*.h")
 add_library(net_plugin
         net_plugin.cpp
+        ${CONSENSUS_HEADERS}
+        ${MEMPOOL_HEADERS}
         ${HEADERS})
 
 target_link_libraries(net_plugin appbase fc)
