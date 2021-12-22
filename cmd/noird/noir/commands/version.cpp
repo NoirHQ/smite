@@ -1,6 +1,5 @@
-#pragma once
 #include <appbase/application.hpp>
-#include <iosfwd>
+#include <iostream>
 
 namespace noir::commands {
 

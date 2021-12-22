@@ -1,11 +1,8 @@
+#include <noir/commands/commands.h>
 #include <noir/tendermint/tendermint.h>
-#include <noir/commands/commands.hpp>
-
 #include <appbase/application.hpp>
 
-namespace cmd = noir::commands;
-
-using tendermint = noir::tendermint::tendermint;
+using namespace noir;
 
 int main(int argc, char** argv) {
   auto& app = appbase::app();
@@ -23,12 +20,13 @@ int main(int argc, char** argv) {
   app.set_config_file("app.toml");
 
   // add subcommands
-  cmd::add_command(app.cli(), &cmd::init);
-  cmd::add_command(app.cli(), &cmd::start);
-  cmd::add_command(app.cli(), &cmd::version);
+  commands::add_command(app.cli(), &commands::debug);
+  commands::add_command(app.cli(), &commands::init);
+  commands::add_command(app.cli(), &commands::start);
+  commands::add_command(app.cli(), &commands::version);
 
   // register plugins
-  app.register_plugin<tendermint>();
+  app.register_plugin<tendermint::tendermint>();
 
   return app.run(argc, argv);
 }
