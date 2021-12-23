@@ -1,6 +1,8 @@
 #pragma once
 #include <noir/net/consensus/validator.h>
 #include <noir/net/consensus/params.h>
+#include <noir/net/consensus/block.h>
+#include <noir/net/consensus/tx.h>
 #include <noir/net/protocol.h>
 
 namespace noir::net::consensus { // todo - move consensus somewhere (maybe under libs?)
@@ -13,6 +15,28 @@ using namespace std;
  * including the last validator set and the consensus params.
  */
 class state {
+ public:
+  state() {
+    // todo - make genesis state by reading from config file
+    // or by restoring from last save state
+  }
+
+  block make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ bytes proposal_address) {
+
+    // Set time
+    tstamp timestamp;
+//    if (height == initial_height) {
+//      timestamp = genesis_time;
+//    } else {
+//      timestamp = get_median_time();
+//    }
+
+  }
+
+  tstamp get_median_time() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  }
+
  public:
   string version;
 

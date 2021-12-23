@@ -1,10 +1,28 @@
+#pragma once
+
 #include <noir/net/types.h>
-#include <fc/crypto/sha256.hpp>
 
 namespace noir::net {
 
 using namespace fc;
 
+struct handshake_message {
+  uint16_t network_version = 0; ///< incremental value above a computed base
+//  chain_id_type chain_id; ///< used to identify chain
+  fc::sha256 node_id; ///< used to identify peers and prevent self-connect
+//  chain::public_key_type key; ///< authentication key; may be a producer or peer key, or empty
+  tstamp time{0};
+  fc::sha256 token; ///< digest of time to prove we own the private key of the key above
+//  chain::signature_type sig; ///< signature for the digest
+  string p2p_address;
+  uint32_t last_irreversible_block_num = 0;
+  block_id_type last_irreversible_block_id;
+  uint32_t head_num = 0;
+  block_id_type head_id;
+//  string os;
+//  string agent;
+//  int16_t generation = 0;
+};
 
 enum signed_msg_type {
   Unknown = 0,
@@ -61,5 +79,44 @@ struct vote_message {
 using net_message = std::variant<proposal_message,
                                  block_part_message,
                                  vote_message>;
+
+enum go_away_reason {
+  no_reason, ///< no reason to go away
+  self, ///< the connection is to itself
+  duplicate, ///< the connection is redundant
+  wrong_chain, ///< the peer's chain id doesn't match
+  wrong_version, ///< the peer's network version doesn't match
+  forked, ///< the peer's irreversible blocks are different
+  unlinkable, ///< the peer sent a block we couldn't use
+  bad_transaction, ///< the peer sent a transaction that failed verification
+  validation, ///< the peer sent a block that failed validation
+  benign_other, ///< reasons such as a timeout. not fatal but warrant resetting
+  fatal_other, ///< a catch-all for errors we don't have discriminated
+  authentication ///< peer failed authenicatio
+};
+
+constexpr auto reason_str( go_away_reason rsn ) {
+  switch (rsn ) {
+    case no_reason : return "no reason";
+    case self : return "self connect";
+    case duplicate : return "duplicate";
+    case wrong_chain : return "wrong chain";
+    case wrong_version : return "wrong version";
+    case forked : return "chain is forked";
+    case unlinkable : return "unlinkable block received";
+    case bad_transaction : return "bad transaction";
+    case validation : return "invalid block";
+    case authentication : return "authentication failure";
+    case fatal_other : return "some other failure";
+    case benign_other : return "some other non-fatal condition, possibly unknown block";
+    default : return "some crazy reason";
+  }
+}
+
+struct go_away_message {
+  go_away_message(go_away_reason r = no_reason) : reason(r), node_id() {}
+  go_away_reason reason{no_reason};
+  fc::sha256 node_id; ///< for duplicate notification
+};
 
 } // namespace noir::net

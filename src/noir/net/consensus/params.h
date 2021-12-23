@@ -1,4 +1,4 @@
-#pragma oncen
+#pragma once
 #include <noir/net/types.h>
 
 namespace noir::net::consensus { // todo - move consensus somewhere (maybe under libs?)

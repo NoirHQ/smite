@@ -19,6 +19,10 @@ int main(int argc, char **argv) {
 
   // register plugins
   app.register_plugin<net_plugin>();
+  app.initialize<net_plugin>();
+  app.startup();
+  app.exec();
 
-  return app.run(argc, argv);
+  //app.run(argc, argv)
+  return 0;
 }
