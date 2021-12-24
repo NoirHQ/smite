@@ -3,6 +3,9 @@
 
 using namespace noir::tendermint;
 
+void abci_init() {
+}
+
 void begin_block(int64_t height) {
   log::info("!!! BeginBlock !!!");
 }
