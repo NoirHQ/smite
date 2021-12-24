@@ -24,7 +24,7 @@ jobs:
         with:
           submodules: recursive
       - run: cmake -E make_directory build
-      - run: BOOST_ROOT=/opt/boost cmake .. && make -j
+      - run: BOOST_ROOT=/opt/boost cmake .. && make -j2
         working-directory: ./build
 
   darwin_build:
@@ -36,6 +36,6 @@ jobs:
         with:
           submodules: recursive
       - run: cmake -E make_directory build
-      - run: cmake .. && make -j
+      - run: cmake .. && make -j2
         working-directory: ./build
 
