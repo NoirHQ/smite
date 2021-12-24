@@ -244,15 +244,15 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::
 }
 
 namespace detail {
-  template<size_t N, typename Stream, typename... Ts>
-  void decode(datastream<scale, Stream>& ds, std::variant<Ts...>& v, int n) {
-    if constexpr (N < std::variant_size_v<std::variant<Ts...>>) {
-      if (n == N) {
-        std::variant_alternative_t<N, std::variant<Ts...>> tmp;
+  template<size_t I, typename Stream, typename... Ts>
+  void decode(datastream<scale, Stream>& ds, std::variant<Ts...>& v, int i) {
+    if constexpr (I < std::variant_size_v<std::variant<Ts...>>) {
+      if (i == I) {
+        std::variant_alternative_t<I, std::variant<Ts...>> tmp;
         ds >> tmp;
-        v.template emplace<N>(std::move(tmp));
+        v.template emplace<I>(std::move(tmp));
       } else {
-        decode<N+1>(ds, v, n);
+        decode<I+1>(ds, v, i);
       }
     } else {
       check(false, "invalid variant index");
