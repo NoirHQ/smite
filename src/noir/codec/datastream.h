@@ -8,8 +8,8 @@ namespace noir::codec {
 template<typename Codec, typename T>
 class datastream {
 public:
-  datastream( T start, size_t s )
-    :_start(start),_pos(start),_end(start+s) {}
+  datastream(T start, size_t s)
+    : _start(start), _pos(start), _end(start+s) {}
 
   inline void skip(size_t s) {
     _pos += s;
@@ -54,7 +54,7 @@ public:
     return get(*(char*)&c);
   }
 
-  inline bool get( char& c ) {
+  inline bool get(char& c) {
     check(_pos < _end, "get");
     c = *_pos;
     ++_pos;
@@ -92,14 +92,14 @@ template<typename Codec>
 class datastream<Codec, size_t> {
 public:
   datastream(size_t init_size = 0)
-    :_size(init_size) {}
+    : _size(init_size) {}
 
   inline bool skip(size_t s) {
     _size += s;
     return true;
   }
 
-  inline bool write(const char*, size_t s)  {
+  inline bool write(const char*, size_t s) {
     _size += s;
     return true;
   }
@@ -183,4 +183,4 @@ T decode(const std::vector<char>& bytes) {
   return decode<Codec,T>(bytes.data(), bytes.size());
 }
 
-}
+} // namespace noir::codec
