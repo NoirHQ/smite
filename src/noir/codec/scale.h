@@ -36,10 +36,10 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const unsig
   if (v < pown(2u, 6)) {
     ds.put(v.value << 2);
   } else if (v < pown(2u, 14)) {
-    uint16_t tmp = v.value << 2 | 0x01;
+    uint16_t tmp = v.value << 2 | 0b01;
     ds.write((char*)&tmp, 2);
   } else if (v < pown(2u, 30)) {
-    uint32_t tmp = v.value << 2 | 0x02;
+    uint32_t tmp = v.value << 2 | 0b10;
     ds.write((char*)&tmp, 4);
   } else {
     // TODO
@@ -53,29 +53,29 @@ datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, unsigned_in
   char tmp = 0;
   ds.read(&tmp, 1);
   ds.seekp(ds.tellp() - 1);
-  switch (tmp & 0x3) {
-    case 0x0: {
+  switch (tmp & 0b11) {
+    case 0b00: {
         uint8_t val = 0;
         ds >> val;
         val >>= 2;
         v = val;
       }
       break;
-    case 0x1: {
+    case 0b01: {
         uint16_t val = 0;
         ds >> val;
         val >>= 2;
         v = val;
       }
       break;
-    case 0x2: {
+    case 0b10: {
         uint32_t val = 0;
         ds >> val;
         val >>= 2;
         v = val;
       }
       break;
-    case 0x3:
+    case 0b11:
       // TODO
       check(false, "not implemented");
       break;
