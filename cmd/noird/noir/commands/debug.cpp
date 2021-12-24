@@ -4,7 +4,8 @@ namespace noir::commands {
 
 CLI::App* debug(CLI::App& root) {
   auto cmd = root.add_subcommand("debug", "Debugging mode")->final_callback([]() {
-  })->silent();
+  });
+  cmd->group("");
   return cmd;
 }
 
