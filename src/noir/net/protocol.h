@@ -21,7 +21,14 @@ struct handshake_message {
   block_id_type head_id;
 //  string os;
 //  string agent;
-//  int16_t generation = 0;
+  int16_t generation = 0;
+};
+
+struct time_message {
+  tstamp org{0};       //!< origin timestamp
+  tstamp rec{0};       //!< receive timestamp
+  tstamp xmt{0};       //!< transmit timestamp
+  mutable tstamp dst{0};       //!< destination timestamp
 };
 
 enum signed_msg_type {
@@ -76,10 +83,6 @@ struct vote_message {
   vote_extension vote_extension;
 };
 
-using net_message = std::variant<proposal_message,
-                                 block_part_message,
-                                 vote_message>;
-
 enum go_away_reason {
   no_reason, ///< no reason to go away
   self, ///< the connection is to itself
@@ -95,8 +98,8 @@ enum go_away_reason {
   authentication ///< peer failed authenicatio
 };
 
-constexpr auto reason_str( go_away_reason rsn ) {
-  switch (rsn ) {
+constexpr auto reason_str(go_away_reason rsn) {
+  switch (rsn) {
     case no_reason : return "no reason";
     case self : return "self connect";
     case duplicate : return "duplicate";
@@ -118,5 +121,12 @@ struct go_away_message {
   go_away_reason reason{no_reason};
   fc::sha256 node_id; ///< for duplicate notification
 };
+
+using net_message = std::variant<handshake_message,
+                                 go_away_message,
+                                 time_message,
+                                 proposal_message,
+                                 block_part_message,
+                                 vote_message>;
 
 } // namespace noir::net

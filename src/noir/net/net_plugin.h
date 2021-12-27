@@ -26,7 +26,7 @@ class net_plugin : public appbase::plugin<net_plugin> {
   void plugin_startup();
   void plugin_shutdown();
 
-  string connect(const string &endpoint);
+  string connect(const string &host);
   string disconnect(const string &endpoint);
   std::optional<connection_status> status(const string &endpoint) const;
   std::vector<connection_status> connections() const;
