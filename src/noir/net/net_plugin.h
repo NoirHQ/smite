@@ -20,7 +20,7 @@ class net_plugin : public appbase::plugin<net_plugin> {
   net_plugin();
   virtual ~net_plugin();
 
-  virtual void set_program_options(CLI::App &cli, CLI::App &config) override {}
+  virtual void set_program_options(CLI::App &cli, CLI::App &config) override;
 
   void plugin_initialize(const CLI::App &cli, const CLI::App &config);
   void plugin_startup();

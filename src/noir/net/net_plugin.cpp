@@ -622,6 +622,12 @@ net_plugin::net_plugin()
 net_plugin::~net_plugin() {
 }
 
+void net_plugin::set_program_options(CLI::App &cli, CLI::App &config) {
+  config.add_option("--p2p-listen-endpoint",
+                    "The actual host:port used to listen for incoming p2p connections.")->default_str("0.0.0.0:9876");
+  config.add_option("--p2p-peer-address", "The public endpoint of a peer node to connect to.")->take_all();
+}
+
 void net_plugin::plugin_initialize(const CLI::App &cli, const CLI::App &config) {
   ilog("Initialize net_plugin");
   try {
@@ -640,10 +646,18 @@ void net_plugin::plugin_initialize(const CLI::App &cli, const CLI::App &config) 
     my->heartbeat_timeout = std::chrono::milliseconds(1000 * 2);
 
     my->p2p_address = "0.0.0.0:9876"; // The actual host:port used to listen for incoming p2p connections
+    if (config.count("--p2p-listen-endpoint")) {
+      my->p2p_address = config.get_option("--p2p-listen-endpoint")->as<string>();
+    }
+
+//    my->supplied_peers = {"127.0.0.1:9877", "127.0.0.1:9878"}; // The public endpoint of a peer node to connect to.
+    if (config.count("--p2p-peer-address")) {
+      my->supplied_peers = {config.get_option("--p2p-peer-address")->as<string>()};
+    }
+
     //my->p2p_server_address = "0.0.0.0:9876"; // An externally accessible host:port for identifying this node. Defaults to p2p-listen-endpoint
     my->thread_pool_size = 2; // number of threads to use
 
-    my->supplied_peers = {"127.0.0.1:9877", "127.0.0.1:9878"}; // The public endpoint of a peer node to connect to.
 
     //my->user_agent_name = ""; // The name supplied to identify this node amongst the peers
 
@@ -653,7 +667,7 @@ void net_plugin::plugin_initialize(const CLI::App &cli, const CLI::App &config) 
 
 //    my->chain_plug = app().find_plugin<chain_plugin>();
 //    my->chain_id = my->chain_plug->get_chain_id();
-//    fc::rand_pseudo_bytes(my->node_id.data(), my->node_id.data_size());
+    fc::rand_pseudo_bytes(my->node_id.data(), my->node_id.data_size());
 //    const controller &cc = my->chain_plug->chain();
 
 //    if (my->p2p_accept_transactions) {

@@ -3,6 +3,8 @@
 
 using namespace noir::net;
 
+using net_plugin = noir::net::net_plugin;
+
 int main(int argc, char **argv) {
   auto& app = appbase::app();
 
@@ -19,10 +21,18 @@ int main(int argc, char **argv) {
 
   // register plugins
   app.register_plugin<net_plugin>();
+
+  // parse
+//  app.cli().allow_extras(); // is this always required?
+//  app.cli().parse(argc, argv);
+  app.config().allow_extras(); // is this always required?
+  app.config().parse(argc, argv);
+
   app.initialize<net_plugin>();
   app.startup();
   app.exec();
 
-  //app.run(argc, argv)
+//  app.register_plugin<net_plugin>();
+//  app.run(argc, argv);
   return 0;
 }
