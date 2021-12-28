@@ -3,6 +3,7 @@
 #include <noir/net/consensus/tx.h>
 #include <noir/net/queued_buffer.h>
 #include <noir/net/thread_util.h>
+#include <noir/net/buffer_factory.h>
 
 #include <appbase/application.hpp>
 
@@ -177,7 +178,7 @@ class connection : public std::enable_shared_from_this<connection> {
   void send_time();
   /** \brief Populate and queue time_message immediately using incoming time_message
    */
-//  void send_time(const time_message &msg);
+  void send_time(const time_message &msg);
   /** \brief Read system time and convert to a 64 bit integer.
    *
    * There are only two calls on this routine in the program.  One
@@ -238,7 +239,7 @@ class connection : public std::enable_shared_from_this<connection> {
    * floating-double arithmetic with rounding done by the hardware.
    * This is necessary in order to avoid overflow and preserve precision.
    */
-//  void handle_message(const time_message &msg);
+  void handle_message(const time_message &msg);
   /** @} */
 //  void handle_message(const notice_message &msg);
 //  void handle_message(const request_message &msg);
@@ -291,6 +292,12 @@ struct msg_handler : public fc::visitor<void> {
     c->handle_message(msg);
   }
 
+  void operator()(const time_message &msg) const {
+    // continue call to handle_message on connection strand
+    dlog("handle time_message");
+    c->handle_message(msg);
+  }
+
   void operator()(const proposal_message &msg) const {
   }
 
@@ -299,67 +306,6 @@ struct msg_handler : public fc::visitor<void> {
 
   void operator()(const vote_message &msg) const {
   }
-};
-
-
-//------------------------------------------------------------------------
-// buffers
-//------------------------------------------------------------------------
-using send_buffer_type = std::shared_ptr<std::vector<char>>;
-
-struct buffer_factory {
-
-  /// caches result for subsequent calls, only provide same net_message instance for each invocation
-  const send_buffer_type &get_send_buffer(const net_message &m) {
-    if (!send_buffer) {
-      send_buffer = create_send_buffer(m);
-    }
-    return send_buffer;
-  }
-
- protected:
-  send_buffer_type send_buffer;
-
- protected:
-  static send_buffer_type create_send_buffer(const net_message &m) {
-//    const uint32_t payload_size = fc::raw::pack_size(m);
-
-//    const char *const header = reinterpret_cast<const char *const>(&payload_size);
-//    constexpr size_t header_size = sizeof(payload_size);
-//    static_assert(header_size == message_header_size, "invalid message_header_size");
-//    const size_t buffer_size = header_size + payload_size;
-
-//    auto send_buffer = std::make_shared<vector<char>>(buffer_size);
-//    fc::datastream<char *> ds(send_buffer->data(), buffer_size);
-//    ds.write(header, header_size);
-//    fc::raw::pack(ds, m);
-
-//    return send_buffer;
-
-    return std::make_shared<vector<char>>(1);
-  }
-
-//  template<typename T>
-//  static send_buffer_type create_send_buffer(uint32_t which, const T &v) {
-//    // match net_message static_variant pack
-//    const uint32_t which_size = fc::raw::pack_size(unsigned_int(which));
-//    const uint32_t payload_size = which_size + fc::raw::pack_size(v);
-//
-//    const char
-//        *const header = reinterpret_cast<const char *const>(&payload_size); // avoid variable size encoding of uint32_t
-//    constexpr size_t header_size = sizeof(payload_size);
-//    static_assert(header_size == message_header_size, "invalid message_header_size");
-//    const size_t buffer_size = header_size + payload_size;
-//
-//    auto send_buffer = std::make_shared<vector<char>>(buffer_size);
-//    fc::datastream<char *> ds(send_buffer->data(), buffer_size);
-//    ds.write(header, header_size);
-//    fc::raw::pack(ds, unsigned_int(which));
-//    fc::raw::pack(ds, v);
-//
-//    return send_buffer;
-//  }
-
 };
 
 //------------------------------------------------------------------------
@@ -910,6 +856,10 @@ connection_status connection::get_status() const {
   return stat;
 }
 
+bool connection::connected() {
+  return socket_is_open() && !connecting;
+}
+
 void connection::set_connection_type(const string &peer_add) {
   // host:port:[<trx>|<blk>]
   string::size_type colon = peer_add.find(':');
@@ -1083,7 +1033,7 @@ bool connection::populate_handshake(handshake_message &hello, bool force) {
   send |= lib != hello.last_irreversible_block_num;
   send |= head != hello.head_num;
   send |= prev_head_id != hello.head_id;
-  if (!send) return false;
+//  if (!send) return false;
   hello.last_irreversible_block_num = lib;
   hello.head_num = head;
 //  hello.chain_id = my_impl->chain_id;
@@ -1278,10 +1228,10 @@ bool connection::process_next_message(uint32_t message_length) {
 //
 //    } else {
     auto ds = pending_message_buffer.create_datastream();
-//    net_message msg;
-//    fc::raw::unpack(ds, msg);
-//    msg_handler m(shared_from_this());
-//    std::visit(m, msg);
+    net_message msg;
+    fc::raw::unpack(ds, msg);
+    msg_handler m(shared_from_this());
+    std::visit(m, msg);
 //    }
 
   } catch (const fc::exception &e) {
@@ -1464,6 +1414,162 @@ void connection::send_time() {
   xpkt.xmt = get_time();
   org = xpkt.xmt;
   enqueue(xpkt);
+}
+
+void connection::send_time(const time_message &msg) {
+  time_message xpkt;
+  xpkt.org = msg.xmt;
+  xpkt.rec = msg.dst;
+  xpkt.xmt = get_time();
+  enqueue(xpkt);
+}
+
+bool connection::is_valid(const handshake_message &msg) {
+  bool valid = true;
+//  if (msg.last_irreversible_block_num > msg.head_num) {
+//    wlog("Handshake message validation: last irreversible block (${i}) is greater than head block (${h})",
+//             ("i", msg.last_irreversible_block_num)("h", msg.head_num) );
+//    valid = false;
+//  }
+  if (msg.p2p_address.empty()) {
+    wlog("Handshake message validation: p2p_address is null string");
+    valid = false;
+  }
+  return valid;
+}
+
+void connection::handle_message(const handshake_message &msg) {
+  dlog("received handshake_message");
+  if (!is_valid(msg)) {
+    elog("bad handshake message");
+    enqueue(go_away_message(fatal_other));
+    return;
+  }
+  dlog("received handshake gen ${g} from ${ep}, lib ${lib}, head ${head}",
+       ("g", msg.generation)("ep", peer_name())
+           ("lib", msg.last_irreversible_block_num)("head", msg.head_num));
+
+  connecting = false;
+  if (msg.generation == 1) {
+    if (msg.node_id == my_impl->node_id) {
+      elog("Self connection detected node_id ${id}. Closing connection", ("id", msg.node_id));
+      enqueue(go_away_message(self));
+      return;
+    }
+
+    if (peer_address().empty()) {
+      set_connection_type(msg.p2p_address);
+    }
+
+    std::unique_lock<std::mutex> g_conn(conn_mtx);
+    if (peer_address().empty() || last_handshake_recv.node_id == fc::sha256()) {
+      g_conn.unlock();
+      dlog("checking for duplicate");
+      std::shared_lock<std::shared_mutex> g_cnts(my_impl->connections_mtx);
+      for (const auto &check: my_impl->connections) {
+        if (check.get() == this)
+          continue;
+        if (check->connected() && check->peer_name() == msg.p2p_address) {
+          if (my_impl->p2p_address < msg.p2p_address) {
+            // only the connection from lower p2p_address to higher p2p_address will be considered as a duplicate,
+            // so there is no chance for both connections to be closed
+            continue;
+          }
+
+          g_cnts.unlock();
+          dlog("sending go_away duplicate to ${ep}", ("ep", msg.p2p_address));
+          go_away_message gam(duplicate);
+          g_conn.lock();
+          gam.node_id = conn_node_id;
+          g_conn.unlock();
+          enqueue(gam);
+          no_retry = duplicate;
+          return;
+        }
+      }
+    } else {
+      dlog("skipping duplicate check, addr == ${pa}, id = ${ni}",
+           ("pa", peer_address())("ni", last_handshake_recv.node_id));
+      g_conn.unlock();
+    }
+
+    g_conn.lock();
+    if (conn_node_id != msg.node_id) {
+      conn_node_id = msg.node_id;
+    }
+    g_conn.unlock();
+
+//    if( !my_impl->authenticate_peer( msg ) ) {
+//      elog("Peer not authenticated.  Closing connection." );
+//      enqueue( go_away_message( authentication ) );
+//      return;
+//    }
+
+    if (sent_handshake_count == 0) {
+      send_handshake();
+    }
+  }
+
+  std::unique_lock<std::mutex> g_conn(conn_mtx);
+  last_handshake_recv = msg;
+  g_conn.unlock();
+//  my_impl->sync_master->recv_handshake( shared_from_this(), msg );
+}
+
+void connection::handle_message(const go_away_message &msg) {
+  wlog("received go_away_message, reason = ${r}", ("r", reason_str(msg.reason)));
+
+  bool retry = no_retry == no_reason; // if no previous go away message
+  no_retry = msg.reason;
+  if (msg.reason == duplicate) {
+    std::lock_guard<std::mutex> g_conn(conn_mtx);
+    conn_node_id = msg.node_id;
+  }
+  if (msg.reason == wrong_version) {
+    if (!retry) no_retry = fatal_other; // only retry once on wrong version
+  } else {
+    retry = false;
+  }
+  flush_queues();
+
+  close(retry); // reconnect if wrong_version
+}
+
+void connection::handle_message(const time_message &msg) {
+  dlog("received time_message");
+
+  /* We've already lost however many microseconds it took to dispatch
+   * the message, but it can't be helped.
+   */
+  msg.dst = get_time();
+
+  // If the transmit timestamp is zero, the peer is horribly broken.
+  if (msg.xmt == 0)
+    return;                 /* invalid timestamp */
+
+  if (msg.xmt == xmt)
+    return;                 /* duplicate packet */
+
+  xmt = msg.xmt;
+  rec = msg.rec;
+  dst = msg.dst;
+
+  if (msg.org == 0) {
+    send_time(msg);
+    return;  // We don't have enough data to perform the calculation yet.
+  }
+
+  double offset = (double(rec - org) + double(msg.xmt - dst)) / 2;
+  double NsecPerUsec{1000};
+
+  org = 0;
+  rec = 0;
+
+  std::unique_lock<std::mutex> g_conn(conn_mtx);
+  if (last_handshake_recv.generation == 0) {
+    g_conn.unlock();
+    send_handshake();
+  }
 }
 
 //------------------------------------------------------------------------

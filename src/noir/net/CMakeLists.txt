@@ -7,7 +7,7 @@ add_library(net_plugin
         ${MEMPOOL_HEADERS}
         ${HEADERS})
 
-target_link_libraries(net_plugin appbase fc)
+target_link_libraries(net_plugin appbase fc expected)
 target_include_directories(net_plugin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
 add_executable(net_test main.cpp)
