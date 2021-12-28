@@ -41,9 +41,8 @@ using boost::multi_index_container;
 using fc::time_point;
 using fc::time_point_sec;
 
-//------------------------------------------------------------------------
-// connection
-//------------------------------------------------------------------------
+
+
 class connection : public std::enable_shared_from_this<connection> {
  public:
   explicit connection(string endpoint);
@@ -308,6 +307,8 @@ struct msg_handler : public fc::visitor<void> {
   }
 };
 
+
+
 //------------------------------------------------------------------------
 // net_plugin_impl
 //------------------------------------------------------------------------
@@ -449,6 +450,14 @@ class net_plugin_impl : public std::enable_shared_from_this<net_plugin_impl> {
 
 static net_plugin_impl *my_impl;
 
+template<typename Function>
+void for_each_connection(Function f) {
+  std::shared_lock<std::shared_mutex> g(my_impl->connections_mtx);
+  for (auto &c: my_impl->connections) {
+    if (!f(c)) return;
+  }
+}
+
 void net_plugin_impl::start_monitors() {
   {
     std::lock_guard<std::mutex> g(connector_check_timer_mtx);
@@ -556,6 +565,107 @@ connection_ptr net_plugin_impl::find_connection(const string &host) const {
     if (c->peer_address() == host) return c;
   return connection_ptr();
 }
+
+void net_plugin_impl::start_listen_loop() {
+  connection_ptr new_connection = std::make_shared<connection>();
+  new_connection->connecting = true;
+  new_connection->strand.post([this, new_connection = std::move(new_connection)]() {
+    acceptor->async_accept(*new_connection->socket,
+                           boost::asio::bind_executor(new_connection->strand,
+                                                      [new_connection, socket =
+                                                      new_connection->socket, this](boost::system::error_code ec) {
+                                                        if (!ec) {
+                                                          uint32_t visitors = 0;
+                                                          uint32_t from_addr = 0;
+                                                          boost::system::error_code rec;
+                                                          const auto
+                                                              &paddr_add = socket->remote_endpoint(rec).address();
+                                                          string paddr_str;
+                                                          if (rec) {
+                                                            elog("Error getting remote endpoint: ${m}",
+                                                                 ("m", rec.message()));
+                                                          } else {
+                                                            paddr_str = paddr_add.to_string();
+                                                            for_each_connection([&visitors, &from_addr, &paddr_str](auto &conn) {
+                                                              if (conn->socket_is_open()) {
+                                                                if (conn->peer_address().empty()) {
+                                                                  ++visitors;
+                                                                  std::lock_guard<std::mutex> g_conn(conn->conn_mtx);
+                                                                  if (paddr_str == conn->remote_endpoint_ip) {
+                                                                    ++from_addr;
+                                                                  }
+                                                                }
+                                                              }
+                                                              return true;
+                                                            });
+                                                            if (from_addr < max_nodes_per_host && (max_client_count == 0
+                                                                || visitors < max_client_count)) {
+                                                              ilog("Accepted new connection: " + paddr_str);
+                                                              new_connection->set_heartbeat_timeout(heartbeat_timeout);
+                                                              if (new_connection->start_session()) {
+                                                                std::lock_guard<std::shared_mutex>
+                                                                    g_unique(connections_mtx);
+                                                                connections.insert(new_connection);
+                                                              }
+
+                                                            } else {
+                                                              if (from_addr >= max_nodes_per_host) {
+                                                                dlog(
+                                                                    "Number of connections (${n}) from ${ra} exceeds limit ${l}",
+                                                                    ("n", from_addr + 1)("ra", paddr_str)("l",
+                                                                                                          max_nodes_per_host));
+                                                              } else {
+                                                                dlog("max_client_count ${m} exceeded",
+                                                                     ("m", max_client_count));
+                                                              }
+                                                              // new_connection never added to connections and start_session not called, lifetime will end
+                                                              boost::system::error_code ec;
+                                                              socket->shutdown(tcp::socket::shutdown_both, ec);
+                                                              socket->close(ec);
+                                                            }
+                                                          }
+                                                        } else {
+                                                          elog("Error accepting connection: ${m}", ("m", ec.message()));
+                                                          // For the listed error codes below, recall start_listen_loop()
+                                                          switch (ec.value()) {
+                                                            case ECONNABORTED:
+                                                            case EMFILE:
+                                                            case ENFILE:
+                                                            case ENOBUFS:
+                                                            case ENOMEM:
+                                                            case EPROTO:break;
+                                                            default:return;
+                                                          }
+                                                        }
+                                                        start_listen_loop();
+                                                      }));
+  });
+}
+
+void net_plugin_impl::ticker() {
+  if (in_shutdown) return;
+  std::lock_guard<std::mutex> g(keepalive_timer_mtx);
+  keepalive_timer->expires_from_now(keepalive_interval);
+  keepalive_timer->async_wait([my = shared_from_this()](boost::system::error_code ec) {
+    my->ticker();
+    if (ec) {
+      if (my->in_shutdown) return;
+      wlog("Peer keepalive ticked sooner than expected: ${m}", ("m", ec.message()));
+    }
+
+    tstamp current_time = connection::get_time();
+    for_each_connection([current_time](auto &c) {
+      if (c->socket_is_open()) {
+        c->strand.post([c, current_time]() {
+          c->check_heartbeat(current_time);
+        });
+      }
+      return true;
+    });
+  });
+}
+
+
 
 //------------------------------------------------------------------------
 // net_plugin
@@ -765,15 +875,11 @@ std::vector<connection_status> net_plugin::connections() const {
   return result;
 }
 
-//------------------------------------------------------------------------
-template<typename Function>
-void for_each_connection(Function f) {
-  std::shared_lock<std::shared_mutex> g(my_impl->connections_mtx);
-  for (auto &c: my_impl->connections) {
-    if (!f(c)) return;
-  }
-}
 
+
+//------------------------------------------------------------------------
+// connection
+//------------------------------------------------------------------------
 connection::connection(string endpoint)
     : peer_addr(endpoint),
       strand(my_impl->thread_pool->get_executor()),
@@ -1579,106 +1685,6 @@ void connection::handle_message(const time_message &msg) {
     g_conn.unlock();
     send_handshake();
   }
-}
-
-//------------------------------------------------------------------------
-void net_plugin_impl::start_listen_loop() {
-  connection_ptr new_connection = std::make_shared<connection>();
-  new_connection->connecting = true;
-  new_connection->strand.post([this, new_connection = std::move(new_connection)]() {
-    acceptor->async_accept(*new_connection->socket,
-                           boost::asio::bind_executor(new_connection->strand,
-                                                      [new_connection, socket =
-                                                      new_connection->socket, this](boost::system::error_code ec) {
-                                                        if (!ec) {
-                                                          uint32_t visitors = 0;
-                                                          uint32_t from_addr = 0;
-                                                          boost::system::error_code rec;
-                                                          const auto
-                                                              &paddr_add = socket->remote_endpoint(rec).address();
-                                                          string paddr_str;
-                                                          if (rec) {
-                                                            elog("Error getting remote endpoint: ${m}",
-                                                                 ("m", rec.message()));
-                                                          } else {
-                                                            paddr_str = paddr_add.to_string();
-                                                            for_each_connection([&visitors, &from_addr, &paddr_str](auto &conn) {
-                                                              if (conn->socket_is_open()) {
-                                                                if (conn->peer_address().empty()) {
-                                                                  ++visitors;
-                                                                  std::lock_guard<std::mutex> g_conn(conn->conn_mtx);
-                                                                  if (paddr_str == conn->remote_endpoint_ip) {
-                                                                    ++from_addr;
-                                                                  }
-                                                                }
-                                                              }
-                                                              return true;
-                                                            });
-                                                            if (from_addr < max_nodes_per_host && (max_client_count == 0
-                                                                || visitors < max_client_count)) {
-                                                              ilog("Accepted new connection: " + paddr_str);
-                                                              new_connection->set_heartbeat_timeout(heartbeat_timeout);
-                                                              if (new_connection->start_session()) {
-                                                                std::lock_guard<std::shared_mutex>
-                                                                    g_unique(connections_mtx);
-                                                                connections.insert(new_connection);
-                                                              }
-
-                                                            } else {
-                                                              if (from_addr >= max_nodes_per_host) {
-                                                                dlog(
-                                                                    "Number of connections (${n}) from ${ra} exceeds limit ${l}",
-                                                                    ("n", from_addr + 1)("ra", paddr_str)("l",
-                                                                                                          max_nodes_per_host));
-                                                              } else {
-                                                                dlog("max_client_count ${m} exceeded",
-                                                                     ("m", max_client_count));
-                                                              }
-                                                              // new_connection never added to connections and start_session not called, lifetime will end
-                                                              boost::system::error_code ec;
-                                                              socket->shutdown(tcp::socket::shutdown_both, ec);
-                                                              socket->close(ec);
-                                                            }
-                                                          }
-                                                        } else {
-                                                          elog("Error accepting connection: ${m}", ("m", ec.message()));
-                                                          // For the listed error codes below, recall start_listen_loop()
-                                                          switch (ec.value()) {
-                                                            case ECONNABORTED:
-                                                            case EMFILE:
-                                                            case ENFILE:
-                                                            case ENOBUFS:
-                                                            case ENOMEM:
-                                                            case EPROTO:break;
-                                                            default:return;
-                                                          }
-                                                        }
-                                                        start_listen_loop();
-                                                      }));
-  });
-}
-
-void net_plugin_impl::ticker() {
-  if (in_shutdown) return;
-  std::lock_guard<std::mutex> g(keepalive_timer_mtx);
-  keepalive_timer->expires_from_now(keepalive_interval);
-  keepalive_timer->async_wait([my = shared_from_this()](boost::system::error_code ec) {
-    my->ticker();
-    if (ec) {
-      if (my->in_shutdown) return;
-      wlog("Peer keepalive ticked sooner than expected: ${m}", ("m", ec.message()));
-    }
-
-    tstamp current_time = connection::get_time();
-    for_each_connection([current_time](auto &c) {
-      if (c->socket_is_open()) {
-        c->strand.post([c, current_time]() {
-          c->check_heartbeat(current_time);
-        });
-      }
-      return true;
-    });
-  });
 }
 
 } // namespace noir::net
