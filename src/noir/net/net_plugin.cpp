@@ -579,7 +579,7 @@ void net_plugin::plugin_initialize(const CLI::App &cli, const CLI::App &config) 
   try {
 //    my->sync_master.reset( new sync_manager( options.at( "sync-fetch-span" ).as<uint32_t>()));
 
-    my->connector_period = std::chrono::seconds(30); // number of seconds to wait before cleaning up dead connections
+    my->connector_period = std::chrono::seconds(60); // number of seconds to wait before cleaning up dead connections
     my->max_cleanup_time_ms = 1000; // max connection cleanup time per cleanup call in millisec
     my->txn_exp_period = def_txn_expire_wait;
     my->resp_expected_period = def_resp_expected_wait;
@@ -588,8 +588,8 @@ void net_plugin::plugin_initialize(const CLI::App &cli, const CLI::App &config) 
     my->p2p_accept_transactions = true;
     my->p2p_reject_incomplete_blocks = true;
     my->use_socket_read_watermark = false;
-    my->keepalive_interval = std::chrono::milliseconds(1000);
-    my->heartbeat_timeout = std::chrono::milliseconds(1000 * 2);
+    my->keepalive_interval = std::chrono::milliseconds(30000);
+    my->heartbeat_timeout = std::chrono::milliseconds(30000 * 2);
 
     my->p2p_address = "0.0.0.0:9876"; // The actual host:port used to listen for incoming p2p connections
     if (config.count("--p2p-listen-endpoint")) {
@@ -738,8 +738,17 @@ string net_plugin::connect(const string &host) {
   return "added connection";
 }
 
-string net_plugin::disconnect(const string &endpoint) {
-  return fc::string();
+string net_plugin::disconnect(const string &host) {
+  std::lock_guard<std::shared_mutex> g(my->connections_mtx);
+  for (auto itr = my->connections.begin(); itr != my->connections.end(); ++itr) {
+    if ((*itr)->peer_address() == host) {
+      ilog("disconnecting: ${p}", ("p", (*itr)->peer_name()));
+      (*itr)->close();
+      my->connections.erase(itr);
+      return "connection removed";
+    }
+  }
+  return "no known connection for host";
 }
 
 std::optional<connection_status> net_plugin::status(const string &endpoint) const {
