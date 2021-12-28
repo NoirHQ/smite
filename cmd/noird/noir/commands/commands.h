@@ -10,8 +10,11 @@ namespace noir::commands {
 
 using add_command_callback = std::function<CLI::App*(CLI::App&)>;
 
-auto add_command(CLI::App& root, add_command_callback cb) {
-  return cb(root);
-};
+CLI::App* add_command(CLI::App& root, add_command_callback cb);
+
+CLI::App* debug(CLI::App&);
+CLI::App* init(CLI::App&);
+CLI::App* start(CLI::App&);
+CLI::App* version(CLI::App&);
 
 } // namespace noir::commands

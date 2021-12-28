@@ -1,27 +1,30 @@
-#include <noir/tendermint/log.h>
+#include <noir/tendermint/tendermint.h>
 #include <tendermint/abci.h>
 
-namespace tmlog = noir::tendermint::log;
+using namespace noir::tendermint;
+
+void abci_init() {
+}
 
 void begin_block(int64_t height) {
-  tmlog::info("!!! BeginBlock !!!");
+  log::info("!!! BeginBlock !!!");
 }
 
 void deliver_tx(void* tx, unsigned int len) {
-  tmlog::info("!!! DeliverTx !!!");
+  log::info("!!! DeliverTx !!!");
 }
 
 void end_block() {
-  tmlog::info("!!! EndBlock !!!");
+  log::info("!!! EndBlock !!!");
 }
 
 char* commit() {
-  tmlog::info("!!! Commit !!!");
+  log::info("!!! Commit !!!");
   return nullptr;
 }
 
 void check_tx(void* tx, unsigned int len) {
-  tmlog::info("!!! --- CheckTX --- !!!");
+  log::info("!!! --- CheckTX --- !!!");
 }
 
 ResponseInfo *info() {

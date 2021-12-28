@@ -1,4 +1,3 @@
-#include <noir/tendermint/log.h>
 #include <tendermint/tendermint.h>
 
 namespace noir::tendermint::log {

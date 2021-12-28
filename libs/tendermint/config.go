@@ -19,12 +19,13 @@ var (
 )
 
 //export tm_config_load
-func tm_config_load(config_file *C.CConstChar) C.char {
-	configFile := C.GoString(config_file)
-	homeDir := filepath.Dir(filepath.Dir(configFile))
+func tm_config_load() C.char {
+	homeDir := viper.GetString("home")
+	if homeDir == "" {
+		return C.char(0)
+	}
 	config.SetRoot(homeDir)
 	cfg.EnsureRoot(homeDir)
-	viper.Set("home", homeDir)
 	viper.SetConfigName("config")
 	viper.AddConfigPath(homeDir)
 	viper.AddConfigPath(filepath.Join(homeDir, "config"))

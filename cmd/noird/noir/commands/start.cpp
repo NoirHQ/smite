@@ -1,17 +1,18 @@
-#pragma once
+#include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
+
+using namespace noir::tendermint;
 
 namespace noir::commands {
 
 CLI::App* start(CLI::App& root) {
   return root.add_subcommand("start", "Run the NOIR node")->final_callback([]() {
-    using noir::tendermint::tendermint;
-
     auto& app = appbase::app();
-    auto config_file = app.config_file();
-    noir::tendermint::config::load(config_file.c_str());
+    auto home_dir = app.home_dir();
+    config::set("home", home_dir.c_str());
+    config::load();
 
-    if (!app.initialize<tendermint>()) {
+    if (!app.initialize<class tendermint>()) {
       throw CLI::Success();
     }
     app.startup();
