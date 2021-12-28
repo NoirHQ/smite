@@ -40,27 +40,6 @@ struct buffer_factory {
     return send_buffer;
   }
 
-//  template<typename T>
-//  static send_buffer_type create_send_buffer(uint32_t which, const T &v) {
-//    // match net_message static_variant pack
-//    const uint32_t which_size = fc::raw::pack_size(unsigned_int(which));
-//    const uint32_t payload_size = which_size + fc::raw::pack_size(v);
-//
-//    const char
-//        *const header = reinterpret_cast<const char *const>(&payload_size); // avoid variable size encoding of uint32_t
-//    constexpr size_t header_size = sizeof(payload_size);
-//    static_assert(header_size == message_header_size, "invalid message_header_size");
-//    const size_t buffer_size = header_size + payload_size;
-//
-//    auto send_buffer = std::make_shared<vector<char>>(buffer_size);
-//    fc::datastream<char *> ds(send_buffer->data(), buffer_size);
-//    ds.write(header, header_size);
-//    fc::raw::pack(ds, unsigned_int(which));
-//    fc::raw::pack(ds, v);
-//
-//    return send_buffer;
-//  }
-
 };
 
 }

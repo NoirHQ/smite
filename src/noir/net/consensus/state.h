@@ -17,8 +17,7 @@ using namespace std;
 class state {
  public:
   state() {
-    // todo - make genesis state by reading from config file
-    // or by restoring from last save state
+    // todo - make genesis state by reading from config file, or by restoring from last saved state
   }
 
   block make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ bytes proposal_address) {

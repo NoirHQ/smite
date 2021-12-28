@@ -29,8 +29,9 @@ struct commit {
   block_id block_id;
   std::vector<commit_sig> signatures;
 
-  //hash // todo - do we need these?
-  //bitArray
+  // todo - do we need these?
+//  hash
+//  bitArray
 };
 
 using block_ptr = std::shared_ptr<block>;
