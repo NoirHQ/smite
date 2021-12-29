@@ -11,6 +11,9 @@ jobs:
   linux_build:
     name: Linux
     runs-on: ubuntu-latest
+    env:
+      CC: /usr/bin/gcc-10
+      CXX: /usr/bin/g++-10
     steps:
       - uses: actions/setup-go@v2
         with:

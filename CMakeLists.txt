@@ -4,6 +4,16 @@ project(noir)
 
 set(CMAKE_CXX_STANDARD 20)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
+    message(FATAL_ERROR "GCC version 10 or later is required")
+  endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
+    message(FATAL_ERROR "Clang version 10 or later is required")
+  endif()
+endif()
+
 if(APPLE)
   set(BOOST_ROOT "/usr/local/opt/boost")
   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
