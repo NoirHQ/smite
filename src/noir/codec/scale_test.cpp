@@ -24,86 +24,60 @@ TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_
 }
 
 TEST_CASE("Compact/general integers", "[codec][scale]") {
-  auto v = unsigned_int(0);
-  auto data = encode<scale>(v);
-  CHECK(to_hex(data) == "00");
+  auto tests = std::to_array<std::pair<unsigned_int, const char*>>({
+    {0, "00"},
+    {1, "04"},
+    {42, "a8"},
+    {69, "1501"},
+    {65535, "feff0300"},
+    // TODO: BigInt(100000000000000)
+  });
 
-  v = 1;
-  data = encode<scale>(v);
-  CHECK(to_hex(data) == "04");
-
-  v = 42;
-  data = encode<scale>(v);
-  CHECK(to_hex(data) == "a8");
-
-  v = 69;
-  data = encode<scale>(v);
-  CHECK(to_hex(data) == "1501");
-
-  v = 65535;
-  data = encode<scale>(v);
-  CHECK(to_hex(data) == "feff0300");
-
-  // TODO: BigInt(100000000000000)
+  std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
+    CHECK(to_hex(encode<scale>(t.first)) == t.second);
+    CHECK(t.first == decode<scale,unsigned_int>(from_hex(t.second)));
+  });
 }
 
 TEST_CASE("Options", "[codec][scale]") {
   SECTION("bool") {
-    auto v = std::make_optional(true);
-    auto data = encode<scale>(v);
-    CHECK(to_hex(data) == "01");
+    auto tests = std::to_array<std::pair<std::optional<bool>, const char*>>({
+      {true, "01"},
+      {false, "02"},
+      {{}, "00"},
+    });
 
-    v = decode<scale,std::optional<bool>>(data);
-    CHECK((v && *v == true));
-
-    v = std::make_optional(false);
-    data = encode<scale>(v);
-    CHECK(to_hex(data) == "02");
-
-    v = decode<scale,std::optional<bool>>(data);
-    CHECK((v && *v == false));
-
-    v = {};
-    data = encode<scale>(v);
-    CHECK(to_hex(data) == "00");
-
-    v = decode<scale,std::optional<bool>>(data);
-    CHECK(!v);
+    std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
+      CHECK(to_hex(encode<scale>(t.first)) == t.second);
+      CHECK(t.first == decode<scale, std::optional<bool>>(from_hex(t.second)));
+    });
   }
 
   SECTION("except bool") {
-    auto v = std::make_optional<uint32_t>(65535u);
-    auto data = encode<scale>(v);
-    CHECK(to_hex(data) == "01ffff0000");
+    auto tests = std::to_array<std::pair<std::optional<uint32_t>, const char*>>({
+      {65535u, "01ffff0000"},
+      {{}, "00"},
+    });
 
-    v = decode<scale,std::optional<uint32_t>>(data);
-    CHECK((v && *v == 65535u));
-
-    v = {};
-    data = encode<scale>(v);
-    CHECK(to_hex(data) == "00");
-
-    v = decode<scale,std::optional<uint32_t>>(data);
-    CHECK(!v);
+    std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
+      CHECK(to_hex(encode<scale>(t.first)) == t.second);
+      CHECK(t.first == decode<scale, std::optional<uint32_t>>(from_hex(t.second)));
+    });
   }
 }
 
 TEST_CASE("Results", "[codec][scale]") {
   using u8_b = noir::expected<uint8_t, bool>;
 
-  auto v = u8_b(42);
-  auto data = encode<scale>(v);
-  CHECK(to_hex(data) == "002a");
+  auto tests = std::to_array<std::pair<u8_b, const char*>>({
+    {42, "002a"},
+    {make_unexpected(false), "0100"},
+  });
 
-  v = decode<scale, u8_b>(data);
-  CHECK((v && *v == 42));
-
-  v = noir::make_unexpected(false);
-  data = encode<scale>(v);
-  CHECK(to_hex(data) == "0100");
-
-  v = decode<scale, u8_b>(data);
-  CHECK((!v && v.error() == false));
+  std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
+    CHECK(to_hex(encode<scale>(t.first)) == t.second);
+    CHECK(t.first == decode<scale, u8_b>(from_hex(t.second)));
+  });
 }
 
 TEST_CASE("Vectors", "[codec][scale]") {
@@ -154,19 +128,15 @@ TEST_CASE("Enumerations", "[codec][scale]") {
   using u8_b = std::variant<uint8_t, bool>;
 
   SECTION("int or bool") {
-    auto v = u8_b((uint8_t) 42);
-    auto data = encode<scale>(v);
-    CHECK(to_hex(data) == "002a");
+    auto tests = std::to_array<std::pair<u8_b, const char*>>({
+      {(uint8_t)42, "002a"},
+      {true, "0101"},
+    });
 
-    v = decode<scale, u8_b>(data);
-    CHECK((std::holds_alternative<uint8_t>(v) && v.index() == 0 && std::get<0>(v) == 42));
-
-    v.emplace<1>(true);
-    data = encode<scale>(v);
-    CHECK(to_hex(data) == "0101");
-
-    v = decode<scale, u8_b>(data);
-    CHECK((std::holds_alternative<bool>(v) && v.index() == 1 && std::get<1>(v) == true));
+    std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
+      CHECK(to_hex(encode<scale>(t.first)) == t.second);
+      CHECK(t.first == decode<scale, u8_b>(from_hex(t.second)));
+    });
   }
 
   SECTION("invalid index") {
