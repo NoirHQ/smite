@@ -14,6 +14,8 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL 
   endif()
 endif()
 
+add_compile_definitions(BOOST_ASIO_HAS_STD_INVOKE_RESULT)
+
 if(APPLE)
   set(BOOST_ROOT "/usr/local/opt/boost")
   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
