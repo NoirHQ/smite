@@ -3,6 +3,15 @@
 
 namespace noir::net::consensus { // todo - move consensus somewhere (maybe under libs?)
 
+// MaxTotalVotingPower - the maximum allowed total voting power.
+// It needs to be sufficiently small to, in all cases:
+// 1. prevent clipping in incrementProposerPriority()
+// 2. let (diff+diffMax-1) not overflow in IncrementProposerPriority()
+// (Proof of 1 is tricky, left to the reader).
+// It could be higher, but this is sufficiently large for our purposes,
+// and leaves room for defensive purposes.
+constexpr int64_t max_total_voting_power{std::numeric_limits<int64_t>::max() / 8};
+
 struct validator {
   bytes address;
   bytes pub_key;
@@ -14,6 +23,54 @@ struct validator_set {
   std::vector<validator> validators;
   validator proposer;
   int64_t total_voting_power = 0;
+
+  bool has_address(bytes address) {
+    for (auto val : validators) {
+      if (val.address == address)
+        return true;
+    }
+    return false;
+  }
+
+  std::optional<validator> get_by_address(const bytes &address) {
+    for (auto val : validators) {
+      if (val.address == address)
+        return val;
+    }
+    return {};
+  }
+
+  std::optional<validator> get_by_index(int32_t index) {
+    if (index < 0 || index >= validators.size())
+      return {};
+    return validators.at(index);
+  }
+
+  int64_t get_total_voting_power() {
+    if (total_voting_power == 0)
+      update_total_voting_power();
+    return total_voting_power;
+  }
+
+  void update_total_voting_power() {
+    int64_t sum{};
+    for (auto val : validators) {
+      sum += val.voting_power; // todo - check safe add
+      if (sum > max_total_voting_power)
+        throw std::runtime_error("total_voting_power exceeded max allowed");
+    }
+    total_voting_power = sum;
+  }
+
+  std::optional<validator> get_proposer() {
+    if (validators.empty())
+      return {};
+    return find_proposer();
+  }
+
+  std::optional<validator> find_proposer() {
+    
+  }
 
   void update_with_change_set() {
 // UpdateWithChangeSet attempts to update the validator set with 'changes'.
@@ -114,7 +171,12 @@ struct validator_set {
 #endif
   }
 
-  validator increment_proposer_priority(validator_set &vals) {
+  validator increment_proposer_priority(int32_t times) {
+    if (validators.empty())
+      throw std::runtime_error("empty validator set");
+    if (times <= 0)
+      throw std::runtime_error("cannot call with non-positive times");
+
 #if 0
     for _, val := range vals.Validators {
       // Check for overflow for sum.
