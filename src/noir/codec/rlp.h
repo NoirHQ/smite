@@ -103,10 +103,8 @@ template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::i
 datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, T& v) {
   unsigned char prefix = 0;
   ds.read((char*)&prefix, 1);
-  if (prefix < 0x80) {
-    v = prefix;
-  } else if (prefix < 0xb8) {
-    check(prefix - 0x80 <= sizeof(T), "not sufficient output size");
+  if (prefix < 0xb8) {
+    check(prefix <= 0x80 + sizeof(T), "not sufficient output size");
     v = rlp::decode_bytes(ds, prefix, 0x80);
   } else if (prefix < 0xc0) {
     // TODO
