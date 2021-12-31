@@ -64,7 +64,7 @@ private:
     auto v = 0ull;
     auto s = std::span((char*)&v, sizeof(v));
     std::for_each(s.rend() - size, s.rend(), [&](auto& c) {
-      ds.read(&c, 1);
+      ds.read({&c, 1});
     });
     return v;
   }
@@ -102,7 +102,7 @@ datastream<rlp, Stream>& operator<<(datastream<rlp, Stream>& ds, const T& v) {
 template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
 datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, T& v) {
   unsigned char prefix = 0;
-  ds.read((char*)&prefix, 1);
+  ds.read({(char*)&prefix,1});
   if (prefix < 0xb8) {
     check(prefix <= 0x80 + sizeof(T), "not sufficient output size");
     v = rlp::decode_bytes(ds, prefix, 0x80);
@@ -132,7 +132,7 @@ datastream<rlp, Stream>& operator<<(datastream<rlp, Stream>& ds, const std::vect
 template<typename Stream, typename T>
 datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, std::vector<T>& v) {
   unsigned char prefix = 0;
-  ds.read((char*)&prefix, 1);
+  ds.read({(char*)&prefix, 1});
   check(prefix >= 0xc0, "not matched prefix type");
   auto size = rlp::decode_prefix(ds, prefix, 0xc0);
   while (size > 0) {
@@ -161,14 +161,14 @@ datastream<rlp, Stream>& operator<<(datastream<rlp, Stream>& ds, const std::stri
 template<typename Stream>
 datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, std::string& v) {
   unsigned char prefix = 0;
-  ds.read((char*)&prefix, 1);
+  ds.read({(char*)&prefix, 1});
   if (prefix < 0x80) {
     v.resize(1);
     v[0] = prefix;
   } else if (prefix < 0xc0) {
     auto size = rlp::decode_prefix(ds, prefix, 0x80);
     v.resize(size);
-    ds.read(v.data(), size);
+    ds.read(v);
   } else {
     check(false, "not matched prefix type");
   }

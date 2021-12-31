@@ -25,7 +25,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const T& v)
 
 template<typename Stream, typename T, typename = std::enable_if_t<std::numeric_limits<T>::is_integer>>
 datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, T& v) {
-  ds.read((char *)&v, sizeof(v));
+  ds.read({(char *)&v, sizeof(v)});
   return ds;
 }
 
@@ -51,7 +51,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const unsig
 template<typename Stream>
 datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, unsigned_int& v) {
   char tmp = 0;
-  ds.read(&tmp, 1);
+  ds.read({&tmp, 1});
   ds.seekp(ds.tellp() - 1);
   switch (tmp & 0b11) {
     case 0b00: {
