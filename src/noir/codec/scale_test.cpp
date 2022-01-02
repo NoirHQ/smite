@@ -7,7 +7,7 @@ using namespace noir::codec;
 
 TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t) {
   TestType v = std::numeric_limits<TestType>::max();
-  auto hex = to_hex((const char*)&v, sizeof(v));
+  auto hex = to_hex({(const char*)&v, sizeof(v)});
   auto data = encode<scale>(v);
   CHECK(to_hex(data).compare(hex) == 0);
 
@@ -15,7 +15,7 @@ TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_
   CHECK(v == std::numeric_limits<TestType>::max());
 
   v = std::numeric_limits<TestType>::min();
-  hex = to_hex((const char*)&v, sizeof(v));
+  hex = to_hex({(const char*)&v, sizeof(v)});
   data = encode<scale>(v);
   CHECK(to_hex(data).compare(hex) == 0);
 

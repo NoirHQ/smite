@@ -1,6 +1,5 @@
 #pragma once
 #include <noir/common/check.h>
-#include <cstdlib>
 #include <span>
 #include <vector>
 
