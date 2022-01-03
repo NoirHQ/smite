@@ -12,20 +12,40 @@ namespace noir::net::consensus { // todo - move consensus somewhere (maybe under
 // and leaves room for defensive purposes.
 constexpr int64_t max_total_voting_power{std::numeric_limits<int64_t>::max() / 8};
 
+// PriorityWindowSizeFactor - is a constant that when multiplied with the
+// total voting power gives the maximum allowed distance between validator
+// priorities.
+constexpr int64_t priority_window_size_factor{2};
+
 struct validator {
   bytes address;
   bytes pub_key;
   int64_t voting_power;
   int64_t proposer_priority;
+
+  validator &compare_proposer_priority(validator &other) {
+    if (this == &other)
+      return *this;
+    if (proposer_priority > other.proposer_priority)
+      return *this;
+    if (proposer_priority < other.proposer_priority)
+      return other;
+    if (address.empty() || other.address.empty())
+      throw std::runtime_error("unable to compare validators as address is empty");
+    if (address < other.address) // todo - check vector comparison
+      return *this;
+    else
+      return other;
+  }
 };
 
 struct validator_set {
   std::vector<validator> validators;
-  validator proposer;
+  std::optional<validator> proposer;
   int64_t total_voting_power = 0;
 
-  bool has_address(bytes address) {
-    for (auto val : validators) {
+  bool has_address(const bytes &address) {
+    for (const auto &val: validators) {
       if (val.address == address)
         return true;
     }
@@ -33,7 +53,7 @@ struct validator_set {
   }
 
   std::optional<validator> get_by_address(const bytes &address) {
-    for (auto val : validators) {
+    for (auto val: validators) {
       if (val.address == address)
         return val;
     }
@@ -54,7 +74,7 @@ struct validator_set {
 
   void update_total_voting_power() {
     int64_t sum{};
-    for (auto val : validators) {
+    for (const auto &val: validators) {
       sum += val.voting_power; // todo - check safe add
       if (sum > max_total_voting_power)
         throw std::runtime_error("total_voting_power exceeded max allowed");
@@ -65,11 +85,19 @@ struct validator_set {
   std::optional<validator> get_proposer() {
     if (validators.empty())
       return {};
-    return find_proposer();
+    if (!proposer.has_value())
+      proposer = find_proposer();
+    return proposer;
   }
 
   std::optional<validator> find_proposer() {
-    
+    if (validators.empty())
+      return {};
+    auto val_with_most_priority = validators.at(0);
+    for (auto &val: validators) {
+      val_with_most_priority = val.compare_proposer_priority(val_with_most_priority);
+    }
+    return val_with_most_priority;
   }
 
   void update_with_change_set() {
@@ -171,68 +199,76 @@ struct validator_set {
 #endif
   }
 
-  validator increment_proposer_priority(int32_t times) {
+  void increment_proposer_priority(int32_t times) {
     if (validators.empty())
       throw std::runtime_error("empty validator set");
     if (times <= 0)
       throw std::runtime_error("cannot call with non-positive times");
 
-#if 0
-    for _, val := range vals.Validators {
-      // Check for overflow for sum.
-      newPrio := safeAddClip(val.ProposerPriority, val.VotingPower)
-      val.ProposerPriority = newPrio
-    }
-    // Decrement the validator with most ProposerPriority.
-    mostest := vals.getValWithMostPriority()
-    // Mind the underflow.
-    mostest.ProposerPriority = safeSubClip(mostest.ProposerPriority, vals.TotalVotingPower())
+    // Cap the difference between priorities to be proportional to 2*totalPower by
+    // re-normalizing priorities, i.e., rescale all priorities by multiplying with:
+    //  2*totalVotingPower/(maxPriority - minPriority)
+    auto diff_max = priority_window_size_factor * get_total_voting_power();
+    rescale_priorities(diff_max);
+    shift_by_avg_proposer_priority();
 
-    return mostest
-#endif
+    for (auto i = 0; i < times; i++) {
+      for (auto &val: validators) {
+        val.proposer_priority += val.voting_power; // todo - check safe add
+      }
+      // find validator with most priority
+      auto it = std::max_element(validators.begin(),
+                                 validators.end(),
+                                 [](const validator &a, const validator &b) {
+                                   return a.proposer_priority < b.proposer_priority;
+                                 });
+      it->proposer_priority -= total_voting_power;
+      proposer = *it;
+    }
   }
 
-  int64_t rescale_priorities(validator_set &vals) {
-// RescalePriorities rescales the priorities such that the distance between the
-// maximum and minimum is smaller than `diffMax`. Panics if validator set is
-// empty.
-#if 0
-    if vals.IsNilOrEmpty() {
-      panic("empty validator set")
-    }
-    // NOTE: This check is merely a sanity check which could be
-    // removed if all tests would init. voting power appropriately;
-    // i.e. diffMax should always be > 0
-    if diffMax <= 0 {
-      return
-    }
+// rescale_priorities rescales the priorities such that the distance between the
+// maximum and minimum is smaller than `diffMax`. throws if validator set is empty.
+  void rescale_priorities(int64_t diff_max) {
+    if (validators.empty()) throw std::runtime_error("empty validator set");
+    if (diff_max <= 0) return;
 
     // Calculating ceil(diff/diffMax):
     // Re-normalization is performed by dividing by an integer for simplicity.
-    // NOTE: This may make debugging priority issues easier as well.
-    diff := computeMaxMinPriorityDiff(vals)
-    ratio := (diff + diffMax - 1) / diffMax
-    if diff > diffMax {
-          for _, val := range vals.Validators {
-            val.ProposerPriority /= ratio
-          }
+    auto max = std::numeric_limits<int64_t>::max();
+    auto min = std::numeric_limits<int64_t>::min();
+    for (const auto &val: validators) {
+      if (val.proposer_priority < min)
+        min = val.proposer_priority;
+      if (val.proposer_priority > max)
+        max = val.proposer_priority;
+    }
+    auto diff = max - min;
+    if (diff < 0)
+      diff = -diff;
+    auto ratio = (diff + diff_max - 1) / diff_max;
+    if (diff > diff_max) {
+      for (auto &val: validators) {
+        val.proposer_priority /= ratio;
       }
-#endif
-    return 0;
+    }
   }
 
-  void shift_by_avg_proposer_priority(validator_set &vals) {
-#if 0
-    if vals.IsNilOrEmpty() {
-      panic("empty validator set")
+  void shift_by_avg_proposer_priority() {
+    if (validators.empty()) throw std::runtime_error("empty validator set");
+    // compute average proposer_priority
+    int64_t sum = 0;
+    for (auto &val: validators) {
+      sum += val.proposer_priority;
     }
-    avgProposerPriority := vals.computeAvgProposerPriority()
-    for _, val := range vals.Validators {
-      val.ProposerPriority = safeSubClip(val.ProposerPriority, avgProposerPriority)
+    if (sum > 0) {
+      int64_t avg = sum / validators.size();
+      for (auto &val: validators) {
+        val.proposer_priority -= avg; // todo - check safe sub
+      }
     }
-#endif
   }
 
 };
 
-}
+} // namespace noir::net::consensus
