@@ -125,7 +125,7 @@ public:
 
   inline auto& seekp(size_t p) {
     size = p;
-    *this;
+    return *this;
   }
 
   inline size_t tellp() const {
