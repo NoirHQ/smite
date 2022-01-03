@@ -3,23 +3,23 @@
 #include <noir/common/hex.h>
 
 using namespace noir;
-using namespace noir::codec;
+using namespace noir::codec::scale;
 
 TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t) {
   TestType v = std::numeric_limits<TestType>::max();
   auto hex = to_hex({(const char*)&v, sizeof(v)});
-  auto data = encode<scale>(v);
+  auto data = encode(v);
   CHECK(to_hex(data).compare(hex) == 0);
 
-  v = decode<scale,TestType>(data);
+  v = decode<TestType>(data);
   CHECK(v == std::numeric_limits<TestType>::max());
 
   v = std::numeric_limits<TestType>::min();
   hex = to_hex({(const char*)&v, sizeof(v)});
-  data = encode<scale>(v);
+  data = encode(v);
   CHECK(to_hex(data).compare(hex) == 0);
 
-  v = decode<scale,TestType>(data);
+  v = decode<TestType>(data);
   CHECK(v == std::numeric_limits<TestType>::min());
 }
 
@@ -34,8 +34,8 @@ TEST_CASE("Compact/general integers", "[codec][scale]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
-    CHECK(to_hex(encode<scale>(t.first)) == t.second);
-    CHECK(t.first == decode<scale,unsigned_int>(from_hex(t.second)));
+    CHECK(to_hex(encode(t.first)) == t.second);
+    CHECK(t.first == decode<unsigned_int>(from_hex(t.second)));
   });
 }
 
@@ -48,8 +48,8 @@ TEST_CASE("Options", "[codec][scale]") {
     });
 
     std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
-      CHECK(to_hex(encode<scale>(t.first)) == t.second);
-      CHECK(t.first == decode<scale, std::optional<bool>>(from_hex(t.second)));
+      CHECK(to_hex(encode(t.first)) == t.second);
+      CHECK(t.first == decode<std::optional<bool>>(from_hex(t.second)));
     });
   }
 
@@ -60,8 +60,8 @@ TEST_CASE("Options", "[codec][scale]") {
     });
 
     std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
-      CHECK(to_hex(encode<scale>(t.first)) == t.second);
-      CHECK(t.first == decode<scale, std::optional<uint32_t>>(from_hex(t.second)));
+      CHECK(to_hex(encode(t.first)) == t.second);
+      CHECK(t.first == decode<std::optional<uint32_t>>(from_hex(t.second)));
     });
   }
 }
@@ -75,35 +75,35 @@ TEST_CASE("Results", "[codec][scale]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
-    CHECK(to_hex(encode<scale>(t.first)) == t.second);
-    CHECK(t.first == decode<scale, u8_b>(from_hex(t.second)));
+    CHECK(to_hex(encode(t.first)) == t.second);
+    CHECK(t.first == decode<u8_b>(from_hex(t.second)));
   });
 }
 
 TEST_CASE("Vectors", "[codec][scale]") {
   auto v = std::vector<uint16_t>{4, 8, 15, 16, 23, 42};
-  auto data = encode<scale>(v);
+  auto data = encode(v);
   CHECK(to_hex(data) == "18040008000f00100017002a00");
 
-  auto w = decode<scale, std::vector<uint16_t>>(data);
+  auto w = decode<std::vector<uint16_t>>(data);
   CHECK(std::equal(v.begin(), v.end(), w.begin(), w.end()));
 }
 
 TEST_CASE("Strings", "[codec][scale]") {
   auto v = std::string("The quick brown fox jumps over the lazy dog.");
-  auto data = encode<scale>(v);
+  auto data = encode(v);
   CHECK(to_hex(data) == "b054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e");
 
-  auto w = decode<scale,std::string>(data);
+  auto w = decode<std::string>(data);
   CHECK(v == w);
 }
 
 TEST_CASE("Tuples", "[codec][scale]") {
   auto v = std::make_tuple((unsigned_int)3, false);
-  auto data = encode<scale>(v);
+  auto data = encode(v);
   CHECK(to_hex(data) == "0c00");
 
-  v = decode<scale, std::tuple<unsigned_int, bool>>(data);
+  v = decode<std::tuple<unsigned_int, bool>>(data);
   CHECK(v == std::make_tuple(3u, false));
 }
 
@@ -116,10 +116,10 @@ TEST_CASE("Data structures", "[codec][scale]") {
   };
 
   auto v = foo{"Lorem ipsum", 42, false, {3, 5, 2, 8}};
-  auto data = encode<scale>(v);
+  auto data = encode(v);
   CHECK(to_hex(data) == "2c4c6f72656d20697073756d2a00000002100300050002000800");
 
-  v = decode<scale, foo>(data);
+  v = decode<foo>(data);
   auto a = std::vector<uint16_t>{3, 5, 2, 8};
   CHECK((v.s == "Lorem ipsum" && v.i == 42 && v.b && !*v.b && std::equal(v.a.begin(), v.a.end(), a.begin())));
 }
@@ -134,13 +134,13 @@ TEST_CASE("Enumerations", "[codec][scale]") {
     });
 
     std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
-      CHECK(to_hex(encode<scale>(t.first)) == t.second);
-      CHECK(t.first == decode<scale, u8_b>(from_hex(t.second)));
+      CHECK(to_hex(encode(t.first)) == t.second);
+      CHECK(t.first == decode<u8_b>(from_hex(t.second)));
     });
   }
 
   SECTION("invalid index") {
     auto data = from_hex("0200");
-    CHECK_THROWS_WITH((decode<scale, u8_b>(data)), "invalid variant index");
+    CHECK_THROWS_WITH((decode<u8_b>(data)), "invalid variant index");
   }
 }
