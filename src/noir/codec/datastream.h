@@ -1,5 +1,6 @@
 #pragma once
 #include <span>
+#include <stdexcept>
 #include <vector>
 
 namespace noir::codec {
@@ -78,7 +79,7 @@ public:
     return *this;
   }
 
-  auto pos() const {
+  inline auto pos() const {
     return pos_;
   }
 
