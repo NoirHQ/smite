@@ -79,10 +79,6 @@ public:
     return *this;
   }
 
-  inline auto pos() const {
-    return pos_;
-  }
-
   inline auto& seekp(size_t p) {
     pos_ = span.begin() + p;
     return *this;
