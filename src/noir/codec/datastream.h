@@ -1,5 +1,4 @@
 #pragma once
-#include <noir/common/check.h>
 #include <span>
 #include <vector>
 
@@ -15,47 +14,77 @@ public:
     pos_ += s;
   }
 
-  inline bool read(std::span<char> s) {
-    check(std::distance(pos_, span.end()) >= s.size(), "datastream attempted to read past the end");
+  inline auto& read(std::span<char> s) {
+    if (!(remaining() >= s.size())) [[unlikely]]
+      throw std::out_of_range("datastream attempted to read past the end");
     std::copy(pos_, pos_ + s.size(), s.begin());
     pos_ += s.size();
-    return true;
+    return *this;
   }
 
-  inline bool write(std::span<char> s) {
-    check(std::distance(pos_, span.end()) >= s.size(), "datastream attempted to write past the end");
+  inline auto& read(char* s, size_t count) {
+    return read({s, count});
+  }
+
+  inline int peek() {
+    if (!(remaining() >= 1)) [[unlikely]]
+      throw std::out_of_range("datastream attempted to read past the end");
+    return *pos_;
+  }
+
+  inline int get() {
+    auto c = peek();
+    ++pos_;
+    return c;
+  }
+
+  inline auto& get(char& c) {
+    c = get();
+    return *this;
+  }
+
+  inline auto& unget() {
+    if (!(tellp() >= 1)) [[unlikely]]
+      throw std::out_of_range("datastream attempted to read past the end");
+    --pos_;
+    return *this;
+  }
+
+  inline auto& write(std::span<const char> s) {
+    if (!(remaining() >= s.size())) [[unlikely]]
+      throw std::out_of_range("datastream attempted to write past the end");
     std::copy(s.begin(), s.end(), pos_);
     pos_ += s.size();
-    return true;
+    return *this;
   }
 
-  inline bool write(char c) {
-    check(std::distance(pos_, span.end()) >= 1, "datastream attempted to write past the end");
-    *pos_++ = c;
-    return true;
+  inline auto& write(const char* s, size_t count) {
+    return write({s, count});
   }
 
-  inline bool write(const void* c, size_t count) {
-    check(std::distance(pos_, span.end()) >= count, "datastream attempted to write pas the end");
-    auto s = std::span<const char>(reinterpret_cast<const char*>(c), count);
+  inline auto& write(const void* c, size_t count) {
+    if (!(remaining() >= count)) [[unlikely]]
+      throw std::out_of_range("datastream attempted to write past the end");
+    auto s = std::span(reinterpret_cast<const char*>(c), count);
     std::copy(s.begin(), s.end(), pos_);
     pos_ += count;
-    return true;
+    return *this;
   }
 
-  inline bool put(char c) {
-    check(std::distance(pos_, span.end()), "put");
+  inline auto& put(char c) {
+    if (!(remaining() >= 1)) [[unlikely]]
+      throw std::out_of_range("datastream attempted to write past the end");
     *pos_++ = c;
-    return true;
+    return *this;
   }
 
   auto pos() const {
     return pos_;
   }
 
-  inline bool seekp(size_t p) {
+  inline auto& seekp(size_t p) {
     pos_ = span.begin() + p;
-    return true;
+    return *this;
   }
 
   inline size_t tellp() const {
@@ -78,34 +107,28 @@ public:
   datastream(size_t init_size = 0)
     : size(init_size) {}
 
-  inline bool skip(size_t s) {
+  inline void skip(size_t s) {
     size += s;
-    return true;
   }
 
-  inline bool write(std::span<char> s) {
+  inline auto& write(std::span<const char> s) {
     size += s.size();
-    return true;
+    return *this;
   }
 
-  inline bool write(char) {
-    ++size;
-    return true;
-  }
-
-  inline bool write(const void*, size_t s) {
+  inline auto& write(const void*, size_t s) {
     size += s;
-    return true;
+    return *this;
   }
 
-  inline bool put(char) {
+  inline auto& put(char) {
     ++size;
-    return true;
+    return *this;
   }
 
-  inline bool seekp(size_t p) {
+  inline auto& seekp(size_t p) {
     size = p;
-    return true;
+    *this;
   }
 
   inline size_t tellp() const {

@@ -1,5 +1,6 @@
 #pragma once
 #include <noir/codec/datastream.h>
+#include <noir/common/check.h>
 #include <noir/common/expected.h>
 #include <noir/common/pow.h>
 #include <noir/common/varint.h>
@@ -50,9 +51,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const unsig
 
 template<typename Stream>
 datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, unsigned_int& v) {
-  char tmp = 0;
-  ds.read({&tmp, 1});
-  ds.seekp(ds.tellp() - 1);
+  char tmp = ds.peek();
   switch (tmp & 0b11) {
     case 0b00: {
         uint8_t val = 0;
