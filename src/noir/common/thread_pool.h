@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: MIT
+// This file is part of NOIR.
+//
+// Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved. 
+//
 #pragma once
 
 #include <boost/asio/io_context.hpp>
@@ -44,3 +49,4 @@ auto async_thread_pool(boost::asio::io_context& thread_pool, F&& f) {
 }
 
 }
+

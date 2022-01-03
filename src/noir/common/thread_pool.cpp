@@ -1,3 +1,8 @@
+// SPDX-License-Identifier: MIT
+// This file is part of NOIR.
+//
+// Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved. 
+//
 #include <noir/common/thread_pool.h>
 #include <fc/log/logger_config.hpp>
 
@@ -6,11 +11,11 @@ namespace noir {
 // named_thread_pool
 //
 named_thread_pool::named_thread_pool(std::string name_prefix, size_t num_threads)
-    : _thread_pool(num_threads)
-    , _ioc(num_threads)
+  : _thread_pool(num_threads)
+  , _ioc(num_threads)
 {
-  _ioc_work.emplace(boost::asio::make_work_guard(_ioc ));
-  for(size_t i = 0; i < num_threads; ++i) {
+  _ioc_work.emplace(boost::asio::make_work_guard(_ioc));
+  for (size_t i = 0; i < num_threads; ++i) {
     boost::asio::post(_thread_pool, [&ioc = _ioc, name_prefix, i]() {
       std::string tn = name_prefix + "-" + std::to_string(i);
       fc::set_os_thread_name(tn);
@@ -31,3 +36,4 @@ void named_thread_pool::stop() {
 }
 
 }
+
