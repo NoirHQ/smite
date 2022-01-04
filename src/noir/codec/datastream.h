@@ -101,38 +101,38 @@ private:
 template<>
 class basic_datastream<size_t> {
 public:
-  basic_datastream(size_t init_size = 0)
+  constexpr basic_datastream(size_t init_size = 0)
     : size(init_size) {}
 
-  inline void skip(size_t s) {
+  constexpr void skip(size_t s) {
     size += s;
   }
 
-  inline auto& write(std::span<const char> s) {
+  constexpr auto& write(std::span<const char> s) {
     size += s.size();
     return *this;
   }
 
-  inline auto& write(const void*, size_t s) {
+  constexpr auto& write(const void*, size_t s) {
     size += s;
     return *this;
   }
 
-  inline auto& put(char) {
+  constexpr auto& put(char) {
     ++size;
     return *this;
   }
 
-  inline auto& seekp(size_t p) {
+  constexpr auto& seekp(size_t p) {
     size = p;
     return *this;
   }
 
-  inline size_t tellp() const {
+  constexpr size_t tellp() const {
     return size;
   }
 
-  inline size_t remaining() const {
+  constexpr size_t remaining() const {
     return 0;
   }
 
@@ -150,7 +150,7 @@ public: \
   using basic_datastream<T>::basic_datastream; \
 }; \
 template<typename T> \
-size_t encode_size(const T& v) { \
+constexpr size_t encode_size(const T& v) { \
   datastream<size_t> ds; \
   ds << v; \
   return ds.tellp(); \
