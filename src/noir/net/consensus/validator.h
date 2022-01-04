@@ -44,6 +44,13 @@ struct validator_set {
   std::optional<validator> proposer;
   int64_t total_voting_power = 0;
 
+  static validator_set new_validator_set(std::vector<validator> &validator_list) {
+    validator_set vals;
+    vals.update_with_change_set(validator_list, false);
+    if (!validator_list.empty()) vals.increment_proposer_priority(1);
+    return vals;
+  }
+
   bool has_address(const bytes &address) {
     for (const auto &val: validators) {
       if (val.address == address)
@@ -105,13 +112,14 @@ struct validator_set {
    * Expects updates to be a list of updates sorted by address with no duplicates or errors,
    * must have been validated with verifyUpdates() and priorities computed with computeNewPriorities().
    */
-  void apply_updates(std::vector<validator> updates) {
+  void apply_updates(std::vector<validator> &updates) {
     std::vector<validator> existing(validators);
     sort(existing.begin(), existing.end(), [](validator a, validator b) {
       return a.address < b.address;
     });
 
     std::vector<validator> merged;
+    merged.resize(existing.size() + updates.size());
     auto i = 0;
     while (!existing.empty() && !updates.empty()) {
       if (existing[0].address < updates[0].address) {
@@ -141,7 +149,7 @@ struct validator_set {
     }
 
     validators.clear();
-    for (auto j = 0; j <= i; j++)
+    for (auto j = 0; j < i; j++)
       validators.push_back(merged[j]);
   }
 
@@ -149,10 +157,11 @@ struct validator_set {
    * Should not fail as verification has been done before.
    * Expects vals to be sorted by address (done by applyUpdates).
    */
-  void apply_removals(std::vector<validator> deletes) {
+  void apply_removals(std::vector<validator> &deletes) {
     std::vector<validator> existing(validators);
 
     std::vector<validator> merged;
+    merged.resize(existing.size() - deletes.size());
     auto i = 0;
     // Loop over deletes until we removed all of them.
     while (!deletes.empty()) {
@@ -173,7 +182,7 @@ struct validator_set {
     }
 
     validators.clear();
-    for (auto j = 0; j <= i; j++)
+    for (auto j = 0; j < i; j++)
       validators.push_back(merged[j]);
   }
 
@@ -190,7 +199,7 @@ struct validator_set {
    * If an error is detected during verification steps, it is returned and the validator set
    * is not changed.
    */
-  void update_with_change_set(std::vector<validator> changes, bool allow_deletes) {
+  void update_with_change_set(const std::vector<validator> &changes, bool allow_deletes) {
     if (changes.empty())
       return;
 
@@ -305,7 +314,7 @@ struct validator_set {
    *
    * No changes are made to the validator set 'vals'.
    */
-  void compute_new_priorities(std::vector<validator> updates, int64_t updated_total_voting_power) {
+  void compute_new_priorities(const std::vector<validator> &updates, int64_t updated_total_voting_power) {
     for (auto val_update: updates) {
       auto address = val_update.address;
       auto val = get_by_address(address);
