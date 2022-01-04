@@ -2,8 +2,8 @@
 #include <noir/net/consensus/block.h>
 #include <noir/net/consensus/tx.h>
 #include <noir/net/queued_buffer.h>
-#include <noir/net/thread_util.h>
 #include <noir/net/buffer_factory.h>
+#include <noir/common/thread_pool.h>
 
 #include <appbase/application.hpp>
 
