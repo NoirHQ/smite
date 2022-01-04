@@ -1,5 +1,4 @@
 #pragma once
-
 #include <noir/net/consensus/validator.h>
 #include <noir/net/consensus/params.h>
 #include <noir/net/consensus/block.h>
