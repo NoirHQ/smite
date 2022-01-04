@@ -1,5 +1,7 @@
 #include <noir/tendermint/tendermint.h>
 
+#include <noir/common/log.h>
+
 extern void abci_init();
 
 namespace noir::tendermint {
@@ -9,6 +11,7 @@ void tendermint::set_program_options(CLI::App& cli, CLI::App& config) {
 }
 
 void tendermint::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
+  noir::log::initialize(noir::log::DEFAULT_LOGGER_NAME);
   log::info("tendermint init");
 }
 
