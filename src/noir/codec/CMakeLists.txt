@@ -1,5 +1,8 @@
-add_executable(scale_test scale_test.cpp)
-target_link_libraries(scale_test noir Catch2WithMain)
+if(BUILD_TESTING)
+  target_sources(noir_tests
+    PRIVATE
+      scale_test.cpp
+      rlp_test.cpp
+  )
+endif()
 
-add_executable(rlp_test rlp_test.cpp)
-target_link_libraries(rlp_test noir Catch2WithMain)
