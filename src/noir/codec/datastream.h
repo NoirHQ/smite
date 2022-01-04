@@ -11,6 +11,9 @@ public:
   basic_datastream(std::span<T> s)
     : span(s), pos_(s.begin()) {}
 
+  basic_datastream(T* s, size_t count)
+    : span(s, count), pos_(span.begin()) {}
+
   inline void skip(size_t s) {
     pos_ += s;
   }
