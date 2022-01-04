@@ -1,4 +1,5 @@
 #pragma once
+
 #include <noir/net/consensus/validator.h>
 #include <noir/net/consensus/params.h>
 #include <noir/net/consensus/block.h>
@@ -15,16 +16,17 @@ using namespace std;
  * including the last validator set and the consensus params.
  */
 class state {
- public:
+public:
   state();
 
   block make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ bytes proposal_address);
 
   tstamp get_median_time();
 
-  state update_state(state new_state, block_id new_block_id, /* header, */ /* abci_response, */ std::vector<validator> validator_updates);
+  state update_state(state new_state, block_id new_block_id, /* header, */ /* abci_response, */
+    std::vector<validator> validator_updates);
 
- public:
+public:
   string version;
 
   string chain_id;
@@ -35,7 +37,7 @@ class state {
   tstamp last_block_time;
 
   validator_set
-      validators; // persisted to the database separately every time they change, so we can query for historical validator sets.
+    validators; // persisted to the database separately every time they change, so we can query for historical validator sets.
   validator_set next_validators;
   validator_set last_validators; // used to validate block.LastCommit
   int64_t last_height_validators_changed;
@@ -89,50 +91,52 @@ block state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* e
 }
 
 tstamp state::get_median_time() {
-  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  return std::chrono::duration_cast<std::chrono::microseconds>(
+    std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-state state::update_state(state new_state, block_id new_block_id, /* header, */ /* abci_response, */ std::vector<validator> validator_updates) {
+state state::update_state(state new_state, block_id new_block_id, /* header, */ /* abci_response, */
+  std::vector<validator> validator_updates) {
 
 //  next_validators.update_with_change_set();
 
 #if 0
   // Copy the valset so we can apply changes from EndBlock
-	// and update s.LastValidators and s.Validators.
-	nValSet := state.NextValidators.Copy()
+  // and update s.LastValidators and s.Validators.
+  nValSet := state.NextValidators.Copy()
 
-	// Update the validator set with the latest abciResponses.
-	lastHeightValsChanged := state.LastHeightValidatorsChanged
-	if len(validatorUpdates) > 0 {
-		err := nValSet.UpdateWithChangeSet(validatorUpdates)
-		if err != nil {
-			return state, fmt.Errorf("error changing validator set: %v", err)
-		}
-		// Change results from this height but only applies to the next next height.
-		lastHeightValsChanged = header.Height + 1 + 1
-	}
+  // Update the validator set with the latest abciResponses.
+  lastHeightValsChanged := state.LastHeightValidatorsChanged
+  if len(validatorUpdates) > 0 {
+    err := nValSet.UpdateWithChangeSet(validatorUpdates)
+    if err != nil {
+      return state, fmt.Errorf("error changing validator set: %v", err)
+    }
+    // Change results from this height but only applies to the next next height.
+    lastHeightValsChanged = header.Height + 1 + 1
+  }
 
-	// Update validator proposer priority and set state variables.
-	nValSet.IncrementProposerPriority(1)
+  // Update validator proposer priority and set state variables.
+  nValSet.IncrementProposerPriority(1)
 
-	// Update the params with the latest abciResponses.
-	nextParams := state.ConsensusParams
-	lastHeightParamsChanged := state.LastHeightConsensusParamsChanged
-	if abciResponses.EndBlock.ConsensusParamUpdates != nil {
-		// NOTE: must not mutate s.ConsensusParams
-		nextParams = state.ConsensusParams.UpdateConsensusParams(abciResponses.EndBlock.ConsensusParamUpdates)
-		err := nextParams.ValidateConsensusParams()
-		if err != nil {
-			return state, fmt.Errorf("error updating consensus params: %v", err)
-		}
+  // Update the params with the latest abciResponses.
+  nextParams := state.ConsensusParams
+  lastHeightParamsChanged := state.LastHeightConsensusParamsChanged
+  if abciResponses.EndBlock.ConsensusParamUpdates != nil {
+    // NOTE: must not mutate s.ConsensusParams
+    nextParams = state.ConsensusParams.UpdateConsensusParams(abciResponses.EndBlock.ConsensusParamUpdates)
+    err := nextParams.ValidateConsensusParams()
+    if err != nil {
+      return state, fmt.Errorf("error updating consensus params: %v", err)
+    }
 
-		state.Version.Consensus.App = nextParams.Version.AppVersion
+    state.Version.Consensus.App = nextParams.Version.AppVersion
 
-		// Change results from this height but only applies to the next height.
-		lastHeightParamsChanged = header.Height + 1
-	}
+    // Change results from this height but only applies to the next height.
+    lastHeightParamsChanged = header.Height + 1
+  }
 
-	nextVersion := state.Version
+  nextVersion := state.Version
 #endif
 }
 

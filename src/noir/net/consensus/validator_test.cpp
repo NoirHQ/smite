@@ -5,11 +5,11 @@
 using namespace noir;
 using namespace noir::net::consensus;
 
-void print_validator_set(validator_set &vals) {
+void print_validator_set(validator_set& vals) {
   auto index = 0;
-  for (auto val: vals.validators)
+  for (auto val : vals.validators)
     std::cout << index++ << ":" << to_hex(val.address) << " " << val.voting_power << " " << val.proposer_priority
-              << std::endl;
+      << std::endl;
 }
 
 TEST_CASE("Basic", "[validator_set]") {
@@ -52,7 +52,7 @@ TEST_CASE("Proposer Selection 1", "[validator_set]") {
 
 //  std::cout << "Summary:" << std::endl;
   int a{}, b{}, c{};
-  for (const auto &e: proposers) {
+  for (const auto& e : proposers) {
     if (e == "aaaa") a++;
     if (e == "bbbb") b++;
     if (e == "cccc") c++;

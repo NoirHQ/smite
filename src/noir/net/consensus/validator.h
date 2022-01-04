@@ -1,4 +1,5 @@
 #pragma once
+
 #include <noir/net/types.h>
 
 namespace noir::net::consensus { // todo - move consensus somewhere (maybe under libs?)
@@ -23,7 +24,7 @@ struct validator {
   int64_t voting_power;
   int64_t proposer_priority;
 
-  validator &compare_proposer_priority(validator &other) {
+  validator& compare_proposer_priority(validator& other) {
     if (this == &other)
       return *this;
     if (proposer_priority > other.proposer_priority)
@@ -44,23 +45,23 @@ struct validator_set {
   std::optional<validator> proposer;
   int64_t total_voting_power = 0;
 
-  static validator_set new_validator_set(std::vector<validator> &validator_list) {
+  static validator_set new_validator_set(std::vector<validator>& validator_list) {
     validator_set vals;
     vals.update_with_change_set(validator_list, false);
     if (!validator_list.empty()) vals.increment_proposer_priority(1);
     return vals;
   }
 
-  bool has_address(const bytes &address) {
-    for (const auto &val: validators) {
+  bool has_address(const bytes& address) {
+    for (const auto& val : validators) {
       if (val.address == address)
         return true;
     }
     return false;
   }
 
-  std::optional<validator> get_by_address(const bytes &address) {
-    for (auto val: validators) {
+  std::optional<validator> get_by_address(const bytes& address) {
+    for (auto val : validators) {
       if (val.address == address)
         return val;
     }
@@ -81,7 +82,7 @@ struct validator_set {
 
   void update_total_voting_power() {
     int64_t sum{};
-    for (const auto &val: validators) {
+    for (const auto& val : validators) {
       sum += val.voting_power; // todo - check safe add
       if (sum > max_total_voting_power)
         throw std::runtime_error("total_voting_power exceeded max allowed");
@@ -101,7 +102,7 @@ struct validator_set {
     if (validators.empty())
       return {};
     auto val_with_most_priority = validators.at(0);
-    for (auto &val: validators) {
+    for (auto& val : validators) {
       val_with_most_priority = val.compare_proposer_priority(val_with_most_priority);
     }
     return val_with_most_priority;
@@ -112,7 +113,7 @@ struct validator_set {
    * Expects updates to be a list of updates sorted by address with no duplicates or errors,
    * must have been validated with verifyUpdates() and priorities computed with computeNewPriorities().
    */
-  void apply_updates(std::vector<validator> &updates) {
+  void apply_updates(std::vector<validator>& updates) {
     std::vector<validator> existing(validators);
     sort(existing.begin(), existing.end(), [](validator a, validator b) {
       return a.address < b.address;
@@ -138,12 +139,12 @@ struct validator_set {
     }
 
     // add the elements which are left
-    for (auto &j: existing) {
+    for (auto& j : existing) {
       merged[i] = j;
       i++;
     }
     // Or, add updates which are left
-    for (auto &update: updates) {
+    for (auto& update : updates) {
       merged[i] = update;
       i++;
     }
@@ -157,7 +158,7 @@ struct validator_set {
    * Should not fail as verification has been done before.
    * Expects vals to be sorted by address (done by applyUpdates).
    */
-  void apply_removals(std::vector<validator> &deletes) {
+  void apply_removals(std::vector<validator>& deletes) {
     std::vector<validator> existing(validators);
 
     std::vector<validator> merged;
@@ -176,7 +177,7 @@ struct validator_set {
     }
 
     // add the elements which are left
-    for (auto &j: existing) {
+    for (auto& j : existing) {
       merged[i] = j;
       i++;
     }
@@ -199,7 +200,7 @@ struct validator_set {
    * If an error is detected during verification steps, it is returned and the validator set
    * is not changed.
    */
-  void update_with_change_set(const std::vector<validator> &changes, bool allow_deletes) {
+  void update_with_change_set(const std::vector<validator>& changes, bool allow_deletes) {
     if (changes.empty())
       return;
 
@@ -210,7 +211,7 @@ struct validator_set {
     });
     std::vector<validator> updates, deletes;
     bytes prevAddr;
-    for (auto val_update: changesCopy) {
+    for (auto val_update : changesCopy) {
       if (val_update.address == prevAddr) {
         elog("duplicate entry ${val_update} in changes", ("val_update", val_update.address));
         return;
@@ -220,7 +221,7 @@ struct validator_set {
         return;
       } else if (val_update.voting_power > max_total_voting_power) {
         elog("to prevent clipping/overflow, voting power can't be higher than max allowed: $(v_power)",
-             ("v_power", val_update.voting_power));
+          ("v_power", val_update.voting_power));
         return;
       } else if (val_update.voting_power == 0) {
         deletes.push_back(val_update);
@@ -237,7 +238,7 @@ struct validator_set {
 
     // Check that the resulting set will not be empty.
     auto num_new_validators = 0;
-    for (const auto &val_update: updates) {
+    for (const auto& val_update : updates) {
       if (!has_address(val_update.address)) num_new_validators++;
     }
     if (num_new_validators == 0 && validators.size() == deletes.size()) {
@@ -249,7 +250,7 @@ struct validator_set {
     // Verify that applying the 'deletes' against 'vals' will not result in error.
     // Get the voting power that is going to be removed.
     int64_t removed_voting_power = 0;
-    for (auto val_update: deletes) {
+    for (auto val_update : deletes) {
       auto address = val_update.address;
       auto val = get_by_address(address);
       if (!val.has_value()) {
@@ -264,7 +265,7 @@ struct validator_set {
 
     // Verify that applying the 'updates' against 'vals' will not result in error.
     // Get the updated total voting power before removal. Note that this is < 2 * MaxTotalVotingPower
-    auto delta = [](validator &update, validator_set &vals) {
+    auto delta = [](validator& update, validator_set& vals) {
       auto val = vals.get_by_address(update.address);
       if (val.has_value())
         return update.voting_power - val->voting_power;
@@ -275,7 +276,7 @@ struct validator_set {
       return delta(a, *this) < delta(b, *this);
     });
     auto tvp_after_removals = total_voting_power - removed_voting_power;
-    for (auto val_update: updatesCopy) {
+    for (auto val_update : updatesCopy) {
       tvp_after_removals += delta(val_update, *this);
       if (tvp_after_removals > max_total_voting_power) {
         elog("total voting power of resulting valset exceeds max");
@@ -314,8 +315,8 @@ struct validator_set {
    *
    * No changes are made to the validator set 'vals'.
    */
-  void compute_new_priorities(const std::vector<validator> &updates, int64_t updated_total_voting_power) {
-    for (auto val_update: updates) {
+  void compute_new_priorities(const std::vector<validator>& updates, int64_t updated_total_voting_power) {
+    for (auto val_update : updates) {
       auto address = val_update.address;
       auto val = get_by_address(address);
       if (!val.has_value()) {
@@ -348,15 +349,15 @@ struct validator_set {
     shift_by_avg_proposer_priority();
 
     for (auto i = 0; i < times; i++) {
-      for (auto &val: validators) {
+      for (auto& val : validators) {
         val.proposer_priority += val.voting_power; // todo - check safe add
       }
       // find validator with most priority
       auto it = std::max_element(validators.begin(),
-                                 validators.end(),
-                                 [](const validator &a, const validator &b) {
-                                   return a.proposer_priority < b.proposer_priority;
-                                 });
+        validators.end(),
+        [](const validator& a, const validator& b) {
+          return a.proposer_priority < b.proposer_priority;
+        });
       it->proposer_priority -= total_voting_power;
       proposer = *it;
     }
@@ -373,7 +374,7 @@ struct validator_set {
     // Re-normalization is performed by dividing by an integer for simplicity.
     auto max = std::numeric_limits<int64_t>::max();
     auto min = std::numeric_limits<int64_t>::min();
-    for (const auto &val: validators) {
+    for (const auto& val : validators) {
       if (val.proposer_priority < min)
         min = val.proposer_priority;
       if (val.proposer_priority > max)
@@ -384,7 +385,7 @@ struct validator_set {
       diff = -diff;
     auto ratio = (diff + diff_max - 1) / diff_max;
     if (diff > diff_max) {
-      for (auto &val: validators) {
+      for (auto& val : validators) {
         val.proposer_priority /= ratio;
       }
     }
@@ -394,12 +395,12 @@ struct validator_set {
     if (validators.empty()) throw std::runtime_error("empty validator set");
     // compute average proposer_priority
     int64_t sum = 0;
-    for (auto &val: validators) {
+    for (auto& val : validators) {
       sum += val.proposer_priority;
     }
     if (sum > 0) {
       int64_t avg = sum / validators.size();
-      for (auto &val: validators) {
+      for (auto& val : validators) {
         val.proposer_priority -= avg; // todo - check safe sub
       }
     }

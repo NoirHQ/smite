@@ -1,4 +1,5 @@
 #pragma once
+
 #include <noir/net/protocol.h>
 
 namespace noir::net::consensus { // todo - where to place?
