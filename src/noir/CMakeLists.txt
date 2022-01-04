@@ -13,6 +13,7 @@ endif()
 if(BUILD_TESTING)
   add_executable(noir_tests)
   target_link_libraries(noir_tests noir Catch2WithMain)
+  catch_discover_tests(noir_tests)
 endif()
 
 add_subdirectory(codec)
