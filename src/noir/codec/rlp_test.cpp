@@ -3,7 +3,7 @@
 #include <noir/common/hex.h>
 
 using namespace noir;
-using namespace noir::codec;
+using namespace noir::codec::rlp;
 
 TEST_CASE("booleans", "[codec][rlp]") {
   auto tests = std::to_array<std::pair<bool, const char*>>({
@@ -12,8 +12,8 @@ TEST_CASE("booleans", "[codec][rlp]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) {
-    CHECK(to_hex(encode<rlp>(t.first)) == t.second);
-    CHECK(t.first == decode<rlp,uint32_t>(from_hex(t.second)));
+    CHECK(to_hex(encode(t.first)) == t.second);
+    CHECK(t.first == decode<uint32_t>(from_hex(t.second)));
   });
 }
 
@@ -30,8 +30,8 @@ TEST_CASE("integers", "[codec][rlp]") {
     });
 
     std::for_each(tests.begin(), tests.end(), [&](auto& t) {
-      CHECK(to_hex(encode<rlp>(t.first)) == t.second);
-      CHECK(t.first == decode<rlp,uint32_t>(from_hex(t.second)));
+      CHECK(to_hex(encode(t.first)) == t.second);
+      CHECK(t.first == decode<uint32_t>(from_hex(t.second)));
     });
   }
 
@@ -45,8 +45,8 @@ TEST_CASE("integers", "[codec][rlp]") {
     });
 
     std::for_each(tests.begin(), tests.end(), [&](auto& t) {
-      CHECK(to_hex(encode<rlp>(t.first)) == t.second);
-      CHECK(t.first == decode<rlp,uint64_t>(from_hex(t.second)));
+      CHECK(to_hex(encode(t.first)) == t.second);
+      CHECK(t.first == decode<uint64_t>(from_hex(t.second)));
     });
   }
 }
@@ -67,8 +67,8 @@ TEST_CASE("strings", "[codec][rlp]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) {
-    CHECK(to_hex(encode<rlp>(t.first)) == t.second);
-    CHECK(t.first == decode<rlp,std::string>(from_hex(t.second)));
+    CHECK(to_hex(encode(t.first)) == t.second);
+    CHECK(t.first == decode<std::string>(from_hex(t.second)));
   });
 }
 
@@ -80,8 +80,8 @@ TEST_CASE("list", "[codec][rlp]") {
     });
 
     std::for_each(tests.begin(), tests.end(), [&](auto& t) {
-      CHECK(to_hex(encode<rlp>(t.first)) == t.second);
-      CHECK(t.first == decode<rlp,std::vector<uint32_t>>(from_hex(t.second)));
+      CHECK(to_hex(encode(t.first)) == t.second);
+      CHECK(t.first == decode<std::vector<uint32_t>>(from_hex(t.second)));
     });
   }
 
@@ -122,7 +122,7 @@ TEST_CASE("list", "[codec][rlp]") {
        "f90200cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376cf84617364668471776572847a786376"
     });
 
-    CHECK(to_hex(encode<rlp>(t.first)) == t.second);
-    CHECK(t.first == decode<rlp,std::vector<std::vector<std::string>>>(from_hex(t.second)));
+    CHECK(to_hex(encode(t.first)) == t.second);
+    CHECK(t.first == decode<std::vector<std::vector<std::string>>>(from_hex(t.second)));
   }
 }

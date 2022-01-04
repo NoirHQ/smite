@@ -1,17 +1,13 @@
 #pragma once
 #include <noir/codec/datastream.h>
+#include <noir/common/check.h>
 #include <span>
 
-namespace noir::codec {
+NOIR_CODEC(rlp) {
 
-class rlp {
-public:
-  template<typename Stream>
-  using datastream = noir::codec::datastream<rlp, Stream>;
-
-private:
+namespace detail {
   template<bool Prefix, typename Stream, typename T>
-  static void encode(datastream<Stream>& ds, const T& v, unsigned char mod) {
+  void encode(datastream<Stream>& ds, const T& v, unsigned char mod) {
     if constexpr (Prefix) {
       // encode a length prefix less than 55
       if (v <= 55) {
@@ -44,7 +40,7 @@ private:
   }
 
   template<bool Prefix, typename Stream>
-  static uint64_t decode(datastream<Stream>& ds, unsigned char prefix, unsigned char mod) {
+  uint64_t decode(datastream<Stream>& ds, unsigned char prefix, unsigned char mod) {
     if constexpr (!Prefix) {
       // decode a value less than 128 (0x80)
       if (prefix < 0x80) {
@@ -64,49 +60,45 @@ private:
     auto v = 0ull;
     auto s = std::span((char*)&v, sizeof(v));
     std::for_each(s.rend() - size, s.rend(), [&](auto& c) {
-      ds.read(&c, 1);
+      ds.get(c);
     });
     return v;
   }
+}
 
-public:
-  template<typename Stream, typename T>
-  static void encode_bytes(datastream<Stream>& ds, const T& v, unsigned char mod) {
-    encode<0>(ds, v, mod);
-  }
+template<typename Stream, typename T>
+void encode_bytes(datastream<Stream>& ds, const T& v, unsigned char mod) {
+  detail::encode<0>(ds, v, mod);
+}
 
-  template<typename Stream, typename T>
-  static void encode_prefix(datastream<Stream>& ds, const T& v, unsigned char mod) {
-    encode<1>(ds, v, mod);
-  }
+template<typename Stream, typename T>
+void encode_prefix(datastream<Stream>& ds, const T& v, unsigned char mod) {
+  detail::encode<1>(ds, v, mod);
+}
 
-  template<typename Stream>
-  static uint64_t decode_bytes(datastream<Stream>& ds, unsigned char v, unsigned char mod) {
-    return decode<0>(ds, v, mod);
-  }
+template<typename Stream>
+uint64_t decode_bytes(datastream<Stream>& ds, unsigned char v, unsigned char mod) {
+  return detail::decode<0>(ds, v, mod);
+}
 
-  template<typename Stream>
-  static uint64_t decode_prefix(datastream<Stream>& ds, unsigned char v, unsigned char mod) {
-    return decode<1>(ds, v, mod);
-  }
-};
+template<typename Stream>
+uint64_t decode_prefix(datastream<Stream>& ds, unsigned char v, unsigned char mod) {
+  return detail::decode<1>(ds, v, mod);
+}
 
 // integers
 template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
-datastream<rlp, Stream>& operator<<(datastream<rlp, Stream>& ds, const T& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   static_assert(sizeof(T) <= 55);
   rlp::encode_bytes(ds, v, 0x80);
   return ds;
 }
 
 template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
-datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, T& v) {
-  unsigned char prefix = 0;
-  ds.read((char*)&prefix, 1);
-  if (prefix < 0x80) {
-    v = prefix;
-  } else if (prefix < 0xb8) {
-    check(prefix - 0x80 <= sizeof(T), "not sufficient output size");
+datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
+  auto prefix = static_cast<unsigned char>(ds.get());
+  if (prefix < 0xb8) {
+    check(prefix <= 0x80 + sizeof(T), "not sufficient output size");
     v = rlp::decode_bytes(ds, prefix, 0x80);
   } else if (prefix < 0xc0) {
     // TODO
@@ -119,10 +111,10 @@ datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, T& v) {
 
 // list
 template<typename Stream, typename T>
-datastream<rlp, Stream>& operator<<(datastream<rlp, Stream>& ds, const std::vector<T>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) {
   auto size = 0ull;
   for (const auto& val : v) {
-    size += encode_size<rlp>(val);
+    size += encode_size(val);
   }
   rlp::encode_prefix(ds, size, 0xc0);
   for (const auto& val : v) {
@@ -132,9 +124,8 @@ datastream<rlp, Stream>& operator<<(datastream<rlp, Stream>& ds, const std::vect
 }
 
 template<typename Stream, typename T>
-datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, std::vector<T>& v) {
-  unsigned char prefix = 0;
-  ds.read((char*)&prefix, 1);
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
+  auto prefix = static_cast<unsigned char>(ds.get());
   check(prefix >= 0xc0, "not matched prefix type");
   auto size = rlp::decode_prefix(ds, prefix, 0xc0);
   while (size > 0) {
@@ -149,7 +140,7 @@ datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, std::vector<T>&
 
 // strings
 template<typename Stream>
-datastream<rlp, Stream>& operator<<(datastream<rlp, Stream>& ds, const std::string& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
   auto size = v.size();
   if (size == 1 && v[0] < 0x80u) {
     ds.put(v[0]);
@@ -161,16 +152,15 @@ datastream<rlp, Stream>& operator<<(datastream<rlp, Stream>& ds, const std::stri
 }
 
 template<typename Stream>
-datastream<rlp, Stream>& operator>>(datastream<rlp, Stream>& ds, std::string& v) {
-  unsigned char prefix = 0;
-  ds.read((char*)&prefix, 1);
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
+  auto prefix = static_cast<unsigned char>(ds.get());
   if (prefix < 0x80) {
     v.resize(1);
     v[0] = prefix;
   } else if (prefix < 0xc0) {
     auto size = rlp::decode_prefix(ds, prefix, 0x80);
     v.resize(size);
-    ds.read(v.data(), size);
+    ds.read(v);
   } else {
     check(false, "not matched prefix type");
   }

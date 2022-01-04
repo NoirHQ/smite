@@ -1,5 +1,6 @@
 #pragma once
 #include <noir/codec/datastream.h>
+#include <noir/common/check.h>
 #include <noir/common/expected.h>
 #include <noir/common/pow.h>
 #include <noir/common/varint.h>
@@ -7,31 +8,25 @@
 #include <optional>
 #include <variant>
 
-namespace noir::codec {
-
-class scale {
-public:
-  template<typename Stream>
-  using datastream = noir::codec::datastream<scale, Stream>;
-};
+NOIR_CODEC(scale) {
 
 // Fixed-width integers
 // Boolean
-template<typename Stream, typename T, typename = std::enable_if_t<std::numeric_limits<T>::is_integer>>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const T& v) {
+template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   ds.write((const char *)&v, sizeof(v));
   return ds;
 }
 
-template<typename Stream, typename T, typename = std::enable_if_t<std::numeric_limits<T>::is_integer>>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, T& v) {
-  ds.read((char *)&v, sizeof(v));
+template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
+datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
+  ds.read({(char *)&v, sizeof(v)});
   return ds;
 }
 
 // Compact/general integers
 template<typename Stream>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const unsigned_int& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const unsigned_int& v) {
   using noir::pown;
   if (v < pown(2u, 6)) {
     ds.put(v.value << 2);
@@ -49,10 +44,8 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const unsig
 }
 
 template<typename Stream>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, unsigned_int& v) {
-  char tmp = 0;
-  ds.read(&tmp, 1);
-  ds.seekp(ds.tellp() - 1);
+datastream<Stream>& operator>>(datastream<Stream>& ds, unsigned_int& v) {
+  char tmp = ds.peek();
   switch (tmp & 0b11) {
     case 0b00: {
         uint8_t val = 0;
@@ -85,7 +78,7 @@ datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, unsigned_in
 
 // Options (bool)
 template<typename Stream>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::optional<bool>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::optional<bool>& v) {
   char val = v.has_value();
   if (val) {
     val += !*v;
@@ -95,7 +88,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::
 }
 
 template<typename Stream>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::optional<bool>& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::optional<bool>& v) {
   char has_value = 0;
   ds >> has_value;
   if (has_value) {
@@ -108,7 +101,7 @@ datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::option
 
 // Options (except for bool)
 template<typename Stream, typename T>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::optional<T>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::optional<T>& v) {
   char has_value = v.has_value();
   ds << has_value;
   if (has_value)
@@ -117,7 +110,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::
 }
 
 template<typename Stream, typename T>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::optional<T>& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::optional<T>& v) {
   char has_value = 0;
   ds >> has_value;
   if (has_value) {
@@ -132,7 +125,7 @@ datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::option
 
 // Results
 template<typename Stream, typename T, typename E>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const noir::expected<T,E>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const noir::expected<T,E>& v) {
   char is_unexpected = !v;
   ds << is_unexpected;
   if (v) {
@@ -144,7 +137,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const noir:
 }
 
 template<typename Stream, typename T, typename E>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, noir::expected<T,E>& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, noir::expected<T,E>& v) {
   char is_unexpected = 0;
   ds >> is_unexpected;
   if (!is_unexpected) {
@@ -162,7 +155,7 @@ datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, noir::expec
 // Vectors (lists, series, sets)
 // TODO: Add other containers
 template<typename Stream, typename T>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::vector<T>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) {
   ds << unsigned_int(v.size());
   for (const auto& i : v) {
     ds << i;
@@ -171,7 +164,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::
 }
 
 template<typename Stream, typename T>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::vector<T>& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
   unsigned_int size;
   ds >> size;
   v.resize(size);
@@ -183,7 +176,7 @@ datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::vector
 
 // Strings
 template<typename Stream>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::string& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
   ds << unsigned_int(v.size());
   if (v.size()) {
     ds.write(v.data(), v.size());
@@ -192,7 +185,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::
 }
 
 template<typename Stream>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::string& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
   std::vector<char> tmp;
   ds >> tmp;
   if (tmp.size()) {
@@ -205,20 +198,20 @@ datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::string
 
 // Tuples
 template<typename Stream, typename... Ts>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::tuple<Ts...>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::tuple<Ts...>& v) {
   std::apply([&](const auto& ...val) { ((ds << val),...); }, v);
   return ds;
 }
 
 template<typename Stream, typename... Ts>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::tuple<Ts...>& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::tuple<Ts...>& v) {
   std::apply([&](auto& ...val) { ((ds >> val),...); }, v);
   return ds;
 }
 
 // Data Structures
 template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const T& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   boost::pfr::for_each_field(v, [&](const auto& val) {
     ds << val;
   });
@@ -226,7 +219,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const T& v)
 }
 
 template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, T& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   boost::pfr::for_each_field(v, [&](auto& val) {
     ds >> val;
   });
@@ -235,7 +228,7 @@ datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, T& v) {
 
 // Enumerations (tagged-unions)
 template<typename Stream, typename... Ts>
-datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::variant<Ts...>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::variant<Ts...>& v) {
   check(v.index() <= 0xff, "no more than 256 variants are supported");
   char index = v.index();
   ds << index;
@@ -245,7 +238,7 @@ datastream<scale, Stream>& operator<<(datastream<scale, Stream>& ds, const std::
 
 namespace detail {
   template<size_t I, typename Stream, typename... Ts>
-  void decode(datastream<scale, Stream>& ds, std::variant<Ts...>& v, int i) {
+  void decode(datastream<Stream>& ds, std::variant<Ts...>& v, int i) {
     if constexpr (I < std::variant_size_v<std::variant<Ts...>>) {
       if (i == I) {
         std::variant_alternative_t<I, std::variant<Ts...>> tmp;
@@ -261,7 +254,7 @@ namespace detail {
 }
 
 template<typename Stream, typename... Ts>
-datastream<scale, Stream>& operator>>(datastream<scale, Stream>& ds, std::variant<Ts...>& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& v) {
   char index = 0;
   ds >> index;
   detail::decode<0>(ds, v, index);
