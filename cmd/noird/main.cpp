@@ -1,7 +1,7 @@
 #include <noir/commands/commands.h>
+#include <noir/common/log.h>
 #include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
-#include <noir/common/log.h>
 
 using namespace noir;
 

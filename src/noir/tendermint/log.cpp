@@ -1,7 +1,7 @@
+#include <tendermint/tendermint.h>
 #include <fc/log/appender.hpp>
 #include <fc/log/log_message.hpp>
 #include <fc/log/logger_config.hpp>
-#include <tendermint/tendermint.h>
 
 namespace noir::tendermint::log {
 
