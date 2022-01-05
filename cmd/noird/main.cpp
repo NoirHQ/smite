@@ -1,6 +1,7 @@
 #include <noir/commands/commands.h>
 #include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
+#include <noir/common/log.h>
 
 using namespace noir;
 
@@ -18,6 +19,8 @@ int main(int argc, char** argv) {
   }
   app.set_home_dir(home_dir / ".noir");
   app.set_config_file("app.toml");
+
+  noir::log::initialize("tmlog");
 
   // add subcommands
   commands::add_command(app.cli(), &commands::debug);

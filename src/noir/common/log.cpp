@@ -1,50 +1,10 @@
 #include <noir/common/log.h>
-#include <fc/log/appender.hpp>
 #include <fc/log/log_message.hpp>
 #include <fc/log/logger_config.hpp>
-#include <noir/tendermint/tendermint.h>
 
 namespace noir::log {
 
-class tmlog_appender : public fc::appender {
-public:
-  explicit tmlog_appender(const fc::variant& args);
-  tmlog_appender();
-
-  virtual ~tmlog_appender();
-
-  virtual void initialize(boost::asio::io_service& io_service) override;
-  virtual void log(const fc::log_message& m) override;
-};
-
-tmlog_appender::tmlog_appender(const fc::variant& args) {}
-
-tmlog_appender::tmlog_appender() {}
-
-tmlog_appender::~tmlog_appender() {}
-
-void tmlog_appender::initialize(boost::asio::io_service& io_service) {}
-
-void tmlog_appender::log(const fc::log_message& m) {
-  fc::string message = format_string(m.get_format(), m.get_data());
-
-  const fc::log_level log_level = m.get_context().get_log_level();
-  switch (log_level) {
-    case fc::log_level::debug:
-      tendermint::log::debug(message.c_str());
-      break;
-    case fc::log_level::info:
-      tendermint::log::info(message.c_str());
-      break;
-    case fc::log_level::warn:
-    case fc::log_level::error:
-      tendermint::log::error(message.c_str());
-      break;
-  }
-}
-
 void initialize(const char* logger_name) {
-  fc::log_config::register_appender<tmlog_appender>(logger_name);
   const fc::logging_config logging_config = [logger_name]() {
     fc::logging_config logging_config;
     fc::variants c;
@@ -67,4 +27,5 @@ void initialize(const char* logger_name) {
   }();
   fc::log_config::configure_logging(logging_config);
 }
+
 } // namespace noir::log

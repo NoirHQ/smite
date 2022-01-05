@@ -3,7 +3,7 @@
 
 namespace noir::log {
 
-static const char* DEFAULT_LOGGER_NAME = "TMLOG";
+static const char* default_logger_name = "tmlog";
 void initialize(const char* logger_name);
 
 #define FC_DEBUG_LOG(LOGGER_NAME, FORMAT, ...) fc_dlog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
@@ -13,22 +13,22 @@ void initialize(const char* logger_name);
 
 #ifdef dlog
 #undef dlog
-#define dlog(FORMAT, ...) FC_DEBUG_LOG(noir::log::DEFAULT_LOGGER_NAME, FORMAT, __VA_ARGS__)
+#define dlog(FORMAT, ...) FC_DEBUG_LOG(noir::log::default_logger_name, FORMAT, __VA_ARGS__)
 #endif
 
 #ifdef ilog
 #undef ilog
-#define ilog(FORMAT, ...) FC_INFO_LOG(noir::log::DEFAULT_LOGGER_NAME, FORMAT, __VA_ARGS__)
+#define ilog(FORMAT, ...) FC_INFO_LOG(noir::log::default_logger_name, FORMAT, __VA_ARGS__)
 #endif
 
 #ifdef wlog
 #undef wlog
-#define wlog(FORMAT, ...) FC_WARN_LOG(noir::log::DEFAULT_LOGGER_NAME, FORMAT, __VA_ARGS__)
+#define wlog(FORMAT, ...) FC_WARN_LOG(noir::log::default_logger_name, FORMAT, __VA_ARGS__)
 #endif
 
 #ifdef elog
 #undef elog
-#define elog(FORMAT, ...) FC_ERROR_LOG(noir::log::DEFAULT_LOGGER_NAME, FORMAT, __VA_ARGS__)
+#define elog(FORMAT, ...) FC_ERROR_LOG(noir::log::default_logger_name, FORMAT, __VA_ARGS__)
 #endif
 
 
