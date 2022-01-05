@@ -8,7 +8,7 @@ import (
 import "C"
 
 var (
-	logger = log.MustNewDefaultLogger(log.LogFormatPlain, log.LogLevelInfo, false)
+	logger = log.MustNewDefaultLogger(log.LogFormatPlain, log.LogLevelDebug, false)
 )
 
 //export tm_log_info
