@@ -1,10 +1,21 @@
 #include <noir/common/log.h>
-
+#include <fc/log/appender.hpp>
+#include <fc/log/log_message.hpp>
 #include <fc/log/logger_config.hpp>
-
 #include <noir/tendermint/tendermint.h>
 
 namespace noir::log {
+
+class tmlog_appender : public fc::appender {
+public:
+  explicit tmlog_appender(const fc::variant& args);
+  tmlog_appender();
+
+  virtual ~tmlog_appender();
+
+  virtual void initialize(boost::asio::io_service& io_service) override;
+  virtual void log(const fc::log_message& m) override;
+};
 
 tmlog_appender::tmlog_appender(const fc::variant& args) {}
 
