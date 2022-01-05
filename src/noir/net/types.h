@@ -8,6 +8,8 @@
 
 namespace noir::net {
 
+using node_id = std::string; // a hex-encoded crypto.Address. It must be lower-cased
+
 using tstamp = std::chrono::system_clock::duration::rep;
 using bytes = std::vector<char>;
 using signature = bytes;

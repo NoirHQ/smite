@@ -1,6 +1,7 @@
 #pragma once
 #include <noir/net/consensus/consensus_state.h>
 #include <noir/net/consensus/state.h>
+#include <noir/net/consensus/round_state.h>
 
 namespace noir::net::consensus {
 
@@ -14,7 +15,20 @@ struct consensus_state {
 
   static std::unique_ptr<consensus_state> new_state(state& state_);
 
+  state get_state();
+  int64_t get_last_height();
+  round_state get_round_state();
+
+  void on_start();
+
+  void update_height(int64_t height);
+  void update_round_step(int32_t rount, round_step_type step);
+  void schedule_round_0(round_state& rs);
   void update_to_state(state& state_);
+
+  void receive_routine(int max_steps);
+  void handle_msg();
+  void handle_timeout();
 
 //  // config details
 //  config            *cfg.ConsensusConfig
@@ -34,10 +48,14 @@ struct consensus_state {
 //  // when it's detected
 //  evpool evidencePool
 //
-//  // internal state
+
+  // internal state
 //  mtx tmsync.RWMutex
-//    cstypes.RoundState
-//    state sm.State // State until height-1.
+//  cstypes.RoundState
+//  state sm.State // State until height-1.
+  std::mutex mtx;
+  round_state rs;
+  state local_state; // State until height-1.
 //  // privValidator pubkey, memoized for the duration of one block
 //  // to avoid extra requests to HSM
 //  privValidatorPubKey crypto.PubKey
@@ -92,12 +110,67 @@ std::unique_ptr<consensus_state> consensus_state::new_state(state& state_) {
   return consensus_state_;
 }
 
-/*
+state consensus_state::get_state() {
+  std::lock_guard<std::mutex> g(mtx);
+  return local_state;
+}
+
+int64_t consensus_state::get_last_height() {
+  std::lock_guard<std::mutex> g(mtx);
+  return rs.height - 1;
+}
+
+round_state consensus_state::get_round_state() {
+  std::lock_guard<std::mutex> g(mtx);
+  return rs;
+}
+
+void consensus_state::on_start() {
+  // todo
+}
+
+void consensus_state::update_height(int64_t height) {
+  rs.height = height;
+}
+
+void consensus_state::update_round_step(int32_t round, round_step_type step) {
+  rs.round = round;
+  rs.step = step;
+}
+
+/**
+ * enterNewRound(height, 0) at StartTime.
+ */
+void consensus_state::schedule_round_0(round_state& rs) {
+//  sleepDuration := rs.StartTime.Sub(tmtime.Now())
+//  cs.scheduleTimeout(sleepDuration, rs.Height, 0, cstypes.RoundStepNewHeight)
+}
+
+/**
  * Updates consensus_state and increments height to match that of state.
  * The round becomes 0 and step becomes RoundStepNewHeight.
  */
 void consensus_state::update_to_state(state& state_) {
   // todo
+}
+
+/**
+ * receiveRoutine handles messages which may cause state transitions.
+ * it's argument (n) is the number of messages to process before exiting - use 0 to run forever
+ * It keeps the RoundState and is the only thing that updates it.
+ * Updates (state transitions) happen on timeouts, complete proposals, and 2/3 majorities.
+ * State must be locked before any internal state is updated.
+ */
+void consensus_state::receive_routine(int max_steps) {
+
+}
+
+void consensus_state::handle_msg() {
+  // todo
+}
+
+void consensus_state::handle_timeout() {
+
 }
 
 }
