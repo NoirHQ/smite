@@ -5,19 +5,19 @@
 
 namespace noir::log {
 
-  class tmlog_appender : public fc::appender {
-  public:
-    explicit tmlog_appender( const fc::variant& args );
-    tmlog_appender();
+class tmlog_appender : public fc::appender {
+public:
+  explicit tmlog_appender(const fc::variant& args);
+  tmlog_appender();
 
-    virtual ~tmlog_appender();
+  virtual ~tmlog_appender();
 
-    virtual void initialize( boost::asio::io_service& io_service ) override;
-    virtual void log( const fc::log_message& m ) override;
-  };
+  virtual void initialize(boost::asio::io_service& io_service) override;
+  virtual void log(const fc::log_message& m) override;
+};
 
-  static const char* DEFAULT_LOGGER_NAME = "TMLOG";
-  void initialize( const char* logger_name );
+static const char* DEFAULT_LOGGER_NAME = "TMLOG";
+void initialize(const char* logger_name);
 
 #define FC_DEBUG_LOG(LOGGER_NAME, FORMAT, ...) fc_dlog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
 #define FC_INFO_LOG(LOGGER_NAME, FORMAT, ...)  fc_ilog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
