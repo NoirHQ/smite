@@ -62,7 +62,7 @@ struct proposal_message {
   int64_t height;
   int32_t round;
   int32_t pol_round;
-  block_id block_id;
+  block_id my_block_id;
   tstamp timestamp{0};
   signature sig;
 };
@@ -84,7 +84,7 @@ struct vote_message {
   bytes validator_address;
   int32_t validator_index;
   signature sig;
-  vote_extension vote_extension;
+  vote_extension my_vote_extension;
 };
 
 enum go_away_reason {
@@ -155,10 +155,10 @@ FC_REFLECT(noir::net::handshake_message,
     (head_num)(head_id)(generation))
 FC_REFLECT(noir::net::go_away_message, (reason)(node_id))
 FC_REFLECT(noir::net::time_message, (org)(rec)(xmt)(dst))
-FC_REFLECT(noir::net::proposal_message, (type)(height)(round)(pol_round)(block_id)(timestamp)(sig))
+FC_REFLECT(noir::net::proposal_message, (type)(height)(round)(pol_round)(my_block_id)(timestamp)(sig))
 FC_REFLECT(noir::net::block_part_message, (height)(round)(index)(bs)(proof))
 FC_REFLECT(noir::net::vote_message,
-  (type)(height)(round)(block_id)(timestamp)(validator_address)(validator_index)(sig)(vote_extension))
+  (type)(height)(round)(block_id)(timestamp)(validator_address)(validator_index)(sig)(my_vote_extension))
 FC_REFLECT(noir::net::block_id, (hash)(parts))
 FC_REFLECT(noir::net::part_set_header, (total)(hash))
 FC_REFLECT(noir::net::vote_extension, (app_data_to_sign)(app_data_self_authenticating))

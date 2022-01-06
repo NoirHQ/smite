@@ -31,7 +31,7 @@ struct commit_sig {
 struct commit {
   int64_t height;
   int32_t round;
-  block_id block_id;
+  block_id my_block_id;
   std::vector<commit_sig> signatures;
 
   // todo - do we need these?
