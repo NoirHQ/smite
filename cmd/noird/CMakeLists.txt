@@ -3,6 +3,7 @@ add_executable(noird
   noir/commands/command.cpp
   noir/commands/debug.cpp
   noir/commands/init.cpp
+  noir/commands/p2p_test.cpp
   noir/commands/start.cpp
   noir/commands/version.cpp
 )

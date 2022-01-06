@@ -18,5 +18,7 @@ endif()
 
 add_subdirectory(codec)
 add_subdirectory(common)
+add_subdirectory(consensus)
+add_subdirectory(p2p)
 add_subdirectory(tendermint)
 

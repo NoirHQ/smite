@@ -19,6 +19,7 @@ CLI::App* add_command(CLI::App& root, add_command_callback cb);
 
 CLI::App* debug(CLI::App&);
 CLI::App* init(CLI::App&);
+CLI::App* p2p_test(CLI::App&);
 CLI::App* start(CLI::App&);
 CLI::App* version(CLI::App&);
 
