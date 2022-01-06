@@ -1,5 +1,9 @@
+// SPDX-License-Identifier: MIT
+// This file is part of NOIR.
+//
+// Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
+//
 #pragma once
-
 #include <noir/net/types.h>
 
 namespace noir::net {
@@ -100,47 +104,61 @@ enum go_away_reason {
 
 constexpr auto reason_str(go_away_reason rsn) {
   switch (rsn) {
-    case no_reason : return "no reason";
-    case self : return "self connect";
-    case duplicate : return "duplicate";
-    case wrong_chain : return "wrong chain";
-    case wrong_version : return "wrong version";
-    case forked : return "chain is forked";
-    case unlinkable : return "unlinkable block received";
-    case bad_transaction : return "bad transaction";
-    case validation : return "invalid block";
-    case authentication : return "authentication failure";
-    case fatal_other : return "some other failure";
-    case benign_other : return "some other non-fatal condition, possibly unknown block";
-    default : return "some crazy reason";
+    case no_reason :
+      return "no reason";
+    case self :
+      return "self connect";
+    case duplicate :
+      return "duplicate";
+    case wrong_chain :
+      return "wrong chain";
+    case wrong_version :
+      return "wrong version";
+    case forked :
+      return "chain is forked";
+    case unlinkable :
+      return "unlinkable block received";
+    case bad_transaction :
+      return "bad transaction";
+    case validation :
+      return "invalid block";
+    case authentication :
+      return "authentication failure";
+    case fatal_other :
+      return "some other failure";
+    case benign_other :
+      return "some other non-fatal condition, possibly unknown block";
+    default :
+      return "some crazy reason";
   }
 }
 
 struct go_away_message {
   go_away_message(go_away_reason r = no_reason) : reason(r), node_id() {}
+
   go_away_reason reason{no_reason};
   fc::sha256 node_id; ///< for duplicate notification
 };
 
 using net_message = std::variant<handshake_message,
-                                 go_away_message,
-                                 time_message,
-                                 proposal_message,
-                                 block_part_message,
-                                 vote_message>;
+  go_away_message,
+  time_message,
+  proposal_message,
+  block_part_message,
+  vote_message>;
 
 } // namespace noir::net
 
 FC_REFLECT(noir::net::handshake_message,
-           (network_version)(node_id)(time)(token)(p2p_address)
-               (last_irreversible_block_num)(last_irreversible_block_id)
-               (head_num)(head_id)(generation))
+  (network_version)(node_id)(time)(token)(p2p_address)
+    (last_irreversible_block_num)(last_irreversible_block_id)
+    (head_num)(head_id)(generation))
 FC_REFLECT(noir::net::go_away_message, (reason)(node_id))
 FC_REFLECT(noir::net::time_message, (org)(rec)(xmt)(dst))
 FC_REFLECT(noir::net::proposal_message, (type)(height)(round)(pol_round)(block_id)(timestamp)(sig))
 FC_REFLECT(noir::net::block_part_message, (height)(round)(index)(bs)(proof))
 FC_REFLECT(noir::net::vote_message,
-           (type)(height)(round)(block_id)(timestamp)(validator_address)(validator_index)(sig)(vote_extension))
+  (type)(height)(round)(block_id)(timestamp)(validator_address)(validator_index)(sig)(vote_extension))
 FC_REFLECT(noir::net::block_id, (hash)(parts))
 FC_REFLECT(noir::net::part_set_header, (total)(hash))
 FC_REFLECT(noir::net::vote_extension, (app_data_to_sign)(app_data_self_authenticating))

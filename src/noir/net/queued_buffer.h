@@ -1,5 +1,9 @@
+// SPDX-License-Identifier: MIT
+// This file is part of NOIR.
+//
+// Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
+//
 #pragma once
-
 #include <noir/net/types.h>
 
 #include <boost/core/noncopyable.hpp>
@@ -14,7 +18,7 @@ namespace noir::net {
 
 // thread safe
 class queued_buffer : boost::noncopyable {
- public:
+public:
   void clear_write_queue() {
     std::lock_guard<std::mutex> g(_mtx);
     _write_queue.clear();
@@ -46,9 +50,9 @@ class queued_buffer : boost::noncopyable {
   }
 
   // @param callback must not callback into queued_buffer
-  bool add_write_queue(const std::shared_ptr<std::vector<char>> &buff,
-                       std::function<void(boost::system::error_code, std::size_t)> callback,
-                       bool to_sync_queue) {
+  bool add_write_queue(const std::shared_ptr<std::vector<char>>& buff,
+    std::function<void(boost::system::error_code, std::size_t)> callback,
+    bool to_sync_queue) {
     std::lock_guard<std::mutex> g(_mtx);
     if (to_sync_queue) {
       _sync_write_queue.push_back({buff, callback});
@@ -62,7 +66,7 @@ class queued_buffer : boost::noncopyable {
     return true;
   }
 
-  void fill_out_buffer(std::vector<boost::asio::const_buffer> &bufs) {
+  void fill_out_buffer(std::vector<boost::asio::const_buffer>& bufs) {
     std::lock_guard<std::mutex> g(_mtx);
     if (_sync_write_queue.size() > 0) { // always send msgs from sync_write_queue first
       fill_out_buffer(bufs, _sync_write_queue);
@@ -74,17 +78,18 @@ class queued_buffer : boost::noncopyable {
 
   void out_callback(boost::system::error_code ec, std::size_t w) {
     std::lock_guard<std::mutex> g(_mtx);
-    for (auto &m: _out_queue) {
+    for (auto& m : _out_queue) {
       m.callback(ec, w);
     }
   }
 
- private:
+private:
   struct queued_write;
-  void fill_out_buffer(std::vector<boost::asio::const_buffer> &bufs,
-                       std::deque<queued_write> &w_queue) {
+
+  void fill_out_buffer(std::vector<boost::asio::const_buffer>& bufs,
+    std::deque<queued_write>& w_queue) {
     while (w_queue.size() > 0) {
-      auto &m = w_queue.front();
+      auto& m = w_queue.front();
       bufs.push_back(boost::asio::buffer(*m.buff));
       _write_queue_size -= m.buff->size();
       _out_queue.emplace_back(m);
@@ -92,7 +97,7 @@ class queued_buffer : boost::noncopyable {
     }
   }
 
- private:
+private:
   struct queued_write {
     std::shared_ptr<std::vector<char>> buff;
     std::function<void(boost::system::error_code, std::size_t)> callback;
