@@ -1,4 +1,10 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
 #include <noir/commands/commands.h>
+#include <noir/common/log.h>
 #include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
 
@@ -18,6 +24,8 @@ int main(int argc, char** argv) {
   }
   app.set_home_dir(home_dir / ".noir");
   app.set_config_file("app.toml");
+
+  noir::log::initialize("tmlog");
 
   // add subcommands
   commands::add_command(app.cli(), &commands::debug);

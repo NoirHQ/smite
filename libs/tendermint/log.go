@@ -1,3 +1,8 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
 package main
 
 import (
@@ -8,7 +13,7 @@ import (
 import "C"
 
 var (
-	logger = log.MustNewDefaultLogger(log.LogFormatPlain, log.LogLevelInfo, false)
+	logger = log.MustNewDefaultLogger(log.LogFormatPlain, log.LogLevelDebug, false)
 )
 
 //export tm_log_info

@@ -1,3 +1,8 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
 #pragma once
 #include <span>
 #include <stdexcept>
@@ -10,6 +15,9 @@ class basic_datastream {
 public:
   basic_datastream(std::span<T> s)
     : span(s), pos_(s.begin()) {}
+
+  basic_datastream(T* s, size_t count)
+    : span(s, count), pos_(span.begin()) {}
 
   inline void skip(size_t s) {
     pos_ += s;
@@ -101,38 +109,38 @@ private:
 template<>
 class basic_datastream<size_t> {
 public:
-  basic_datastream(size_t init_size = 0)
+  constexpr basic_datastream(size_t init_size = 0)
     : size(init_size) {}
 
-  inline void skip(size_t s) {
+  constexpr void skip(size_t s) {
     size += s;
   }
 
-  inline auto& write(std::span<const char> s) {
+  constexpr auto& write(std::span<const char> s) {
     size += s.size();
     return *this;
   }
 
-  inline auto& write(const void*, size_t s) {
+  constexpr auto& write(const void*, size_t s) {
     size += s;
     return *this;
   }
 
-  inline auto& put(char) {
+  constexpr auto& put(char) {
     ++size;
     return *this;
   }
 
-  inline auto& seekp(size_t p) {
+  constexpr auto& seekp(size_t p) {
     size = p;
     return *this;
   }
 
-  inline size_t tellp() const {
+  constexpr size_t tellp() const {
     return size;
   }
 
-  inline size_t remaining() const {
+  constexpr size_t remaining() const {
     return 0;
   }
 
@@ -150,7 +158,7 @@ public: \
   using basic_datastream<T>::basic_datastream; \
 }; \
 template<typename T> \
-size_t encode_size(const T& v) { \
+constexpr size_t encode_size(const T& v) { \
   datastream<size_t> ds; \
   ds << v; \
   return ds.tellp(); \
