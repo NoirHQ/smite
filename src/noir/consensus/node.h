@@ -10,7 +10,7 @@
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 
-namespace noir::consensus { // todo - where to place?
+namespace noir::consensus {
 
 class node : boost::noncopyable {
 public:
@@ -114,4 +114,4 @@ void node::log_node_startup_info(bytes pub_key, std::string mode) {
   }
 }
 
-}
+} // namespace noir::consensus

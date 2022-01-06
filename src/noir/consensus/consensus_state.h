@@ -178,4 +178,4 @@ void consensus_state::handle_timeout() {
 
 }
 
-}
+} // namespace noir::consensus
