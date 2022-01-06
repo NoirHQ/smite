@@ -33,4 +33,4 @@ struct node_key {
 
 };
 
-}
+} // namespace noir::consensus

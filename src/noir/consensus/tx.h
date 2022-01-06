@@ -13,4 +13,4 @@ struct tx {
 
 using tx_ptr = std::shared_ptr<tx>;
 
-}
+} // namespace noir::consensus

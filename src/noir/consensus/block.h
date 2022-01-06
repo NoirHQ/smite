@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/p2p/protocol.h>
 
-namespace noir::consensus { // todo - where to place?
+namespace noir::consensus {
 
 using namespace noir::p2p;
 
@@ -43,5 +43,4 @@ struct commit {
 
 using block_ptr = std::shared_ptr<block>;
 
-}
-
+} // namespace noir::consensus

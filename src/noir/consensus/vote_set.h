@@ -7,7 +7,7 @@
 #include <noir/consensus/validator.h>
 #include <noir/p2p/protocol.h>
 
-namespace noir::consensus { // todo - where to place?
+namespace noir::consensus {
 
 using P2PID = std::string;
 
@@ -68,4 +68,4 @@ struct vote_set {
   std::map<P2PID, block_id> peer_maj23s;
 };
 
-}
+} // namespace noir::consensus

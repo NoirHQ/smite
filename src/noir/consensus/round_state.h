@@ -10,7 +10,7 @@
 #include <noir/p2p/types.h>
 #include <noir/p2p/protocol.h>
 
-namespace noir::consensus { // todo - where to place?
+namespace noir::consensus {
 
 enum round_step_type {
   NewHeight = 1, // Wait til CommitTime + timeoutCommit
@@ -55,4 +55,4 @@ struct round_state {
   bool triggered_timeout_precommit;
 };
 
-}
+} // namespace noir::consensus

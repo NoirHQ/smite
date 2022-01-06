@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/p2p/types.h>
 
-namespace noir::consensus { // todo - move consensus somewhere (maybe under libs?)
+namespace noir::consensus {
 
 struct block_params {
   int64_t max_bytes;
@@ -34,4 +34,4 @@ struct consensus_params {
   version_params version;
 };
 
-}
+} // namespace noir::consensus

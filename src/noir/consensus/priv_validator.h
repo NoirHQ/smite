@@ -19,4 +19,4 @@ struct priv_validator {
   void sign_proposal();
 };
 
-}
+} // namespace noir::consensus

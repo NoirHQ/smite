@@ -7,7 +7,7 @@
 #include <noir/common/log.h>
 #include <noir/p2p/types.h>
 
-namespace noir::consensus { // todo - move consensus somewhere (maybe under libs?)
+namespace noir::consensus {
 
 using namespace noir::p2p;
 
@@ -415,4 +415,4 @@ struct validator_set {
 
 };
 
-} // namespace noir::net::consensus
+} // namespace noir::consensus

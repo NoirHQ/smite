@@ -5,6 +5,6 @@
 //
 #pragma once
 
-namespace noir::consensus { // todo - where to place?
+namespace noir::consensus {
 
-}
+} // namespace noir::consensus

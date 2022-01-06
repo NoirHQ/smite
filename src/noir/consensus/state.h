@@ -10,7 +10,7 @@
 #include <noir/consensus/tx.h>
 #include <noir/p2p/protocol.h>
 
-namespace noir::net::consensus { // todo - move consensus somewhere (maybe under libs?)
+namespace noir::consensus {
 
 using namespace std;
 
@@ -144,4 +144,4 @@ state state::update_state(state new_state, block_id new_block_id, /* header, */ 
 #endif
 }
 
-}
+} // namespace noir::consensus

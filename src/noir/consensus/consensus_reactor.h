@@ -8,7 +8,7 @@
 #include <noir/consensus/state.h>
 #include <noir/p2p/types.h>
 
-namespace noir::consensus { // todo - where to place?
+namespace noir::consensus {
 
 class consensus_reactor : boost::noncopyable {
 public:
@@ -68,4 +68,4 @@ std::unique_ptr<consensus_reactor> consensus_reactor::new_consensus_reactor(stat
   return consensus_reactor_;
 }
 
-}
+} // namespace noir::consensus

@@ -8,7 +8,7 @@
 #include <noir/consensus/vote_set.h>
 #include <noir/p2p/types.h>
 
-namespace noir::consensus { // todo - where to place?
+namespace noir::consensus {
 
 struct part {
   uint32_t index;
@@ -56,4 +56,4 @@ struct height_vote_set {
   std::map<node_id, int32_t> peer_catchup_rounds;
 };
 
-}
+} // namespace noir::consensus
