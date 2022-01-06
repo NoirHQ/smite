@@ -79,7 +79,7 @@ struct vote_message {
   signed_msg_type type;
   int64_t height;
   int32_t round;
-  block_id block_id;
+  block_id my_block_id;
   tstamp timestamp;
   bytes validator_address;
   int32_t validator_index;
@@ -158,7 +158,7 @@ FC_REFLECT(noir::net::time_message, (org)(rec)(xmt)(dst))
 FC_REFLECT(noir::net::proposal_message, (type)(height)(round)(pol_round)(my_block_id)(timestamp)(sig))
 FC_REFLECT(noir::net::block_part_message, (height)(round)(index)(bs)(proof))
 FC_REFLECT(noir::net::vote_message,
-  (type)(height)(round)(block_id)(timestamp)(validator_address)(validator_index)(sig)(my_vote_extension))
+  (type)(height)(round)(my_block_id)(timestamp)(validator_address)(validator_index)(sig)(my_vote_extension))
 FC_REFLECT(noir::net::block_id, (hash)(parts))
 FC_REFLECT(noir::net::part_set_header, (total)(hash))
 FC_REFLECT(noir::net::vote_extension, (app_data_to_sign)(app_data_self_authenticating))
