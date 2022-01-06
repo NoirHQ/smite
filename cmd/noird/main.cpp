@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
   // add subcommands
   commands::add_command(app.cli(), &commands::debug);
   commands::add_command(app.cli(), &commands::init);
+  commands::add_command(app.cli(), &commands::p2p_test);
   commands::add_command(app.cli(), &commands::start);
   commands::add_command(app.cli(), &commands::version);
 

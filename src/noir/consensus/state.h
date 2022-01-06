@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/consensus/validator.h>
-#include <noir/net/consensus/params.h>
-#include <noir/net/consensus/block.h>
-#include <noir/net/consensus/tx.h>
-#include <noir/net/protocol.h>
+#include <noir/consensus/validator.h>
+#include <noir/consensus/params.h>
+#include <noir/consensus/block.h>
+#include <noir/consensus/tx.h>
+#include <noir/p2p/protocol.h>
 
 namespace noir::net::consensus { // todo - move consensus somewhere (maybe under libs?)
 

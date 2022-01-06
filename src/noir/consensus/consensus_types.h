@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/types.h>
-#include <noir/net/consensus/validator.h>
-#include <noir/net/consensus/vote_set.h>
+#include <noir/consensus/validator.h>
+#include <noir/consensus/vote_set.h>
+#include <noir/p2p/types.h>
 
-namespace noir::net::consensus { // todo - where to place?
+namespace noir::consensus { // todo - where to place?
 
 struct part {
   uint32_t index;

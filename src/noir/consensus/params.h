@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/types.h>
+#include <noir/p2p/types.h>
 
-namespace noir::net::consensus { // todo - move consensus somewhere (maybe under libs?)
+namespace noir::consensus { // todo - move consensus somewhere (maybe under libs?)
 
 struct block_params {
   int64_t max_bytes;

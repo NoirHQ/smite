@@ -4,13 +4,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/types.h>
-#include <noir/net/protocol.h>
-#include <noir/net/consensus/validator.h>
-#include <noir/net/consensus/block.h>
-#include <noir/net/consensus/consensus_types.h>
+#include <noir/consensus/validator.h>
+#include <noir/consensus/block.h>
+#include <noir/consensus/consensus_types.h>
+#include <noir/p2p/types.h>
+#include <noir/p2p/protocol.h>
 
-namespace noir::net::consensus { // todo - where to place?
+namespace noir::consensus { // todo - where to place?
 
 enum round_step_type {
   NewHeight = 1, // Wait til CommitTime + timeoutCommit

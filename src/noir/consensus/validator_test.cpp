@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/net/consensus/validator.h>
+#include <noir/consensus/validator.h>
 #include <noir/common/hex.h>
 
 using namespace noir;
-using namespace noir::net::consensus;
+using namespace noir::consensus;
 
 void print_validator_set(validator_set& vals) {
   auto index = 0;

@@ -1,13 +1,13 @@
-// SPDX-License-Identifier: MIT
 // This file is part of NOIR.
 //
 // Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
+// SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/net/protocol.h>
+#include <noir/p2p/protocol.h>
 #include <appbase/application.hpp>
 
-namespace noir::net {
+namespace noir::p2p {
 
 struct connection_status {
   std::string peer;
@@ -16,26 +16,27 @@ struct connection_status {
   handshake_message last_handshake;
 };
 
-class net_plugin : public appbase::plugin<net_plugin> {
+class p2p : public appbase::plugin<p2p> {
 public:
   APPBASE_PLUGIN_REQUIRES()
 
-  net_plugin();
-  virtual ~net_plugin();
+  p2p();
+  virtual ~p2p();
 
-  virtual void set_program_options(CLI::App& cli, CLI::App& config) override;
+  void set_program_options(CLI::App& cli, CLI::App& config) override;
 
   void plugin_initialize(const CLI::App& cli, const CLI::App& config);
   void plugin_startup();
   void plugin_shutdown();
 
-  string connect(const string& host);
-  string disconnect(const string& host);
-  std::optional<connection_status> status(const string& endpoint) const;
+  std::string connect(const std::string& host);
+  std::string disconnect(const std::string& host);
+  std::optional<connection_status> status(const std::string& endpoint) const;
   std::vector<connection_status> connections() const;
 
 private:
-  std::shared_ptr<class net_plugin_impl> my;
+  std::shared_ptr<class p2p_impl> my;
 };
 
-} // namespace noir::net
+} // namespace noir::p2p
+

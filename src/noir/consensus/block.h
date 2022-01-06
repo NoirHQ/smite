@@ -4,9 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/protocol.h>
+#include <noir/p2p/protocol.h>
 
-namespace noir::net::consensus { // todo - where to place?
+namespace noir::consensus { // todo - where to place?
+
+using namespace noir::p2p;
 
 struct block {
   //mutex mtx;
@@ -42,3 +44,4 @@ struct commit {
 using block_ptr = std::shared_ptr<block>;
 
 }
+

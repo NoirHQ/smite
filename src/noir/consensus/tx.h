@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/protocol.h>
+#include <noir/p2p/protocol.h>
 
-namespace noir::net::consensus { // todo - where to place?
+namespace noir::consensus {
 
 struct tx {
 };

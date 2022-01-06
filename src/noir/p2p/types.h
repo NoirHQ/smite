@@ -4,14 +4,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <cinttypes>
-#include <chrono>
-#include <vector>
 #include <fc/crypto/sha256.hpp>
 #include <fc/crypto/public_key.hpp>
 #include <fc/crypto/private_key.hpp>
+#include <chrono>
+#include <cinttypes>
+#include <vector>
 
-namespace noir::net {
+namespace noir::p2p {
 
 using node_id = std::string; // a hex-encoded crypto.Address. It must be lower-cased
 
@@ -50,4 +50,5 @@ constexpr uint16_t proto_pruned_types = 3;        // supports new signed_block &
 constexpr uint16_t heartbeat_interval = 4;        // supports configurable heartbeat interval
 constexpr uint16_t dup_goaway_resolution = 5;     // support peer address based duplicate connection resolution
 
-}
+} // namespace noir::p2p
+

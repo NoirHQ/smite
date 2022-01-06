@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma
-#include <noir/net/types.h>
-#include <noir/net/consensus/consensus_state.h>
-#include <noir/net/consensus/state.h>
+#include <noir/consensus/consensus_state.h>
+#include <noir/consensus/state.h>
+#include <noir/p2p/types.h>
 
-namespace noir::net::consensus { // todo - where to place?
+namespace noir::consensus { // todo - where to place?
 
 class consensus_reactor : boost::noncopyable {
 public:

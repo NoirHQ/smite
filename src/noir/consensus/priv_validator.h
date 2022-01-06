@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/types.h>
+#include <noir/p2p/types.h>
 
-namespace noir::net::consensus {
+namespace noir::consensus {
 
 struct priv_validator {
   bytes pub_key;
@@ -17,7 +17,6 @@ struct priv_validator {
 
   void sign_vote();
   void sign_proposal();
-
 };
 
 }

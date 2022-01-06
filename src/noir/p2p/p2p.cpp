@@ -1,40 +1,36 @@
-// SPDX-License-Identifier: MIT
 // This file is part of NOIR.
 //
 // Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
+// SPDX-License-Identifier: MIT
 //
-#include <noir/net/net_plugin.h>
-#include <noir/net/consensus/block.h>
-#include <noir/net/consensus/tx.h>
-#include <noir/net/queued_buffer.h>
-#include <noir/net/buffer_factory.h>
+#include <noir/common/log.h>
 #include <noir/common/thread_pool.h>
+#include <noir/consensus/block.h>
+#include <noir/consensus/tx.h>
+#include <noir/p2p/buffer_factory.h>
+#include <noir/p2p/p2p.h>
+#include <noir/p2p/queued_buffer.h>
 
 #include <appbase/application.hpp>
-
-#include <fc/network/message_buffer.hpp>
-#include <fc/network/ip.hpp>
-#include <fc/io/json.hpp>
-#include <fc/io/raw.hpp>
-#include <fc/log/appender.hpp>
-#include <fc/log/logger_config.hpp>
-#include <fc/log/trace.hpp>
-#include <fc/reflect/variant.hpp>
-#include <fc/crypto/rand.hpp>
-#include <fc/exception/exception.hpp>
-#include <fc/static_variant.hpp>
-
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <fc/crypto/rand.hpp>
+#include <fc/exception/exception.hpp>
+#include <fc/io/json.hpp>
+#include <fc/io/raw.hpp>
+#include <fc/network/message_buffer.hpp>
+#include <fc/network/ip.hpp>
+#include <fc/reflect/variant.hpp>
+#include <fc/static_variant.hpp>
 
 #include <atomic>
 #include <shared_mutex>
 
-namespace noir::net {
+namespace noir::p2p {
 
 // todo - register here or in main?
-//static appbase::abstract_plugin &_net_plugin = appbase::app().register_plugin<net_plugin>();
+//static appbase::abstract_plugin &_p2p = appbase::app().register_plugin<p2p>();
 
 using std::vector;
 
@@ -319,9 +315,9 @@ struct msg_handler : public fc::visitor<void> {
 
 
 //------------------------------------------------------------------------
-// net_plugin_impl
+// p2p_impl
 //------------------------------------------------------------------------
-class net_plugin_impl : public std::enable_shared_from_this<net_plugin_impl> {
+class p2p_impl : public std::enable_shared_from_this<p2p_impl> {
 public:
   unique_ptr<tcp::acceptor> acceptor;
   std::atomic<uint32_t> current_connection_id{0};
@@ -457,7 +453,7 @@ public:
   connection_ptr find_connection(const string& host) const; // must call with held mutex
 };
 
-static net_plugin_impl* my_impl;
+static p2p_impl* my_impl;
 
 template<typename Function>
 void for_each_connection(Function f) {
@@ -467,7 +463,7 @@ void for_each_connection(Function f) {
   }
 }
 
-void net_plugin_impl::start_monitors() {
+void p2p_impl::start_monitors() {
   {
     std::lock_guard<std::mutex> g(connector_check_timer_mtx);
     connector_check_timer.reset(new boost::asio::steady_timer(my_impl->thread_pool->get_executor()));
@@ -480,7 +476,7 @@ void net_plugin_impl::start_monitors() {
 //  start_expire_timer(); // todo - we only check connection expiration for now
 }
 
-void net_plugin_impl::start_conn_timer(boost::asio::steady_timer::duration du,
+void p2p_impl::start_conn_timer(boost::asio::steady_timer::duration du,
   std::weak_ptr<connection> from_connection) {
   if (in_shutdown) return;
   std::lock_guard<std::mutex> g(connector_check_timer_mtx);
@@ -502,7 +498,7 @@ void net_plugin_impl::start_conn_timer(boost::asio::steady_timer::duration du,
   });
 }
 
-void net_plugin_impl::connection_monitor(std::weak_ptr<connection> from_connection, bool reschedule) {
+void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, bool reschedule) {
   auto max_time = fc::time_point::now();
   max_time += fc::milliseconds(max_cleanup_time_ms);
   auto from = from_connection.lock();
@@ -548,7 +544,7 @@ void net_plugin_impl::connection_monitor(std::weak_ptr<connection> from_connecti
   }
 }
 
-void net_plugin_impl::update_chain_info() {
+void p2p_impl::update_chain_info() {
 //  controller& cc = chain_plug->chain();
 //  std::lock_guard<std::mutex> g( chain_info_mtx );
 //  chain_lib_num = cc.last_irreversible_block_num();
@@ -562,20 +558,20 @@ void net_plugin_impl::update_chain_info() {
 }
 
 std::tuple<uint32_t, uint32_t, uint32_t, block_id_type, block_id_type, block_id_type>
-net_plugin_impl::get_chain_info() const {
+p2p_impl::get_chain_info() const {
   std::lock_guard<std::mutex> g(chain_info_mtx);
   return std::make_tuple(
     chain_lib_num, chain_head_blk_num, chain_fork_head_blk_num,
     chain_lib_id, chain_head_blk_id, chain_fork_head_blk_id);
 }
 
-connection_ptr net_plugin_impl::find_connection(const string& host) const {
+connection_ptr p2p_impl::find_connection(const string& host) const {
   for (const auto& c : connections)
     if (c->peer_address() == host) return c;
   return connection_ptr();
 }
 
-void net_plugin_impl::start_listen_loop() {
+void p2p_impl::start_listen_loop() {
   connection_ptr new_connection = std::make_shared<connection>();
   new_connection->connecting = true;
   new_connection->strand.post([this, new_connection = std::move(new_connection)]() {
@@ -653,7 +649,7 @@ void net_plugin_impl::start_listen_loop() {
   });
 }
 
-void net_plugin_impl::ticker() {
+void p2p_impl::ticker() {
   if (in_shutdown) return;
   std::lock_guard<std::mutex> g(keepalive_timer_mtx);
   keepalive_timer->expires_from_now(keepalive_interval);
@@ -678,24 +674,24 @@ void net_plugin_impl::ticker() {
 
 
 //------------------------------------------------------------------------
-// net_plugin
+// p2p
 //------------------------------------------------------------------------
-net_plugin::net_plugin()
-  : my(new net_plugin_impl) {
+p2p::p2p()
+  : my(new p2p_impl) {
   my_impl = my.get();
 }
 
-net_plugin::~net_plugin() {
+p2p::~p2p() {
 }
 
-void net_plugin::set_program_options(CLI::App& cli, CLI::App& config) {
+void p2p::set_program_options(CLI::App& cli, CLI::App& config) {
   config.add_option("--p2p-listen-endpoint",
     "The actual host:port used to listen for incoming p2p connections.")->default_str("0.0.0.0:9876");
   config.add_option("--p2p-peer-address", "The public endpoint of a peer node to connect to.")->take_all();
 }
 
-void net_plugin::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
-  ilog("Initialize net_plugin");
+void p2p::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
+  ilog("Initialize p2p");
   try {
 //    my->sync_master.reset( new sync_manager( options.at( "sync-fetch-span" ).as<uint32_t>()));
 
@@ -729,7 +725,7 @@ void net_plugin::plugin_initialize(const CLI::App& cli, const CLI::App& config) 
 
     // Can be 'any' or 'producers' or 'specified' or 'none'. If 'specified', peer-key must be specified at least once. If only 'producers', peer-key is not required. 'producers' and 'specified' may be combined.
     //if (options.count("allowed-connection")) {
-    my->allowed_connections = net_plugin_impl::Producers;
+    my->allowed_connections = p2p_impl::Producers;
 
 //    my->chain_plug = app().find_plugin<chain_plugin>();
 //    my->chain_id = my->chain_plug->get_chain_id();
@@ -743,14 +739,14 @@ void net_plugin::plugin_initialize(const CLI::App& cli, const CLI::App& config) 
   } FC_LOG_AND_RETHROW()
 }
 
-void net_plugin::plugin_startup() {
-  ilog("Start net_plugin");
+void p2p::plugin_startup() {
+  ilog("Start p2p");
   try {
     ilog("my node_id is ${id}", ("id", my->node_id));
 
 //    my->producer_plug = app().find_plugin<producer_plugin>();
 
-    my->thread_pool.emplace("net", my->thread_pool_size);
+    my->thread_pool.emplace("p2p", my->thread_pool_size);
 
 //    my->dispatcher.reset( new dispatch_manager( my_impl->thread_pool->get_executor() ) );
 
@@ -797,7 +793,7 @@ void net_plugin::plugin_startup() {
         my->acceptor->bind(listen_endpoint);
         my->acceptor->listen();
       } catch (const std::exception& e) {
-        elog("net_plugin::plugin_startup failed to bind to port ${port}", ("port", listen_endpoint.port()));
+        elog("p2p::plugin_startup failed to bind to port ${port}", ("port", listen_endpoint.port()));
         throw e;
       }
       ilog("starting listener, max clients is ${mc}", ("mc", my->max_client_count));
@@ -823,7 +819,7 @@ void net_plugin::plugin_startup() {
     my->ticker();
 
 //    my->incoming_transaction_ack_subscription = app().get_channel<compat::channels::transaction_ack>().subscribe(
-//        std::bind(&net_plugin_impl::transaction_ack, my.get(), std::placeholders::_1));
+//        std::bind(&p2p_impl::transaction_ack, my.get(), std::placeholders::_1));
 
     my->start_monitors();
 
@@ -840,10 +836,10 @@ void net_plugin::plugin_startup() {
   }
 }
 
-void net_plugin::plugin_shutdown() {
+void p2p::plugin_shutdown() {
 }
 
-string net_plugin::connect(const string& host) {
+string p2p::connect(const string& host) {
   std::lock_guard<std::shared_mutex> g(my->connections_mtx);
   if (my->find_connection(host))
     return "already connected";
@@ -858,7 +854,7 @@ string net_plugin::connect(const string& host) {
   return "added connection";
 }
 
-string net_plugin::disconnect(const string& host) {
+string p2p::disconnect(const string& host) {
   std::lock_guard<std::shared_mutex> g(my->connections_mtx);
   for (auto itr = my->connections.begin(); itr != my->connections.end(); ++itr) {
     if ((*itr)->peer_address() == host) {
@@ -871,11 +867,11 @@ string net_plugin::disconnect(const string& host) {
   return "no known connection for host";
 }
 
-std::optional<connection_status> net_plugin::status(const string& endpoint) const {
+std::optional<connection_status> p2p::status(const string& endpoint) const {
   return std::optional<connection_status>();
 }
 
-std::vector<connection_status> net_plugin::connections() const {
+std::vector<connection_status> p2p::connections() const {
   vector<connection_status> result;
   std::shared_lock<std::shared_mutex> g(my->connections_mtx);
   result.reserve(my->connections.size());
@@ -1700,4 +1696,4 @@ void connection::handle_message(const time_message& msg) {
   }
 }
 
-} // namespace noir::net
+} // namespace noir::p2p

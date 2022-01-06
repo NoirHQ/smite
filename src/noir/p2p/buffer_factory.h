@@ -1,13 +1,13 @@
-// SPDX-License-Identifier: MIT
 // This file is part of NOIR.
 //
 // Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
+// SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/net/protocol.h>
 #include <noir/codec/scale.h>
+#include <noir/p2p/protocol.h>
 
-namespace noir::net {
+namespace noir::p2p {
 
 using namespace noir::codec;
 

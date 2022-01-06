@@ -4,12 +4,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/consensus/consensus_reactor.h>
-#include <noir/net/consensus/priv_validator.h>
-#include <noir/net/consensus/node_key.h>
-#include <noir/net/consensus/state.h>
+#include <noir/common/log.h>
+#include <noir/consensus/consensus_reactor.h>
+#include <noir/consensus/node_key.h>
+#include <noir/consensus/priv_validator.h>
+#include <noir/consensus/state.h>
 
-namespace noir::net::consensus { // todo - where to place?
+namespace noir::consensus { // todo - where to place?
 
 class node : boost::noncopyable {
 public:

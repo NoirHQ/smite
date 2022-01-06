@@ -1,18 +1,18 @@
-// SPDX-License-Identifier: MIT
 // This file is part of NOIR.
 //
 // Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
+// SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/net/types.h>
+#include <noir/p2p/types.h>
 
-namespace noir::net {
+namespace noir::p2p {
 
 using namespace fc;
 
 struct handshake_message {
   uint16_t network_version = 0; ///< incremental value above a computed base
-//  chain_id_type chain_id; ///< used to identify chain
+//  chain_id_type chain_id; ///< used to identify chain fc::sha256 node_id; ///< used to identify peers and prevent self-connect
   fc::sha256 node_id; ///< used to identify peers and prevent self-connect
 //  chain::public_key_type key; ///< authentication key; may be a producer or peer key, or empty
   tstamp time{0};
@@ -147,18 +147,18 @@ using net_message = std::variant<handshake_message,
   block_part_message,
   vote_message>;
 
-} // namespace noir::net
+} // namespace noir::p2p
 
-FC_REFLECT(noir::net::handshake_message,
+FC_REFLECT(noir::p2p::handshake_message,
   (network_version)(node_id)(time)(token)(p2p_address)
-    (last_irreversible_block_num)(last_irreversible_block_id)
-    (head_num)(head_id)(generation))
-FC_REFLECT(noir::net::go_away_message, (reason)(node_id))
-FC_REFLECT(noir::net::time_message, (org)(rec)(xmt)(dst))
-FC_REFLECT(noir::net::proposal_message, (type)(height)(round)(pol_round)(my_block_id)(timestamp)(sig))
-FC_REFLECT(noir::net::block_part_message, (height)(round)(index)(bs)(proof))
-FC_REFLECT(noir::net::vote_message,
+  (last_irreversible_block_num)(last_irreversible_block_id)
+  (head_num)(head_id)(generation))
+FC_REFLECT(noir::p2p::go_away_message, (reason)(node_id))
+FC_REFLECT(noir::p2p::time_message, (org)(rec)(xmt)(dst))
+FC_REFLECT(noir::p2p::proposal_message, (type)(height)(round)(pol_round)(my_block_id)(timestamp)(sig))
+FC_REFLECT(noir::p2p::block_part_message, (height)(round)(index)(bs)(proof))
+FC_REFLECT(noir::p2p::vote_message,
   (type)(height)(round)(my_block_id)(timestamp)(validator_address)(validator_index)(sig)(my_vote_extension))
-FC_REFLECT(noir::net::block_id, (hash)(parts))
-FC_REFLECT(noir::net::part_set_header, (total)(hash))
-FC_REFLECT(noir::net::vote_extension, (app_data_to_sign)(app_data_self_authenticating))
+FC_REFLECT(noir::p2p::block_id, (hash)(parts))
+FC_REFLECT(noir::p2p::part_set_header, (total)(hash))
+FC_REFLECT(noir::p2p::vote_extension, (app_data_to_sign)(app_data_self_authenticating))

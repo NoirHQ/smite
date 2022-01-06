@@ -1,20 +1,20 @@
-// SPDX-License-Identifier: MIT
 // This file is part of NOIR.
 //
 // Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
+// SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/net/types.h>
+#include <noir/p2p/types.h>
 
-#include <boost/core/noncopyable.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <shared_mutex>
 #include <vector>
 #include <deque>
 
-namespace noir::net {
+namespace noir::p2p {
 
 // thread safe
 class queued_buffer : boost::noncopyable {

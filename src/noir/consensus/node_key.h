@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/types.h>
 #include <noir/common/hex.h>
+#include <noir/p2p/types.h>
 
-namespace noir::net::consensus {
+namespace noir::consensus {
 
 struct node_key {
   std::string node_id;

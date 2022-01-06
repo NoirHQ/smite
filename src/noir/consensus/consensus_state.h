@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/net/consensus/consensus_state.h>
-#include <noir/net/consensus/state.h>
-#include <noir/net/consensus/round_state.h>
+#include <noir/consensus/consensus_state.h>
+#include <noir/consensus/round_state.h>
+#include <noir/consensus/state.h>
 
-namespace noir::net::consensus {
+namespace noir::consensus {
 
 /**
  * Handles execution of the consensus algorithm.
