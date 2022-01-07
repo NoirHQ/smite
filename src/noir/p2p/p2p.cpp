@@ -688,9 +688,9 @@ void p2p::set_program_options(CLI::App& cli, CLI::App& config) {
   auto p2p_options = config.add_subcommand("p2p", "Peer-to-peer configuration");
   p2p_options->configurable();
 
-  p2p_options->add_option("p2p-listen-endpoint",
-    "The actual host:port used to listen for incoming p2p connections.")->default_str("0.0.0.0:9876");
-  p2p_options->add_option("p2p-peer-address", "The public endpoint of a peer node to connect to.")->take_all();
+  p2p_options->add_option("p2p-listen-endpoint", my->p2p_address,
+    "The actual host:port used to listen for incoming p2p connections.")->force_callback()->default_str("0.0.0.0:9876");
+  p2p_options->add_option("p2p-peer-address", my->supplied_peers, "The public endpoint of a peer node to connect to.")->take_all();
 }
 
 void p2p::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
@@ -710,16 +710,6 @@ void p2p::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
     my->use_socket_read_watermark = false;
     my->keepalive_interval = std::chrono::milliseconds(30000);
     my->heartbeat_timeout = std::chrono::milliseconds(30000 * 2);
-
-    my->p2p_address = "0.0.0.0:9876"; // The actual host:port used to listen for incoming p2p connections
-    if (p2p_options->count("p2p-listen-endpoint")) {
-      my->p2p_address = p2p_options->get_option("p2p-listen-endpoint")->as<string>();
-    }
-
-//    my->supplied_peers = {"127.0.0.1:9877", "127.0.0.1:9878"}; // The public endpoint of a peer node to connect to.
-    if (p2p_options->count("p2p-peer-address")) {
-      my->supplied_peers = {p2p_options->get_option("p2p-peer-address")->as<string>()};
-    }
 
     //my->p2p_server_address = "0.0.0.0:9876"; // An externally accessible host:port for identifying this node. Defaults to p2p-listen-endpoint
     my->thread_pool_size = 2; // number of threads to use
