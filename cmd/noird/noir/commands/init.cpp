@@ -26,7 +26,7 @@ CLI::App* init(CLI::App& root) {
   cmd->add_option("mode", mode, "Initialization mode")->required()->
     check(CLI::IsMember({"full", "validator", "seed"}));
   cmd->add_option("--key", key_type, "Key type to generate privval file with.")->
-    check(CLI::IsMember({"ed25519", "secp256k1"}))->default_str("ed25519");
+    check(CLI::IsMember({"ed25519", "secp256k1"}))->default_str("ed25519")->force_callback();
   return cmd;
 }
 
