@@ -90,6 +90,7 @@ block state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* e
 //    } else {
 //      timestamp = get_median_time();
 //    }
+  return block{};
 }
 
 tstamp state::get_median_time() {
@@ -140,6 +141,7 @@ state state::update_state(state new_state, block_id new_block_id, /* header, */ 
 
   nextVersion := state.Version
 #endif
+  return state{};
 }
 
 } // namespace noir::consensus
