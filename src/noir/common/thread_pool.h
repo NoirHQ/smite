@@ -1,22 +1,22 @@
 // This file is part of NOIR.
 //
-// Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved. 
+// Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
 // SPDX-License-Identifier: MIT
 //
 #pragma once
 
 #include <boost/asio/io_context.hpp>
-#include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
+#include <boost/asio/thread_pool.hpp>
 #include <future>
 #include <memory>
 #include <optional>
 
 namespace noir {
 /**
-  * Wrapper class for boost asio thread pool and io_context run.
-  * Also names threads so that tools like htop can see thread name.
-  */
+ * Wrapper class for boost asio thread pool and io_context run.
+ * Also names threads so that tools like htop can see thread name.
+ */
 class named_thread_pool {
 public:
   // name_prefix is name appended with -## of thread.
@@ -26,7 +26,9 @@ public:
   // calls stop()
   ~named_thread_pool();
 
-  boost::asio::io_context& get_executor() { return _ioc; }
+  boost::asio::io_context& get_executor() {
+    return _ioc;
+  }
 
   // destroy work guard, stop io_context, join thread_pool, and stop thread_pool
   void stop();
@@ -39,7 +41,6 @@ private:
   std::optional<ioc_work_t> _ioc_work;
 };
 
-
 // async on thread_pool and return future
 template<typename F>
 auto async_thread_pool(boost::asio::io_context& thread_pool, F&& f) {
@@ -48,5 +49,4 @@ auto async_thread_pool(boost::asio::io_context& thread_pool, F&& f) {
   return task->get_future();
 }
 
-}
-
+} // namespace noir

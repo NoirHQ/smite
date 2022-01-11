@@ -17,10 +17,8 @@ void initialize(const char* logger_name) {
     c.push_back(fc::mutable_variant_object("level", "warn")("color", "yellow"));
     c.push_back(fc::mutable_variant_object("level", "error")("color", "red"));
 
-    logging_config.appenders.emplace_back("default", logger_name, fc::mutable_variant_object()
-      ("stream", "default")
-      ("level_colors", c)
-    );
+    logging_config.appenders.emplace_back(
+      "default", logger_name, fc::mutable_variant_object()("stream", "default")("level_colors", c));
 
     fc::logger_config dlc;
     dlc.name = logger_name;

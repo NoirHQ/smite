@@ -13,11 +13,9 @@ namespace noir::codec {
 template<typename T>
 class basic_datastream {
 public:
-  basic_datastream(std::span<T> s)
-    : span(s), pos_(s.begin()) {}
+  basic_datastream(std::span<T> s) : span(s), pos_(s.begin()) {}
 
-  basic_datastream(T* s, size_t count)
-    : span(s, count), pos_(span.begin()) {}
+  basic_datastream(T* s, size_t count) : span(s, count), pos_(span.begin()) {}
 
   inline void skip(size_t s) {
     pos_ += s;
@@ -105,12 +103,10 @@ private:
   typename std::span<T>::iterator pos_;
 };
 
-
 template<>
 class basic_datastream<size_t> {
 public:
-  constexpr basic_datastream(size_t init_size = 0)
-    : size(init_size) {}
+  constexpr basic_datastream(size_t init_size = 0) : size(init_size) {}
 
   constexpr void skip(size_t s) {
     size += s;
@@ -151,32 +147,31 @@ private:
 } // namespace noir::codec
 
 #define NOIR_CODEC(CODEC) \
-namespace noir::codec::CODEC { \
-template<typename T> \
-class datastream : public basic_datastream<T> { \
-public: \
-  using basic_datastream<T>::basic_datastream; \
-}; \
-template<typename T> \
-constexpr size_t encode_size(const T& v) { \
-  datastream<size_t> ds; \
-  ds << v; \
-  return ds.tellp(); \
-} \
-template<typename T> \
-std::vector<char> encode(const T& v) { \
-  auto buffer = std::vector<char>(encode_size(v)); \
-  datastream<char> ds(buffer); \
-  ds << v; \
-  return buffer; \
-} \
-template<typename T> \
-T decode(std::span<const char> s) { \
-  T v; \
-  datastream<const char> ds(s); \
-  ds >> v; \
-  return v; \
-} \
-} \
-namespace noir::codec::CODEC
-
+  namespace noir::codec::CODEC { \
+    template<typename T> \
+    class datastream : public basic_datastream<T> { \
+    public: \
+      using basic_datastream<T>::basic_datastream; \
+    }; \
+    template<typename T> \
+    constexpr size_t encode_size(const T& v) { \
+      datastream<size_t> ds; \
+      ds << v; \
+      return ds.tellp(); \
+    } \
+    template<typename T> \
+    std::vector<char> encode(const T& v) { \
+      auto buffer = std::vector<char>(encode_size(v)); \
+      datastream<char> ds(buffer); \
+      ds << v; \
+      return buffer; \
+    } \
+    template<typename T> \
+    T decode(std::span<const char> s) { \
+      T v; \
+      datastream<const char> ds(s); \
+      ds >> v; \
+      return v; \
+    } \
+  } \
+  namespace noir::codec::CODEC

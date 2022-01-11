@@ -10,9 +10,9 @@
 #include <boost/core/noncopyable.hpp>
 #include <boost/system/error_code.hpp>
 
-#include <shared_mutex>
-#include <vector>
 #include <deque>
+#include <vector>
+#include <shared_mutex>
 
 namespace noir::p2p {
 
@@ -51,8 +51,7 @@ public:
 
   // @param callback must not callback into queued_buffer
   bool add_write_queue(const std::shared_ptr<std::vector<char>>& buff,
-    std::function<void(boost::system::error_code, std::size_t)> callback,
-    bool to_sync_queue) {
+    std::function<void(boost::system::error_code, std::size_t)> callback, bool to_sync_queue) {
     std::lock_guard<std::mutex> g(_mtx);
     if (to_sync_queue) {
       _sync_write_queue.push_back({buff, callback});
@@ -72,7 +71,7 @@ public:
       fill_out_buffer(bufs, _sync_write_queue);
     } else { // postpone real_time write_queue if sync queue is not empty
       fill_out_buffer(bufs, _write_queue);
-//      EOS_ASSERT(_write_queue_size == 0, plugin_exception, "write queue size expected to be zero");
+      //      EOS_ASSERT(_write_queue_size == 0, plugin_exception, "write queue size expected to be zero");
     }
   }
 
@@ -86,8 +85,7 @@ public:
 private:
   struct queued_write;
 
-  void fill_out_buffer(std::vector<boost::asio::const_buffer>& bufs,
-    std::deque<queued_write>& w_queue) {
+  void fill_out_buffer(std::vector<boost::asio::const_buffer>& bufs, std::deque<queued_write>& w_queue) {
     while (w_queue.size() > 0) {
       auto& m = w_queue.front();
       bufs.push_back(boost::asio::buffer(*m.buff));
@@ -111,4 +109,4 @@ private:
 
 }; // queued_buffer
 
-}
+} // namespace noir::p2p

@@ -5,6 +5,4 @@
 //
 #pragma once
 
-namespace noir::consensus {
-
-} // namespace noir::consensus
+namespace noir::consensus {} // namespace noir::consensus

@@ -12,8 +12,8 @@ static const char* default_logger_name = "tmlog";
 void initialize(const char* logger_name);
 
 #define FC_DEBUG_LOG(LOGGER_NAME, FORMAT, ...) fc_dlog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
-#define FC_INFO_LOG(LOGGER_NAME, FORMAT, ...)  fc_ilog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
-#define FC_WARN_LOG(LOGGER_NAME, FORMAT, ...)  fc_wlog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
+#define FC_INFO_LOG(LOGGER_NAME, FORMAT, ...) fc_ilog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
+#define FC_WARN_LOG(LOGGER_NAME, FORMAT, ...) fc_wlog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
 #define FC_ERROR_LOG(LOGGER_NAME, FORMAT, ...) fc_elog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
 
 #ifdef dlog
@@ -36,5 +36,4 @@ void initialize(const char* logger_name);
 #define elog(FORMAT, ...) FC_ERROR_LOG(noir::log::default_logger_name, FORMAT, __VA_ARGS__)
 #endif
 
-
-} // namespace noir::tendermint::log
+} // namespace noir::log

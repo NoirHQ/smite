@@ -28,7 +28,7 @@ protected:
 
 protected:
   static send_buffer_type create_send_buffer(const net_message& m) {
-//    auto data = encode<scale>(m);
+    //    auto data = encode<scale>(m);
 
     const uint32_t payload_size = fc::raw::pack_size(m);
 
@@ -44,7 +44,6 @@ protected:
 
     return send_buffer;
   }
-
 };
 
-}
+} // namespace noir::p2p

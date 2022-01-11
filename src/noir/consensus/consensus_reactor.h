@@ -40,24 +40,22 @@ public:
 
   void handleMessage();
 
-
 private:
-
-//  state    *State
+  //  state    *State
   std::unique_ptr<consensus_state> local_state;
 
-//  eventBus *types.EventBus
-//  Metrics  *Metrics
-//
-//  mtx      tmsync.RWMutex
-//  peers    map[types.NodeID]*PeerState
-//  waitSync bool
-//
-//  stateCh       *p2p.Channel
-//  dataCh        *p2p.Channel
-//  voteCh        *p2p.Channel
-//  voteSetBitsCh *p2p.Channel
-//  peerUpdates   *p2p.PeerUpdates
+  //  eventBus *types.EventBus
+  //  Metrics  *Metrics
+  //
+  //  mtx      tmsync.RWMutex
+  //  peers    map[types.NodeID]*PeerState
+  //  waitSync bool
+  //
+  //  stateCh       *p2p.Channel
+  //  dataCh        *p2p.Channel
+  //  voteCh        *p2p.Channel
+  //  voteSetBitsCh *p2p.Channel
+  //  peerUpdates   *p2p.PeerUpdates
 };
 
 std::unique_ptr<consensus_reactor> consensus_reactor::new_consensus_reactor(state& prev_state) {

@@ -30,7 +30,6 @@ struct node_key {
     // todo - generate ed25519 private key
     return node_key{"node_id_abcdefg", std::vector<char>(from_hex("000000"))};
   }
-
 };
 
 } // namespace noir::consensus

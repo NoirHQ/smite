@@ -8,7 +8,7 @@
 
 // forward declaration
 namespace CLI {
-  class App;
+class App;
 }
 
 namespace noir::commands {
