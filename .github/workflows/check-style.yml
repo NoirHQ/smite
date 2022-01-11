@@ -1,0 +1,27 @@
+name: Check Style
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release
+      - release/**
+
+jobs:
+  check_style:
+    name: Check Style
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        path:
+          - 'cmd'
+          - 'src'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: jidicula/clang-format-action@v4.4.1
+        with:
+          clang-format-version: '14'
+          check-path: ${{matrix.path}}
+
