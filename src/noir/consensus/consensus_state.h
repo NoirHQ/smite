@@ -5,8 +5,8 @@
 //
 #pragma once
 #include <noir/consensus/consensus_state.h>
-#include <noir/consensus/round_state.h>
 #include <noir/consensus/state.h>
+#include <noir/consensus/types.h>
 
 namespace noir::consensus {
 

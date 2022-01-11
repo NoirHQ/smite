@@ -12,8 +12,6 @@
 
 namespace noir::consensus {
 
-using namespace std;
-
 /**
  * State is a short description of the latest committed block of the Tendermint consensus.
  * It keeps all information necessary to validate new blocks,

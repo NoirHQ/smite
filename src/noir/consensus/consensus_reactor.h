@@ -6,7 +6,7 @@
 #pragma
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/state.h>
-#include <noir/p2p/types.h>
+#include <noir/consensus/types.h>
 
 namespace noir::consensus {
 
