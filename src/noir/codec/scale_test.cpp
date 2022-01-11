@@ -10,7 +10,8 @@
 using namespace noir;
 using namespace noir::codec::scale;
 
-TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t) {
+TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_t, uint8_t, int16_t, uint16_t, int32_t,
+  uint32_t, int64_t, uint64_t) {
   TestType v = std::numeric_limits<TestType>::max();
   auto hex = to_hex({(const char*)&v, sizeof(v)});
   auto data = encode(v);
@@ -30,11 +31,7 @@ TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_
 
 TEST_CASE("Compact/general integers", "[codec][scale]") {
   auto tests = std::to_array<std::pair<unsigned_int, const char*>>({
-    {0, "00"},
-    {1, "04"},
-    {42, "a8"},
-    {69, "1501"},
-    {65535, "feff0300"},
+    {0, "00"}, {1, "04"}, {42, "a8"}, {69, "1501"}, {65535, "feff0300"},
     // TODO: BigInt(100000000000000)
   });
 

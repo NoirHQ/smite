@@ -20,7 +20,7 @@ namespace detail {
         return;
       }
     }
-    auto s = std::span((const char*) &v, sizeof(T));
+    auto s = std::span((const char*)&v, sizeof(T));
     auto nonzero = std::find_if(s.rbegin(), s.rend(), [](const auto& c) {
       if (c != 0)
         return true;
@@ -39,9 +39,7 @@ namespace detail {
       mod += 55;
     }
     ds.put(trimmed + mod);
-    std::for_each(s.rend() - trimmed, s.rend(), [&](const auto& c) {
-      ds.write(&c, 1);
-    });
+    std::for_each(s.rend() - trimmed, s.rend(), [&](const auto& c) { ds.write(&c, 1); });
   }
 
   template<bool Prefix, typename Stream>
@@ -64,12 +62,10 @@ namespace detail {
     }
     auto v = 0ull;
     auto s = std::span((char*)&v, sizeof(v));
-    std::for_each(s.rend() - size, s.rend(), [&](auto& c) {
-      ds.get(c);
-    });
+    std::for_each(s.rend() - size, s.rend(), [&](auto& c) { ds.get(c); });
     return v;
   }
-}
+} // namespace detail
 
 template<typename Stream, typename T>
 void encode_bytes(datastream<Stream>& ds, const T& v, unsigned char mod) {
@@ -172,4 +168,4 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
   return ds;
 }
 
-} // namespace noir::codec
+} // NOIR_CODEC(rlp)

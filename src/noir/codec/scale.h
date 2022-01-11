@@ -19,13 +19,13 @@ NOIR_CODEC(scale) {
 // Boolean
 template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
-  ds.write((const char *)&v, sizeof(v));
+  ds.write((const char*)&v, sizeof(v));
   return ds;
 }
 
 template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
-  ds.read({(char *)&v, sizeof(v)});
+  ds.read({(char*)&v, sizeof(v)});
   return ds;
 }
 
@@ -52,31 +52,28 @@ template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, unsigned_int& v) {
   char tmp = ds.peek();
   switch (tmp & 0b11) {
-    case 0b00: {
-        uint8_t val = 0;
-        ds >> val;
-        val >>= 2;
-        v = val;
-      }
-      break;
-    case 0b01: {
-        uint16_t val = 0;
-        ds >> val;
-        val >>= 2;
-        v = val;
-      }
-      break;
-    case 0b10: {
-        uint32_t val = 0;
-        ds >> val;
-        val >>= 2;
-        v = val;
-      }
-      break;
-    case 0b11:
-      // TODO
-      check(false, "not implemented");
-      break;
+  case 0b00: {
+    uint8_t val = 0;
+    ds >> val;
+    val >>= 2;
+    v = val;
+  } break;
+  case 0b01: {
+    uint16_t val = 0;
+    ds >> val;
+    val >>= 2;
+    v = val;
+  } break;
+  case 0b10: {
+    uint32_t val = 0;
+    ds >> val;
+    val >>= 2;
+    v = val;
+  } break;
+  case 0b11:
+    // TODO
+    check(false, "not implemented");
+    break;
   }
   return ds;
 }
@@ -130,7 +127,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::optional<T>& v) {
 
 // Results
 template<typename Stream, typename T, typename E>
-datastream<Stream>& operator<<(datastream<Stream>& ds, const noir::expected<T,E>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const noir::expected<T, E>& v) {
   char is_unexpected = !v;
   ds << is_unexpected;
   if (v) {
@@ -142,7 +139,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const noir::expected<T,E>
 }
 
 template<typename Stream, typename T, typename E>
-datastream<Stream>& operator>>(datastream<Stream>& ds, noir::expected<T,E>& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, noir::expected<T, E>& v) {
   char is_unexpected = 0;
   ds >> is_unexpected;
   if (!is_unexpected) {
@@ -204,30 +201,26 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
 // Tuples
 template<typename Stream, typename... Ts>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::tuple<Ts...>& v) {
-  std::apply([&](const auto& ...val) { ((ds << val),...); }, v);
+  std::apply([&](const auto&... val) { ((ds << val), ...); }, v);
   return ds;
 }
 
 template<typename Stream, typename... Ts>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::tuple<Ts...>& v) {
-  std::apply([&](auto& ...val) { ((ds >> val),...); }, v);
+  std::apply([&](auto&... val) { ((ds >> val), ...); }, v);
   return ds;
 }
 
 // Data Structures
 template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
-  boost::pfr::for_each_field(v, [&](const auto& val) {
-    ds << val;
-  });
+  boost::pfr::for_each_field(v, [&](const auto& val) { ds << val; });
   return ds;
 }
 
 template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
-  boost::pfr::for_each_field(v, [&](auto& val) {
-    ds >> val;
-  });
+  boost::pfr::for_each_field(v, [&](auto& val) { ds >> val; });
   return ds;
 }
 
@@ -250,13 +243,13 @@ namespace detail {
         ds >> tmp;
         v.template emplace<I>(std::move(tmp));
       } else {
-        decode<I+1>(ds, v, i);
+        decode<I + 1>(ds, v, i);
       }
     } else {
       check(false, "invalid variant index");
     }
   }
-}
+} // namespace detail
 
 template<typename Stream, typename... Ts>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& v) {
@@ -266,4 +259,4 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& v) {
   return ds;
 }
 
-} // namespace noir::codec
+} // NOIR_CODEC(scale)

@@ -35,76 +35,76 @@ struct consensus_state {
   void handle_msg();
   void handle_timeout();
 
-//  // config details
-//  config            *cfg.ConsensusConfig
-//  privValidator     types.PrivValidator // for signing votes
-//  privValidatorType types.PrivValidatorType
-//
-//  // store blocks and commits
-//  blockStore sm.BlockStore
-//
-//  // create and execute blocks
-//  blockExec *sm.BlockExecutor
-//
-//  // notify us if txs are available
-//  txNotifier txNotifier
-//
-//  // add evidence to the pool
-//  // when it's detected
-//  evpool evidencePool
-//
+  //  // config details
+  //  config            *cfg.ConsensusConfig
+  //  privValidator     types.PrivValidator // for signing votes
+  //  privValidatorType types.PrivValidatorType
+  //
+  //  // store blocks and commits
+  //  blockStore sm.BlockStore
+  //
+  //  // create and execute blocks
+  //  blockExec *sm.BlockExecutor
+  //
+  //  // notify us if txs are available
+  //  txNotifier txNotifier
+  //
+  //  // add evidence to the pool
+  //  // when it's detected
+  //  evpool evidencePool
+  //
 
   // internal state
-//  mtx tmsync.RWMutex
-//  cstypes.RoundState
-//  state sm.State // State until height-1.
+  //  mtx tmsync.RWMutex
+  //  cstypes.RoundState
+  //  state sm.State // State until height-1.
   std::mutex mtx;
   round_state rs;
   state local_state; // State until height-1.
-//  // privValidator pubkey, memoized for the duration of one block
-//  // to avoid extra requests to HSM
-//  privValidatorPubKey crypto.PubKey
-//
-//  // state changes may be triggered by: msgs from peers,
-//  // msgs from ourself, or by timeouts
-//  peerMsgQueue     chan msgInfo
-//  internalMsgQueue chan msgInfo
-//    timeoutTicker    TimeoutTicker
-//
-//  // information about about added votes and block parts are written on this channel
-//  // so statistics can be computed by reactor
-//  statsMsgQueue chan msgInfo
-//
-//  // we use eventBus to trigger msg broadcasts in the reactor,
-//  // and to notify external subscribers, eg. through a websocket
-//  eventBus *types.EventBus
-//
-//  // a Write-Ahead Log ensures we can recover from any kind of crash
-//  // and helps us avoid signing conflicting votes
-//  wal          WAL
-//    replayMode   bool // so we don't log signing errors during replay
-//  doWALCatchup bool // determines if we even try to do the catchup
-//
-//  // for tests where we want to limit the number of transitions the state makes
-//  nSteps int
-//
-//  // some functions can be overwritten for testing
-//  decideProposal func(height int64, round int32)
-//  doPrevote      func(height int64, round int32)
-//  setProposal    func(proposal *types.Proposal) error
-//
-//  // closed when we finish shutting down
-//  done chan struct{}
-//
-//  // synchronous pubsub between consensus state and reactor.
-//  // state only emits EventNewRoundStep and EventVote
-//  evsw tmevents.EventSwitch
-//
-//  // for reporting metrics
-//  metrics *Metrics
-//
-//  // wait the channel event happening for shutting down the state gracefully
-//  onStopCh chan *cstypes.RoundState
+  //  // privValidator pubkey, memoized for the duration of one block
+  //  // to avoid extra requests to HSM
+  //  privValidatorPubKey crypto.PubKey
+  //
+  //  // state changes may be triggered by: msgs from peers,
+  //  // msgs from ourself, or by timeouts
+  //  peerMsgQueue     chan msgInfo
+  //  internalMsgQueue chan msgInfo
+  //    timeoutTicker    TimeoutTicker
+  //
+  //  // information about about added votes and block parts are written on this channel
+  //  // so statistics can be computed by reactor
+  //  statsMsgQueue chan msgInfo
+  //
+  //  // we use eventBus to trigger msg broadcasts in the reactor,
+  //  // and to notify external subscribers, eg. through a websocket
+  //  eventBus *types.EventBus
+  //
+  //  // a Write-Ahead Log ensures we can recover from any kind of crash
+  //  // and helps us avoid signing conflicting votes
+  //  wal          WAL
+  //    replayMode   bool // so we don't log signing errors during replay
+  //  doWALCatchup bool // determines if we even try to do the catchup
+  //
+  //  // for tests where we want to limit the number of transitions the state makes
+  //  nSteps int
+  //
+  //  // some functions can be overwritten for testing
+  //  decideProposal func(height int64, round int32)
+  //  doPrevote      func(height int64, round int32)
+  //  setProposal    func(proposal *types.Proposal) error
+  //
+  //  // closed when we finish shutting down
+  //  done chan struct{}
+  //
+  //  // synchronous pubsub between consensus state and reactor.
+  //  // state only emits EventNewRoundStep and EventVote
+  //  evsw tmevents.EventSwitch
+  //
+  //  // for reporting metrics
+  //  metrics *Metrics
+  //
+  //  // wait the channel event happening for shutting down the state gracefully
+  //  onStopCh chan *cstypes.RoundState
 };
 
 std::unique_ptr<consensus_state> consensus_state::new_state(state& state_) {
@@ -147,8 +147,8 @@ void consensus_state::update_round_step(int32_t round, round_step_type step) {
  * enterNewRound(height, 0) at StartTime.
  */
 void consensus_state::schedule_round_0(round_state& rs) {
-//  sleepDuration := rs.StartTime.Sub(tmtime.Now())
-//  cs.scheduleTimeout(sleepDuration, rs.Height, 0, cstypes.RoundStepNewHeight)
+  //  sleepDuration := rs.StartTime.Sub(tmtime.Now())
+  //  cs.scheduleTimeout(sleepDuration, rs.Height, 0, cstypes.RoundStepNewHeight)
 }
 
 /**
@@ -166,16 +166,12 @@ void consensus_state::update_to_state(state& state_) {
  * Updates (state transitions) happen on timeouts, complete proposals, and 2/3 majorities.
  * State must be locked before any internal state is updated.
  */
-void consensus_state::receive_routine(int max_steps) {
-
-}
+void consensus_state::receive_routine(int max_steps) {}
 
 void consensus_state::handle_msg() {
   // todo
 }
 
-void consensus_state::handle_timeout() {
-
-}
+void consensus_state::handle_timeout() {}
 
 } // namespace noir::consensus

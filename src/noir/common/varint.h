@@ -8,7 +8,7 @@
 
 namespace noir {
 
-using ::fc::unsigned_int;
 using ::fc::signed_int;
+using ::fc::unsigned_int;
 
 } // namespace noir

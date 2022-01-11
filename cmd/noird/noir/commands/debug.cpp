@@ -8,8 +8,7 @@
 namespace noir::commands {
 
 CLI::App* debug(CLI::App& root) {
-  auto cmd = root.add_subcommand("debug", "Debugging mode")->final_callback([]() {
-  });
+  auto cmd = root.add_subcommand("debug", "Debugging mode")->final_callback([]() {});
   cmd->group("");
   return cmd;
 }

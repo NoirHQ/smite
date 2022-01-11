@@ -12,27 +12,28 @@ using namespace fc;
 
 struct handshake_message {
   uint16_t network_version = 0; ///< incremental value above a computed base
-//  chain_id_type chain_id; ///< used to identify chain fc::sha256 node_id; ///< used to identify peers and prevent self-connect
+  //  chain_id_type chain_id; ///< used to identify chain fc::sha256 node_id; ///< used to identify peers and prevent
+  //  self-connect
   fc::sha256 node_id; ///< used to identify peers and prevent self-connect
-//  chain::public_key_type key; ///< authentication key; may be a producer or peer key, or empty
+  //  chain::public_key_type key; ///< authentication key; may be a producer or peer key, or empty
   tstamp time{0};
   fc::sha256 token; ///< digest of time to prove we own the private key of the key above
-//  chain::signature_type sig; ///< signature for the digest
+  //  chain::signature_type sig; ///< signature for the digest
   string p2p_address;
   uint32_t last_irreversible_block_num = 0;
   block_id_type last_irreversible_block_id;
   uint32_t head_num = 0;
   block_id_type head_id;
-//  string os;
-//  string agent;
+  //  string os;
+  //  string agent;
   int16_t generation = 0;
 };
 
 struct time_message {
-  tstamp org{0};       //!< origin timestamp
-  tstamp rec{0};       //!< receive timestamp
-  tstamp xmt{0};       //!< transmit timestamp
-  mutable tstamp dst{0};       //!< destination timestamp
+  tstamp org{0}; //!< origin timestamp
+  tstamp rec{0}; //!< receive timestamp
+  tstamp xmt{0}; //!< transmit timestamp
+  mutable tstamp dst{0}; //!< destination timestamp
 };
 
 enum signed_msg_type {
@@ -104,32 +105,32 @@ enum go_away_reason {
 
 constexpr auto reason_str(go_away_reason rsn) {
   switch (rsn) {
-    case no_reason :
-      return "no reason";
-    case self :
-      return "self connect";
-    case duplicate :
-      return "duplicate";
-    case wrong_chain :
-      return "wrong chain";
-    case wrong_version :
-      return "wrong version";
-    case forked :
-      return "chain is forked";
-    case unlinkable :
-      return "unlinkable block received";
-    case bad_transaction :
-      return "bad transaction";
-    case validation :
-      return "invalid block";
-    case authentication :
-      return "authentication failure";
-    case fatal_other :
-      return "some other failure";
-    case benign_other :
-      return "some other non-fatal condition, possibly unknown block";
-    default :
-      return "some crazy reason";
+  case no_reason:
+    return "no reason";
+  case self:
+    return "self connect";
+  case duplicate:
+    return "duplicate";
+  case wrong_chain:
+    return "wrong chain";
+  case wrong_version:
+    return "wrong version";
+  case forked:
+    return "chain is forked";
+  case unlinkable:
+    return "unlinkable block received";
+  case bad_transaction:
+    return "bad transaction";
+  case validation:
+    return "invalid block";
+  case authentication:
+    return "authentication failure";
+  case fatal_other:
+    return "some other failure";
+  case benign_other:
+    return "some other non-fatal condition, possibly unknown block";
+  default:
+    return "some crazy reason";
   }
 }
 
@@ -140,19 +141,13 @@ struct go_away_message {
   fc::sha256 node_id; ///< for duplicate notification
 };
 
-using net_message = std::variant<handshake_message,
-  go_away_message,
-  time_message,
-  proposal_message,
-  block_part_message,
-  vote_message>;
+using net_message =
+  std::variant<handshake_message, go_away_message, time_message, proposal_message, block_part_message, vote_message>;
 
 } // namespace noir::p2p
 
 FC_REFLECT(noir::p2p::handshake_message,
-  (network_version)(node_id)(time)(token)(p2p_address)
-  (last_irreversible_block_num)(last_irreversible_block_id)
-  (head_num)(head_id)(generation))
+  (network_version)(node_id)(time)(token)(p2p_address)(last_irreversible_block_num)(last_irreversible_block_id)(head_num)(head_id)(generation))
 FC_REFLECT(noir::p2p::go_away_message, (reason)(node_id))
 FC_REFLECT(noir::p2p::time_message, (org)(rec)(xmt)(dst))
 FC_REFLECT(noir::p2p::proposal_message, (type)(height)(round)(pol_round)(my_block_id)(timestamp)(sig))

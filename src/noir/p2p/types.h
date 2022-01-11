@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <fc/crypto/sha256.hpp>
-#include <fc/crypto/public_key.hpp>
 #include <fc/crypto/private_key.hpp>
+#include <fc/crypto/public_key.hpp>
+#include <fc/crypto/sha256.hpp>
 #include <chrono>
 #include <cinttypes>
 #include <vector>
@@ -44,11 +44,10 @@ constexpr auto def_keepalive_interval = 32000;
 constexpr auto message_header_size = 4;
 
 constexpr uint16_t proto_base = 0;
-constexpr uint16_t proto_explicit_sync = 1;       // version at time of eosio 1.0
-constexpr uint16_t proto_block_id_notify = 2;     // reserved. feature was removed. next net_version should be 3
-constexpr uint16_t proto_pruned_types = 3;        // supports new signed_block & packed_transaction types
-constexpr uint16_t heartbeat_interval = 4;        // supports configurable heartbeat interval
-constexpr uint16_t dup_goaway_resolution = 5;     // support peer address based duplicate connection resolution
+constexpr uint16_t proto_explicit_sync = 1; // version at time of eosio 1.0
+constexpr uint16_t proto_block_id_notify = 2; // reserved. feature was removed. next net_version should be 3
+constexpr uint16_t proto_pruned_types = 3; // supports new signed_block & packed_transaction types
+constexpr uint16_t heartbeat_interval = 4; // supports configurable heartbeat interval
+constexpr uint16_t dup_goaway_resolution = 5; // support peer address based duplicate connection resolution
 
 } // namespace noir::p2p
-

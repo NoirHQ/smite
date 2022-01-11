@@ -13,16 +13,16 @@ namespace noir::consensus {
 struct part {
   uint32_t index;
   bytes bytes;
-  //proof proof;
+  // proof proof;
 };
 
 struct part_set {
   uint32_t total;
   bytes hash;
 
-//  std::mutex mtx;
+  //  std::mutex mtx;
   std::vector<part> parts;
-  //bit_array parts_bit_array;
+  // bit_array parts_bit_array;
   uint32_t count;
   int64_t byte_size;
 };
@@ -50,7 +50,7 @@ struct height_vote_set {
   int64_t height;
   validator_set val_set;
 
-//  std::mutex mtx;
+  //  std::mutex mtx;
   int32_t round;
   std::map<int32_t, round_vote_set> round_vote_sets;
   std::map<node_id, int32_t> peer_catchup_rounds;

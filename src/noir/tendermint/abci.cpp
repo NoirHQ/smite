@@ -8,8 +8,7 @@
 
 using namespace noir::tendermint;
 
-void abci_init() {
-}
+void abci_init() {}
 
 void begin_block(int64_t height) {
   log::info("!!! BeginBlock !!!");
@@ -32,7 +31,7 @@ void check_tx(void* tx, unsigned int len) {
   log::info("!!! --- CheckTX --- !!!");
 }
 
-ResponseInfo *info() {
-  auto *info = (ResponseInfo *) calloc(1, sizeof(ResponseInfo));
+ResponseInfo* info() {
+  auto* info = (ResponseInfo*)calloc(1, sizeof(ResponseInfo));
   return info;
 }

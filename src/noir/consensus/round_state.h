@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/consensus/validator.h>
 #include <noir/consensus/block.h>
 #include <noir/consensus/consensus_types.h>
-#include <noir/p2p/types.h>
+#include <noir/consensus/validator.h>
 #include <noir/p2p/protocol.h>
+#include <noir/p2p/types.h>
 
 namespace noir::consensus {
 
@@ -20,7 +20,7 @@ enum round_step_type {
   PrevoteWait = 5, // Did receive any +2/3 prevotes, start timeout
   Precommit = 6, // Did precommit, gossip precommits
   PrecommitWait = 7, // Did receive any +2/3 precommits, start timeout
-  Commit = 8  // Entered commit state machine
+  Commit = 8 // Entered commit state machine
 };
 
 /*
