@@ -21,22 +21,22 @@ class state {
 public:
   state();
 
-  block make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ bytes proposal_address);
+  block make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address);
 
-  tstamp get_median_time();
+  p2p::tstamp get_median_time();
 
-  state update_state(state new_state, block_id new_block_id, /* header, */ /* abci_response, */
+  state update_state(state new_state, p2p::block_id new_block_id, /* header, */ /* abci_response, */
     std::vector<validator> validator_updates);
 
 public:
-  string version;
+  std::string version;
 
-  string chain_id;
+  std::string chain_id;
   int64_t initial_height;
 
   int64_t last_block_height{0}; // set to 0 at genesis
-  block_id last_block_id;
-  tstamp last_block_time;
+  p2p::block_id last_block_id;
+  p2p::tstamp last_block_time;
 
   validator_set
     validators; // persisted to the database separately every time they change, so we can query for historical validator sets.
@@ -47,9 +47,9 @@ public:
   consensus_params consensus_params;
   int64_t last_height_consensus_params_changed;
 
-  bytes last_result_hash;
+  p2p::bytes last_result_hash;
 
-  bytes app_hash;
+  p2p::bytes app_hash;
 };
 
 state::state() {
@@ -82,9 +82,9 @@ state::state() {
 //  app_hash = genDoc.app_hash;
 }
 
-block state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ bytes proposal_address) {
+block state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address) {
   // Set time
-  tstamp timestamp;
+  p2p::tstamp timestamp;
 //    if (height == initial_height) {
 //      timestamp = genesis_time;
 //    } else {
@@ -93,12 +93,12 @@ block state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* e
   return block{};
 }
 
-tstamp state::get_median_time() {
+p2p::tstamp state::get_median_time() {
   return std::chrono::duration_cast<std::chrono::microseconds>(
     std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-state state::update_state(state new_state, block_id new_block_id, /* header, */ /* abci_response, */
+state state::update_state(state new_state, p2p::block_id new_block_id, /* header, */ /* abci_response, */
   std::vector<validator> validator_updates) {
 
 //  next_validators.update_with_change_set();

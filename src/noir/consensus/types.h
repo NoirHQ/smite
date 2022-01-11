@@ -10,6 +10,9 @@
 #include <noir/p2p/types.h>
 #include <noir/p2p/protocol.h>
 
+#include <appbase/application.hpp>
+#include <appbase/channel.hpp>
+
 namespace noir::consensus {
 
 using namespace noir::p2p;
@@ -103,4 +106,21 @@ struct round_state {
   bool triggered_timeout_precommit;
 };
 
+struct timeout_info {
+  std::chrono::system_clock::duration duration_;
+  int64_t height;
+  int32_t round;
+  round_step_type step;
+};
+
+using timeout_info_ptr = std::shared_ptr<timeout_info>;
+
+namespace channels {
+using timeout_ticker = appbase::channel_decl<struct timeout_ticker_tag, timeout_info_ptr>;
+}
+
 } // namespace noir::consensus
+
+FC_REFLECT(noir::consensus::timeout_info, (duration_)(height)(round)(step))
+FC_REFLECT(std::chrono::system_clock::duration, )
+FC_REFLECT(noir::consensus::round_step_type, )

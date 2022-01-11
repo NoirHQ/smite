@@ -7,6 +7,10 @@
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
+#include <noir/common/thread_pool.h>
+
+#include <appbase/application.hpp>
+#include <boost/asio/steady_timer.hpp>
 
 namespace noir::consensus {
 
@@ -17,6 +21,7 @@ namespace noir::consensus {
  * The internal state machine receives input from peers, the internal validator, and from a timer.
  */
 struct consensus_state {
+  consensus_state();
 
   static std::unique_ptr<consensus_state> new_state(state& state_);
 
@@ -33,7 +38,12 @@ struct consensus_state {
 
   void receive_routine(int max_steps);
   void handle_msg();
-  void handle_timeout();
+
+  void
+  schedule_timeout(std::chrono::system_clock::duration duration_, int64_t height, int32_t round, round_step_type step);
+  void tick(timeout_info_ptr ti);
+  void tock(timeout_info_ptr ti);
+  void handle_timeout(timeout_info_ptr ti);
 
 //  // config details
 //  config            *cfg.ConsensusConfig
@@ -69,7 +79,16 @@ struct consensus_state {
 //  // msgs from ourself, or by timeouts
 //  peerMsgQueue     chan msgInfo
 //  internalMsgQueue chan msgInfo
+
 //    timeoutTicker    TimeoutTicker
+  channels::timeout_ticker::channel_type& timeout_ticker_channel;
+  channels::timeout_ticker::channel_type::handle timeout_ticker_subscription;
+  std::mutex timeout_ticker_mtx;
+  unique_ptr<boost::asio::steady_timer> timeout_ticker_timer;
+  uint16_t thread_pool_size = 2;
+  std::optional<named_thread_pool> thread_pool;
+  timeout_info_ptr old_ti;
+
 //
 //  // information about about added votes and block parts are written on this channel
 //  // so statistics can be computed by reactor
@@ -106,6 +125,19 @@ struct consensus_state {
 //  // wait the channel event happening for shutting down the state gracefully
 //  onStopCh chan *cstypes.RoundState
 };
+
+consensus_state::consensus_state()
+  : timeout_ticker_channel(appbase::app().get_channel<channels::timeout_ticker>()) {
+  timeout_ticker_subscription = appbase::app().get_channel<channels::timeout_ticker>().subscribe(
+    std::bind(&consensus_state::tock, this, std::placeholders::_1));
+
+  thread_pool.emplace("consensus", thread_pool_size);
+  {
+    std::lock_guard<std::mutex> g(timeout_ticker_mtx);
+    timeout_ticker_timer.reset(new boost::asio::steady_timer(thread_pool->get_executor()));
+  }
+  old_ti = std::make_shared<timeout_info>(timeout_info{});
+}
 
 std::unique_ptr<consensus_state> consensus_state::new_state(state& state_) {
   auto consensus_state_ = std::make_unique<consensus_state>();
@@ -174,7 +206,49 @@ void consensus_state::handle_msg() {
   // todo
 }
 
-void consensus_state::handle_timeout() {
+void consensus_state::schedule_timeout(std::chrono::system_clock::duration duration_, int64_t height, int32_t round,
+  round_step_type step) {
+  tick(std::make_shared<timeout_info>(timeout_info{duration_, height, round, step}));
+}
+
+void consensus_state::tick(timeout_info_ptr ti) {
+  std::lock_guard<std::mutex> g(timeout_ticker_mtx);
+  elog("received tick: old_ti=${old_ti}, new_ti=${new_ti}", ("old_ti", old_ti)("new_ti", ti));
+
+  // ignore tickers for old height/round/step
+  if (ti->height < old_ti->height) {
+    return;
+  } else if (ti->height == old_ti->height) {
+    if (ti->round < old_ti->round) {
+      return;
+    } else if (ti->round == old_ti->round) {
+      if ((old_ti->step > 0) && (ti->step <= old_ti->step)) {
+        return;
+      }
+    }
+  }
+
+//  tock(old_ti); // todo - decide if we want to still process the last tock
+  timeout_ticker_timer->cancel();
+
+  // update timeoutInfo and reset timer
+  old_ti = ti;
+  timeout_ticker_timer->expires_from_now(ti->duration_);
+  timeout_ticker_timer->async_wait([this, ti](boost::system::error_code ec) {
+    if (ec) {
+      wlog("consensus_state timeout error: ${m}", ("m", ec.message()));
+//      return; // todo - decide if we want to still process the last tock
+    }
+    timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock
+  });
+}
+
+void consensus_state::tock(timeout_info_ptr ti) {
+  ilog("Timed out: ti=${ti}", ("ti", ti));
+  handle_timeout(ti);
+}
+
+void consensus_state::handle_timeout(timeout_info_ptr ti) {
 
 }
 
