@@ -14,7 +14,7 @@ using P2PID = std::string;
 struct block_votes {
   bool peer_maj23;
   //bitarray
-  vote_message votes;
+  p2p::vote_message votes;
   int64_t sum;
 };
 
@@ -56,16 +56,16 @@ struct vote_set {
   std::string chain_id;
   int64_t height;
   int32_t round;
-  signed_msg_type signed_msg_type;
+  p2p::signed_msg_type signed_msg_type;
   validator_set val_set;
 
 //  std::mutex mtx;
   //bit_array
-  vote_message votes;
+  p2p::vote_message votes;
   int64_t sum;
-  block_id maj23;
+  p2p::block_id maj23;
   std::map<std::string, block_votes> votes_by_block;
-  std::map<P2PID, block_id> peer_maj23s;
+  std::map<P2PID, p2p::block_id> peer_maj23s;
 };
 
 } // namespace noir::consensus
