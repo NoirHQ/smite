@@ -4,12 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/log.h>
 #include <noir/p2p/types.h>
+#include <noir/common/log.h>
 
 namespace noir::consensus {
-
-using namespace noir::p2p;
 
 // MaxTotalVotingPower - the maximum allowed total voting power.
 // It needs to be sufficiently small to, in all cases:
@@ -26,8 +24,8 @@ constexpr int64_t max_total_voting_power{std::numeric_limits<int64_t>::max() / 8
 constexpr int64_t priority_window_size_factor{2};
 
 struct validator {
-  bytes address;
-  bytes pub_key;
+  p2p::bytes address;
+  p2p::bytes pub_key;
   int64_t voting_power;
   int64_t proposer_priority;
 
@@ -60,7 +58,7 @@ struct validator_set {
     return vals;
   }
 
-  bool has_address(const bytes& address) {
+  bool has_address(const p2p::bytes& address) {
     for (const auto& val : validators) {
       if (val.address == address)
         return true;
@@ -68,7 +66,7 @@ struct validator_set {
     return false;
   }
 
-  std::optional<validator> get_by_address(const bytes& address) {
+  std::optional<validator> get_by_address(const p2p::bytes& address) {
     for (auto val : validators) {
       if (val.address == address)
         return val;
@@ -214,7 +212,7 @@ struct validator_set {
     std::vector<validator> changesCopy(changes);
     sort(changesCopy.begin(), changesCopy.end(), [](validator a, validator b) { return a.address < b.address; });
     std::vector<validator> updates, deletes;
-    bytes prevAddr;
+    p2p::bytes prevAddr;
     for (auto val_update : changesCopy) {
       if (val_update.address == prevAddr) {
         elog("duplicate entry ${val_update} in changes", ("val_update", val_update.address));

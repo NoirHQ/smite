@@ -4,11 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/p2p/types.h>
 #include <noir/p2p/protocol.h>
 
 namespace noir::consensus {
-
-using namespace noir::p2p;
 
 struct block {
   // mutex mtx;
@@ -19,21 +18,21 @@ struct block {
 };
 
 struct vote_extension_to_sign {
-  bytes add_data_to_sign;
+  p2p::bytes add_data_to_sign;
 };
 
 struct commit_sig {
   std::byte block_id_flag;
-  bytes validator_address;
-  tstamp timestamp;
-  bytes signature;
+  p2p::bytes validator_address;
+  p2p::tstamp timestamp;
+  p2p::bytes signature;
   vote_extension_to_sign vote_extension;
 };
 
 struct commit {
   int64_t height;
   int32_t round;
-  block_id my_block_id;
+  p2p::block_id my_block_id;
   std::vector<commit_sig> signatures;
 
   // todo - do we need these?

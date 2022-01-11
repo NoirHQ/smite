@@ -5,7 +5,7 @@
 //
 #pragma once
 #include <noir/common/hex.h>
-#include <noir/p2p/types.h>
+#include <noir/consensus/types.h>
 
 namespace noir::consensus {
 
