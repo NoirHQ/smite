@@ -1,0 +1,35 @@
+Language: Cpp
+BasedOnStyle: LLVM
+AlignAfterOpenBracket: DontAlign
+AlignEscapedNewlines: DontAlign
+AlignOperands: DontAlign
+AlignTrailingComments: false
+AllowShortEnumsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Empty
+AlwaysBreakTemplateDeclarations: Yes
+BreakBeforeBraces: Attach
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+ColumnLimit: 120
+CompactNamespaces: false
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
+IncludeCategories:
+  - Regex:        '^(<noir/)'
+    SortPriority: 2
+  - Regex:        '^(<catch2/)'
+    SortPriority: 1
+  - Regex:        '^(<[[:alnum:].]+/)'
+    SortPriority: 3
+  - Regex:        '^(<[[:alnum:].]+>)'
+    SortPriority: 4
+IndentGotoLabels: false
+IndentWidth: 2
+KeepEmptyLinesAtTheStartOfBlocks: true
+NamespaceMacros: [NOIR_CODEC]
+NamespaceIndentation: Inner
+PointerAlignment: Left
+SpaceAfterTemplateKeyword: false
+SpacesBeforeTrailingComments: 1
+UseTab: Never
