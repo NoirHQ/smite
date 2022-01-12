@@ -9,6 +9,9 @@
 using namespace noir::consensus;
 
 TEST_CASE("Basic", "[consensus_state]") {
-  consensus_state cs;
-
+  auto local_config = config::default_config();
+  state prev_state;
+  std::unique_ptr<consensus_state> cs_state = consensus_state::new_state(local_config.consensus, prev_state);
+  cs_state->schedule_timeout(std::chrono::milliseconds{3000}, 1, 0, NewHeight);
+  cs_state->schedule_timeout(std::chrono::milliseconds{4000}, 1, 1, Propose);
 }

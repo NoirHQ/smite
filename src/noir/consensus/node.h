@@ -29,6 +29,8 @@ private:
 
   // config
 //  config        *cfg.Config
+  config local_config;
+
 //  genesisDoc    *types.GenesisDoc   // initial validator set
 
 //  privValidator types.PrivValidator // local node's validator key
@@ -84,6 +86,7 @@ std::unique_ptr<node> node::make_node(priv_validator local_validator_, node_key 
   node_->local_validator = local_validator_;
   node_->local_node_key = node_key_;
 
+  node_->local_config = config::default_config();
   // Check config.Mode == cfg.ModeValidator
 
   // Determine whether we should attempt state sync.
@@ -98,7 +101,7 @@ std::unique_ptr<node> node::make_node(priv_validator local_validator_, node_key 
   // Create mempool // todo - here? or somewhere?
 
   // Create consensus_reactor
-  node_->cs_reactor = consensus_reactor::new_consensus_reactor(prev_state);
+  node_->cs_reactor = consensus_reactor::new_consensus_reactor(node_->local_config, prev_state);
 
   return node_;
 }
