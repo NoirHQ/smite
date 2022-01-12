@@ -28,6 +28,8 @@ public:
   state update_state(state new_state, p2p::block_id new_block_id, /* header, */ /* abci_response, */
     std::vector<validator> validator_updates);
 
+  bool is_empty();
+
 public:
   std::string version;
 
@@ -142,6 +144,10 @@ state state::update_state(state new_state, p2p::block_id new_block_id, /* header
   nextVersion := state.Version
 #endif
   return state{};
+}
+
+bool state::is_empty() {
+  return validators.validators.empty();
 }
 
 } // namespace noir::consensus
