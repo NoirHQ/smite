@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/consensus/config.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
@@ -23,7 +24,7 @@ namespace noir::consensus {
 struct consensus_state {
   consensus_state();
 
-  static std::unique_ptr<consensus_state> new_state(state& state_);
+  static std::unique_ptr<consensus_state> new_state(const consensus_config& cs_config_, state& state_);
 
   state get_state();
   int64_t get_last_height();
@@ -45,8 +46,18 @@ struct consensus_state {
   void tock(timeout_info_ptr ti);
   void handle_timeout(timeout_info_ptr ti);
 
+  void enter_new_round(int64_t height, int32_t round);
+  void enter_propose(int64_t height, int32_t round);
+  void enter_prevote(int64_t height, int32_t round);
+  void enter_prevote_wait(int64_t height, int32_t round);
+  void enter_precommit(int64_t height, int32_t round);
+  void enter_precommit_wait(int64_t height, int32_t round);
+  void enter_commit(int64_t height, int32_t round);
+
   //  // config details
   //  config            *cfg.ConsensusConfig
+  consensus_config cs_config;
+
   //  privValidator     types.PrivValidator // for signing votes
   //  privValidatorType types.PrivValidatorType
   //
@@ -138,8 +149,9 @@ consensus_state::consensus_state()
   old_ti = std::make_shared<timeout_info>(timeout_info{});
 }
 
-std::unique_ptr<consensus_state> consensus_state::new_state(state& state_) {
+std::unique_ptr<consensus_state> consensus_state::new_state(const consensus_config& cs_config_, state& state_) {
   auto consensus_state_ = std::make_unique<consensus_state>();
+  consensus_state_->cs_config = cs_config_;
 
   consensus_state_->update_to_state(state_);
 
@@ -225,7 +237,6 @@ void consensus_state::tick(timeout_info_ptr ti) {
     }
   }
 
-//  tock(old_ti); // todo - decide if we want to still process the last tock
   timeout_ticker_timer->cancel();
 
   // update timeoutInfo and reset timer
@@ -234,9 +245,10 @@ void consensus_state::tick(timeout_info_ptr ti) {
   timeout_ticker_timer->async_wait([this, ti](boost::system::error_code ec) {
     if (ec) {
       wlog("consensus_state timeout error: ${m}", ("m", ec.message()));
-//      return; // todo - decide if we want to still process the last tock
+      //return; // by commenting this line out, we'll process the last tock
     }
-    timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock
+//    timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock
+    tock(ti); // directly call (temporary workaround) // todo - use channel instead
   });
 }
 
@@ -246,6 +258,64 @@ void consensus_state::tock(timeout_info_ptr ti) {
 }
 
 void consensus_state::handle_timeout(timeout_info_ptr ti) {
+  std::lock_guard<std::mutex> g(mtx);
+  elog("Received tock: tock=${ti} timeout=${timeout} height=${height} round={round} step=${step}",
+    ("ti", ti)("timeout", ti->duration_)("height", ti->height)("round", ti->round)("step", ti->step));
+
+  // timeouts must be for current height, round, step
+  if ((ti->height != rs.height) || (ti->round < rs.round) || (ti->round == rs.round && ti->step < rs.step)) {
+    dlog("Ignoring tock because we are ahead: height=${height} round={round} step=${step}",
+      ("height", ti->height)("round", ti->round)("step", ti->step));
+    return;
+  }
+
+  switch (ti->step) {
+    case NewHeight:
+      enter_new_round(ti->height, 0);
+      break;
+    case NewRound:
+      enter_propose(ti->height, 0);
+      break;
+    case Propose:
+      enter_prevote(ti->height, ti->round);
+      break;
+    case PrevoteWait:
+      enter_precommit(ti->height, ti->round);
+      break;
+    case PrecommitWait:
+      enter_precommit(ti->height, ti->round);
+      enter_new_round(ti->height, ti->round + 1);
+      break;
+    default:
+      throw std::runtime_error("invalid timeout step");
+  }
+}
+
+void consensus_state::enter_new_round(int64_t height, int32_t round) {
+
+}
+
+void consensus_state::enter_propose(int64_t height, int32_t round) {
+
+}
+
+void consensus_state::enter_prevote(int64_t height, int32_t round) {
+
+}
+
+void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
+
+}
+
+void consensus_state::enter_precommit(int64_t height, int32_t round) {
+
+}
+
+void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {
+
+}
+
+void consensus_state::enter_commit(int64_t height, int32_t round) {
 
 }
 
