@@ -17,13 +17,13 @@ NOIR_CODEC(scale) {
 
 // Fixed-width integers
 // Boolean
-template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
+template<typename Stream, typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   ds.write((const char*)&v, sizeof(v));
   return ds;
 }
 
-template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
+template<typename Stream, typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   ds.read({(char*)&v, sizeof(v)});
   return ds;
@@ -171,6 +171,24 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
   ds >> size;
   v.resize(size);
   for (auto& i : v) {
+    ds >> i;
+  }
+  return ds;
+}
+
+template<typename Stream, typename T, size_t N>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const T (&v)[N]) {
+  std::span s(v);
+  for (const auto& i : s) {
+    ds << i;
+  }
+  return ds;
+}
+
+template<typename Stream, typename T, size_t N>
+datastream<Stream>& operator>>(datastream<Stream>& ds, T (&v)[N]) {
+  std::span s(v);
+  for (auto& i : s) {
     ds >> i;
   }
   return ds;

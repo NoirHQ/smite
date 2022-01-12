@@ -83,12 +83,25 @@ TEST_CASE("Results", "[codec][scale]") {
 }
 
 TEST_CASE("Vectors", "[codec][scale]") {
-  auto v = std::vector<uint16_t>{4, 8, 15, 16, 23, 42};
-  auto data = encode(v);
-  CHECK(to_hex(data) == "18040008000f00100017002a00");
+  SECTION("Vector") {
+    auto v = std::vector<uint16_t>{4, 8, 15, 16, 23, 42};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "18040008000f00100017002a00");
 
-  auto w = decode<std::vector<uint16_t>>(data);
-  CHECK(std::equal(v.begin(), v.end(), w.begin(), w.end()));
+    auto w = decode<std::vector<uint16_t>>(data);
+    CHECK(std::equal(v.begin(), v.end(), w.begin(), w.end()));
+  }
+
+  SECTION("C-Array") {
+    uint16_t v[4] = {1, 2, 3, 4};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "0100020003000400");
+
+    std::fill(std::begin(v), std::end(v), 0);
+    datastream<char> ds(data);
+    ds >> v;
+    CHECK((v[0] == 1 && v[1] == 2 && v[2] == 3 && v[3] == 4));
+  }
 }
 
 TEST_CASE("Strings", "[codec][scale]") {
