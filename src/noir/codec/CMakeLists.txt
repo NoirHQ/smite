@@ -1,8 +1,3 @@
-if(BUILD_TESTING)
-  target_sources(noir_tests
-    PRIVATE
-      scale_test.cpp
-      rlp_test.cpp
-  )
-endif()
+add_noir_test(scale_test scale_test.cpp)
+add_noir_test(rlp_test rlp_test.cpp)
 
