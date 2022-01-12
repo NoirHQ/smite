@@ -36,6 +36,7 @@ struct consensus_state {
   void update_round_step(int32_t rount, round_step_type step);
   void schedule_round_0(round_state& rs);
   void update_to_state(state& state_);
+  void new_step();
 
   void receive_routine(int max_steps);
   void handle_msg();
@@ -116,6 +117,8 @@ struct consensus_state {
   //
   //  // for tests where we want to limit the number of transitions the state makes
   //  nSteps int
+  int n_steps;
+
   //
   //  // some functions can be overwritten for testing
   //  decideProposal func(height int64, round int32)
@@ -199,7 +202,87 @@ void consensus_state::schedule_round_0(round_state& rs) {
  * The round becomes 0 and step becomes RoundStepNewHeight.
  */
 void consensus_state::update_to_state(state& state_) {
+  if ((rs.commit_round > -1) && (0 < rs.height) && (rs.height != state_.last_block_height)) {
+    throw std::runtime_error("update_to_state() unexpected height");
+  }
+
+  if (!local_state.is_empty()) {
+    if (local_state.last_block_height > 0 && local_state.last_block_height + 1 != rs.height) {
+      // This might happen when someone else is mutating local_state.
+      // Someone forgot to pass in state.Copy() somewhere?!
+      throw std::runtime_error("inconsistent local_state.last_block_height + 1");
+    }
+    if (local_state.last_block_height > 0 && rs.height == local_state.initial_height) {
+      throw std::runtime_error("inconsistent local_state.last_block_height");
+    }
+
+    // If state_ isn't further out than local_state, just ignore.
+    // This happens when SwitchToConsensus() is called in the reactor.
+    // We don't want to reset e.g. the Votes, but we still want to
+    // signal the new round step, because other services (eg. txNotifier)
+    // depend on having an up-to-date peer state!
+    if (state_.last_block_height <= local_state.last_block_height) {
+      dlog("ignoring update_to_state()");
+      new_step();
+      return;
+    }
+  }
+
+  // Reset fields based on state.
+  rs.validators = std::make_shared<validator_set>(state_.validators);
+
+  if (state_.last_block_height == 0) {
+    // very first commit should be empty
+    rs.last_commit = nullptr;
+  } else if (rs.commit_round > -1 && rs.votes != nullptr) {
+    // use votes
+//    if (rs.votes)
+    // todo
+  } else if (rs.last_commit == nullptr) {
+    // NOTE: when Tendermint starts, it has no votes. reconstructLastCommit
+    // must be called to reconstruct LastCommit from SeenCommit.
+    throw std::runtime_error("last commit cannot be empty after initial block");
+  }
+
+  // Next desired block height
+  auto height = state_.last_block_height + 1;
+  if (height == 1)
+    height = state_.initial_height;
+
+  // RoundState fields
+  update_height(height);
+  update_round_step(0, NewHeight);
+
   // todo
+//  if (rs.commit_time == 0)
+//    rs.start_time = config.;
+//  else
+//    rs.start_time =
+
+  rs.proposal = nullptr;
+  rs.proposal_block = nullptr;
+  rs.proposal_block_parts = nullptr;
+  rs.locked_round = -1;
+  rs.locked_block = nullptr;
+  rs.locked_block_parts = nullptr;
+
+  rs.valid_round = -1;
+  rs.valid_block = nullptr;
+  rs.valid_block_parts = nullptr;
+//  rs.votes = // todo
+  rs.commit_round = -1;
+  rs.last_validators = std::make_shared<validator_set>(state_.last_validators);
+  rs.triggered_timeout_precommit = false;
+
+  local_state = state_;
+
+  // Finally, broadcast RoundState
+  new_step();
+}
+
+void consensus_state::new_step() {
+  // todo
+  n_steps++;
 }
 
 /**
@@ -292,7 +375,13 @@ void consensus_state::handle_timeout(timeout_info_ptr ti) {
 }
 
 void consensus_state::enter_new_round(int64_t height, int32_t round) {
+  if ((rs.height != height) || (round < rs.round) || (rs.round == round && rs.step != NewHeight)) {
+    dlog("entering new round with invalid args: height=${height} round={round} step=${step}",
+      ("height", rs.height)("round", rs.round)("step", rs.step));
+    return;
+  }
 
+//  rs.start_time // todo - continue
 }
 
 void consensus_state::enter_propose(int64_t height, int32_t round) {

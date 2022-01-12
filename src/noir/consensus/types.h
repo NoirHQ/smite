@@ -86,23 +86,23 @@ struct round_state {
 
   // Subjective time when +2/3 precommits for Block at Round were found
   tstamp commit_time;
-  validator_set validators;
-  proposal_message proposal;
-  block proposal_block;
-  part_set proposal_block_parts;
+  std::shared_ptr<validator_set> validators;
+  std::shared_ptr<proposal_message> proposal;
+  std::shared_ptr<block> proposal_block;
+  std::shared_ptr<part_set> proposal_block_parts;
   int32_t locked_round;
-  block locked_block;
-  part_set locked_block_parts;
+  std::shared_ptr<block> locked_block;
+  std::shared_ptr<part_set> locked_block_parts;
 
   // Last known round with POL for non-nil valid block.
   int32_t valid_round;
-  block valid_block; // Last known block of POL mentioned above.
+  std::shared_ptr<block> valid_block; // Last known block of POL mentioned above.
 
-  part_set valid_block_parts;
-  height_vote_set votes;
+  std::shared_ptr<part_set> valid_block_parts;
+  std::shared_ptr<height_vote_set> votes;
   int32_t commit_round;
-  vote_set last_commit;
-  validator_set las_validators;
+  std::shared_ptr<vote_set> last_commit;
+  std::shared_ptr<validator_set> last_validators;
   bool triggered_timeout_precommit;
 };
 
