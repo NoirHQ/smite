@@ -15,7 +15,8 @@ class block_meta;
 
 class block_store {
 public:
-  explicit block_store(const std::string& db_type = "simple") : _db(new noir::consensus::simple_db) {}
+  explicit block_store(const std::string& db_type = "simple")
+    : _db(new noir::consensus::simple_db<noir::p2p::bytes, noir::p2p::bytes>) {}
 
   block_store(block_store&& other) noexcept : _db(std::move(other._db)) {}
 
@@ -62,7 +63,7 @@ public:
   }
 
 private:
-  std::unique_ptr<noir::consensus::db> _db;
+  std::unique_ptr<noir::consensus::db<noir::p2p::bytes, noir::p2p::bytes>> _db;
 };
 
 } // namespace noir::consensus
