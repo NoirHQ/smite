@@ -159,3 +159,9 @@ TEST_CASE("Enumerations", "[codec][scale]") {
     CHECK_THROWS_WITH((decode<u8_b>(data)), "invalid variant index");
   }
 }
+
+TEST_CASE("bytes32", "[codec][scale]") {
+  auto v = bytes32("ff000000");
+  auto data = encode(v);
+  CHECK(data[0] == -1);
+}
