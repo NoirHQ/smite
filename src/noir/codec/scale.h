@@ -233,23 +233,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::tuple<Ts...>& v) {
 // Data Structures
 template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
-  auto f = [&](const auto& val) { ds << val; };
-  if constexpr (Foreachable<T, decltype(f)>) {
-    for_each_field(v, f);
-  } else {
-    boost::pfr::for_each_field(v, f);
-  }
+  for_each_field(v, [&](const auto& val) { ds << val; });
   return ds;
 }
 
 template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   auto f = [&](auto& val) { ds >> val; };
-  if constexpr (Foreachable<T, decltype(f)>) {
-    for_each_field(v, f);
-  } else {
-    boost::pfr::for_each_field(v, f);
-  }
+  for_each_field(v, [&](auto& val) { ds >> val; });
   return ds;
 }
 
