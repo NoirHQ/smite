@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <boost/pfr.hpp>
 #include <boost/preprocessor/control/if.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/seq.hpp>
@@ -12,9 +13,14 @@
 namespace noir {
 
 template<typename T, typename F>
-concept Foreachable = requires(T v, F f) {
-  for_each_field(v, f);
-};
+void for_each_field(T& v, F&& f) {
+  boost::pfr::for_each_field(v, f);
+}
+
+template<typename T, typename F>
+void for_each_field(const T& v, F&& f) {
+  boost::pfr::for_each_field(v, f);
+}
 
 } // namespace noir
 
