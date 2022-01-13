@@ -14,7 +14,8 @@ class consensus_reactor : boost::noncopyable {
 public:
   consensus_reactor();
 
-  static std::unique_ptr<consensus_reactor> new_consensus_reactor(const config& local_config, state& prev_state);
+  static std::unique_ptr<consensus_reactor>
+  new_consensus_reactor(const config& local_config, state& prev_state, priv_validator priv);
 
   void on_start();
 
@@ -59,10 +60,14 @@ private:
 };
 
 std::unique_ptr<consensus_reactor>
-consensus_reactor::new_consensus_reactor(const config& local_config, state& prev_state) {
+consensus_reactor::new_consensus_reactor(const config& local_config, state& prev_state, priv_validator priv) {
   auto consensus_reactor_ = std::make_unique<consensus_reactor>();
 
-  consensus_reactor_->local_state = consensus_state::new_state(local_config.consensus, prev_state);
+  auto cs = consensus_state::new_state(local_config.consensus, prev_state);
+  if (local_config.base.mode == "validator")
+    cs->set_priv_validator(priv);
+
+  consensus_reactor_->local_state = move(cs);
 
   return consensus_reactor_;
 }
