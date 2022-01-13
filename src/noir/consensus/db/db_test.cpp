@@ -3,8 +3,8 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/consensus/db/db.h>
 #include <catch2/catch_all.hpp>
+#include <noir/consensus/db/db.h>
 
 TEST_CASE("get/has/set", "[simple_db]") {
   noir::consensus::simple_db test_db;
@@ -103,7 +103,6 @@ TEST_CASE("batch", "[simple_db]") {
     noir::p2p::bytes expected;
     bool ret;
 
-
     ret = batch->set(key, val);
     CHECK(ret == true);
   });
@@ -135,7 +134,6 @@ TEST_CASE("batch", "[simple_db]") {
     noir::p2p::bytes val(t.second.begin(), t.second.end());
     noir::p2p::bytes expected;
     bool ret;
-
 
     test_db.has(key, ret);
     CHECK(ret == false);

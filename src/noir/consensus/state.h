@@ -86,8 +86,8 @@ state::state() {
   //  app_hash = genDoc.app_hash;
 }
 
-block
-state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address) {
+block state::make_block(
+  int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address) {
   // Set time
   p2p::tstamp timestamp;
   //    if (height == initial_height) {
@@ -99,8 +99,8 @@ state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidenc
 }
 
 p2p::tstamp state::get_median_time() {
-  return std::chrono::duration_cast<std::chrono::microseconds>(
-    std::chrono::system_clock::now().time_since_epoch()).count();
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch())
+    .count();
 }
 
 state state::update_state(state new_state, p2p::block_id new_block_id, /* header, */ /* abci_response, */

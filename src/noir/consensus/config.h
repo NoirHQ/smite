@@ -30,9 +30,9 @@ struct base_config {
 };
 
 struct consensus_config {
-//  std::string root_dir;
+  //  std::string root_dir;
   std::string wal_path;
-//  std::string wal_file;
+  //  std::string wal_file;
 
   std::chrono::system_clock::duration timeout_propose;
   std::chrono::system_clock::duration timeout_propose_delta;
@@ -53,21 +53,10 @@ struct consensus_config {
   int64_t double_sign_check_height;
 
   static consensus_config default_consensus_config() {
-    return consensus_config{"cs.wal",
-      std::chrono::milliseconds{3000},
-      std::chrono::milliseconds{500},
-      std::chrono::milliseconds{1000},
-      std::chrono::milliseconds{500},
-      std::chrono::milliseconds{1000},
-      std::chrono::milliseconds{500},
-      std::chrono::milliseconds{1000},
-      false,
-      true,
-      std::chrono::seconds{0},
-      std::chrono::milliseconds{100},
-      std::chrono::milliseconds{2000},
-      0
-    };
+    return consensus_config{"cs.wal", std::chrono::milliseconds{3000}, std::chrono::milliseconds{500},
+      std::chrono::milliseconds{1000}, std::chrono::milliseconds{500}, std::chrono::milliseconds{1000},
+      std::chrono::milliseconds{500}, std::chrono::milliseconds{1000}, false, true, std::chrono::seconds{0},
+      std::chrono::milliseconds{100}, std::chrono::milliseconds{2000}, 0};
   }
 };
 
@@ -76,10 +65,7 @@ struct config {
   consensus_config consensus;
 
   static config default_config() {
-    return {
-      base_config::default_consensus_config(),
-      consensus_config::default_consensus_config()
-    };
+    return {base_config::default_consensus_config(), consensus_config::default_consensus_config()};
   }
 };
 

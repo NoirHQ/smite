@@ -14,8 +14,8 @@ class consensus_reactor : boost::noncopyable {
 public:
   consensus_reactor();
 
-  static std::unique_ptr<consensus_reactor>
-  new_consensus_reactor(const config& local_config, state& prev_state, priv_validator priv);
+  static std::unique_ptr<consensus_reactor> new_consensus_reactor(
+    const config& local_config, state& prev_state, priv_validator priv);
 
   void on_start();
 
@@ -59,8 +59,8 @@ private:
   //  peerUpdates   *p2p.PeerUpdates
 };
 
-std::unique_ptr<consensus_reactor>
-consensus_reactor::new_consensus_reactor(const config& local_config, state& prev_state, priv_validator priv) {
+std::unique_ptr<consensus_reactor> consensus_reactor::new_consensus_reactor(
+  const config& local_config, state& prev_state, priv_validator priv) {
   auto consensus_reactor_ = std::make_unique<consensus_reactor>();
 
   auto cs = consensus_state::new_state(local_config.consensus, prev_state);

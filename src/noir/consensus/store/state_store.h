@@ -6,8 +6,8 @@
 #pragma once
 
 #include <noir/codec/scale.h>
-#include <noir/consensus/state.h>
 #include <noir/consensus/db/db.h>
+#include <noir/consensus/state.h>
 
 namespace noir::consensus {
 
@@ -28,7 +28,7 @@ class db_store : public state_store {
 public:
   db_store(std::string db_type = "simple") : _db(new noir::consensus::simple_db) {}
 
-  db_store(db_store&& other) noexcept: _db(std::move(other._db)) {}
+  db_store(db_store&& other) noexcept : _db(std::move(other._db)) {}
 
   bool load(state& st) const override {
     return true;
