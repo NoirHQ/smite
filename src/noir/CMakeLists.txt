@@ -4,6 +4,7 @@ target_link_libraries(noir
   appbase
   expected
   fc
+  fmt
   tendermint
 )
 if(APPLE)
