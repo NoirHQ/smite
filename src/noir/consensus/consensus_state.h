@@ -4,16 +4,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/thread_pool.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
-#include <noir/common/thread_pool.h>
 
 #include <appbase/application.hpp>
-#include <fmt/core.h>
 #include <boost/asio/steady_timer.hpp>
+#include <fmt/core.h>
 
 namespace noir::consensus {
 
@@ -46,8 +46,8 @@ struct consensus_state {
   void receive_routine(int max_steps);
   void handle_msg();
 
-  void
-  schedule_timeout(std::chrono::system_clock::duration duration_, int64_t height, int32_t round, round_step_type step);
+  void schedule_timeout(
+    std::chrono::system_clock::duration duration_, int64_t height, int32_t round, round_step_type step);
   void tick(timeout_info_ptr ti);
   void tock(timeout_info_ptr ti);
   void handle_timeout(timeout_info_ptr ti);
@@ -60,29 +60,29 @@ struct consensus_state {
   void enter_precommit_wait(int64_t height, int32_t round);
   void enter_commit(int64_t height, int32_t round);
 
-//  // config details
-//  config            *cfg.ConsensusConfig
+  //  // config details
+  //  config            *cfg.ConsensusConfig
   consensus_config cs_config;
 
-//  privValidator     types.PrivValidator // for signing votes
-//  privValidatorType types.PrivValidatorType
+  //  privValidator     types.PrivValidator // for signing votes
+  //  privValidatorType types.PrivValidatorType
   priv_validator local_priv_validator;
   priv_validator_type local_priv_validator_type;
 
-//
-//  // store blocks and commits
-//  blockStore sm.BlockStore
-//
-//  // create and execute blocks
-//  blockExec *sm.BlockExecutor
-//
-//  // notify us if txs are available
-//  txNotifier txNotifier
-//
-//  // add evidence to the pool
-//  // when it's detected
-//  evpool evidencePool
-//
+  //
+  //  // store blocks and commits
+  //  blockStore sm.BlockStore
+  //
+  //  // create and execute blocks
+  //  blockExec *sm.BlockExecutor
+  //
+  //  // notify us if txs are available
+  //  txNotifier txNotifier
+  //
+  //  // add evidence to the pool
+  //  // when it's detected
+  //  evpool evidencePool
+  //
 
   // internal state
   //  mtx tmsync.RWMutex
@@ -92,17 +92,17 @@ struct consensus_state {
   round_state rs{};
   state local_state; // State until height-1.
 
-//  // privValidator pubkey, memoized for the duration of one block to avoid extra requests to HSM
-//  privValidatorPubKey crypto.PubKey
+  //  // privValidator pubkey, memoized for the duration of one block to avoid extra requests to HSM
+  //  privValidatorPubKey crypto.PubKey
   bytes local_priv_validator_pub_key;
 
-//
-//  // state changes may be triggered by: msgs from peers,
-//  // msgs from ourself, or by timeouts
-//  peerMsgQueue     chan msgInfo
-//  internalMsgQueue chan msgInfo
+  //
+  //  // state changes may be triggered by: msgs from peers,
+  //  // msgs from ourself, or by timeouts
+  //  peerMsgQueue     chan msgInfo
+  //  internalMsgQueue chan msgInfo
 
-//    timeoutTicker    TimeoutTicker
+  //    timeoutTicker    TimeoutTicker
   channels::timeout_ticker::channel_type& timeout_ticker_channel;
   channels::timeout_ticker::channel_type::handle timeout_ticker_subscription;
   std::mutex timeout_ticker_mtx;
@@ -111,47 +111,46 @@ struct consensus_state {
   std::optional<named_thread_pool> thread_pool;
   timeout_info_ptr old_ti;
 
-//
-//  // information about about added votes and block parts are written on this channel
-//  // so statistics can be computed by reactor
-//  statsMsgQueue chan msgInfo
-//
-//  // we use eventBus to trigger msg broadcasts in the reactor,
-//  // and to notify external subscribers, eg. through a websocket
-//  eventBus *types.EventBus
-//
-//  // a Write-Ahead Log ensures we can recover from any kind of crash
-//  // and helps us avoid signing conflicting votes
-//  wal          WAL
-//    replayMode   bool // so we don't log signing errors during replay
-//  doWALCatchup bool // determines if we even try to do the catchup
-//
-//  // for tests where we want to limit the number of transitions the state makes
-//  nSteps int
+  //
+  //  // information about about added votes and block parts are written on this channel
+  //  // so statistics can be computed by reactor
+  //  statsMsgQueue chan msgInfo
+  //
+  //  // we use eventBus to trigger msg broadcasts in the reactor,
+  //  // and to notify external subscribers, eg. through a websocket
+  //  eventBus *types.EventBus
+  //
+  //  // a Write-Ahead Log ensures we can recover from any kind of crash
+  //  // and helps us avoid signing conflicting votes
+  //  wal          WAL
+  //    replayMode   bool // so we don't log signing errors during replay
+  //  doWALCatchup bool // determines if we even try to do the catchup
+  //
+  //  // for tests where we want to limit the number of transitions the state makes
+  //  nSteps int
   int n_steps;
 
-//
-//  // some functions can be overwritten for testing
-//  decideProposal func(height int64, round int32)
-//  doPrevote      func(height int64, round int32)
-//  setProposal    func(proposal *types.Proposal) error
-//
-//  // closed when we finish shutting down
-//  done chan struct{}
-//
-//  // synchronous pubsub between consensus state and reactor.
-//  // state only emits EventNewRoundStep and EventVote
-//  evsw tmevents.EventSwitch
-//
-//  // for reporting metrics
-//  metrics *Metrics
-//
-//  // wait the channel event happening for shutting down the state gracefully
-//  onStopCh chan *cstypes.RoundState
+  //
+  //  // some functions can be overwritten for testing
+  //  decideProposal func(height int64, round int32)
+  //  doPrevote      func(height int64, round int32)
+  //  setProposal    func(proposal *types.Proposal) error
+  //
+  //  // closed when we finish shutting down
+  //  done chan struct{}
+  //
+  //  // synchronous pubsub between consensus state and reactor.
+  //  // state only emits EventNewRoundStep and EventVote
+  //  evsw tmevents.EventSwitch
+  //
+  //  // for reporting metrics
+  //  metrics *Metrics
+  //
+  //  // wait the channel event happening for shutting down the state gracefully
+  //  onStopCh chan *cstypes.RoundState
 };
 
-consensus_state::consensus_state()
-  : timeout_ticker_channel(appbase::app().get_channel<channels::timeout_ticker>()) {
+consensus_state::consensus_state() : timeout_ticker_channel(appbase::app().get_channel<channels::timeout_ticker>()) {
   timeout_ticker_subscription = appbase::app().get_channel<channels::timeout_ticker>().subscribe(
     std::bind(&consensus_state::tock, this, std::placeholders::_1));
 
@@ -198,8 +197,8 @@ void consensus_state::set_priv_validator(const priv_validator& priv) {
 
   local_priv_validator = priv;
 
-//  switch(priv.type) {
-//  }
+  //  switch(priv.type) {
+  //  }
   local_priv_validator_type = FileSignerClient; // todo - implement FilePV
 
   update_priv_validator_pub_key();
@@ -261,8 +260,8 @@ void consensus_state::update_to_state(state& state_) {
     if (local_state.last_block_height > 0 && local_state.last_block_height + 1 != rs.height) {
       // This might happen when someone else is mutating local_state.
       // Someone forgot to pass in state.Copy() somewhere?!
-      throw std::runtime_error(fmt::format("inconsistent local_state.last_block_height+1={} vs rs.height=",
-        local_state.last_block_height + 1, rs.height));
+      throw std::runtime_error(fmt::format(
+        "inconsistent local_state.last_block_height+1={} vs rs.height=", local_state.last_block_height + 1, rs.height));
     }
     if (local_state.last_block_height > 0 && rs.height == local_state.initial_height) {
       throw std::runtime_error(
@@ -276,8 +275,8 @@ void consensus_state::update_to_state(state& state_) {
     // signal the new round step, because other services (eg. txNotifier)
     // depend on having an up-to-date peer state!
     if (state_.last_block_height <= local_state.last_block_height) {
-      dlog(fmt::format("ignoring update_to_state(): new_height={} old_height={}",
-        state_.last_block_height + 1, local_state.last_block_height + 1));
+      dlog(fmt::format("ignoring update_to_state(): new_height={} old_height={}", state_.last_block_height + 1,
+        local_state.last_block_height + 1));
       new_step();
       return;
     }
@@ -291,7 +290,7 @@ void consensus_state::update_to_state(state& state_) {
     rs.last_commit = nullptr;
   } else if (rs.commit_round > -1 && rs.votes != nullptr) {
     // use votes
-//    if (rs.votes)
+    //    if (rs.votes)
     // todo
   } else if (rs.last_commit == nullptr) {
     // NOTE: when Tendermint starts, it has no votes. reconstructLastCommit
@@ -310,10 +309,10 @@ void consensus_state::update_to_state(state& state_) {
   update_round_step(0, NewHeight);
 
   // todo
-//  if (rs.commit_time == 0)
-//    rs.start_time = config.;
-//  else
-//    rs.start_time =
+  //  if (rs.commit_time == 0)
+  //    rs.start_time = config.;
+  //  else
+  //    rs.start_time =
 
   rs.proposal = nullptr;
   rs.proposal_block = nullptr;
@@ -325,7 +324,7 @@ void consensus_state::update_to_state(state& state_) {
   rs.valid_round = -1;
   rs.valid_block = nullptr;
   rs.valid_block_parts = nullptr;
-//  rs.votes = // todo
+  //  rs.votes = // todo
   rs.commit_round = -1;
   rs.last_validators = std::make_shared<validator_set>(state_.last_validators);
   rs.triggered_timeout_precommit = false;
@@ -354,8 +353,8 @@ void consensus_state::handle_msg() {
   // todo
 }
 
-void consensus_state::schedule_timeout(std::chrono::system_clock::duration duration_, int64_t height, int32_t round,
-  round_step_type step) {
+void consensus_state::schedule_timeout(
+  std::chrono::system_clock::duration duration_, int64_t height, int32_t round, round_step_type step) {
   tick(std::make_shared<timeout_info>(timeout_info{duration_, height, round, step}));
 }
 
@@ -384,9 +383,9 @@ void consensus_state::tick(timeout_info_ptr ti) {
   timeout_ticker_timer->async_wait([this, ti](boost::system::error_code ec) {
     if (ec) {
       wlog("consensus_state timeout error: ${m}", ("m", ec.message()));
-      //return; // by commenting this line out, we'll process the last tock
+      // return; // by commenting this line out, we'll process the last tock
     }
-//    timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock
+    //    timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock
     tock(ti); // directly call (temporary workaround) // todo - use channel instead
   });
 }
@@ -409,24 +408,24 @@ void consensus_state::handle_timeout(timeout_info_ptr ti) {
   }
 
   switch (ti->step) {
-    case NewHeight:
-      enter_new_round(ti->height, 0);
-      break;
-    case NewRound:
-      enter_propose(ti->height, 0);
-      break;
-    case Propose:
-      enter_prevote(ti->height, ti->round);
-      break;
-    case PrevoteWait:
-      enter_precommit(ti->height, ti->round);
-      break;
-    case PrecommitWait:
-      enter_precommit(ti->height, ti->round);
-      enter_new_round(ti->height, ti->round + 1);
-      break;
-    default:
-      throw std::runtime_error("invalid timeout step");
+  case NewHeight:
+    enter_new_round(ti->height, 0);
+    break;
+  case NewRound:
+    enter_propose(ti->height, 0);
+    break;
+  case Propose:
+    enter_prevote(ti->height, ti->round);
+    break;
+  case PrevoteWait:
+    enter_precommit(ti->height, ti->round);
+    break;
+  case PrecommitWait:
+    enter_precommit(ti->height, ti->round);
+    enter_new_round(ti->height, ti->round + 1);
+    break;
+  default:
+    throw std::runtime_error("invalid timeout step");
   }
 }
 
@@ -437,31 +436,19 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
     return;
   }
 
-//  rs.start_time // todo - continue
+  //  rs.start_time // todo - continue
 }
 
-void consensus_state::enter_propose(int64_t height, int32_t round) {
+void consensus_state::enter_propose(int64_t height, int32_t round) {}
 
-}
+void consensus_state::enter_prevote(int64_t height, int32_t round) {}
 
-void consensus_state::enter_prevote(int64_t height, int32_t round) {
+void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {}
 
-}
+void consensus_state::enter_precommit(int64_t height, int32_t round) {}
 
-void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
+void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {}
 
-}
-
-void consensus_state::enter_precommit(int64_t height, int32_t round) {
-
-}
-
-void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {
-
-}
-
-void consensus_state::enter_commit(int64_t height, int32_t round) {
-
-}
+void consensus_state::enter_commit(int64_t height, int32_t round) {}
 
 } // namespace noir::consensus

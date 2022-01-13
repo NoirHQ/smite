@@ -3,9 +3,9 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/consensus/consensus_state.h>
-#include <noir/common/hex.h>
 #include <catch2/catch_all.hpp>
+#include <noir/common/hex.h>
+#include <noir/consensus/consensus_state.h>
 #include <stdlib.h>
 
 using namespace noir::consensus;
@@ -25,7 +25,7 @@ std::unique_ptr<consensus_state> rand_cs(config& config_, int validator_number) 
 
 void start_test_round(std::unique_ptr<consensus_state>& cs, int64_t height, int32_t round) {
   cs->enter_new_round(height, round);
-//  cs.startRoutines(0) // not needed for noir
+  //  cs.startRoutines(0) // not needed for noir
 }
 
 TEST_CASE("Basic", "[consensus_state]") {
@@ -40,6 +40,6 @@ TEST_CASE("Basic", "[consensus_state]") {
   auto rs = cs1->get_round_state();
   auto prop = rs->validators->get_proposer();
 
-//  cs1->schedule_timeout(std::chrono::milliseconds{3000}, 1, 0, NewHeight);
-//  cs1->schedule_timeout(std::chrono::milliseconds{4000}, 1, 1, Propose);
+  //  cs1->schedule_timeout(std::chrono::milliseconds{3000}, 1, 0, NewHeight);
+  //  cs1->schedule_timeout(std::chrono::milliseconds{4000}, 1, 1, Propose);
 }

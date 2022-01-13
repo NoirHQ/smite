@@ -29,10 +29,10 @@ public:
 
 private:
   // config
-//  config        *cfg.Config
+  //  config        *cfg.Config
   config local_config;
 
-//  genesisDoc    *types.GenesisDoc   // initial validator set
+  //  genesisDoc    *types.GenesisDoc   // initial validator set
 
   //  privValidator types.PrivValidator // local node's validator key
   priv_validator local_validator;

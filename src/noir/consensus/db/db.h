@@ -11,7 +11,7 @@ namespace noir::consensus {
 
 class db {
 public:
-  virtual ~db() {};
+  virtual ~db(){};
   virtual bool get(const noir::p2p::bytes& key, noir::p2p::bytes& val) const = 0;
   virtual bool has(const noir::p2p::bytes& key, bool& val) const = 0;
   virtual bool set(const noir::p2p::bytes& key, const noir::p2p::bytes& val) = 0;
@@ -24,13 +24,12 @@ public:
 
   class batch {
   public:
-    virtual ~batch() {};
+    virtual ~batch(){};
     virtual bool set(const noir::p2p::bytes& key, const noir::p2p::bytes& val) = 0;
     virtual bool del(const noir::p2p::bytes& key) = 0;
     virtual bool write() = 0;
     virtual bool write_sync() = 0;
     virtual bool close() = 0;
-
   };
 
   virtual std::shared_ptr<batch> new_batch() = 0;
@@ -61,7 +60,9 @@ public:
 
   simple_db(const simple_db& other) : _impl(std::make_shared<simple_db_impl>(*other._impl)) {}
 
-  simple_db(simple_db&& other) : _impl(std::move(other._impl)) { other._impl = nullptr; }
+  simple_db(simple_db&& other) : _impl(std::move(other._impl)) {
+    other._impl = nullptr;
+  }
 
   ~simple_db() override {}
 
@@ -79,17 +80,20 @@ public:
   public:
     explicit simple_db_batch(std::shared_ptr<simple_db_impl> db_impl) : _db(std::move(db_impl)) {}
 
-    explicit simple_db_batch(const simple_db_batch& other) noexcept: _db(other._db), _map(other._map) {}
+    explicit simple_db_batch(const simple_db_batch& other) noexcept : _db(other._db), _map(other._map) {}
 
-    explicit simple_db_batch(simple_db_batch&& other) noexcept: _db(std::move(other._db)) { other._db = nullptr; }
+    explicit simple_db_batch(simple_db_batch&& other) noexcept : _db(std::move(other._db)) {
+      other._db = nullptr;
+    }
 
-    ~simple_db_batch() override {};
+    ~simple_db_batch() override{};
 
     bool set(const noir::p2p::bytes& key, const noir::p2p::bytes& val) override;
     bool del(const noir::p2p::bytes& key) override;
     bool write() override;
     bool write_sync() override;
     bool close() override;
+
   private:
     std::shared_ptr<simple_db_impl> _db;
     std::map<noir::p2p::bytes, std::pair<bool, noir::p2p::bytes>> _map;
@@ -99,7 +103,6 @@ public:
   std::shared_ptr<batch> new_batch() override {
     return std::make_shared<simple_db_batch>(simple_db_batch(_impl));
   }
-
 };
 
-} // noir::consensus
+} // namespace noir::consensus
