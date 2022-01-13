@@ -10,7 +10,7 @@
 using namespace noir;
 using namespace noir::codec::scale;
 
-TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_t, uint8_t, int16_t, uint16_t, int32_t,
+TEMPLATE_TEST_CASE("[scale] Fixed-width integers/Boolean", "[codec]", bool, int8_t, uint8_t, int16_t, uint16_t, int32_t,
   uint32_t, int64_t, uint64_t) {
   TestType v = std::numeric_limits<TestType>::max();
   auto hex = to_hex({(const char*)&v, sizeof(v)});
@@ -29,7 +29,7 @@ TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_
   CHECK(v == std::numeric_limits<TestType>::min());
 }
 
-TEST_CASE("Compact/general integers", "[codec][scale]") {
+TEST_CASE("[scale] Compact/general integers", "[codec]") {
   auto tests = std::to_array<std::pair<unsigned_int, const char*>>({
     {0, "00"}, {1, "04"}, {42, "a8"}, {69, "1501"}, {65535, "feff0300"},
     // TODO: BigInt(100000000000000)
@@ -41,7 +41,7 @@ TEST_CASE("Compact/general integers", "[codec][scale]") {
   });
 }
 
-TEST_CASE("Options", "[codec][scale]") {
+TEST_CASE("[scale] Options", "[codec]") {
   SECTION("bool") {
     auto tests = std::to_array<std::pair<std::optional<bool>, const char*>>({
       {true, "01"},
@@ -68,7 +68,7 @@ TEST_CASE("Options", "[codec][scale]") {
   }
 }
 
-TEST_CASE("Results", "[codec][scale]") {
+TEST_CASE("[scale] Results", "[codec]") {
   using u8_b = noir::expected<uint8_t, bool>;
 
   auto tests = std::to_array<std::pair<u8_b, const char*>>({
@@ -82,7 +82,7 @@ TEST_CASE("Results", "[codec][scale]") {
   });
 }
 
-TEST_CASE("Vectors", "[codec][scale]") {
+TEST_CASE("[scale] Vectors", "[codec]") {
   SECTION("Vector") {
     auto v = std::vector<uint16_t>{4, 8, 15, 16, 23, 42};
     auto data = encode(v);
@@ -104,7 +104,7 @@ TEST_CASE("Vectors", "[codec][scale]") {
   }
 }
 
-TEST_CASE("Strings", "[codec][scale]") {
+TEST_CASE("[scale] Strings", "[codec]") {
   auto v = std::string("The quick brown fox jumps over the lazy dog.");
   auto data = encode(v);
   CHECK(to_hex(data) == "b054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e");
@@ -113,7 +113,7 @@ TEST_CASE("Strings", "[codec][scale]") {
   CHECK(v == w);
 }
 
-TEST_CASE("Tuples", "[codec][scale]") {
+TEST_CASE("[scale] Tuples", "[codec]") {
   auto v = std::make_tuple((unsigned_int)3, false);
   auto data = encode(v);
   CHECK(to_hex(data) == "0c00");
@@ -122,7 +122,7 @@ TEST_CASE("Tuples", "[codec][scale]") {
   CHECK(v == std::make_tuple(3u, false));
 }
 
-TEST_CASE("Data structures", "[codec][scale]") {
+TEST_CASE("[scale] Data structures", "[codec]") {
   struct foo {
     std::string s;
     uint32_t i;
@@ -139,7 +139,7 @@ TEST_CASE("Data structures", "[codec][scale]") {
   CHECK((v.s == "Lorem ipsum" && v.i == 42 && v.b && !*v.b && std::equal(v.a.begin(), v.a.end(), a.begin())));
 }
 
-TEST_CASE("Enumerations", "[codec][scale]") {
+TEST_CASE("[scale] Enumerations", "[codec]") {
   using u8_b = std::variant<uint8_t, bool>;
 
   SECTION("int or bool") {
@@ -160,7 +160,7 @@ TEST_CASE("Enumerations", "[codec][scale]") {
   }
 }
 
-TEST_CASE("bytes32", "[codec][scale]") {
+TEST_CASE("[scale] bytes32", "[codec]") {
   auto v = bytes32("ff000000");
   auto data = encode(v);
   CHECK(data[0] == -1);
