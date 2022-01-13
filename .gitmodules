@@ -10,3 +10,6 @@
 [submodule "libs/fc"]
 	path = libs/fc
 	url = https://github.com/noir-protocol/fc
+[submodule "libs/fmt"]
+	path = libs/fmt
+	url = https://github.com/fmtlib/fmt
