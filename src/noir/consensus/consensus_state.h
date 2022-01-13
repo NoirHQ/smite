@@ -6,11 +6,13 @@
 #pragma once
 #include <noir/consensus/config.h>
 #include <noir/consensus/consensus_state.h>
+#include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
 #include <noir/common/thread_pool.h>
 
 #include <appbase/application.hpp>
+#include <fmt/core.h>
 #include <boost/asio/steady_timer.hpp>
 
 namespace noir::consensus {
@@ -28,7 +30,10 @@ struct consensus_state {
 
   state get_state();
   int64_t get_last_height();
-  round_state get_round_state();
+  std::unique_ptr<round_state> get_round_state();
+  void set_priv_validator(const priv_validator& priv);
+  void update_priv_validator_pub_key();
+  state reconstruct_last_commit(state& state_);
 
   void on_start();
 
@@ -61,6 +66,9 @@ struct consensus_state {
 
 //  privValidator     types.PrivValidator // for signing votes
 //  privValidatorType types.PrivValidatorType
+  priv_validator local_priv_validator;
+  priv_validator_type local_priv_validator_type;
+
 //
 //  // store blocks and commits
 //  blockStore sm.BlockStore
@@ -81,11 +89,13 @@ struct consensus_state {
 //  cstypes.RoundState
 //  state sm.State // State until height-1.
   std::mutex mtx;
-  round_state rs;
+  round_state rs{};
   state local_state; // State until height-1.
-//  // privValidator pubkey, memoized for the duration of one block
-//  // to avoid extra requests to HSM
+
+//  // privValidator pubkey, memoized for the duration of one block to avoid extra requests to HSM
 //  privValidatorPubKey crypto.PubKey
+  bytes local_priv_validator_pub_key;
+
 //
 //  // state changes may be triggered by: msgs from peers,
 //  // msgs from ourself, or by timeouts
@@ -157,6 +167,10 @@ std::unique_ptr<consensus_state> consensus_state::new_state(const consensus_conf
   auto consensus_state_ = std::make_unique<consensus_state>();
   consensus_state_->cs_config = cs_config_;
 
+  if (state_.last_block_height > 0) {
+    consensus_state_->reconstruct_last_commit(state_);
+  }
+
   consensus_state_->update_to_state(state_);
 
   return consensus_state_;
@@ -172,9 +186,44 @@ int64_t consensus_state::get_last_height() {
   return rs.height - 1;
 }
 
-round_state consensus_state::get_round_state() {
+std::unique_ptr<round_state> consensus_state::get_round_state() {
   std::lock_guard<std::mutex> g(mtx);
-  return rs;
+  auto rs_copy = std::make_unique<round_state>();
+  *rs_copy = rs;
+  return rs_copy;
+}
+
+void consensus_state::set_priv_validator(const priv_validator& priv) {
+  std::lock_guard<std::mutex> g(mtx);
+
+  local_priv_validator = priv;
+
+//  switch(priv.type) {
+//  }
+  local_priv_validator_type = FileSignerClient; // todo - implement FilePV
+
+  update_priv_validator_pub_key();
+}
+
+/**
+ * get private validator public key and memoizes it
+ */
+void consensus_state::update_priv_validator_pub_key() {
+
+  std::chrono::system_clock::duration timeout = cs_config.timeout_prevote;
+  if (cs_config.timeout_precommit > cs_config.timeout_prevote)
+    timeout = cs_config.timeout_precommit;
+
+  // no GetPubKey retry beyond the proposal/voting in RetrySignerClient
+  if (rs.step >= Precommit && local_priv_validator_type == RetrySignerClient)
+    timeout = std::chrono::system_clock::duration::zero();
+
+  auto pub_key = local_priv_validator.get_pub_key();
+  local_priv_validator_pub_key = pub_key;
+}
+
+state consensus_state::reconstruct_last_commit(state& state_) {
+  // todo
 }
 
 void consensus_state::on_start() {
@@ -204,17 +253,21 @@ void consensus_state::schedule_round_0(round_state& rs) {
  */
 void consensus_state::update_to_state(state& state_) {
   if ((rs.commit_round > -1) && (0 < rs.height) && (rs.height != state_.last_block_height)) {
-    throw std::runtime_error("update_to_state() unexpected height");
+    throw std::runtime_error(
+      fmt::format("update_to_state() unexpected state height of {} but found {}", rs.height, state_.last_block_height));
   }
 
   if (!local_state.is_empty()) {
     if (local_state.last_block_height > 0 && local_state.last_block_height + 1 != rs.height) {
       // This might happen when someone else is mutating local_state.
       // Someone forgot to pass in state.Copy() somewhere?!
-      throw std::runtime_error("inconsistent local_state.last_block_height + 1");
+      throw std::runtime_error(fmt::format("inconsistent local_state.last_block_height+1={} vs rs.height=",
+        local_state.last_block_height + 1, rs.height));
     }
     if (local_state.last_block_height > 0 && rs.height == local_state.initial_height) {
-      throw std::runtime_error("inconsistent local_state.last_block_height");
+      throw std::runtime_error(
+        fmt::format("inconsistent local_state.last_block_height={}, expected 0 for initial height {}",
+          local_state.last_block_height, local_state.initial_height));
     }
 
     // If state_ isn't further out than local_state, just ignore.
@@ -223,7 +276,8 @@ void consensus_state::update_to_state(state& state_) {
     // signal the new round step, because other services (eg. txNotifier)
     // depend on having an up-to-date peer state!
     if (state_.last_block_height <= local_state.last_block_height) {
-      dlog("ignoring update_to_state()");
+      dlog(fmt::format("ignoring update_to_state(): new_height={} old_height={}",
+        state_.last_block_height + 1, local_state.last_block_height + 1));
       new_step();
       return;
     }
@@ -242,7 +296,8 @@ void consensus_state::update_to_state(state& state_) {
   } else if (rs.last_commit == nullptr) {
     // NOTE: when Tendermint starts, it has no votes. reconstructLastCommit
     // must be called to reconstruct LastCommit from SeenCommit.
-    throw std::runtime_error("last commit cannot be empty after initial block");
+    throw std::runtime_error(
+      fmt::format("last commit cannot be empty after initial block (height={})", state_.last_block_height + 1));
   }
 
   // Next desired block height
