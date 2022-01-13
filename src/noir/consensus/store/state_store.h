@@ -26,7 +26,7 @@ public:
 
 class db_store : public state_store {
 public:
-  db_store(std::string db_type = "simple") : _db(new noir::consensus::simple_db) {}
+  db_store(std::string db_type = "simple") : _db(new simple_db<noir::p2p::bytes, noir::p2p::bytes>) {}
 
   db_store(db_store&& other) noexcept : _db(std::move(other._db)) {}
 
@@ -67,7 +67,7 @@ public:
   }
 
 private:
-  std::unique_ptr<noir::consensus::db> _db;
+  std::unique_ptr<db<noir::p2p::bytes, noir::p2p::bytes>> _db;
 };
 
 } // namespace noir::consensus
