@@ -8,8 +8,18 @@
 
 namespace noir::consensus {
 
+enum priv_validator_type {
+  MockSignerClient = 0,
+  FileSignerClient = 1,
+  RetrySignerClient = 2,
+  SignerSocketClient = 3,
+  ErrorMockSignerClient = 4,
+  SignerGRPCClient = 5
+};
+
 struct priv_validator {
   bytes pub_key;
+  priv_validator_type type;
 
   bytes get_pub_key() {
     return pub_key;

@@ -25,6 +25,8 @@ public:
 
   void on_stop();
 
+  static state load_state_from_db_or_genesis(/* stateStore, genDoc*/);
+
 private:
   // config
   //  config        *cfg.Config
@@ -93,14 +95,14 @@ std::unique_ptr<node> node::make_node(priv_validator local_validator_, node_key 
   // Reload the state. It will have the Version.Consensus.App set by the
   // Handshake, and may have other modifications as well (ie. depending on
   // what happened during block replay).
-  state prev_state; // todo
+  state state_ = load_state_from_db_or_genesis(); // todo - properly load state
 
   node_->log_node_startup_info(node_->local_node_key.get_pub_key(), "ModeValidator");
 
   // Create mempool // todo - here? or somewhere?
 
   // Create consensus_reactor
-  node_->cs_reactor = consensus_reactor::new_consensus_reactor(node_->local_config, prev_state);
+  node_->cs_reactor = consensus_reactor::new_consensus_reactor(node_->local_config, state_);
 
   return node_;
 }
@@ -114,6 +116,22 @@ void node::log_node_startup_info(bytes pub_key, std::string mode) {
     auto addr = pub_key; // todo - convert pub_key to addr
     ilog("This node is a validator addr=${addr} pubKey=${pubKey}", ("addr", addr)("pubKey", pub_key));
   }
+}
+
+/**
+ * load state from the database, or create one using the given genDoc.
+ * On success this returns the genesis doc loaded through the given provider.
+ */
+state node::load_state_from_db_or_genesis(/* stateStore, genDoc*/) {
+  // todo
+  // 1. Attempt to load state form the database
+  state state_;
+
+  if (state_.is_empty()) {
+    // 2. If it's not there, derive it from the genesis doc
+    state_ = state::make_genesis_state();
+  }
+  return state_;
 }
 
 } // namespace noir::consensus

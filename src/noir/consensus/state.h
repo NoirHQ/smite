@@ -30,6 +30,8 @@ public:
 
   bool is_empty();
 
+  static state make_genesis_state(/*genDoc*/);
+
 public:
   std::string version;
 
@@ -84,7 +86,8 @@ state::state() {
   //  app_hash = genDoc.app_hash;
 }
 
-block state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address) {
+block
+state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address) {
   // Set time
   p2p::tstamp timestamp;
   //    if (height == initial_height) {
@@ -148,6 +151,11 @@ state state::update_state(state new_state, p2p::block_id new_block_id, /* header
 
 bool state::is_empty() {
   return validators.validators.empty();
+}
+
+state state::make_genesis_state(/* genDoc*/) {
+  // todo - read from genDoc
+  return state{};
 }
 
 } // namespace noir::consensus
