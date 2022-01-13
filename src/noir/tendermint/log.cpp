@@ -3,10 +3,10 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <tendermint/tendermint.h>
 #include <fc/log/appender.hpp>
 #include <fc/log/log_message.hpp>
 #include <fc/log/logger_config.hpp>
+#include <tendermint/tendermint.h>
 
 namespace noir::tendermint::log {
 
@@ -37,16 +37,16 @@ public:
 
     const fc::log_level log_level = m.get_context().get_log_level();
     switch (log_level) {
-      case fc::log_level::debug:
-        tendermint::log::debug(message.c_str());
-        break;
-      case fc::log_level::info:
-        tendermint::log::info(message.c_str());
-        break;
-      case fc::log_level::warn:
-      case fc::log_level::error:
-        tendermint::log::error(message.c_str());
-        break;
+    case fc::log_level::debug:
+      tendermint::log::debug(message.c_str());
+      break;
+    case fc::log_level::info:
+      tendermint::log::info(message.c_str());
+      break;
+    case fc::log_level::warn:
+    case fc::log_level::error:
+      tendermint::log::error(message.c_str());
+      break;
     }
   }
 };

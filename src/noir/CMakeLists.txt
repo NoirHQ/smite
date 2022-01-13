@@ -1,3 +1,11 @@
+function(add_noir_test TARGET)
+  if(BUILD_TESTING)
+    add_executable(${TARGET} ${ARGN})
+    target_link_libraries(${TARGET} noir Catch2WithMain)
+    catch_discover_tests(${TARGET})
+  endif()
+endfunction()
+
 add_library(noir STATIC)
 target_include_directories(noir PUBLIC ${NOIR_SOURCE_DIR})
 target_link_libraries(noir
@@ -9,12 +17,6 @@ target_link_libraries(noir
 )
 if(APPLE)
   target_link_libraries(noir "-framework CoreFoundation" "-framework Security")
-endif()
-
-if(BUILD_TESTING)
-  add_executable(noir_tests)
-  target_link_libraries(noir_tests noir Catch2WithMain)
-  catch_discover_tests(noir_tests)
 endif()
 
 add_subdirectory(codec)

@@ -10,11 +10,11 @@
 namespace noir::consensus {
 
 struct block {
-  //mutex mtx;
-  //header header;
-  //data data;
-  //evidence evidence;
-  //commit last_commit;
+  // mutex mtx;
+  // header header;
+  // data data;
+  // evidence evidence;
+  // commit last_commit;
 };
 
 struct vote_extension_to_sign {
@@ -36,8 +36,8 @@ struct commit {
   std::vector<commit_sig> signatures;
 
   // todo - do we need these?
-//  hash
-//  bitArray
+  //  hash
+  //  bitArray
 };
 
 using block_ptr = std::shared_ptr<block>;

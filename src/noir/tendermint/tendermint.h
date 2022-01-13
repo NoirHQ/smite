@@ -43,4 +43,3 @@ void start();
 void stop();
 
 } // namespace noir::tendermint::node
-

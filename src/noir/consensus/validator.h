@@ -53,7 +53,8 @@ struct validator_set {
   static validator_set new_validator_set(std::vector<validator>& validator_list) {
     validator_set vals;
     vals.update_with_change_set(validator_list, false);
-    if (!validator_list.empty()) vals.increment_proposer_priority(1);
+    if (!validator_list.empty())
+      vals.increment_proposer_priority(1);
     return vals;
   }
 
@@ -120,9 +121,7 @@ struct validator_set {
    */
   void apply_updates(std::vector<validator>& updates) {
     std::vector<validator> existing(validators);
-    sort(existing.begin(), existing.end(), [](validator a, validator b) {
-      return a.address < b.address;
-    });
+    sort(existing.begin(), existing.end(), [](validator a, validator b) { return a.address < b.address; });
 
     std::vector<validator> merged;
     merged.resize(existing.size() + updates.size());
@@ -211,9 +210,7 @@ struct validator_set {
 
     // Check for duplicates within changes, split in 'updates' and 'deletes' lists (sorted).
     std::vector<validator> changesCopy(changes);
-    sort(changesCopy.begin(), changesCopy.end(), [](validator a, validator b) {
-      return a.address < b.address;
-    });
+    sort(changesCopy.begin(), changesCopy.end(), [](validator a, validator b) { return a.address < b.address; });
     std::vector<validator> updates, deletes;
     p2p::bytes prevAddr;
     for (auto val_update : changesCopy) {
@@ -244,13 +241,13 @@ struct validator_set {
     // Check that the resulting set will not be empty.
     auto num_new_validators = 0;
     for (const auto& val_update : updates) {
-      if (!has_address(val_update.address)) num_new_validators++;
+      if (!has_address(val_update.address))
+        num_new_validators++;
     }
     if (num_new_validators == 0 && validators.size() == deletes.size()) {
       elog("applying the validator changes would result in empty set");
       return;
     }
-
 
     // Verify that applying the 'deletes' against 'vals' will not result in error.
     // Get the voting power that is going to be removed.
@@ -277,9 +274,8 @@ struct validator_set {
       return update.voting_power;
     };
     std::vector<validator> updatesCopy(updates);
-    sort(updatesCopy.begin(), updatesCopy.end(), [delta, this](validator a, validator b) {
-      return delta(a, *this) < delta(b, *this);
-    });
+    sort(updatesCopy.begin(), updatesCopy.end(),
+      [delta, this](validator a, validator b) { return delta(a, *this) < delta(b, *this); });
     auto tvp_after_removals = total_voting_power - removed_voting_power;
     for (auto val_update : updatesCopy) {
       tvp_after_removals += delta(val_update, *this);
@@ -303,9 +299,8 @@ struct validator_set {
     rescale_priorities(priority_window_size_factor * get_total_voting_power());
     shift_by_avg_proposer_priority();
 
-    sort(validators.begin(), validators.end(), [](validator a, validator b) {
-      return a.voting_power < b.voting_power;
-    });
+    sort(
+      validators.begin(), validators.end(), [](validator a, validator b) { return a.voting_power < b.voting_power; });
   }
 
   /** \brief computes the proposer priority for the validators not present in the set based on
@@ -358,11 +353,8 @@ struct validator_set {
         val.proposer_priority += val.voting_power; // todo - check safe add
       }
       // find validator with most priority
-      auto it = std::max_element(validators.begin(),
-        validators.end(),
-        [](const validator& a, const validator& b) {
-          return a.proposer_priority < b.proposer_priority;
-        });
+      auto it = std::max_element(validators.begin(), validators.end(),
+        [](const validator& a, const validator& b) { return a.proposer_priority < b.proposer_priority; });
       it->proposer_priority -= total_voting_power;
       proposer = *it;
     }
@@ -372,8 +364,10 @@ struct validator_set {
    * maximum and minimum is smaller than `diffMax`. throws if validator set is empty.
    */
   void rescale_priorities(int64_t diff_max) {
-    if (validators.empty()) throw std::runtime_error("empty validator set");
-    if (diff_max <= 0) return;
+    if (validators.empty())
+      throw std::runtime_error("empty validator set");
+    if (diff_max <= 0)
+      return;
 
     // Calculating ceil(diff/diffMax):
     // Re-normalization is performed by dividing by an integer for simplicity.
@@ -397,7 +391,8 @@ struct validator_set {
   }
 
   void shift_by_avg_proposer_priority() {
-    if (validators.empty()) throw std::runtime_error("empty validator set");
+    if (validators.empty())
+      throw std::runtime_error("empty validator set");
     // compute average proposer_priority
     int64_t sum = 0;
     for (auto& val : validators) {
@@ -410,7 +405,6 @@ struct validator_set {
       }
     }
   }
-
 };
 
 } // namespace noir::consensus

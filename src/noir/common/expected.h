@@ -9,7 +9,7 @@
 namespace noir {
 
 using ::tl::expected;
-using ::tl::unexpected;
 using ::tl::make_unexpected;
+using ::tl::unexpected;
 
 } // namespace noir

@@ -85,9 +85,9 @@ struct consensus_state {
 //
 
   // internal state
-//  mtx tmsync.RWMutex
-//  cstypes.RoundState
-//  state sm.State // State until height-1.
+  //  mtx tmsync.RWMutex
+  //  cstypes.RoundState
+  //  state sm.State // State until height-1.
   std::mutex mtx;
   round_state rs{};
   state local_state; // State until height-1.
@@ -243,8 +243,8 @@ void consensus_state::update_round_step(int32_t round, round_step_type step) {
  * enterNewRound(height, 0) at StartTime.
  */
 void consensus_state::schedule_round_0(round_state& rs) {
-//  sleepDuration := rs.StartTime.Sub(tmtime.Now())
-//  cs.scheduleTimeout(sleepDuration, rs.Height, 0, cstypes.RoundStepNewHeight)
+  //  sleepDuration := rs.StartTime.Sub(tmtime.Now())
+  //  cs.scheduleTimeout(sleepDuration, rs.Height, 0, cstypes.RoundStepNewHeight)
 }
 
 /**
@@ -348,9 +348,7 @@ void consensus_state::new_step() {
  * Updates (state transitions) happen on timeouts, complete proposals, and 2/3 majorities.
  * State must be locked before any internal state is updated.
  */
-void consensus_state::receive_routine(int max_steps) {
-
-}
+void consensus_state::receive_routine(int max_steps) {}
 
 void consensus_state::handle_msg() {
   // todo

@@ -10,7 +10,8 @@
 using namespace noir;
 using namespace noir::codec::scale;
 
-TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t) {
+TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_t, uint8_t, int16_t, uint16_t, int32_t,
+  uint32_t, int64_t, uint64_t) {
   TestType v = std::numeric_limits<TestType>::max();
   auto hex = to_hex({(const char*)&v, sizeof(v)});
   auto data = encode(v);
@@ -30,11 +31,7 @@ TEMPLATE_TEST_CASE("Fixed-width integers/Boolean", "[codec][scale]", bool, int8_
 
 TEST_CASE("Compact/general integers", "[codec][scale]") {
   auto tests = std::to_array<std::pair<unsigned_int, const char*>>({
-    {0, "00"},
-    {1, "04"},
-    {42, "a8"},
-    {69, "1501"},
-    {65535, "feff0300"},
+    {0, "00"}, {1, "04"}, {42, "a8"}, {69, "1501"}, {65535, "feff0300"},
     // TODO: BigInt(100000000000000)
   });
 
@@ -86,12 +83,25 @@ TEST_CASE("Results", "[codec][scale]") {
 }
 
 TEST_CASE("Vectors", "[codec][scale]") {
-  auto v = std::vector<uint16_t>{4, 8, 15, 16, 23, 42};
-  auto data = encode(v);
-  CHECK(to_hex(data) == "18040008000f00100017002a00");
+  SECTION("Vector") {
+    auto v = std::vector<uint16_t>{4, 8, 15, 16, 23, 42};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "18040008000f00100017002a00");
 
-  auto w = decode<std::vector<uint16_t>>(data);
-  CHECK(std::equal(v.begin(), v.end(), w.begin(), w.end()));
+    auto w = decode<std::vector<uint16_t>>(data);
+    CHECK(std::equal(v.begin(), v.end(), w.begin(), w.end()));
+  }
+
+  SECTION("C-Array") {
+    uint16_t v[4] = {1, 2, 3, 4};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "0100020003000400");
+
+    std::fill(std::begin(v), std::end(v), 0);
+    datastream<char> ds(data);
+    ds >> v;
+    CHECK((v[0] == 1 && v[1] == 2 && v[2] == 3 && v[3] == 4));
+  }
 }
 
 TEST_CASE("Strings", "[codec][scale]") {
@@ -148,4 +158,10 @@ TEST_CASE("Enumerations", "[codec][scale]") {
     auto data = from_hex("0200");
     CHECK_THROWS_WITH((decode<u8_b>(data)), "invalid variant index");
   }
+}
+
+TEST_CASE("bytes32", "[codec][scale]") {
+  auto v = bytes32("ff000000");
+  auto data = encode(v);
+  CHECK(data[0] == -1);
 }

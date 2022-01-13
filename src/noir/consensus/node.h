@@ -28,47 +28,46 @@ public:
   static state load_state_from_db_or_genesis(/* stateStore, genDoc*/);
 
 private:
-
   // config
 //  config        *cfg.Config
   config local_config;
 
 //  genesisDoc    *types.GenesisDoc   // initial validator set
 
-//  privValidator types.PrivValidator // local node's validator key
+  //  privValidator types.PrivValidator // local node's validator key
   priv_validator local_validator;
 
   // network
-//  transport   *p2p.MConnTransport
-//  sw          *p2p.Switch // p2p connections
-//  peerManager *p2p.PeerManager
-//  router      *p2p.Router
-//  addrBook    pex.AddrBook // known peers
-//  nodeInfo    types.NodeInfo
+  //  transport   *p2p.MConnTransport
+  //  sw          *p2p.Switch // p2p connections
+  //  peerManager *p2p.PeerManager
+  //  router      *p2p.Router
+  //  addrBook    pex.AddrBook // known peers
+  //  nodeInfo    types.NodeInfo
 
-//  nodeKey     types.NodeKey // our node privkey
+  //  nodeKey     types.NodeKey // our node privkey
   node_key local_node_key;
 
-//  isListening bool
+  //  isListening bool
 
   // services
-//  eventBus         *types.EventBus // pub/sub for services
-//  stateStore       sm.Store
-//  blockStore       *store.BlockStore // store the blockchain to disk
-//  bcReactor        service.Service   // for block-syncing
-//  mempoolReactor   service.Service   // for gossipping transactions
-//  mempool          mempool.Mempool
-//  stateSync        bool               // whether the node should state sync on startup
-//  stateSyncReactor *statesync.Reactor // for hosting and restoring state sync snapshots
+  //  eventBus         *types.EventBus // pub/sub for services
+  //  stateStore       sm.Store
+  //  blockStore       *store.BlockStore // store the blockchain to disk
+  //  bcReactor        service.Service   // for block-syncing
+  //  mempoolReactor   service.Service   // for gossipping transactions
+  //  mempool          mempool.Mempool
+  //  stateSync        bool               // whether the node should state sync on startup
+  //  stateSyncReactor *statesync.Reactor // for hosting and restoring state sync snapshots
 
-//  consensusReactor *cs.Reactor        // for participating in the consensus
+  //  consensusReactor *cs.Reactor        // for participating in the consensus
   std::unique_ptr<consensus_reactor> cs_reactor;
 
   //  pexReactor       service.Service    // for exchanging peer addresses
-//  evidenceReactor  service.Service
-//  rpcListeners     []net.Listener // rpc servers
-//  indexerService   service.Service
-//  rpcEnv           *rpccore.Environment
+  //  evidenceReactor  service.Service
+  //  rpcListeners     []net.Listener // rpc servers
+  //  indexerService   service.Service
+  //  rpcEnv           *rpccore.Environment
 };
 
 std::unique_ptr<node> node::new_default_node() {
