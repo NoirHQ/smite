@@ -10,7 +10,7 @@
 using namespace noir;
 using namespace noir::codec::rlp;
 
-TEST_CASE("booleans", "[codec][rlp]") {
+TEST_CASE("[rlp] booleans", "[codec]") {
   auto tests = std::to_array<std::pair<bool, const char*>>({
     {true, "01"},
     {false, "80"},
@@ -22,7 +22,7 @@ TEST_CASE("booleans", "[codec][rlp]") {
   });
 }
 
-TEST_CASE("integers", "[codec][rlp]") {
+TEST_CASE("[rlp] integers", "[codec]") {
   SECTION("uint32_t") {
     auto tests = std::to_array<std::pair<uint32_t, const char*>>({
       {0, "80"},
@@ -56,7 +56,7 @@ TEST_CASE("integers", "[codec][rlp]") {
   }
 }
 
-TEST_CASE("strings", "[codec][rlp]") {
+TEST_CASE("[rlp] strings", "[codec]") {
   auto tests = std::to_array<std::pair<std::string, const char*>>({
     {"", "80"},
     {"\x7e", "7e"},
@@ -106,7 +106,7 @@ TEST_CASE("strings", "[codec][rlp]") {
   });
 }
 
-TEST_CASE("list", "[codec][rlp]") {
+TEST_CASE("[rlp] list", "[codec]") {
   SECTION("a list of uint32_t") {
     auto tests = std::to_array<std::pair<std::vector<uint32_t>, const char*>>({
       {{}, "c0"},
