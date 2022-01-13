@@ -121,7 +121,9 @@ bool simple_db::simple_db_batch::write() {
   return true;
 }
 
-bool simple_db::simple_db_batch::write_sync() { return write(); }
+bool simple_db::simple_db_batch::write_sync() {
+  return write();
+}
 
 bool simple_db::simple_db_batch::close() {
   _is_closed = true;

@@ -13,7 +13,7 @@ using P2PID = std::string;
 
 struct block_votes {
   bool peer_maj23;
-  //bitarray
+  // bitarray
   p2p::vote_message votes;
   int64_t sum;
 };
@@ -59,8 +59,8 @@ struct vote_set {
   p2p::signed_msg_type signed_msg_type;
   validator_set val_set;
 
-//  std::mutex mtx;
-  //bit_array
+  //  std::mutex mtx;
+  // bit_array
   p2p::vote_message votes;
   int64_t sum;
   p2p::block_id maj23;

@@ -3,9 +3,9 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <catch2/catch_all.hpp>
 #include <noir/consensus/store/block_store.h>
 #include <noir/consensus/store/state_store.h>
-#include <catch2/catch_all.hpp>
 
 TEST_CASE("db_store", "[store]") {
   noir::consensus::db_store dbs("simple");
