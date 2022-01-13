@@ -29,7 +29,8 @@ concept Foreachable = requires(T v, F f) {
     } \
     template<typename F> \
     void for_each_field(const TYPE& v, F&& f) { \
-      BOOST_PP_SEQ_FOR_EACH(NOIR_FOR_EACH_FIELD_IMPL, _, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__)) \
+      BOOST_PP_SEQ_FOR_EACH(NOIR_FOR_EACH_FIELD_IMPL, _, \
+        BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)) \
     } \
   }
 
