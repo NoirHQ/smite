@@ -29,8 +29,6 @@ struct vote {
   p2p::vote_extension vote_extension_;
 
   commit_sig to_commit_sig() {
-    if (this == nullptr)
-      return commit_sig{FlagAbsent};
     block_id_flag flag;
     if (block_id_.is_complete())
       flag = FlagCommit;
@@ -43,10 +41,10 @@ struct vote {
 };
 
 struct block_votes {
-  bool peer_maj23;
+  bool peer_maj23{};
   // bitarray
   std::vector<vote> votes;
-  int64_t sum;
+  int64_t sum{};
 
   static block_votes new_block_votes(bool peer_maj23_, int num_validators) {
     block_votes ret{peer_maj23_};
@@ -54,7 +52,7 @@ struct block_votes {
     return ret;
   }
 
-  vote add_verified_vote(vote& vote_, int64_t voting_power) {
+  void add_verified_vote(const vote& vote_, int64_t voting_power) {
     auto val_index = vote_.validator_index;
     if (votes.size() <= val_index) {
       auto existing = votes[val_index];
@@ -240,7 +238,7 @@ struct vote_set {
         auto maj23_block_id = vote_.value().block_id_;
         maj23 = maj23_block_id;
         // And also copy votes over to voteSet.votes
-        for (auto i = 0; auto v : new_votes_by_block.votes) {
+        for (auto i = 0; const auto& v : new_votes_by_block.votes) {
           votes[i++] = v;
         }
       }
@@ -249,7 +247,7 @@ struct vote_set {
     return true;
   }
 
-  std::optional<vote> get_vote(int32_t val_index, std::string block_key) {
+  std::optional<vote> get_vote(int32_t val_index, const std::string& block_key) {
     if (votes.size() >= val_index) {
       auto existing = votes[val_index];
       if (existing.block_id_.key() == block_key)

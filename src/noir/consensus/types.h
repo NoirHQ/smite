@@ -193,6 +193,10 @@ namespace channels {
   using timeout_ticker = appbase::channel_decl<struct timeout_ticker_tag, timeout_info_ptr>;
 }
 
+inline p2p::tstamp get_time() {
+  return std::chrono::system_clock::now().time_since_epoch().count();
+}
+
 } // namespace noir::consensus
 
 FC_REFLECT(noir::consensus::timeout_info, (duration_)(height)(round)(step))
