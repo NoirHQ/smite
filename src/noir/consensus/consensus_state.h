@@ -33,13 +33,13 @@ struct consensus_state {
   std::unique_ptr<round_state> get_round_state();
   void set_priv_validator(const priv_validator& priv);
   void update_priv_validator_pub_key();
-  state reconstruct_last_commit(state& state_);
+  void reconstruct_last_commit(state& state_);
 
   void on_start();
 
   void update_height(int64_t height);
   void update_round_step(int32_t rount, round_step_type step);
-  void schedule_round_0(round_state& rs);
+  void schedule_round_0(round_state& rs_);
   void update_to_state(state& state_);
   void new_step();
 
@@ -221,7 +221,7 @@ void consensus_state::update_priv_validator_pub_key() {
   local_priv_validator_pub_key = pub_key;
 }
 
-state consensus_state::reconstruct_last_commit(state& state_) {
+void consensus_state::reconstruct_last_commit(state& state_) {
   // todo
 }
 
@@ -241,9 +241,9 @@ void consensus_state::update_round_step(int32_t round, round_step_type step) {
 /**
  * enterNewRound(height, 0) at StartTime.
  */
-void consensus_state::schedule_round_0(round_state& rs) {
-  //  sleepDuration := rs.StartTime.Sub(tmtime.Now())
-  //  cs.scheduleTimeout(sleepDuration, rs.Height, 0, cstypes.RoundStepNewHeight)
+void consensus_state::schedule_round_0(round_state& rs_) {
+  auto sleep_duration = rs_.start_time - get_time();
+  schedule_timeout(std::chrono::microseconds(sleep_duration), rs_.height, 0, NewHeight); // todo
 }
 
 /**
@@ -436,7 +436,42 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
     return;
   }
 
-  //  rs.start_time // todo - continue
+  auto now = get_time();
+  if (rs.start_time > now) {
+    dlog("need to set a buffer and log message here for sanity");
+  }
+  dlog(fmt::format("entering new round: current={}/{}/{}", rs.height, rs.round, rs.step));
+
+  // increment validators if necessary
+  auto validators = rs.validators;
+  if (rs.round < round) {
+    validators->increment_proposer_priority(round - rs.round); // todo - safe sub
+  }
+
+  // Setup new round
+  // we don't fire newStep for this step,
+  // but we fire an event, so update the round step first
+  update_round_step(round, NewRound);
+  rs.validators = validators;
+  if (round == 0) {
+    // We've already reset these upon new height,
+    // and meanwhile we might have received a proposal
+    // for round 0.
+  } else {
+    dlog("resetting proposal info");
+    rs.proposal = nullptr;
+    rs.proposal_block = nullptr;
+    rs.proposal_block_parts = nullptr;
+  }
+
+  rs.votes->set_round(round + 1); // todo - safe math
+  rs.triggered_timeout_precommit = false;
+
+  // event bus // todo?
+  // metrics // todo?
+
+  // wait for tx? // todo?
+  enter_propose(height, round);
 }
 
 void consensus_state::enter_propose(int64_t height, int32_t round) {}
