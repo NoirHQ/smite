@@ -43,19 +43,51 @@ enum signed_msg_type {
   Proposal = 32
 };
 
+inline bool is_vote_type_valid(signed_msg_type type) {
+  if (type == Prevote || type == Precommit)
+    return true;
+  return false;
+}
+
 struct part_set_header {
   uint32_t total;
   sha256 hash;
+
+  bool is_zero() {
+    return (total == 0) && (hash == sha256());
+  }
 };
 
 struct block_id {
   sha256 hash;
   part_set_header parts;
+
+  bool is_complete() {
+    return (parts.total > 0);
+  }
+
+  bool is_zero() {
+    return (hash == sha256()) && (parts.is_zero());
+  }
+
+  std::string key() {
+    // returns a machine-readable string representation of the block_id
+    // todo
+    return "key";
+  }
+};
+
+struct vote_extension_to_sign {
+  p2p::bytes add_data_to_sign;
 };
 
 struct vote_extension {
   bytes app_data_to_sign;
   bytes app_data_self_authenticating;
+
+  vote_extension_to_sign to_sign() {
+    return vote_extension_to_sign{app_data_to_sign};
+  }
 };
 
 struct proposal_message {

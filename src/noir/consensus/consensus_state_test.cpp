@@ -19,7 +19,7 @@ config config_setup() {
 std::unique_ptr<consensus_state> rand_cs(config& config_, int validator_number) {
   auto state_ = state::make_genesis_state();
   for (auto i = 0; i < validator_number; i++)
-    state_.validators.validators.push_back(validator{noir::from_hex("AAAA" + to_string(i)), {}, std::rand(), 0});
+    state_.validators.validators.push_back(validator{noir::from_hex("AAAA" + std::to_string(i)), {}, std::rand(), 0});
   return consensus_state::new_state(config_.consensus, state_);
 }
 
