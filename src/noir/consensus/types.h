@@ -6,26 +6,25 @@
 #pragma once
 #include <noir/consensus/block.h>
 #include <noir/consensus/validator.h>
-#include <noir/consensus/vote_set.h>
+#include <noir/consensus/vote.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 
 #include <appbase/application.hpp>
 #include <appbase/channel.hpp>
+#include <fmt/core.h>
 
 namespace noir::consensus {
 
-using namespace noir::p2p;
-
 struct part {
   uint32_t index;
-  bytes bytes;
+  p2p::bytes bytes;
   // proof proof;
 };
 
 struct part_set {
   uint32_t total;
-  bytes hash;
+  p2p::bytes hash;
 
   //  std::mutex mtx;
   std::vector<part> parts;
@@ -57,10 +56,76 @@ struct height_vote_set {
   int64_t height;
   validator_set val_set;
 
-  //  std::mutex mtx;
+  std::mutex mtx;
   int32_t round;
   std::map<int32_t, round_vote_set> round_vote_sets;
-  std::map<node_id, int32_t> peer_catchup_rounds;
+  std::map<p2p::node_id, int32_t> peer_catchup_rounds;
+
+  static height_vote_set new_height_vote_set(std::string chain_id_, int64_t height_, const validator_set& val_set_) {}
+
+  void reset(int64_t height_, const validator_set& val_set_) {
+    std::lock_guard<std::mutex> g(mtx);
+    height = height_;
+    val_set = val_set_;
+    add_round(0);
+    round = 0;
+  }
+
+  void add_round(int32_t round_) {
+    if (round_vote_sets.contains(round))
+      throw std::runtime_error("add_round() for an existing round");
+
+    auto prevotes = vote_set::new_vote_set(chain_id, height, round_, p2p::Prevote, val_set);
+    auto precommits = vote_set::new_vote_set(chain_id, height, round_, p2p::Precommit, val_set);
+    round_vote_sets[round_] = round_vote_set{prevotes, precommits};
+  }
+
+  void set_round(int32_t round_) {
+    std::lock_guard<std::mutex> g(mtx);
+    auto new_round_ = round - 1; // todo - safe subtract
+    if (round != 0 && round_ < new_round_)
+      throw std::runtime_error("set_round() must increment round");
+    for (auto r = new_round_; r <= round; r++) {
+      if (round_vote_sets.contains(r))
+        continue; // Already exists because peer_catchup_rounds
+      add_round(r);
+    }
+    round = round_;
+  }
+
+  std::optional<vote_set> get_vote_set(int32_t round_, p2p::signed_msg_type vote_type) {
+    auto it = round_vote_sets.find(round_);
+    if (it == round_vote_sets.end())
+      return {};
+    switch (vote_type) {
+    case p2p::Prevote:
+      return it->second.prevotes;
+    case p2p::Precommit:
+      return it->second.precommits;
+    default:
+      throw std::runtime_error(fmt::format("get_vote_set() unexpected vote type {}", vote_type));
+    }
+  }
+
+  bool add_vote(vote vote_, p2p::node_id peer_id) {
+    std::lock_guard<std::mutex> g(mtx);
+    if (!p2p::is_vote_type_valid(vote_.type))
+      return false;
+    auto vote_set_ = get_vote_set(vote_.round, vote_.type);
+    if (!vote_set_.has_value()) {
+    }
+    vote_set_->add_vote(vote_);
+  }
+
+  std::optional<vote_set> prevotes(int32_t round_) {
+    std::lock_guard<std::mutex> g(mtx);
+    return get_vote_set(round_, p2p::Prevote);
+  }
+
+  std::optional<vote_set> precommits(int32_t round_) {
+    std::lock_guard<std::mutex> g(mtx);
+    return get_vote_set(round_, p2p::Precommit);
+  }
 };
 
 enum round_step_type {
@@ -82,12 +147,12 @@ struct round_state {
   int64_t height;
   int32_t round;
   round_step_type step;
-  tstamp start_time;
+  p2p::tstamp start_time;
 
   // Subjective time when +2/3 precommits for Block at Round were found
-  tstamp commit_time;
+  p2p::tstamp commit_time;
   std::shared_ptr<validator_set> validators;
-  std::shared_ptr<proposal_message> proposal;
+  std::shared_ptr<p2p::proposal_message> proposal;
   std::shared_ptr<block> proposal_block;
   std::shared_ptr<part_set> proposal_block_parts;
   int32_t locked_round;
