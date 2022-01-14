@@ -58,6 +58,10 @@ struct validator_set {
     return vals;
   }
 
+  int size() const {
+    return validators.size();
+  }
+
   bool has_address(const p2p::bytes& address) {
     for (const auto& val : validators) {
       if (val.address == address)
