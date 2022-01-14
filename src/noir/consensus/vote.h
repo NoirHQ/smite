@@ -45,8 +45,30 @@ struct vote {
 struct block_votes {
   bool peer_maj23;
   // bitarray
-  p2p::vote_message votes;
+  std::vector<vote> votes;
   int64_t sum;
+
+  static block_votes new_block_votes(bool peer_maj23_, int num_validators) {
+    block_votes ret{peer_maj23_};
+    ret.votes.resize(num_validators);
+    return ret;
+  }
+
+  vote add_verified_vote(vote& vote_, int64_t voting_power) {
+    auto val_index = vote_.validator_index;
+    if (votes.size() <= val_index) {
+      auto existing = votes[val_index];
+      // vs.bitArray.SetIndex(int(valIndex), true) // todo - bit_array
+      votes[val_index] = vote_;
+      sum += voting_power;
+    }
+  }
+
+  std::optional<vote> get_by_index(int32_t index) {
+    if (votes.size() <= index)
+      return votes[index];
+    return {};
+  }
 };
 
 /**
@@ -92,9 +114,9 @@ struct vote_set {
 
   //  std::mutex mtx;
   // bit_array
-  p2p::vote_message votes;
+  std::vector<vote> votes;
   int64_t sum;
-  p2p::block_id maj23;
+  std::optional<p2p::block_id> maj23;
   std::map<std::string, block_votes> votes_by_block;
   std::map<P2PID, p2p::block_id> peer_maj23s;
 
@@ -146,14 +168,99 @@ struct vote_set {
     }
 
     // Check if the same vote exists
-    //    if (get_vote) // todo
+    if (auto existing = get_vote(val_index, block_key); existing.has_value()) {
+      if (existing->signature == vote_->signature) {
+        // duplicate
+        return false;
+      }
+      elog("add_vote() failed: same vote exists");
+      return false;
+    }
 
     // Check signature
     // todo
 
     // Add vote and get conflicting vote if any
     // todo - directly implement addVerifiedVote() here
+    auto voting_power = val->voting_power;
+    std::optional<vote> conflicting;
+
+    // Already exists in vote_set.votes?
+    if (votes.size() <= val_index) {
+      auto existing = votes[val_index];
+      if (existing.block_id_ == vote_->block_id_) {
+        throw std::runtime_error("add_vote() does not expect duplicate votes");
+      } else {
+        conflicting = existing;
+      }
+      // Replace vote if block_key matches vote_set.maj23
+      if (maj23.has_value() && maj23.value().key() == block_key) {
+        votes[val_index] = vote_.value();
+        // voteSet.votesBitArray.SetIndex(int(valIndex), true) // todo - bit_array
+      }
+      // Otherwise, don't add to vote_set.votes
+    } else {
+      // Add to vote_set.votes and increase sum
+      votes.push_back(vote_.value());
+      // voteSet.votesBitArray.SetIndex(int(valIndex), true) // todo - bit_array
+      sum += voting_power;
+    }
+
+    block_votes new_votes_by_block;
+    if (votes_by_block.contains(block_key)) {
+      new_votes_by_block = votes_by_block[block_key];
+      if (conflicting.has_value() && votes_by_block[block_key].peer_maj23) {
+        // There's a conflict and no peer claims that this block is special.
+        return false;
+      }
+      // We'll add the vote in a bit.
+    } else {
+      if (conflicting.has_value()) {
+        // there's a conflicting vote.
+        // We're not even tracking this blockKey, so just forget it.
+        return false;
+      }
+      // Start tracking this blockKey
+      new_votes_by_block = block_votes::new_block_votes(false, val_set.size());
+      votes_by_block[block_key] = new_votes_by_block;
+      // We'll add the vote in a bit.
+    }
+
+    // Before adding to votesByBlock, see if we'll exceed quorum
+    auto orig_sum = new_votes_by_block.sum;
+    auto quorum = val_set.get_total_voting_power() * 2 / 3 + 1;
+
+    // Add vote to votesByBlock
+    new_votes_by_block.add_verified_vote(vote_.value(), voting_power);
+
+    // If we just crossed the quorum threshold and have 2/3 majority...
+    if (orig_sum < quorum && quorum <= new_votes_by_block.sum) {
+      // Only consider the first quorum reached
+      if (!maj23.has_value()) {
+        auto maj23_block_id = vote_.value().block_id_;
+        maj23 = maj23_block_id;
+        // And also copy votes over to voteSet.votes
+        for (auto i = 0; auto v : new_votes_by_block.votes) {
+          votes[i++] = v;
+        }
+      }
+    }
+
     return true;
+  }
+
+  std::optional<vote> get_vote(int32_t val_index, std::string block_key) {
+    if (votes.size() >= val_index) {
+      auto existing = votes[val_index];
+      if (existing.block_id_.key() == block_key)
+        return existing;
+    }
+    if (votes_by_block.contains(block_key)) {
+      auto existing = votes_by_block[block_key].get_by_index(val_index);
+      if (existing.has_value())
+        return existing;
+    }
+    return {};
   }
 };
 
