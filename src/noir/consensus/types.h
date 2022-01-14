@@ -59,7 +59,7 @@ struct height_vote_set {
   std::mutex mtx;
   int32_t round;
   std::map<int32_t, round_vote_set> round_vote_sets;
-  std::map<p2p::node_id, int32_t> peer_catchup_rounds;
+  std::map<p2p::node_id, std::vector<int32_t>> peer_catchup_rounds;
 
   static height_vote_set new_height_vote_set(std::string chain_id_, int64_t height_, const validator_set& val_set_) {}
 
@@ -113,6 +113,15 @@ struct height_vote_set {
       return false;
     auto vote_set_ = get_vote_set(vote_.round, vote_.type);
     if (!vote_set_.has_value()) {
+      auto it = peer_catchup_rounds.find(peer_id);
+      if (it == peer_catchup_rounds.end() || it->second.size() >= 2) {
+        // punish peer // todo - how?
+        elog("peer has sent a vote that does not match our round for more than one round");
+        return false;
+      }
+      add_round(vote_.round);
+      vote_set_ = get_vote_set(vote_.round, vote_.type);
+      it->second.push_back(vote_.round);
     }
     vote_set_->add_vote(vote_);
   }

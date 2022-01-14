@@ -53,6 +53,10 @@ struct part_set_header {
   uint32_t total;
   sha256 hash;
 
+  bool operator==(const part_set_header& rhs) const {
+    return (total == rhs.total) && (hash == rhs.hash);
+  }
+
   bool is_zero() {
     return (total == 0) && (hash == sha256());
   }
@@ -62,7 +66,11 @@ struct block_id {
   sha256 hash;
   part_set_header parts;
 
-  bool is_complete() {
+  bool operator==(const block_id& rhs) const {
+    return (hash == rhs.hash) && (parts == rhs.parts);
+  }
+
+  bool is_complete() const {
     return (parts.total > 0);
   }
 
