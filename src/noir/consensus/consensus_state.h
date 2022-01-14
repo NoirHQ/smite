@@ -94,7 +94,7 @@ struct consensus_state {
   //  // privValidator pubkey, memoized for the duration of one block
   //  // to avoid extra requests to HSM
   //  privValidatorPubKey crypto.PubKey
-  bytes local_priv_validator_pub_key;
+  p2p::bytes local_priv_validator_pub_key;
 
   //
   //  // state changes may be triggered by: msgs from peers,
@@ -105,7 +105,7 @@ struct consensus_state {
   channels::timeout_ticker::channel_type& timeout_ticker_channel;
   channels::timeout_ticker::channel_type::handle timeout_ticker_subscription;
   std::mutex timeout_ticker_mtx;
-  unique_ptr<boost::asio::steady_timer> timeout_ticker_timer;
+  std::unique_ptr<boost::asio::steady_timer> timeout_ticker_timer;
   uint16_t thread_pool_size = 2;
   std::optional<named_thread_pool> thread_pool;
   timeout_info_ptr old_ti;
@@ -289,7 +289,7 @@ void consensus_state::update_to_state(state& state_) {
     rs.last_commit = nullptr;
   } else if (rs.commit_round > -1 && rs.votes != nullptr) {
     // use votes
-    //    if (rs.votes)
+    //    if (rs.votes
     // todo
   } else if (rs.last_commit == nullptr) {
     // NOTE: when Tendermint starts, it has no votes. reconstructLastCommit

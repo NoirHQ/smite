@@ -17,16 +17,18 @@ struct block {
   // commit last_commit;
 };
 
-struct vote_extension_to_sign {
-  p2p::bytes add_data_to_sign;
+enum block_id_flag {
+  FlagAbsent = 1,
+  FlagCommit,
+  FlagNil
 };
 
 struct commit_sig {
-  std::byte block_id_flag;
+  block_id_flag flag;
   p2p::bytes validator_address;
   p2p::tstamp timestamp;
   p2p::bytes signature;
-  vote_extension_to_sign vote_extension;
+  p2p::vote_extension_to_sign vote_extension;
 };
 
 struct commit {
