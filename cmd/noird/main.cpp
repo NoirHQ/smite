@@ -6,6 +6,7 @@
 #include <noir/commands/commands.h>
 #include <noir/common/log.h>
 #include <noir/tendermint/tendermint.h>
+#include <noir/rpc/rpc.h>
 #include <appbase/application.hpp>
 
 using namespace noir;
@@ -36,6 +37,7 @@ int main(int argc, char** argv) {
 
   // register plugins
   app.register_plugin<tendermint::tendermint>();
+  app.register_plugin<rpc::rpc>();
 
   return app.run(argc, argv);
 }
