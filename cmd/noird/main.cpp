@@ -5,8 +5,8 @@
 //
 #include <noir/commands/commands.h>
 #include <noir/common/log.h>
-#include <noir/tendermint/tendermint.h>
 #include <noir/rpc/rpc.h>
+#include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
 
 using namespace noir;
