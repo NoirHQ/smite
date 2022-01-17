@@ -94,7 +94,8 @@ public:
   }
 
   // standard exception handling for api handlers
-  static void handle_exception(const char* api_name, const char* call_name, const std::string& body, url_response_callback cb);
+  static void handle_exception(
+    const char* api_name, const char* call_name, const std::string& body, url_response_callback cb);
 
   bool is_on_loopback() const;
   bool is_secure() const;
@@ -146,14 +147,11 @@ struct error_results {
       uint8_t limit = include_full_log ? details_limit : 1;
       for (auto itr = exc.get_log().begin(); itr != exc.get_log().end(); ++itr) {
         // Prevent sending trace that are too big
-        if (details.size() >= limit) break;
+        if (details.size() >= limit)
+          break;
         // Append error
-        error_detail detail = {
-          include_full_log ? itr->get_message() : itr->get_limited_message(),
-          itr->get_context().get_file(),
-          itr->get_context().get_line_number(),
-          itr->get_context().get_method()
-        };
+        error_detail detail = {include_full_log ? itr->get_message() : itr->get_limited_message(),
+          itr->get_context().get_file(), itr->get_context().get_line_number(), itr->get_context().get_method()};
         details.emplace_back(detail);
       }
     }
@@ -227,7 +225,8 @@ T parse_params(const std::string& body) {
 
   try {
     try {
-      if constexpr (params_type == http_params_types::no_params_required || params_type == http_params_types::possible_no_params) {
+      if constexpr (params_type == http_params_types::no_params_required ||
+        params_type == http_params_types::possible_no_params) {
         if (is_empty_content(body)) {
           if constexpr (std::is_same_v<T, std::string>) {
             return std::string("{}");
