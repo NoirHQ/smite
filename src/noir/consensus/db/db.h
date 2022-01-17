@@ -35,67 +35,77 @@ public:
 
   virtual std::shared_ptr<batch> new_batch() = 0;
 
-  struct item {
-    K key;
-    V val;
-  };
-
   class db_iterator_impl {
   public:
     virtual ~db_iterator_impl(){};
     virtual void increment() = 0;
-    virtual const K& key() = 0;
-    virtual const V& val() = 0;
+    virtual void decrement() = 0;
+    virtual const K& key() const = 0;
+    virtual const V& val() const = 0;
+    virtual db_iterator_impl* clone() = 0;
   };
 
-  class db_iterator : public std::iterator<std::forward_iterator_tag, item> {
+  class db_iterator : public std::iterator<std::bidirectional_iterator_tag, const K> {
   public:
-    db_iterator(db_iterator_impl* impl) : _impl(impl){};
-    db_iterator(db_iterator&& other) : _item(other._item), _impl(std::move(other._impl)) {
-      other._impl = nullptr;
+    db_iterator(db_iterator_impl* impl) : impl_(impl){};
+    db_iterator(db_iterator&& other) : impl_(std::move(other.impl_)) {
+      other.impl_ = nullptr;
     }
-    db_iterator(const db_iterator& other) : _item(other._item), _impl(other._impl) {
-      _item.key = _impl->key();
-      _item.val = _impl->val();
-    }
+    db_iterator(const db_iterator& other) : impl_(other.impl_->clone()) {}
 
     friend bool operator==(const db_iterator& lhs, const db_iterator& rhs) {
-      return (lhs._item.key == rhs._item.key) && (lhs._item.val == rhs._item.val);
+      return (lhs.impl_->key() == rhs.impl_->key()) && (lhs.impl_->val() == rhs.impl_->val());
     }
 
     friend bool operator!=(const db_iterator& lhs, const db_iterator& rhs) {
       return !(lhs == rhs);
     }
-    virtual item& operator*() {
-      return _item;
+    virtual const V& operator*() {
+      return impl_->val();
     }
 
-    virtual item* operator->() {
-      return &_item;
+    virtual const V* operator->() {
+      return &impl_->val();
     }
 
     db_iterator& operator++() {
-      _impl->increment();
-      _item.key = _impl->key();
-      _item.val = _impl->val();
+      impl_->increment();
       return *this;
-    };
+    }
 
     db_iterator operator++(int) {
       auto tmp = *this;
       ++(*this);
       return tmp;
-    };
+    }
 
-  protected:
-    item _item;
+    db_iterator& operator--() {
+      impl_->decrement();
+      return *this;
+    }
+
+    db_iterator operator--(int) {
+      auto tmp = *this;
+      --(*this);
+      return tmp;
+    }
+    const K& key() const {
+      return impl_->key();
+    }
+    const V& val() const {
+      return impl_->val();
+    }
 
   private:
-    std::shared_ptr<db_iterator_impl> _impl;
+    std::unique_ptr<db_iterator_impl> impl_;
   }; // class db_iterator
+  using db_reverse_iterator = std::reverse_iterator<db_iterator>;
 
-  virtual db_iterator lower_bound(const K&) = 0;
-  virtual db_iterator upper_bound(const K&) = 0;
+  virtual db_iterator begin_iterator(const K&) = 0;
+  virtual db_iterator end_iterator(const K&) = 0;
+
+  virtual db_reverse_iterator rbegin_iterator(const K&) = 0;
+  virtual db_reverse_iterator rend_iterator(const K&) = 0;
 }; // class db
 
 template<typename K, typename V>
@@ -104,7 +114,7 @@ private:
   class simple_db_impl {
   public:
     bool get(const K& key, V& val) const {
-      if (auto iter = _map.find(key); iter != _map.end()) {
+      if (auto iter = map_.find(key); iter != map_.end()) {
         noir::p2p::bytes tmp(iter->second.begin(), iter->second.end());
         val = tmp;
         return true;
@@ -113,13 +123,13 @@ private:
     }
 
     bool has(const K& key, bool& val) const {
-      auto iter = _map.find(key);
-      val = (iter != _map.end());
+      auto iter = map_.find(key);
+      val = (iter != map_.end());
       return true;
     }
 
     bool set(const K& key, const V& val) {
-      _map.emplace(key, val);
+      map_.emplace(key, val);
       return true;
     }
 
@@ -129,7 +139,7 @@ private:
     }
 
     bool del(const K& key) {
-      _map.erase(key);
+      map_.erase(key);
       return true;
     }
 
@@ -147,68 +157,68 @@ private:
     }
 
     const std::map<K, V>& stats() {
-      return _map;
+      return map_;
     }
 
     typename std::map<K, V>::iterator lower_bound(const K& key) {
-      return _map.lower_bound(key);
+      return map_.lower_bound(key);
     }
 
     typename std::map<K, V>::iterator upper_bound(const K& key) {
-      return _map.upper_bound(key);
+      return map_.upper_bound(key);
     }
 
   private:
-    std::map<noir::p2p::bytes, noir::p2p::bytes> _map;
+    std::map<noir::p2p::bytes, noir::p2p::bytes> map_;
   }; // class simple_db_impl
 
-  std::shared_ptr<simple_db_impl> _impl;
+  std::shared_ptr<simple_db_impl> impl_;
 
 public:
-  simple_db() : _impl(new simple_db_impl) {}
+  simple_db() : impl_(new simple_db_impl) {}
 
-  simple_db(const simple_db& other) : _impl(std::make_shared<simple_db_impl>(*other._impl)) {}
+  simple_db(const simple_db& other) : impl_(std::make_shared<simple_db_impl>(*other.impl_)) {}
 
-  simple_db(simple_db&& other) : _impl(std::move(other._impl)) {
-    other._impl = nullptr;
+  simple_db(simple_db&& other) : impl_(std::move(other.impl_)) {
+    other.impl_ = nullptr;
   }
 
   ~simple_db() override {}
 
   bool get(const K& key, V& val) const override {
-    return _impl->get(key, val);
+    return impl_->get(key, val);
   }
 
   bool has(const K& key, bool& val) const override {
-    return _impl->has(key, val);
+    return impl_->has(key, val);
   }
 
   bool set(const K& key, const V& val) override {
-    return _impl->set(key, val);
+    return impl_->set(key, val);
   }
 
   bool set_sync(const K& key, const V& val) override {
-    return _impl->set_sync(key, val);
+    return impl_->set_sync(key, val);
   }
 
   bool del(const K& key) override {
-    return _impl->del(key);
+    return impl_->del(key);
   }
 
   bool del_sync(const K& key) override {
-    return _impl->del_sync(key);
+    return impl_->del_sync(key);
   }
 
   bool close() override {
-    return _impl->close();
+    return impl_->close();
   }
 
   bool print() const override {
-    return _impl->print();
+    return impl_->print();
   }
 
   const std::map<K, V>& stats() override {
-    return _impl->stats();
+    return impl_->stats();
   }
 
   class simple_db_iterator_impl : public db<K, V>::db_iterator_impl {
@@ -217,72 +227,86 @@ public:
   public:
     ~simple_db_iterator_impl() override{};
     void increment() override {
-      _map_iter++;
+      map_iter_++;
     }
-    const K& key() override {
-      return _map_iter->first;
+    void decrement() override {
+      map_iter_--;
     }
-    const V& val() override {
-      return _map_iter->second;
+    const K& key() const override {
+      return map_iter_->first;
+    }
+    const V& val() const override {
+      return map_iter_->second;
+    }
+    typename db<K, V>::db_iterator_impl* clone() override {
+      return new simple_db_iterator_impl(map_iter_);
     }
 
   private:
-    typename std::map<K, V>::iterator _map_iter;
-    simple_db_iterator_impl(typename std::map<K, V>::iterator iter) : _map_iter(iter) {}
+    typename std::map<K, V>::iterator map_iter_;
+    simple_db_iterator_impl(typename std::map<K, V>::iterator iter) : map_iter_(iter) {}
     simple_db_iterator_impl lower_bound(const K& key) {
-      return simple_db_iterator_impl{_map_iter->lower_bound(key)};
+      return simple_db_iterator_impl{map_iter_->lower_bound(key)};
     }
 
     simple_db_iterator_impl upper_bound(const K& key) {
-      return simple_db_iterator_impl{_map_iter->upper_bound(key)};
+      return simple_db_iterator_impl{map_iter_->upper_bound(key)};
     }
   }; // class simple_db_iterator_impl
 
-  typename db<K, V>::db_iterator lower_bound(const K& key) override {
-    return typename db<K, V>::db_iterator(new simple_db_iterator_impl{_impl->lower_bound(key)});
+  typename db<K, V>::db_iterator begin_iterator(const K& key) override {
+    return typename db<K, V>::db_iterator(new simple_db_iterator_impl{impl_->lower_bound(key)});
   }
 
-  typename db<K, V>::db_iterator upper_bound(const K& key) override {
-    return typename db<K, V>::db_iterator(new simple_db_iterator_impl{_impl->upper_bound(key)});
+  typename db<K, V>::db_iterator end_iterator(const K& key) override {
+    return typename db<K, V>::db_iterator(new simple_db_iterator_impl{impl_->upper_bound(key)});
+  }
+
+  typename db<K, V>::db_reverse_iterator rbegin_iterator(const K& key) override {
+    return std::make_reverse_iterator(end_iterator(key));
+  }
+
+  typename db<K, V>::db_reverse_iterator rend_iterator(const K& key) override {
+    return std::make_reverse_iterator(begin_iterator(key));
   }
 
   class simple_db_batch : public virtual db<K, V>::batch {
   public:
-    explicit simple_db_batch(std::shared_ptr<simple_db_impl> db_impl) : _db(std::move(db_impl)) {}
+    explicit simple_db_batch(std::shared_ptr<simple_db_impl> db_impl) : db_(std::move(db_impl)) {}
 
-    explicit simple_db_batch(const simple_db_batch& other) noexcept : _db(other._db), _map(other._map) {}
+    explicit simple_db_batch(const simple_db_batch& other) noexcept : db_(other.db_), map_(other.map_) {}
 
-    explicit simple_db_batch(simple_db_batch&& other) noexcept : _db(std::move(other._db)) {
-      other._db = nullptr;
+    explicit simple_db_batch(simple_db_batch&& other) noexcept : db_(std::move(other.db_)) {
+      other.db_ = nullptr;
     }
 
     ~simple_db_batch() override{};
 
     bool set(const K& key, const V& val) override {
-      if (_is_closed) {
+      if (is_closed_) {
         return false;
       }
-      _map.emplace(key, std::make_pair(true, val));
+      map_.emplace(key, std::make_pair(true, val));
       return true;
     }
 
     bool del(const K& key) override {
-      if (_is_closed) {
+      if (is_closed_) {
         return false;
       }
-      _map.emplace(key, std::make_pair(false, noir::p2p::bytes{}));
+      map_.emplace(key, std::make_pair(false, noir::p2p::bytes{}));
       return true;
     }
 
     bool write() override {
-      if (_is_closed) {
+      if (is_closed_) {
         return false;
       }
-      std::for_each(_map.begin(), _map.end(), [&](const auto& t) {
+      std::for_each(map_.begin(), map_.end(), [&](const auto& t) {
         if (t.second.first == true) {
-          _db->set(t.first, t.second.second);
+          db_->set(t.first, t.second.second);
         } else {
-          _db->del(t.first);
+          db_->del(t.first);
         }
       });
       return true;
@@ -293,18 +317,18 @@ public:
     }
 
     bool close() override {
-      _is_closed = true;
+      is_closed_ = true;
       return true;
     }
 
   private:
-    std::shared_ptr<simple_db_impl> _db;
-    std::map<noir::p2p::bytes, std::pair<bool, noir::p2p::bytes>> _map;
-    bool _is_closed = false;
+    std::shared_ptr<simple_db_impl> db_;
+    std::map<noir::p2p::bytes, std::pair<bool, noir::p2p::bytes>> map_;
+    bool is_closed_ = false;
   }; // class simple_db_batch
 
   std::shared_ptr<typename db<K, V>::batch> new_batch() override {
-    return std::make_shared<simple_db_batch>(simple_db_batch(_impl));
+    return std::make_shared<simple_db_batch>(simple_db_batch(impl_));
   }
 }; // class simple_db
 
