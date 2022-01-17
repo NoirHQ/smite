@@ -260,6 +260,11 @@ struct vote_set {
     }
     return {};
   }
+
+  bool has_two_thirds_majority() {
+    // todo - use mtx
+    return maj23.has_value();
+  }
 };
 
 } // namespace noir::consensus
