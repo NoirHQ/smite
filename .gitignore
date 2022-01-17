@@ -52,3 +52,6 @@ compile_commands.json
 
 # VSCode
 .vscode
+
+# Doxygen
+html
