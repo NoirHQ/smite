@@ -13,6 +13,7 @@ target_link_libraries(noir
   expected
   fc
   tendermint
+  websocketpp
 )
 if(APPLE)
   target_link_libraries(noir "-framework CoreFoundation" "-framework Security")

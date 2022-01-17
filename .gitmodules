@@ -10,3 +10,6 @@
 [submodule "libs/fc"]
 	path = libs/fc
 	url = https://github.com/noir-protocol/fc
+[submodule "libs/websocketpp"]
+	path = libs/websocketpp
+	url = https://github.com/zaphoyd/websocketpp
