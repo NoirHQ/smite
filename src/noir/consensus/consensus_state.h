@@ -287,12 +287,15 @@ void consensus_state::update_to_state(state& state_) {
 
   if (state_.last_block_height == 0) {
     // very first commit should be empty
-    rs.last_commit = nullptr;
+    rs.last_commit = {};
   } else if (rs.commit_round > -1 && rs.votes != nullptr) {
-    // use votes
-    //    if (rs.votes
-    // todo
-  } else if (rs.last_commit == nullptr) {
+    // Use rs.votes
+    if (!rs.votes->precommits(rs.commit_round)->has_two_thirds_majority()) {
+      throw std::runtime_error(fmt::format("wanted to form a commit, but precommits (H/R: {}/{}) didn't have 2/3+",
+        state_.last_block_height, rs.commit_round));
+    }
+    rs.last_commit = rs.votes->precommits(rs.commit_round);
+  } else if (!rs.last_commit.has_value()) {
     // NOTE: when Tendermint starts, it has no votes. reconstructLastCommit
     // must be called to reconstruct LastCommit from SeenCommit.
     throw std::runtime_error(
@@ -324,7 +327,7 @@ void consensus_state::update_to_state(state& state_) {
   rs.valid_round = -1;
   rs.valid_block = nullptr;
   rs.valid_block_parts = nullptr;
-  //  rs.votes = // todo
+  rs.votes = height_vote_set::new_height_vote_set(state_.chain_id, height, state_.validators);
   rs.commit_round = -1;
   rs.last_validators = std::make_shared<validator_set>(state_.last_validators);
   rs.triggered_timeout_precommit = false;
@@ -474,7 +477,15 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
   enter_propose(height, round);
 }
 
-void consensus_state::enter_propose(int64_t height, int32_t round) {}
+void consensus_state::enter_propose(int64_t height, int32_t round) {
+  if (rs.height != height || round < rs.round || (rs.round == round && Propose <= rs.step)) {
+    dlog(fmt::format("entering propose step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+    return;
+  }
+  dlog(fmt::format("entering propose step: {}/{}/{}", rs.height, rs.round, rs.step));
+
+  // todo - use scope guard (is it possible?)
+}
 
 void consensus_state::enter_prevote(int64_t height, int32_t round) {}
 

@@ -61,7 +61,12 @@ struct height_vote_set {
   std::map<int32_t, round_vote_set> round_vote_sets;
   std::map<p2p::node_id, std::vector<int32_t>> peer_catchup_rounds;
 
-  static height_vote_set new_height_vote_set(std::string chain_id_, int64_t height_, const validator_set& val_set_) {}
+  static std::shared_ptr<height_vote_set> new_height_vote_set(std::string chain_id_, int64_t height_, const validator_set& val_set_) {
+    auto hvs = std::make_shared<height_vote_set>();
+    hvs->chain_id = chain_id_;
+    hvs->reset(height_, val_set_);
+    return hvs;
+  }
 
   void reset(int64_t height_, const validator_set& val_set_) {
     std::lock_guard<std::mutex> g(mtx);
@@ -175,7 +180,7 @@ struct round_state {
   std::shared_ptr<part_set> valid_block_parts;
   std::shared_ptr<height_vote_set> votes;
   int32_t commit_round;
-  std::shared_ptr<vote_set> last_commit;
+  std::optional<vote_set> last_commit;
   std::shared_ptr<validator_set> last_validators;
   bool triggered_timeout_precommit;
 };
