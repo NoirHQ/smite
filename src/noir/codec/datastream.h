@@ -9,7 +9,7 @@
 #include <vector>
 
 /// \defgroup codec Codec
-/// Data (de)serialization
+/// \brief Data (de)serialization
 
 /// \brief codec namespace
 /// \ingroup codec
