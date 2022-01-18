@@ -4,9 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/scope_exit.h>
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/consensus_state.h>
+#include <noir/consensus/crypto.h>
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
@@ -53,7 +55,12 @@ struct consensus_state {
   void handle_timeout(timeout_info_ptr ti);
 
   void enter_new_round(int64_t height, int32_t round);
+
   void enter_propose(int64_t height, int32_t round);
+  bool is_proposal_complete();
+  bool is_proposal(p2p::bytes address);
+  void decide_proposal(int64_t height, int32_t round);
+
   void enter_prevote(int64_t height, int32_t round);
   void enter_prevote_wait(int64_t height, int32_t round);
   void enter_precommit(int64_t height, int32_t round);
@@ -66,7 +73,7 @@ struct consensus_state {
 
   //  privValidator     types.PrivValidator // for signing votes
   //  privValidatorType types.PrivValidatorType
-  priv_validator local_priv_validator;
+  std::optional<priv_validator> local_priv_validator;
   priv_validator_type local_priv_validator_type;
 
   //
@@ -94,7 +101,7 @@ struct consensus_state {
 
   //  // privValidator pubkey, memoized for the duration of one block to avoid extra requests to HSM
   //  privValidatorPubKey crypto.PubKey
-  p2p::bytes local_priv_validator_pub_key;
+  pub_key local_priv_validator_pub_key;
 
   //
   //  // state changes may be triggered by: msgs from peers,
@@ -135,6 +142,8 @@ struct consensus_state {
   //  decideProposal func(height int64, round int32)
   //  doPrevote      func(height int64, round int32)
   //  setProposal    func(proposal *types.Proposal) error
+  /////-- directly implemented decide_proposal
+
   //
   //  // closed when we finish shutting down
   //  done chan struct{}
@@ -208,6 +217,8 @@ void consensus_state::set_priv_validator(const priv_validator& priv) {
  * get private validator public key and memoizes it
  */
 void consensus_state::update_priv_validator_pub_key() {
+  if (!local_priv_validator.has_value())
+    return;
 
   std::chrono::system_clock::duration timeout = cs_config.timeout_prevote;
   if (cs_config.timeout_precommit > cs_config.timeout_prevote)
@@ -217,8 +228,8 @@ void consensus_state::update_priv_validator_pub_key() {
   if (rs.step >= Precommit && local_priv_validator_type == RetrySignerClient)
     timeout = std::chrono::system_clock::duration::zero();
 
-  auto pub_key = local_priv_validator.get_pub_key();
-  local_priv_validator_pub_key = pub_key;
+  auto key = local_priv_validator->get_pub_key();
+  local_priv_validator_pub_key = pub_key{key};
 }
 
 void consensus_state::reconstruct_last_commit(state& state_) {
@@ -317,16 +328,16 @@ void consensus_state::update_to_state(state& state_) {
   //  else
   //    rs.start_time =
 
-  rs.proposal = nullptr;
-  rs.proposal_block = nullptr;
-  rs.proposal_block_parts = nullptr;
+  rs.proposal = {};
+  rs.proposal_block = {};
+  rs.proposal_block_parts = {};
   rs.locked_round = -1;
   rs.locked_block = nullptr;
   rs.locked_block_parts = nullptr;
 
   rs.valid_round = -1;
-  rs.valid_block = nullptr;
-  rs.valid_block_parts = nullptr;
+  rs.valid_block = {};
+  rs.valid_block_parts = {};
   rs.votes = height_vote_set::new_height_vote_set(state_.chain_id, height, state_.validators);
   rs.commit_round = -1;
   rs.last_validators = std::make_shared<validator_set>(state_.last_validators);
@@ -462,9 +473,9 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
     // for round 0.
   } else {
     dlog("resetting proposal info");
-    rs.proposal = nullptr;
-    rs.proposal_block = nullptr;
-    rs.proposal_block_parts = nullptr;
+    rs.proposal = {};
+    rs.proposal_block = {};
+    rs.proposal_block_parts = {};
   }
 
   rs.votes->set_round(round + 1); // todo - safe math
@@ -484,7 +495,110 @@ void consensus_state::enter_propose(int64_t height, int32_t round) {
   }
   dlog(fmt::format("entering propose step: {}/{}/{}", rs.height, rs.round, rs.step));
 
-  // todo - use scope guard (is it possible?)
+  auto defer = fc::make_scoped_exit([this, height, round]() {
+    update_round_step(round, Propose);
+    new_step();
+    if (is_proposal_complete())
+      enter_prevote(height, rs.round);
+  });
+
+  // If we don't get the proposal and all block parts quick enough, enter_prevote
+  schedule_timeout(cs_config.propose(round), height, round, Propose);
+
+  // Nothing more to do if we are not a validator
+  if (!local_priv_validator.has_value()) {
+    dlog("node is not a validator");
+    return;
+  }
+  dlog("node is a validator");
+
+  if (local_priv_validator_pub_key.empty()) {
+    // If this node is a validator & proposer in the current round, it will
+    // miss the opportunity to create a block.
+    elog("propose step; empty priv_validator_pub_key is not set");
+    return;
+  }
+
+  auto address = local_priv_validator_pub_key.address();
+
+  // If not a validator, we are done
+  if (!rs.validators->has_address(address)) {
+    dlog(fmt::format("node is not a validator: addr_size={}", address.size()));
+    return;
+  }
+
+  if (is_proposal(address)) {
+    dlog("propose step; our turn to propose");
+    decide_proposal(height, round);
+  } else {
+    dlog("propose step; not our turn to propose");
+  }
+}
+
+/**
+ * returns true if the proposal block is complete, if POL_round was proposed, and we have 2/3+ prevotes
+ */
+bool consensus_state::is_proposal_complete() {
+  if (!rs.proposal.has_value() || !rs.proposal_block.has_value())
+    return false;
+  // We have the proposal. If there is a POL_round, make sure we have prevotes from it.
+  if (rs.proposal->pol_round < 0)
+    return true;
+  // if this is false the proposer is lying or we haven't received the POL yet
+  return rs.votes->prevotes(rs.proposal->pol_round)->has_two_thirds_majority();
+}
+
+bool consensus_state::is_proposal(p2p::bytes address) {
+  return rs.validators->get_proposer()->address == address;
+}
+
+void consensus_state::decide_proposal(int64_t height, int32_t round) {
+  std::optional<block> block_;
+  std::optional<part_set> block_parts_;
+
+  // Decide on a block
+  if (rs.valid_block.has_value()) {
+    // If there is valid block, choose that
+    block_ = rs.valid_block;
+    block_parts_ = rs.valid_block_parts;
+  } else {
+    // Create a new proposal block from state/txs from the mempool
+    //    block_ = create_proposal_block();
+    if (!local_priv_validator.has_value())
+      throw std::runtime_error("attempted to create proposal block with empty priv_validator");
+
+    commit commit_;
+    std::vector<vote> votes_;
+    if (rs.height == local_state.initial_height) {
+      // We are creating a proposal for the first block
+      std::vector<commit_sig> commit_sigs;
+      commit_ = commit::new_commit(0, 0, p2p::block_id{}, commit_sigs);
+    } else if (rs.last_commit->has_two_thirds_majority()) {
+      // Make the commit from last_commit
+      commit_ = rs.last_commit->make_commit();
+      votes_ = rs.last_commit->votes;
+    } else {
+      elog("propose step; cannot propose anyting without commit for the previous block");
+      return;
+    }
+    auto proposer_addr = local_priv_validator_pub_key.address();
+
+    // block_exec.create_proposal_block // todo - requires interface to mempool?
+
+    if (!block_.has_value()) {
+      wlog("MUST CONNECT TO MEMPOOL IN ORDER TO RETRIEVE SOME BLOCKS"); // todo - remove once mempool is ready
+      return;
+    }
+  }
+
+  // Flush the WAL
+  // todo
+
+  // Make proposal
+  auto prop_block_id = p2p::block_id{block_->get_hash(), block_parts_->header()};
+  auto proposal_ = proposal::new_proposal(height, round, rs.valid_round, prop_block_id);
+
+  // todo - sign and send internal msg queue
 }
 
 void consensus_state::enter_prevote(int64_t height, int32_t round) {}
