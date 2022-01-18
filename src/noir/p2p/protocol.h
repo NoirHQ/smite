@@ -51,19 +51,19 @@ inline bool is_vote_type_valid(signed_msg_type type) {
 
 struct part_set_header {
   uint32_t total;
-  sha256 hash;
+  p2p::bytes hash;
 
   bool operator==(const part_set_header& rhs) const {
     return (total == rhs.total) && (hash == rhs.hash);
   }
 
   bool is_zero() {
-    return (total == 0) && (hash == sha256());
+    return (total == 0) && (hash.empty());
   }
 };
 
 struct block_id {
-  sha256 hash;
+  p2p::bytes hash;
   part_set_header parts;
 
   bool operator==(const block_id& rhs) const {
@@ -75,7 +75,7 @@ struct block_id {
   }
 
   bool is_zero() {
-    return (hash == sha256()) && (parts.is_zero());
+    return (hash.empty() && parts.is_zero());
   }
 
   std::string key() {

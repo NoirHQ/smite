@@ -15,6 +15,11 @@ struct block {
   // data data;
   // evidence evidence;
   // commit last_commit;
+
+  p2p::bytes get_hash() {
+    // todo - lock mtx
+    return std::vector<char>();
+  }
 };
 
 enum block_id_flag {
@@ -29,6 +34,18 @@ struct commit_sig {
   p2p::tstamp timestamp;
   p2p::bytes signature;
   p2p::vote_extension_to_sign vote_extension;
+
+  static commit_sig new_commit_sig_absent() {
+    return commit_sig{FlagAbsent};
+  }
+
+  bool for_block() {
+    return flag == FlagCommit;
+  }
+
+  bool absent() {
+    return flag == FlagAbsent;
+  }
 };
 
 struct commit {
@@ -40,6 +57,11 @@ struct commit {
   // todo - do we need these?
   //  hash
   //  bitArray
+
+  static commit new_commit(
+    int64_t height_, int32_t round_, p2p::block_id block_id_, std::vector<commit_sig>& commit_sigs) {
+    return commit{height_, round_, block_id_, commit_sigs};
+  }
 };
 
 using block_ptr = std::shared_ptr<block>;

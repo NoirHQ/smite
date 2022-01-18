@@ -265,6 +265,29 @@ struct vote_set {
     // todo - use mtx
     return maj23.has_value();
   }
+
+  /**
+   * constructs a commit from the vote_set. It only include precommits for the block, which has 2/3+ majority and nil
+   */
+  commit make_commit() {
+    // todo - use mtx
+    if (signed_msg_type_ == p2p::Precommit)
+      throw std::runtime_error("cannot make_commit() unless signed_msg_type_ is Precommit");
+    // Make sure we have a 2/3 majority
+    if (!maj23.has_value())
+      throw std::runtime_error("cannot make_comit() unless a block has 2/3+");
+    // For every validator, get the precommit
+    std::vector<commit_sig> commit_sigs;
+    for (auto& vote : votes) {
+      auto commit_sig_ = vote.to_commit_sig();
+      // If block_id exists but does not match, exclude sig
+      if (commit_sig_.for_block() && (vote.block_id_ != maj23)) {
+        commit_sig_ = commit_sig::new_commit_sig_absent();
+      }
+      commit_sigs.push_back(commit_sig_);
+    }
+    return commit::new_commit(height, round, maj23.value(), commit_sigs);
+  }
 };
 
 } // namespace noir::consensus
