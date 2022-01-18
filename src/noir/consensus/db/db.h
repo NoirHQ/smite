@@ -9,42 +9,102 @@
 
 namespace noir::consensus {
 
+/// \addtogroup consensus
+/// \{
+
+/// \brief wrapper of database
 template<typename K, typename V>
 class db {
 public:
   virtual ~db(){};
+  /// \brief gets stored value with key
+  /// \param[in] key key to get stored value
+  /// \param[out] val stored value to get
+  /// \return true on success, false otherwise
   virtual bool get(const K& key, V& val) const = 0;
+  /// \brief checks whether key exists
+  /// \param[in] key key to check
+  /// \param[out] val true if exists, false otherwise
+  /// \return true on success, false otherwise
   virtual bool has(const K& key, bool& val) const = 0;
+  /// \brief sets value with key
+  /// \param[in] key key to store value
+  /// \param[in] val value to store
+  /// \return true on success, false otherwise
   virtual bool set(const K& key, const V& val) = 0;
+  /// \brief sets given value with key, and flushes it to storage
+  /// \param[in] key key to store value
+  /// \param[in] val value to store
+  /// \return true on success, false otherwise
   virtual bool set_sync(const K& key, const V& val) = 0;
+  /// \brief deletes stored value with key
+  /// \param[in] key key to delete
+  /// \return true on success, false otherwise
   virtual bool del(const K& key) = 0;
+  /// \brief deletes stored value with given key, and flushes it to storage
+  /// \param[in] key key to delete
+  /// \return true on success, false otherwise
   virtual bool del_sync(const K& key) = 0;
+  /// \brief closes database connection
+  /// \return true on success, false otherwise
   virtual bool close() = 0;
+  /// prints info for debug
+  /// \return true on success, false otherwise
   virtual bool print() const = 0;
+  /// provides a map of property values for keys
+  /// \return map object
   virtual const std::map<K, V>& stats() = 0;
 
+  /// \brief group of write for db
   class batch {
   public:
     virtual ~batch(){};
+    /// \brief gets stored value with key
+    /// \param[in] key key to get stored value
+    /// \param[out] val stored value to get
+    /// \return true on success, false otherwise
     virtual bool set(const K& key, const V& val) = 0;
+    /// \brief deletes stored value with given key, and flushes it to storage
+    /// \param[in] key key to delete
+    /// \return true on success, false otherwise
     virtual bool del(const K& key) = 0;
+    /// \brief writes the batch
+    /// \note Only close() can be called after calling this method
+    /// \return true on success, false otherwise
     virtual bool write() = 0;
+    /// \brief writes the batch and flushes it to storage
+    /// \note Only close() can be called after calling this method
+    /// \return true on success, false otherwise
     virtual bool write_sync() = 0;
+    /// \brief closes the batch
+    /// \return true on success, false otherwise
     virtual bool close() = 0;
   };
 
+  /// \brief creates a batch
+  /// \return shared_ptr of batch
   virtual std::shared_ptr<batch> new_batch() = 0;
 
+  /// \brief internal implementation of db_iterator and wrapper of iterator of internal container
   class db_iterator_impl {
   public:
     virtual ~db_iterator_impl(){};
+    /// \brief increase internal iterator
     virtual void increment() = 0;
+    /// \brief decrease internal iterator
     virtual void decrement() = 0;
+    /// \brief gets key of internal iterator is pointing
+    /// \return key
     virtual const K& key() const = 0;
+    /// \brief gets value of internal iterator is pointing
+    /// \return value
     virtual const V& val() const = 0;
+    /// \brief clones self
+    /// \return  pointer of new db_iterator_impl object
     virtual db_iterator_impl* clone() = 0;
   };
 
+  /// \brief wrapper of iterator
   class db_iterator : public std::iterator<std::bidirectional_iterator_tag, const K> {
   public:
     db_iterator(db_iterator_impl* impl) : impl_(impl){};
@@ -89,9 +149,13 @@ public:
       --(*this);
       return tmp;
     }
+    /// \brief get key of iterator
+    /// \return key
     const K& key() const {
       return impl_->key();
     }
+    /// \brief get value of iterator
+    /// \return value
     const V& val() const {
       return impl_->val();
     }
@@ -99,15 +163,33 @@ public:
   private:
     std::unique_ptr<db_iterator_impl> impl_;
   }; // class db_iterator
+
+  /// \brief reverse iterator iterates in reverse order of db_iterator
   using db_reverse_iterator = std::reverse_iterator<db_iterator>;
 
-  virtual db_iterator begin_iterator(const K&) = 0;
-  virtual db_iterator end_iterator(const K&) = 0;
+  /// \brief get first db_iterator which includes given key
+  /// \param[in] key key
+  /// \return db_iterator object
+  virtual db_iterator begin_iterator(const K& key) = 0;
 
+  /// get last db_iterator which includes given key
+  /// \note TBD: inclusive or not
+  /// \param[in] key key
+  /// \return db_iterator object
+  virtual db_iterator end_iterator(const K& key) = 0;
+
+  /// \brief get first db_reverse_iterator which includes given key
+  /// \param[in] key key
+  /// \return db_reverse_iterator object
   virtual db_reverse_iterator rbegin_iterator(const K&) = 0;
+  /// get last db_revers_iterator which includes given key
+  /// \note TBD: inclusive or not
+  /// \param[in] key key
+  /// \return db_reverse_iterator object
   virtual db_reverse_iterator rend_iterator(const K&) = 0;
 }; // class db
 
+/// \brief wrapper of map<K,V>
 template<typename K, typename V>
 class simple_db : public virtual db<K, V> {
 private:
@@ -331,5 +413,6 @@ public:
     return std::make_shared<simple_db_batch>(simple_db_batch(impl_));
   }
 }; // class simple_db
+/// \}
 
 } // namespace noir::consensus
