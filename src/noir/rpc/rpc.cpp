@@ -746,19 +746,17 @@ void rpc::set_program_options(CLI::App& cli, CLI::App& config) {
     ->add_option("http-max-in-flight-requests",
       "Maximum number of requests rpc should use for processing http requests. 429 error response when exceeded.")
     ->default_val(-1);
-  rpc_options->add_option("http-max-response-time-ms", "Maximum time for processing a request.")
-    ->default_val(30);
-  rpc_options->add_option("verbose-http-errors", "Append the error log to HTTP responses")
-    ->default_val(false);
+  rpc_options->add_option("http-max-response-time-ms", "Maximum time for processing a request.")->default_val(30);
+  rpc_options->add_option("verbose-http-errors", "Append the error log to HTTP responses")->default_val(false);
   rpc_options
     ->add_option("http-validate-host", "If set to false, then any incoming \"Host\" header is considered valid")
     ->default_val(true);
-  rpc_options->add_option("http-alias",
-    "Additionally acceptable values for the \"Host\" header of incoming HTTP requests, can be specified multiple "
-    "times. Includes http/s_server_address by default.")
+  rpc_options
+    ->add_option("http-alias",
+      "Additionally acceptable values for the \"Host\" header of incoming HTTP requests, can be specified multiple "
+      "times. Includes http/s_server_address by default.")
     ->take_all();
-  rpc_options->add_option("http-threads", "Number of worker threads in http thread pool")
-    ->default_val(2);
+  rpc_options->add_option("http-threads", "Number of worker threads in http thread pool")->default_val(2);
   rpc_options->add_option("access-control-allow-origin", my->access_control_allow_origin,
     "Specify the Access-Control-Allow-Origin to be returned on each request.");
   rpc_options->add_option("access-control-allow-headers", my->access_control_allow_headers,
