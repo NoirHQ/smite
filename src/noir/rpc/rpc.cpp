@@ -404,7 +404,7 @@ public:
    * child struct, implementing abstract connection for various underlying connection types
    * that ties it to an rpc_impl
    *
-   * @param T - The downstream parameter for the connection_ptr
+   * @tparam T - The downstream parameter for the connection_ptr
    */
   template<typename T>
   struct abstract_conn_impl : public detail::abstract_conn {
@@ -450,7 +450,7 @@ public:
 
   /**
    * Helper to construct an abstract_conn_impl for a given connection and instance of rpc_impl
-   * @param T - The downstream parameter for the connection_ptr
+   * @tparam T - The downstream parameter for the connection_ptr
    * @param conn - existing connection_ptr<T>
    * @param impl - the owning rpc_impl
    * @return abstract_conn_ptr backed by type specific implementations of the methods
@@ -720,7 +720,6 @@ void rpc::set_program_options(CLI::App& cli, CLI::App& config) {
     rpc_options
       ->add_option(
         "http-server-address", "The local IP and port to listen for incoming http connections; set blank to disable.")
-      ->force_callback()
       ->default_val("127.0.0.1:" + std::to_string(current_rpc_defaults.default_http_port));
   else
     rpc_options->add_option(
@@ -738,33 +737,27 @@ void rpc::set_program_options(CLI::App& cli, CLI::App& config) {
     ->default_val(https_ecdh_curve_t::SECP384R1);
 
   rpc_options->add_option("max-body-size", "The maximum body size in bytes allowed for incoming RPC requests")
-    ->force_callback()
     ->default_val(1024 * 1024);
   rpc_options
     ->add_option("http-max-bytes-in-flight-mb",
       "Maximum size in megabytes rpc should use for processing http requests. 429 error response when exceeded.")
-    ->force_callback()
     ->default_val(500);
   rpc_options
     ->add_option("http-max-in-flight-requests",
       "Maximum number of requests rpc should use for processing http requests. 429 error response when exceeded.")
-    ->force_callback()
     ->default_val(-1);
   rpc_options->add_option("http-max-response-time-ms", "Maximum time for processing a request.")
-    ->force_callback()
     ->default_val(30);
   rpc_options->add_option("verbose-http-errors", "Append the error log to HTTP responses")
-    ->force_callback()
     ->default_val(false);
   rpc_options
     ->add_option("http-validate-host", "If set to false, then any incoming \"Host\" header is considered valid")
-    ->force_callback()
     ->default_val(true);
   rpc_options->add_option("http-alias",
     "Additionally acceptable values for the \"Host\" header of incoming HTTP requests, can be specified multiple "
-    "times. Includes http/s_server_address by default.");
+    "times. Includes http/s_server_address by default.")
+    ->take_all();
   rpc_options->add_option("http-threads", "Number of worker threads in http thread pool")
-    ->force_callback()
     ->default_val(2);
   rpc_options->add_option("access-control-allow-origin", my->access_control_allow_origin,
     "Specify the Access-Control-Allow-Origin to be returned on each request.");
@@ -783,14 +776,14 @@ void rpc::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
   try {
     auto rpc_options = config.get_subcommand("rpc");
 
-    if (rpc_options->get_option("http-alias")->count()) {
+    my->validate_host = rpc_options->get_option("http-validate-host")->as<bool>();
+    if (rpc_options->count("http-alias")) {
       const auto& aliases = rpc_options->get_option("http-alias")->as<vector<string>>();
       my->valid_hosts.insert(aliases.begin(), aliases.end());
     }
 
     tcp::resolver resolver(app().io_context());
-    if (rpc_options->get_option("http-server-address")->count() &&
-      rpc_options->get_option("http-server-address")->as<string>().length()) {
+    if (rpc_options->get_option("http-server-address")->as<string>().length()) {
       string lipstr = rpc_options->get_option("http-server-address")->as<string>();
       string host = lipstr.substr(0, lipstr.find(':'));
       string port = lipstr.substr(host.size() + 1, lipstr.size());
@@ -808,7 +801,7 @@ void rpc::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
     }
 
     //#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
-    //    if(rpc_options->get_option("unix-socket-path")->count() &&
+    //    if(rpc_options->count("unix-socket-path") &&
     //    !rpc_options->get_option("unix-socket-path")->as<string>().empty()) {
     //      boost::filesystem::path sock_path = rpc_options->get_option("unix-socket-path")->as<string>();
     //      if (sock_path.is_relative())
@@ -817,14 +810,14 @@ void rpc::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
     //    }
     //#endif
 
-    if (rpc_options->get_option("https-server-address")->count() &&
+    if (rpc_options->count("https-server-address") &&
       rpc_options->get_option("https-server-address")->as<string>().length()) {
-      if (!rpc_options->get_option("https-certificate-chain-file")->count() ||
+      if (!rpc_options->count("https-certificate-chain-file") ||
         rpc_options->get_option("https-certificate-chain-file")->as<string>().empty()) {
         elog("https-certificate-chain-file is required for HTTPS");
         return;
       }
-      if (!rpc_options->get_option("https-private-key-file")->count() ||
+      if (!rpc_options->count("https-private-key-file") ||
         rpc_options->get_option("https-private-key-file")->as<string>().empty()) {
         elog("https-private-key-file is required for HTTPS");
         return;
