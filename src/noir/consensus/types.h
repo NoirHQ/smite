@@ -31,6 +31,10 @@ struct part_set {
   // bit_array parts_bit_array;
   uint32_t count;
   int64_t byte_size;
+
+  p2p::part_set_header header() {
+    return p2p::part_set_header{total, hash};
+  }
 };
 
 struct round_vote_set {
@@ -61,7 +65,8 @@ struct height_vote_set {
   std::map<int32_t, round_vote_set> round_vote_sets;
   std::map<p2p::node_id, std::vector<int32_t>> peer_catchup_rounds;
 
-  static std::shared_ptr<height_vote_set> new_height_vote_set(std::string chain_id_, int64_t height_, const validator_set& val_set_) {
+  static std::shared_ptr<height_vote_set> new_height_vote_set(
+    std::string chain_id_, int64_t height_, const validator_set& val_set_) {
     auto hvs = std::make_shared<height_vote_set>();
     hvs->chain_id = chain_id_;
     hvs->reset(height_, val_set_);
@@ -166,18 +171,18 @@ struct round_state {
   // Subjective time when +2/3 precommits for Block at Round were found
   p2p::tstamp commit_time;
   std::shared_ptr<validator_set> validators;
-  std::shared_ptr<p2p::proposal_message> proposal;
-  std::shared_ptr<block> proposal_block;
-  std::shared_ptr<part_set> proposal_block_parts;
+  std::optional<p2p::proposal_message> proposal;
+  std::optional<block> proposal_block;
+  std::optional<part_set> proposal_block_parts;
   int32_t locked_round;
   std::shared_ptr<block> locked_block;
   std::shared_ptr<part_set> locked_block_parts;
 
   // Last known round with POL for non-nil valid block.
   int32_t valid_round;
-  std::shared_ptr<block> valid_block; // Last known block of POL mentioned above.
+  std::optional<block> valid_block; // Last known block of POL mentioned above.
 
-  std::shared_ptr<part_set> valid_block_parts;
+  std::optional<part_set> valid_block_parts;
   std::shared_ptr<height_vote_set> votes;
   int32_t commit_round;
   std::optional<vote_set> last_commit;
@@ -201,6 +206,28 @@ namespace channels {
 inline p2p::tstamp get_time() {
   return std::chrono::system_clock::now().time_since_epoch().count();
 }
+
+/**
+ * Proposal defines a block proposal for the consensus.
+ * It refers to the block by BlockID field.
+ * It must be signed by the correct proposer for the given Height/Round
+ * to be considered valid. It may depend on votes from a previous round,
+ * a so-called Proof-of-Lock (POL) round, as noted in the POLRound.
+ * If POLRound >= 0, then BlockID corresponds to the block that is locked in POLRound.
+ */
+struct proposal {
+  p2p::signed_msg_type type;
+  int64_t height;
+  int32_t round;
+  int32_t pol_round;
+  p2p::block_id block_id_;
+  p2p::tstamp timestamp;
+  p2p::bytes signature;
+
+  static proposal new_proposal(int64_t height_, int32_t round_, int32_t pol_round_, p2p::block_id b_id_) {
+    return proposal{p2p::Proposal, height_, round_, pol_round_, b_id_, get_time()};
+  }
+};
 
 } // namespace noir::consensus
 

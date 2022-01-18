@@ -58,6 +58,25 @@ struct consensus_config {
       std::chrono::milliseconds{500}, std::chrono::milliseconds{1000}, false, true, std::chrono::seconds{0},
       std::chrono::milliseconds{100}, std::chrono::milliseconds{2000}, 0};
   }
+
+  std::chrono::system_clock::duration propose(int32_t round) const {
+    return timeout_propose + (timeout_propose_delta * round);
+  }
+
+  std::chrono::system_clock::duration prevote(int32_t round) const {
+    return timeout_prevote + (timeout_propose_delta * round);
+  }
+
+  std::chrono::system_clock::duration precommit(int32_t round) const {
+    return timeout_precommit + (timeout_precommit_delta * round);
+  }
+
+  /**
+   * returns the amount of time to wait for straggler votes after receiving 2/3+ precommits
+   */
+  p2p::tstamp commit(p2p::tstamp t) {
+    return t + timeout_commit.count();
+  }
 };
 
 struct config {
