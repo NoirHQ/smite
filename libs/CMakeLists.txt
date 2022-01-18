@@ -14,6 +14,7 @@ add_subdirectory(softfloat)
 
 add_subdirectory(appbase)
 add_subdirectory(Catch2)
+add_subdirectory(chain_kv)
 add_subdirectory(expected)
 add_subdirectory(fc)
 add_subdirectory(fmt)
