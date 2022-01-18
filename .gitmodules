@@ -10,3 +10,12 @@
 [submodule "libs/fc"]
 	path = libs/fc
 	url = https://github.com/noir-protocol/fc
+[submodule "libs/rocksdb"]
+	path = libs/rocksdb
+	url = https://github.com/facebook/rocksdb.git
+[submodule "libs/softfloat"]
+	path = libs/softfloat
+	url = https://github.com/eosio/berkeley-softfloat-3
+[submodule "libs/fmt"]
+	path = libs/fmt
+	url = https://github.com/fmtlib/fmt
