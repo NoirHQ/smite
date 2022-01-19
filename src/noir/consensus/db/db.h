@@ -102,19 +102,24 @@ public:
     /// \brief clones self
     /// \return  pointer of new db_iterator_impl object
     virtual db_iterator_impl* clone() = 0;
+
+    virtual bool is_equal(const db_iterator_impl&) const = 0;
   };
 
   /// \brief wrapper of iterator
+  template<bool reverse = false>
   class db_iterator : public std::iterator<std::bidirectional_iterator_tag, const K> {
   public:
-    db_iterator(db_iterator_impl* impl) : impl_(impl){};
+    db_iterator(db_iterator_impl* begin, db_iterator_impl* end) : impl_(begin), begin_(begin->clone()), end_(end) {}
+    db_iterator(db_iterator_impl* impl, db_iterator_impl* begin, db_iterator_impl* end)
+      : impl_(impl), begin_(begin), end_(end) {}
     db_iterator(db_iterator&& other) : impl_(std::move(other.impl_)) {
       other.impl_ = nullptr;
     }
     db_iterator(const db_iterator& other) : impl_(other.impl_->clone()) {}
 
     friend bool operator==(const db_iterator& lhs, const db_iterator& rhs) {
-      return (lhs.impl_->key() == rhs.impl_->key()) && (lhs.impl_->val() == rhs.impl_->val());
+      return lhs.impl_->is_equal(*rhs.impl_.get());
     }
 
     friend bool operator!=(const db_iterator& lhs, const db_iterator& rhs) {
@@ -129,7 +134,11 @@ public:
     }
 
     db_iterator& operator++() {
-      impl_->increment();
+      if constexpr (reverse == false) {
+        impl_->increment();
+      } else {
+        impl_->decrement();
+      }
       return *this;
     }
 
@@ -140,7 +149,11 @@ public:
     }
 
     db_iterator& operator--() {
-      impl_->decrement();
+      if constexpr (reverse == false) {
+        impl_->decrement();
+      } else {
+        impl_->increment();
+      }
       return *this;
     }
 
@@ -160,33 +173,19 @@ public:
       return impl_->val();
     }
 
+    const db_iterator begin() {
+      return db_iterator(begin_->clone(), begin_->clone(), end_->clone());
+    }
+    const db_iterator end() {
+      return db_iterator(end_->clone(), begin_->clone(), end_->clone());
+    }
+
   private:
     std::unique_ptr<db_iterator_impl> impl_;
+    std::unique_ptr<db_iterator_impl> begin_;
+    std::unique_ptr<db_iterator_impl> end_;
   }; // class db_iterator
 
-  /// \brief reverse iterator iterates in reverse order of db_iterator
-  using db_reverse_iterator = std::reverse_iterator<db_iterator>;
-
-  /// \brief get first db_iterator which includes given key
-  /// \param[in] key key
-  /// \return db_iterator object
-  virtual db_iterator begin_iterator(const K& key) = 0;
-
-  /// get last db_iterator which includes given key
-  /// \note TBD: inclusive or not
-  /// \param[in] key key
-  /// \return db_iterator object
-  virtual db_iterator end_iterator(const K& key) = 0;
-
-  /// \brief get first db_reverse_iterator which includes given key
-  /// \param[in] key key
-  /// \return db_reverse_iterator object
-  virtual db_reverse_iterator rbegin_iterator(const K&) = 0;
-  /// get last db_revers_iterator which includes given key
-  /// \note TBD: inclusive or not
-  /// \param[in] key key
-  /// \return db_reverse_iterator object
-  virtual db_reverse_iterator rend_iterator(const K&) = 0;
 }; // class db
 
 /// \brief wrapper of map<K,V>
@@ -194,6 +193,8 @@ template<typename K, typename V>
 class simple_db : public virtual db<K, V> {
 private:
   class simple_db_impl {
+    friend class simple_db;
+
   public:
     bool get(const K& key, V& val) const {
       if (auto iter = map_.find(key); iter != map_.end()) {
@@ -309,10 +310,14 @@ public:
   public:
     ~simple_db_iterator_impl() override{};
     void increment() override {
-      map_iter_++;
+      ++map_iter_;
     }
     void decrement() override {
-      map_iter_--;
+      if (map_iter_ != map_begin_) {
+        --map_iter_;
+      } else {
+        map_iter_ = map_end_;
+      }
     }
     const K& key() const override {
       return map_iter_->first;
@@ -321,35 +326,53 @@ public:
       return map_iter_->second;
     }
     typename db<K, V>::db_iterator_impl* clone() override {
-      return new simple_db_iterator_impl(map_iter_);
+      return new simple_db_iterator_impl(map_iter_, map_begin_, map_end_);
+    }
+
+    bool is_equal(const typename db<K, V>::db_iterator_impl& other) const override {
+      return (typeid(*this) == typeid(other)) &&
+        (map_iter_ == dynamic_cast<const simple_db_iterator_impl&>(other).map_iter_);
     }
 
   private:
+    typename std::map<K, V>::iterator map_begin_;
+    typename std::map<K, V>::iterator map_end_;
     typename std::map<K, V>::iterator map_iter_;
-    simple_db_iterator_impl(typename std::map<K, V>::iterator iter) : map_iter_(iter) {}
+    simple_db_iterator_impl(typename std::map<K, V>::iterator iter, typename std::map<K, V>::iterator begin,
+      typename std::map<K, V>::iterator end)
+      : map_iter_(iter), map_begin_(begin), map_end_(end) {}
     simple_db_iterator_impl lower_bound(const K& key) {
-      return simple_db_iterator_impl{map_iter_->lower_bound(key)};
+      return simple_db_iterator_impl{map_iter_->lower_bound(key), map_begin_, map_end_};
     }
 
     simple_db_iterator_impl upper_bound(const K& key) {
-      return simple_db_iterator_impl{map_iter_->upper_bound(key)};
+      return simple_db_iterator_impl{map_iter_->upper_bound(key), map_begin_, map_end_};
     }
   }; // class simple_db_iterator_impl
 
-  typename db<K, V>::db_iterator begin_iterator(const K& key) override {
-    return typename db<K, V>::db_iterator(new simple_db_iterator_impl{impl_->lower_bound(key)});
-  }
-
-  typename db<K, V>::db_iterator end_iterator(const K& key) override {
-    return typename db<K, V>::db_iterator(new simple_db_iterator_impl{impl_->upper_bound(key)});
-  }
-
-  typename db<K, V>::db_reverse_iterator rbegin_iterator(const K& key) override {
-    return std::make_reverse_iterator(end_iterator(key));
-  }
-
-  typename db<K, V>::db_reverse_iterator rend_iterator(const K& key) override {
-    return std::make_reverse_iterator(begin_iterator(key));
+  template<bool reverse = false>
+  typename db<K, V>::template db_iterator<reverse> get_iterator(const K& start, const K& end) {
+    // begin: inclusive / end: exclusive
+    auto begin_ = impl_->map_.begin();
+    auto end_ = impl_->map_.end();
+    if constexpr (reverse == false) {
+      return typename db<K, V>::template db_iterator<false>(
+        new simple_db_iterator_impl{impl_->lower_bound(start), begin_, end_},
+        new simple_db_iterator_impl{impl_->upper_bound(end), begin_, end_});
+    } else {
+      auto start_it = impl_->upper_bound(end);
+      if (start_it != begin_) {
+        --start_it;
+      }
+      auto end_it = impl_->lower_bound(start);
+      if (end_it != begin_) {
+        --end_it;
+      } else {
+        end_it = end_;
+      }
+      return typename db<K, V>::template db_iterator<true>(
+        new simple_db_iterator_impl{start_it, begin_, end_}, new simple_db_iterator_impl{end_it, begin_, end_});
+    }
   }
 
   class simple_db_batch : public virtual db<K, V>::batch {
