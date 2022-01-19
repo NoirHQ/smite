@@ -32,8 +32,43 @@ struct part_set {
   uint32_t count;
   int64_t byte_size;
 
+  static part_set new_part_set_from_header(p2p::part_set_header header) {
+    std::vector<part> parts_;
+    parts_.resize(header.total);
+    return part_set{header.total, header.hash, parts_, 0, 0};
+  }
+
+  bool is_complete() {
+    return count == total;
+  }
+
   p2p::part_set_header header() {
     return p2p::part_set_header{total, hash};
+  }
+
+  bool add_part(part part_) {
+    // todo - lock mtx
+
+    if (part_.index >= total) {
+      dlog("error part set unexpected index");
+      return false;
+    }
+
+    // If part already exists, return false.
+    try {
+      auto p = parts.at(part_.index);
+      return false;
+    } catch (std::out_of_range&) {
+    }
+
+    // Check hash proof // todo
+
+    // Add part
+    parts[part_.index] = part_;
+    // parts_bit_array =
+    count++;
+    byte_size += part_.bytes.size();
+    return true;
   }
 };
 
@@ -197,11 +232,21 @@ struct timeout_info {
   round_step_type step;
 };
 
+using consensus_message = std::variant<p2p::proposal_message, p2p::block_part_message, p2p::vote_message>;
+
+struct msg_info {
+  consensus_message msg;
+  p2p::node_id peer_id;
+};
+
 using timeout_info_ptr = std::shared_ptr<timeout_info>;
+using msg_info_ptr = std::shared_ptr<msg_info>;
 
 namespace channels {
   using timeout_ticker = appbase::channel_decl<struct timeout_ticker_tag, timeout_info_ptr>;
-}
+  using internal_message_queue = appbase::channel_decl<struct internal_message_queue_tag, msg_info_ptr>;
+  using peer_message_queue = appbase::channel_decl<struct peer_message_queue_tag, msg_info_ptr>;
+} // namespace channels
 
 inline p2p::tstamp get_time() {
   return std::chrono::system_clock::now().time_since_epoch().count();
