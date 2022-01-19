@@ -1,3 +1,8 @@
+target_sources(noir
+  PRIVATE
+    consensus_state.cpp
+    state.cpp)
+
 add_executable(validator_test validator_test.cpp)
 target_link_libraries(validator_test noir Catch2WithMain)
 
