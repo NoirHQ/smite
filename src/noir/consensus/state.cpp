@@ -1,0 +1,112 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+#include <noir/consensus/state.h>
+
+namespace noir::consensus {
+
+state::state() {
+  // read from config file, or restore from last saved state
+  validator_set validatorSet, nextValidatorSet;
+  //  if genDoc.Validators == nil || len(genDoc.Validators) == 0
+  //  {
+  //    validatorSet = types.NewValidatorSet(nil)
+  //    nextValidatorSet = types.NewValidatorSet(nil)
+  //  } else {
+
+  // read from genesis.json
+  //    validatorSet = types.NewValidatorSet(validators)
+  //    nextValidatorSet = types.NewValidatorSet(validators).CopyIncrementProposerPriority(1)
+  //  }
+
+  version = "0.0.0";
+  //  initial_height = genDoc.inital_height;
+  last_block_height = 0;
+  //  last_block_time = genDoc.GenesisTime;
+
+  next_validators = nextValidatorSet;
+  validators = validatorSet;
+  //  last_validators = nil;
+  //  last_height_validators_changed = genDoc.initial_height;
+
+  //  consensus_params = genDoc.consensus_params;
+  //  last_height_consensus_params_changed = genDoc.initial_height;
+
+  //  app_hash = genDoc.app_hash;
+}
+
+block state::make_block(
+  int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address) {
+  // Set time
+  p2p::tstamp timestamp;
+  //    if (height == initial_height) {
+  //      timestamp = genesis_time;
+  //    } else {
+  //      timestamp = get_median_time();
+  //    }
+  return block{};
+}
+
+p2p::tstamp state::get_median_time() {
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch())
+    .count();
+}
+
+state state::update_state(state new_state, p2p::block_id new_block_id, /* header, */ /* abci_response, */
+  std::vector<validator> validator_updates) {
+
+  //  next_validators.update_with_change_set();
+
+#if 0
+  // Copy the valset so we can apply changes from EndBlock
+  // and update s.LastValidators and s.Validators.
+  nValSet := state.NextValidators.Copy()
+
+  // Update the validator set with the latest abciResponses.
+  lastHeightValsChanged := state.LastHeightValidatorsChanged
+  if len(validatorUpdates) > 0 {
+    err := nValSet.UpdateWithChangeSet(validatorUpdates)
+    if err != nil {
+      return state, fmt.Errorf("error changing validator set: %v", err)
+    }
+    // Change results from this height but only applies to the next next height.
+    lastHeightValsChanged = header.Height + 1 + 1
+  }
+
+  // Update validator proposer priority and set state variables.
+  nValSet.IncrementProposerPriority(1)
+
+  // Update the params with the latest abciResponses.
+  nextParams := state.ConsensusParams
+  lastHeightParamsChanged := state.LastHeightConsensusParamsChanged
+  if abciResponses.EndBlock.ConsensusParamUpdates != nil {
+    // NOTE: must not mutate s.ConsensusParams
+    nextParams = state.ConsensusParams.UpdateConsensusParams(abciResponses.EndBlock.ConsensusParamUpdates)
+    err := nextParams.ValidateConsensusParams()
+    if err != nil {
+      return state, fmt.Errorf("error updating consensus params: %v", err)
+    }
+
+    state.Version.Consensus.App = nextParams.Version.AppVersion
+
+    // Change results from this height but only applies to the next height.
+    lastHeightParamsChanged = header.Height + 1
+  }
+
+  nextVersion := state.Version
+#endif
+  return state{};
+}
+
+bool state::is_empty() {
+  return validators.validators.empty();
+}
+
+state state::make_genesis_state(/* genDoc*/) {
+  // todo - read from genDoc
+  return state{};
+}
+
+} // namespace noir::consensus
