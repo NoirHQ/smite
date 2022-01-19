@@ -926,18 +926,6 @@ void rpc::plugin_startup() {
           throw;
         }
       }
-
-      add_api({{std::string("/v1/node/get_supported_apis"),
-        [&](const string&, string body, url_response_callback cb) mutable {
-          try {
-            if (body.empty())
-              body = "{}";
-            auto result = (*this).get_supported_apis();
-            cb(200, fc::variant(result));
-          } catch (...) {
-            handle_exception("node", "get_supported_apis", body, cb);
-          }
-        }}});
     } catch (...) {
       fc_elog(logger, "rpc startup fails, shutting down");
       app().quit();
