@@ -146,7 +146,8 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //  decideProposal func(height int64, round int32)
   //  doPrevote      func(height int64, round int32)
   //  setProposal    func(proposal *types.Proposal) error
-  /////-- directly implemented decide_proposal
+  ///-- directly implemented decide_proposal
+  ///-- directly implemented set_proposal
 
   //
   //  // closed when we finish shutting down

@@ -18,8 +18,8 @@ namespace noir::consensus {
 
 struct part {
   uint32_t index;
-  p2p::bytes bytes;
-  // proof proof;
+  p2p::bytes bytes_;
+  p2p::bytes proof;
 };
 
 struct part_set {
@@ -67,8 +67,13 @@ struct part_set {
     parts[part_.index] = part_;
     // parts_bit_array =
     count++;
-    byte_size += part_.bytes.size();
+    byte_size += part_.bytes_.size();
     return true;
+  }
+
+  part get_part(int index) {
+    // todo - lock mtx
+    return parts[index]; // todo - check range?
   }
 };
 
@@ -260,14 +265,7 @@ inline p2p::tstamp get_time() {
  * a so-called Proof-of-Lock (POL) round, as noted in the POLRound.
  * If POLRound >= 0, then BlockID corresponds to the block that is locked in POLRound.
  */
-struct proposal {
-  p2p::signed_msg_type type;
-  int64_t height;
-  int32_t round;
-  int32_t pol_round;
-  p2p::block_id block_id_;
-  p2p::tstamp timestamp;
-  p2p::bytes signature;
+struct proposal : p2p::proposal_message {
 
   static proposal new_proposal(int64_t height_, int32_t round_, int32_t pol_round_, p2p::block_id b_id_) {
     return proposal{p2p::Proposal, height_, round_, pol_round_, b_id_, get_time()};
