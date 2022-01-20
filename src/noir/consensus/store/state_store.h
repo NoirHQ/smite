@@ -7,13 +7,11 @@
 
 #include <fmt/core.h>
 
+#include <noir/consensus/state.h>
+
 #include <noir/codec/scale.h>
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/db/db.h>
-#include <noir/consensus/params.h>
-#include <noir/consensus/state.h>
-#include <noir/consensus/types.h>
-#include <noir/consensus/validator.h>
 
 namespace noir::consensus {
 
@@ -215,7 +213,7 @@ private:
       return false;
     }
 
-    if (!batch->set(state_key_, encode_state(st))) {
+    if (!batch->set(state_key_, noir::codec::scale::encode(st))) {
       return false;
     }
     return batch->write_sync();
@@ -239,7 +237,7 @@ private:
           height, st.last_height_consensus_params_changed, st.consensus_params, batch.get())) {
       return false;
     }
-    if (!batch->set(state_key_, encode_state(st))) {
+    if (!batch->set(state_key_, noir::codec::scale::encode(st))) {
       return false;
     }
     return batch->write_sync();
@@ -250,7 +248,7 @@ private:
     if (auto ret = db_->get(state_key_, buf); !ret || buf.empty()) {
       return false;
     }
-    decode_state(buf, st);
+    st = noir::codec::scale::decode<state>(buf);
     return true;
   }
 
@@ -411,38 +409,6 @@ private:
     return true;
   }
 
-  // TEMP
-  static size_t encode_state_size(const state& st) {
-    noir::codec::scale::datastream<size_t> ds;
-    ds << st.version << st.chain_id << st.initial_height << st.last_block_height;
-    // ds << st.last_block_id;
-    ds << st.last_block_time << st.next_validators << st.validators << st.last_validators
-       << st.last_height_validators_changed << st.consensus_params << st.last_height_consensus_params_changed
-       << st.last_result_hash << st.app_hash;
-    return ds.tellp();
-  }
-
-  static p2p::bytes encode_state(const state& st) {
-    auto buf = p2p::bytes(encode_state_size(st));
-
-    noir::codec::scale::datastream<char> ds(buf);
-    ds << st.version << st.chain_id << st.initial_height << st.last_block_height;
-    // ds << st.last_block_id;
-    ds << st.last_block_time << st.next_validators << st.validators << st.last_validators
-       << st.last_height_validators_changed << st.consensus_params << st.last_height_consensus_params_changed
-       << st.last_result_hash << st.app_hash;
-
-    return buf;
-  }
-
-  static void decode_state(const p2p::bytes& buf, state& st) {
-    noir::codec::scale::datastream<char> ds(const_cast<p2p::bytes&>(buf));
-    ds >> st.version >> st.chain_id >> st.initial_height >> st.last_block_height;
-    // ds >> st.last_block_id;
-    ds >> st.last_block_time >> st.next_validators >> st.validators >> st.last_validators >>
-      st.last_height_validators_changed >> st.consensus_params >> st.last_height_consensus_params_changed >>
-      st.last_result_hash >> st.app_hash;
-  }
 };
 
 /// }
