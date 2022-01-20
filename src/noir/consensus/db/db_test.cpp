@@ -216,55 +216,59 @@ TEST_CASE("iterator", "[simple_db]") {
       }},
   });
   std::for_each(tests.begin(), tests.end(), [&](const test_case& t) {
-    auto expected = t.expected;
-    auto start_s = t.start;
-    auto end_s = t.end;
-    noir::p2p::bytes start_b(start_s.begin(), start_s.end());
-    noir::p2p::bytes end_b(end_s.begin(), end_s.end());
+    SECTION(t.name) {
+      auto expected = t.expected;
+      auto start_s = t.start;
+      auto end_s = t.end;
+      noir::p2p::bytes start_b(start_s.begin(), start_s.end());
+      noir::p2p::bytes end_b(end_s.begin(), end_s.end());
 
-    auto db_it = test_db.get_iterator(start_b, end_b);
-    auto exp_it = expected.begin();
-    for (auto it = db_it.begin(); it != db_it.end(); ++it, ++exp_it) {
-      auto& key = it.key();
-      auto& val = it.val();
-      CHECK(std::string(key.begin(), key.end()) == exp_it->first);
-      CHECK(std::string(val.begin(), val.end()) == exp_it->second);
+      auto db_it = test_db.get_iterator(start_b, end_b);
+      auto exp_it = expected.begin();
+      for (auto it = db_it.begin(); it != db_it.end(); ++it, ++exp_it) {
+        auto& key = it.key();
+        auto& val = it.val();
+        CHECK(std::string(key.begin(), key.end()) == exp_it->first);
+        CHECK(std::string(val.begin(), val.end()) == exp_it->second);
+      }
+      CHECK(exp_it == expected.end());
+      exp_it = expected.begin();
+      for (auto it = db_it.begin(); it != db_it.end(); ++it, exp_it++) {
+        auto& key = it.key();
+        auto& val = it.val();
+        CHECK(std::string(key.begin(), key.end()) == exp_it->first);
+        CHECK(std::string(val.begin(), val.end()) == exp_it->second);
+      }
+      CHECK(exp_it == expected.end());
     }
-    CHECK(exp_it == expected.end());
-    exp_it = expected.begin();
-    for (auto it = db_it.begin(); it != db_it.end(); ++it, exp_it++) {
-      auto& key = it.key();
-      auto& val = it.val();
-      CHECK(std::string(key.begin(), key.end()) == exp_it->first);
-      CHECK(std::string(val.begin(), val.end()) == exp_it->second);
-    }
-    CHECK(exp_it == expected.end());
   });
 
   // reverse
   std::for_each(tests.begin(), tests.end(), [&](const test_case& t) {
-    auto expected = t.expected;
-    auto start_s = t.start;
-    auto end_s = t.end;
-    noir::p2p::bytes start_b(start_s.begin(), start_s.end());
-    noir::p2p::bytes end_b(end_s.begin(), end_s.end());
+    SECTION(t.name + "<reverse>") {
+      auto expected = t.expected;
+      auto start_s = t.start;
+      auto end_s = t.end;
+      noir::p2p::bytes start_b(start_s.begin(), start_s.end());
+      noir::p2p::bytes end_b(end_s.begin(), end_s.end());
 
-    auto db_it = test_db.get_iterator<true>(start_b, end_b);
-    auto exp_it = expected.rbegin();
-    for (auto it = db_it.begin(); it != db_it.end(); ++it, ++exp_it) {
-      auto& key = it.key();
-      auto& val = it.val();
-      CHECK(std::string(key.begin(), key.end()) == exp_it->first);
-      CHECK(std::string(val.begin(), val.end()) == exp_it->second);
+      auto db_it = test_db.get_reverse_iterator(start_b, end_b);
+      auto exp_it = expected.rbegin();
+      for (auto it = db_it.begin(); it != db_it.end(); ++it, ++exp_it) {
+        auto& key = it.key();
+        auto& val = it.val();
+        CHECK(std::string(key.begin(), key.end()) == exp_it->first);
+        CHECK(std::string(val.begin(), val.end()) == exp_it->second);
+      }
+      CHECK(exp_it == expected.rend());
+      exp_it = expected.rbegin();
+      for (auto it = db_it.begin(); it != db_it.end(); ++it, exp_it++) {
+        auto& key = it.key();
+        auto& val = it.val();
+        CHECK(std::string(key.begin(), key.end()) == exp_it->first);
+        CHECK(std::string(val.begin(), val.end()) == exp_it->second);
+      }
+      CHECK(exp_it == expected.rend());
     }
-    CHECK(exp_it == expected.rend());
-    exp_it = expected.rbegin();
-    for (auto it = db_it.begin(); it != db_it.end(); ++it, exp_it++) {
-      auto& key = it.key();
-      auto& val = it.val();
-      CHECK(std::string(key.begin(), key.end()) == exp_it->first);
-      CHECK(std::string(val.begin(), val.end()) == exp_it->second);
-    }
-    CHECK(exp_it == expected.rend());
   });
 }

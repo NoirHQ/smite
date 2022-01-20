@@ -102,8 +102,10 @@ public:
     /// \brief clones self
     /// \return  pointer of new db_iterator_impl object
     virtual db_iterator_impl* clone() = 0;
-
-    virtual bool is_equal(const db_iterator_impl&) const = 0;
+    /// \brief check this object is equal to given db_iterator_impl object
+    /// \param[in] other db_iterator_impl to check equality
+    /// \return true if equal, false otherwise
+    virtual bool is_equal(const db_iterator_impl& other) const = 0;
   };
 
   /// \brief wrapper of iterator
@@ -172,10 +174,13 @@ public:
     const V& val() const {
       return impl_->val();
     }
-
+    /// \brief get db_iterator at begin
+    /// \return db_iterator object
     const db_iterator begin() {
       return db_iterator(begin_->clone(), begin_->clone(), end_->clone());
     }
+    /// \brief get db_iterator at end
+    /// \return db_iterator object
     const db_iterator end() {
       return db_iterator(end_->clone(), begin_->clone(), end_->clone());
     }
@@ -186,6 +191,18 @@ public:
     std::unique_ptr<db_iterator_impl> end_;
   }; // class db_iterator
 
+  /// \brief get iterator with given start & end key.
+  /// \note CONTRACT: start should be less than end
+  /// \param[in] start inclusive key to start
+  /// \param[in] end exclusive key to end
+  /// \return db_iterator object
+  virtual db_iterator<false> get_iterator(const K& start, const K& end) = 0;
+  /// \brief get reverse iterator with given start & end key.
+  /// \note CONTRACT: start should be less than end
+  /// \param[in] start inclusive key to start
+  /// \param[in] end exclusive key to end
+  /// \return db_iterator object
+  virtual db_iterator<true> get_reverse_iterator(const K& start, const K& end) = 0;
 }; // class db
 
 /// \brief wrapper of map<K,V>
@@ -198,8 +215,7 @@ private:
   public:
     bool get(const K& key, V& val) const {
       if (auto iter = map_.find(key); iter != map_.end()) {
-        noir::p2p::bytes tmp(iter->second.begin(), iter->second.end());
-        val = tmp;
+        val = noir::p2p::bytes{iter->second.begin(), iter->second.end()};
         return true;
       }
       return false;
@@ -350,29 +366,31 @@ public:
     }
   }; // class simple_db_iterator_impl
 
-  template<bool reverse = false>
-  typename db<K, V>::template db_iterator<reverse> get_iterator(const K& start, const K& end) {
+  typename db<K, V>::template db_iterator<false> get_iterator(const K& start, const K& end) override {
     // begin: inclusive / end: exclusive
     auto begin_ = impl_->map_.begin();
     auto end_ = impl_->map_.end();
-    if constexpr (reverse == false) {
-      return typename db<K, V>::template db_iterator<false>(
-        new simple_db_iterator_impl{impl_->lower_bound(start), begin_, end_},
-        new simple_db_iterator_impl{impl_->upper_bound(end), begin_, end_});
-    } else {
-      auto start_it = impl_->upper_bound(end);
-      if (start_it != begin_) {
-        --start_it;
-      }
-      auto end_it = impl_->lower_bound(start);
-      if (end_it != begin_) {
-        --end_it;
-      } else {
-        end_it = end_;
-      }
-      return typename db<K, V>::template db_iterator<true>(
-        new simple_db_iterator_impl{start_it, begin_, end_}, new simple_db_iterator_impl{end_it, begin_, end_});
+    return typename db<K, V>::template db_iterator<false>(
+      new simple_db_iterator_impl{impl_->lower_bound(start), begin_, end_},
+      new simple_db_iterator_impl{impl_->upper_bound(end), begin_, end_});
+  }
+
+  typename db<K, V>::template db_iterator<true> get_reverse_iterator(const K& start, const K& end) override {
+    // begin: inclusive / end: exclusive
+    auto begin_ = impl_->map_.begin();
+    auto end_ = impl_->map_.end();
+    auto start_it = impl_->upper_bound(end);
+    if (start_it != begin_) {
+      --start_it;
     }
+    auto end_it = impl_->lower_bound(start);
+    if (end_it != begin_) {
+      --end_it;
+    } else {
+      end_it = end_;
+    }
+    return typename db<K, V>::template db_iterator<true>(
+      new simple_db_iterator_impl{start_it, begin_, end_}, new simple_db_iterator_impl{end_it, begin_, end_});
   }
 
   class simple_db_batch : public virtual db<K, V>::batch {
