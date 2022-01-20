@@ -56,6 +56,8 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void decide_proposal(int64_t height, int32_t round);
 
   void enter_prevote(int64_t height, int32_t round);
+  void do_prevote(int64_t height, int32_t round);
+
   void enter_prevote_wait(int64_t height, int32_t round);
   void enter_precommit(int64_t height, int32_t round);
   void enter_precommit_wait(int64_t height, int32_t round);
@@ -65,6 +67,9 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   bool add_proposal_block_part(p2p::block_part_message& msg, p2p::node_id peer_id);
   bool try_add_vote(p2p::vote_message& msg, p2p::node_id peer_id);
   bool add_vote(p2p::vote_message& msg, p2p::node_id peer_id);
+  vote sign_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header);
+  p2p::tstamp vote_time();
+  vote sign_and_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header);
 
   //  // config details
   //  config            *cfg.ConsensusConfig
@@ -147,6 +152,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //  doPrevote      func(height int64, round int32)
   //  setProposal    func(proposal *types.Proposal) error
   ///-- directly implemented decide_proposal
+  ///-- directly implemented do_prevote
   ///-- directly implemented set_proposal
 
   //

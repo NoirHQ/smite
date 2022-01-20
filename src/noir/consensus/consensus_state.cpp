@@ -222,8 +222,8 @@ void consensus_state::update_to_state(state& state_) {
   rs.proposal_block = {};
   rs.proposal_block_parts = {};
   rs.locked_round = -1;
-  rs.locked_block = nullptr;
-  rs.locked_block_parts = nullptr;
+  rs.locked_block = {};
+  rs.locked_block_parts = {};
 
   rs.valid_round = -1;
   rs.valid_block = {};
@@ -515,9 +515,72 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
   }
 }
 
-void consensus_state::enter_prevote(int64_t height, int32_t round) {}
+/**
+ * Enter after entering propose (proposal block and POL is ready)
+ * Prevote for locked_block if we are locked or proposal_blocke if valid. Otherwise vote nil.
+ */
+void consensus_state::enter_prevote(int64_t height, int32_t round) {
+  if (rs.height != height || round < rs.round || (rs.round == round && Prevote <= rs.step)) {
+    dlog(fmt::format("entering prevote step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+    return;
+  }
+  dlog(fmt::format("entering prevote step: {}/{}/{}", rs.height, rs.round, rs.step));
 
-void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {}
+  auto defer = make_scoped_exit([this, height, round]() {
+    update_round_step(round, Prevote);
+    new_step();
+  });
+
+  // Sign and broadcast vote as necessary
+  do_prevote(height, round);
+
+  // Once `add_vote` hits any +2/3 prevotes, we will go to prevote_wait
+  // (so we have more time to try and collect +2/3 prevotes for a single block)
+}
+
+void consensus_state::do_prevote(int64_t height, int32_t round) {
+  // If a block is locked, prevote that
+  if (rs.locked_block.has_value()) {
+    dlog("prevote step; already locked on a block; prevoting on a locked block");
+    sign_and_vote(p2p::signed_msg_type::Prevote, rs.locked_block->get_hash(), rs.locked_block_parts->header());
+    return;
+  }
+
+  // If proposal_block is nil, prevote nil
+  if (!rs.proposal_block.has_value()) {
+    dlog("prevote step; proposal_block is nil");
+    sign_and_vote(p2p::Prevote, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    return;
+  }
+
+  // Validate proposal block // todo
+
+  // Prevote rs.proposal_block
+  dlog("prevote step; proposal_block is valid");
+  sign_and_vote(p2p::Prevote, rs.proposal_block->get_hash(), rs.proposal_block_parts->header());
+}
+
+void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
+  if (rs.height != height || round < rs.round || (rs.round == round && PrevoteWait <= rs.step)) {
+    dlog(fmt::format("entering prevote_wait step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+    return;
+  }
+
+  if (rs.votes->prevotes(round)->has_two_thirds_any()) {
+    throw std::runtime_error(
+      fmt::format("entering prevote_wait step ({}/{}), but prevotes does not have any 2/3+ votes", height, round));
+  }
+
+  dlog(fmt::format("entering prevote_wait step: {}/{}/{}", rs.height, rs.round, rs.step));
+
+  auto defer = make_scoped_exit([this, height, round]() {
+    update_round_step(round, PrevoteWait);
+    new_step();
+  });
+
+  // Wait for some more prevotes
+  schedule_timeout(cs_config.prevote(round), height, round, PrevoteWait);
+}
 
 void consensus_state::enter_precommit(int64_t height, int32_t round) {}
 
@@ -607,6 +670,18 @@ bool consensus_state::add_vote(p2p::vote_message& msg, p2p::node_id peer_id) {
     "adding vote: height={} type={} index={} cs_height={}", msg.height, msg.type, msg.validator_index, rs.height));
 
   // todo - implement; it's very long
+}
+
+vote consensus_state::sign_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
+  // todo
+}
+
+p2p::tstamp consensus_state::vote_time() {
+  // todo
+}
+
+vote consensus_state::sign_and_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
+  // todo
 }
 
 } // namespace noir::consensus

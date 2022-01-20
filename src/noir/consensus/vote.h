@@ -266,6 +266,11 @@ struct vote_set {
     return maj23.has_value();
   }
 
+  bool has_two_thirds_any() {
+    // todo - use mtx
+    return sum > val_set.total_voting_power * 2 / 3;
+  }
+
   /**
    * constructs a commit from the vote_set. It only include precommits for the block, which has 2/3+ majority and nil
    */
