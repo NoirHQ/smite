@@ -678,7 +678,31 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
   sign_and_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
 }
 
-void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {}
+/**
+ * Enter any 2/3+ precommits for next round
+ */
+void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {
+  if (rs.height != height || round < rs.round || (rs.round == round && rs.triggered_timeout_precommit)) {
+    dlog(fmt::format("entering precommit_wait step with invalid args: {}/{} triggered_timeout={}", rs.height, rs.round,
+      rs.triggered_timeout_precommit));
+    return;
+  }
+
+  if (rs.votes->precommits(round)->has_two_thirds_any()) {
+    throw std::runtime_error(
+      fmt::format("entering precommit_wait step ({}/{}), but prevotes does not have any 2/3+ votes", height, round));
+  }
+
+  dlog(fmt::format("entering precommit_wait step: {}/{}/{}", rs.height, rs.round, rs.step));
+
+  auto defer = make_scoped_exit([this, height, round]() {
+    rs.triggered_timeout_precommit = true;
+    new_step();
+  });
+
+  // wait for more precommits
+  schedule_timeout(cs_config.precommit(round), height, round, PrecommitWait);
+}
 
 void consensus_state::enter_commit(int64_t height, int32_t round) {}
 
