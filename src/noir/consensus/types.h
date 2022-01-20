@@ -215,8 +215,8 @@ struct round_state {
   std::optional<block> proposal_block;
   std::optional<part_set> proposal_block_parts;
   int32_t locked_round;
-  std::shared_ptr<block> locked_block;
-  std::shared_ptr<part_set> locked_block_parts;
+  std::optional<block> locked_block;
+  std::optional<part_set> locked_block_parts;
 
   // Last known round with POL for non-nil valid block.
   int32_t valid_round;
