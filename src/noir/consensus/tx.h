@@ -4,12 +4,32 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/types.h>
 #include <noir/p2p/protocol.h>
 
 namespace noir::consensus {
 
-// struct tx {};
-using tx = bytes;
+using sender_type = std::string;
+using tx_id_type = bytes32;
+
+struct tx {
+  sender_type sender;
+  std::optional<bytes32> _id;
+
+  uint64_t gas;
+  uint64_t nonce;
+
+  tx_id_type id() {
+    if (_id == std::nullopt) {
+      _id = tx_id_type{}; // FIXME
+    }
+    return _id.value();
+  }
+
+  static uint64_t size() {
+    return sizeof(tx);
+  }
+};
 
 using tx_ptr = std::shared_ptr<tx>;
 
