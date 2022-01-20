@@ -46,6 +46,10 @@ struct part_set {
     return p2p::part_set_header{total, hash};
   }
 
+  bool has_header(p2p::part_set_header header_) {
+    return header() == header_;
+  }
+
   bool add_part(part part_) {
     // todo - lock mtx
 
@@ -155,6 +159,19 @@ struct height_vote_set {
     default:
       throw std::runtime_error(fmt::format("get_vote_set() unexpected vote type {}", vote_type));
     }
+  }
+
+  /**
+   * return last round number or -1 if not exists
+   */
+  int32_t pol_info() {
+    std::lock_guard<std::mutex> g(mtx);
+    for (auto r = round; r >= 0; r--) {
+      auto rvs = get_vote_set(r, p2p::Prevote);
+      if (rvs->two_thirds_majority().has_value())
+        return r;
+    }
+    return -1;
   }
 
   bool add_vote(vote vote_, p2p::node_id peer_id) {

@@ -20,6 +20,12 @@ struct block {
     // todo - lock mtx
     return std::vector<char>();
   }
+
+  bool hashes_to(p2p::bytes hash) {
+    if (hash.empty())
+      return false;
+    return get_hash() == hash;
+  }
 };
 
 enum block_id_flag {
