@@ -242,6 +242,8 @@ void consensus_state::update_to_state(state& state_) {
 void consensus_state::new_step() {
   // todo
   n_steps++;
+
+  // todo - notify consensus_reactor about rs
 }
 
 /**
@@ -389,7 +391,7 @@ void consensus_state::enter_propose(int64_t height, int32_t round) {
   }
   dlog(fmt::format("entering propose step: {}/{}/{}", rs.height, rs.round, rs.step));
 
-  auto defer = fc::make_scoped_exit([this, height, round]() {
+  auto defer = make_scoped_exit([this, height, round]() {
     update_round_step(round, Propose);
     new_step();
     if (is_proposal_complete())
@@ -497,6 +499,16 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
   //               - for now assume it is signed right away
   // if (local_priv_validator->sign_proposal()) {
   if (true) {
+    // proposal_.signature = p.signature;
+
+    // Send proposal and block_parts
+    internal_mq_channel.publish(appbase::priority::medium, std::make_shared<msg_info>(msg_info{proposal_, ""}));
+
+    for (auto i = 0; i < block_parts_->total; i++) {
+      auto part_ = block_parts_->get_part(i);
+      auto msg = p2p::block_part_message{rs.height, rs.round, part_.index, part_.bytes_, part_.proof};
+      internal_mq_channel.publish(appbase::priority::medium, std::make_shared<msg_info>(msg_info{proposal_, ""}));
+    }
     dlog(fmt::format("signed proposal: height={} round={}", height, round));
   } else {
     elog(fmt::format("propose step; failed signing proposal: height={} round={}", height, round));
@@ -539,7 +551,7 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
   // We don't update cs.ProposalBlockParts if it is already set.
   // This happens if we're already in cstypes.RoundStepCommit or if there is a valid block in the current round.
   if (!rs.proposal_block_parts.has_value()) {
-    rs.proposal_block_parts = part_set::new_part_set_from_header(msg.my_block_id.parts);
+    rs.proposal_block_parts = part_set::new_part_set_from_header(msg.block_id_.parts);
   }
 
   ilog(fmt::format("received proposal; {}", msg.type));
@@ -552,7 +564,7 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
 bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p::node_id peer_id) {
   auto height_ = msg.height;
   auto round_ = msg.round;
-  auto part_ = part{msg.index, msg.bs};
+  auto part_ = part{msg.index, msg.bytes_};
 
   // Blocks might be reused, so round mismatch is OK
   if (rs.height != height_) {

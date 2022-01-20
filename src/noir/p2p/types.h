@@ -17,7 +17,6 @@ using node_id = std::string; // a hex-encoded crypto.Address. It must be lower-c
 
 using tstamp = std::chrono::system_clock::duration::rep;
 using bytes = std::vector<char>;
-using signature = bytes;
 
 using block_id_type = fc::sha256;
 
