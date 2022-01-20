@@ -704,7 +704,114 @@ void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {
   schedule_timeout(cs_config.precommit(round), height, round, PrecommitWait);
 }
 
-void consensus_state::enter_commit(int64_t height, int32_t round) {}
+void consensus_state::enter_commit(int64_t height, int32_t round) {
+  if (rs.height != height || Commit <= rs.step) {
+    dlog(fmt::format("entering commit step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+    return;
+  }
+  dlog(fmt::format("entering commit step: {}/{}/{}", rs.height, rs.round, rs.step));
+
+  auto defer = make_scoped_exit([this, height, round]() {
+    update_round_step(round, Commit);
+    rs.commit_round = round;
+    rs.commit_time = get_time();
+    new_step();
+
+    // Maybe finalize immediately
+    try_finalize_commit(height);
+  });
+
+  auto block_id_ = rs.votes->precommits(round)->two_thirds_majority();
+  if (!block_id_.has_value())
+    throw std::runtime_error("RunActionCommit() expects +2/3 precommits");
+
+  // The Locked* fields no longer matter.
+  // Move them over to ProposalBlock if they match the commit hash,
+  // otherwise they'll be cleared in update_to_state.
+  if (rs.locked_block->hashes_to(block_id_->hash)) {
+    dlog("commit is for a locked block; set ProposalBlock=LockedBlock");
+    rs.proposal_block = rs.locked_block;
+    rs.proposal_block_parts = rs.locked_block_parts;
+  }
+
+  // If we don't have the block being committed, set up to get it.
+  if (!rs.proposal_block->hashes_to(block_id_->hash)) {
+    if (!rs.proposal_block_parts->has_header(block_id_->parts)) {
+      ilog("commit is for a block we do not know about; set ProposalBlock=nil");
+      // We're getting the wrong block.
+      // Set up ProposalBlockParts and keep waiting.
+      rs.proposal_block = {};
+      rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
+
+      // publish event valid block // todo
+      // fire event valid block // todo - is this required?
+    }
+  }
+}
+
+void consensus_state::try_finalize_commit(int64_t height) {
+  if (rs.height != height)
+    throw std::runtime_error(fmt::format("try_finalize_commit: rs.height={} vs height={}", rs.height, height));
+
+  auto block_id_ = rs.votes->precommits(rs.commit_round)->two_thirds_majority();
+  if (!block_id_.has_value() || block_id_->hash.empty()) {
+    elog("failed attempt to finalize commit; there was no +2/3 majority or +2/3 was for nil");
+    return;
+  }
+
+  if (!rs.proposal_block->hashes_to(block_id_->hash)) {
+    dlog("failed attempt to finalize commit; we do not have the commit block");
+    return;
+  }
+  finalize_commit(height);
+}
+
+void consensus_state::finalize_commit(int64_t height) {
+  if (rs.height != height || rs.step != Commit) {
+    dlog(fmt::format("entering finalize commit step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+    return;
+  }
+
+  auto block_id_ = rs.votes->precommits(rs.commit_round)->two_thirds_majority();
+  auto block_ = rs.proposal_block;
+  auto block_parts_ = rs.proposal_block_parts;
+
+  if (!block_id_.has_value())
+    throw std::runtime_error("cannot finalize commit; commit does not have 2/3 majority");
+  if (!block_parts_->has_header(block_id_->parts))
+    throw std::runtime_error("expected ProposalBlockParts header to be commit header");
+  if (!block_->hashes_to(block_id_->hash))
+    throw std::runtime_error("cannot finalize commit; proposal block does not hash to commit hash");
+
+  // validate block // todo
+
+  ilog(fmt::format("finalizing commit of block: num_txs={}"));
+  dlog("block=");
+
+  // save to blockstore // todo
+
+  // write to wal // todo
+
+  auto state_copy = local_state;
+  // apply block // todo
+
+  // record metric
+
+  // New Height Step!
+  update_to_state(state_copy);
+
+  // Private validator might have changed it's key pair => refetch pubkey.
+  update_priv_validator_pub_key();
+
+  // cs.StartTime is already set.
+  // Schedule Round0 to start soon.
+  schedule_round_0(rs);
+
+  // By here,
+  // * cs.Height has been increment to height+1
+  // * cs.Step is now cstypes.RoundStepNewHeight
+  // * cs.StartTime is set to when we will start round0.
+}
 
 void consensus_state::set_proposal(p2p::proposal_message& msg) {
   if (!rs.proposal.has_value()) {
