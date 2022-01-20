@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/tx_pool/tx_pool.h>
+#include <noir/tx_pool/unapplied_tx_queue.hpp>
 
 namespace noir::tx_pool {
 
