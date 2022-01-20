@@ -582,7 +582,101 @@ void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
   schedule_timeout(cs_config.prevote(round), height, round, PrevoteWait);
 }
 
-void consensus_state::enter_precommit(int64_t height, int32_t round) {}
+/**
+ * Enter 2/3+ precommits for block or nil.
+ * Lock and precommit the proposal_block if we have enough prevotes for it
+ * or, unlock an existing lock and precommit nil if 2/3+ of prevotes were nil
+ * or, precommit nil
+ */
+void consensus_state::enter_precommit(int64_t height, int32_t round) {
+  if (rs.height != height || round < rs.round || (rs.round == round && Precommit <= rs.step)) {
+    dlog(fmt::format("entering precommit step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+    return;
+  }
+  dlog(fmt::format("entering precommit step: {}/{}/{}", rs.height, rs.round, rs.step));
+
+  auto defer = make_scoped_exit([this, height, round]() {
+    update_round_step(round, Precommit);
+    new_step();
+  });
+
+  // Check for a polka
+  auto block_id_ = rs.votes->prevotes(round)->two_thirds_majority();
+  if (!block_id_.has_value()) {
+    // don't have a polka, so precommit nil
+    if (rs.locked_block.has_value())
+      dlog("precommit step; no +2/3 prevotes during enterPrecommit while we are locked; precommitting nil");
+    else
+      dlog("precommit step; no +2/3 prevotes during enterPrecommit; precommitting nil");
+    sign_and_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    return;
+  }
+
+  // At this point 2/3+ prevoted for a block or nil
+  // publish event polka // todo - is this necessary?
+
+  // latest pol_round should be this round
+  auto pol_round = rs.votes->pol_info();
+  if (pol_round < round)
+    throw std::runtime_error(fmt::format("pol_round should be {} but got {}", round, pol_round));
+
+  // 2/3+ prevoted nil, so unlock and precommit nil
+  if (block_id_->hash.empty()) {
+    if (!rs.locked_block.has_value()) {
+      dlog("precommit step; +2/3 prevoted for nil");
+    } else {
+      dlog("precommit step; +2/3 prevoted for nil; unlocking");
+      rs.locked_round = -1;
+      rs.locked_block = {};
+      rs.locked_block_parts = {};
+      // publish event unlock // todo
+    }
+    sign_and_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    return;
+  }
+
+  // At this point, 2/3+ prevoted for a block
+  // If we are already locked on the block, precommit it, and update the locked_round
+  if (rs.locked_block->hashes_to(block_id_->hash)) {
+    dlog("precommit step; +2/3 prevoted locked block; relocking");
+    rs.locked_round = round;
+    // publish event relock // todo
+    sign_and_vote(p2p::Precommit, block_id_->hash, block_id_->parts);
+    return;
+  }
+
+  // If +2/3 prevoted for proposal block, stage and precommit it
+  if (rs.proposal_block->hashes_to(block_id_->hash)) {
+    dlog("precommit step; +2/3 prevoted proposal block; locking hash");
+
+    // Validate block // todo
+
+    rs.locked_round = round;
+    rs.locked_block = rs.proposal_block;
+    rs.locked_block_parts = rs.proposal_block_parts;
+
+    // publish event lock // todo
+    sign_and_vote(p2p::Precommit, block_id_->hash, block_id_->parts);
+    return;
+  }
+
+  // There was a polka in this round for a block we don't have.
+  // Fetch that block, unlock, and precommit nil.
+  // The +2/3 prevotes for this round is the POL for our unlock.
+  dlog("precommit step; +2/3 prevotes for a block we do not have; voting nil");
+
+  rs.locked_round = -1;
+  rs.locked_block = {};
+  rs.locked_block_parts = {};
+
+  if (!rs.proposal_block_parts->has_header(block_id_->parts)) {
+    rs.proposal_block = {};
+    rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
+  }
+
+  // publish event unlock // todo
+  sign_and_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+}
 
 void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {}
 
