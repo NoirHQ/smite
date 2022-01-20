@@ -103,16 +103,16 @@ struct proposal_message {
   int64_t height;
   int32_t round;
   int32_t pol_round;
-  block_id my_block_id;
+  block_id block_id_;
   tstamp timestamp{0};
-  signature sig;
+  bytes signature;
 };
 
 struct block_part_message {
   int64_t height;
   int32_t round;
   uint32_t index;
-  bytes bs;
+  bytes bytes_;
   bytes proof;
 };
 
@@ -124,7 +124,7 @@ struct vote_message {
   tstamp timestamp;
   bytes validator_address;
   int32_t validator_index;
-  signature sig;
+  bytes sig;
   vote_extension my_vote_extension;
 };
 
@@ -190,8 +190,8 @@ FC_REFLECT(noir::p2p::handshake_message,
   (network_version)(node_id)(time)(token)(p2p_address)(last_irreversible_block_num)(last_irreversible_block_id)(head_num)(head_id)(generation))
 FC_REFLECT(noir::p2p::go_away_message, (reason)(node_id))
 FC_REFLECT(noir::p2p::time_message, (org)(rec)(xmt)(dst))
-FC_REFLECT(noir::p2p::proposal_message, (type)(height)(round)(pol_round)(my_block_id)(timestamp)(sig))
-FC_REFLECT(noir::p2p::block_part_message, (height)(round)(index)(bs)(proof))
+FC_REFLECT(noir::p2p::proposal_message, (type)(height)(round)(pol_round)(block_id_)(timestamp)(signature))
+FC_REFLECT(noir::p2p::block_part_message, (height)(round)(index)(bytes_)(proof))
 FC_REFLECT(noir::p2p::vote_message,
   (type)(height)(round)(my_block_id)(timestamp)(validator_address)(validator_index)(sig)(my_vote_extension))
 FC_REFLECT(noir::p2p::block_id, (hash)(parts))
