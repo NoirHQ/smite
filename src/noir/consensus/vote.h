@@ -272,6 +272,17 @@ struct vote_set {
   }
 
   /**
+   * if there is a 2/3+ majority for block_id, return block_id
+   */
+  std::optional<p2p::block_id> two_thirds_majority() {
+    // todo - use mtx
+    // if (maj23.has_value())
+    //  return maj23;
+    // return {};
+    return maj23;
+  }
+
+  /**
    * constructs a commit from the vote_set. It only include precommits for the block, which has 2/3+ majority and nil
    */
   commit make_commit() {
