@@ -5,6 +5,7 @@
 //
 #pragma once
 
+#include <noir/tx_pool/unapplied_tx_queue.hpp>
 
 namespace noir::tx_pool {
 class tx_pool {
