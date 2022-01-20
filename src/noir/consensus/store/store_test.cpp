@@ -7,6 +7,25 @@
 #include <noir/consensus/store/block_store.h>
 #include <noir/consensus/store/state_store.h>
 
+namespace {
+inline bool check_state_equal(noir::consensus::state& lhs, noir::consensus::state& rhs) {
+  CHECK(lhs.version == rhs.version);
+  CHECK(lhs.chain_id == rhs.chain_id);
+  CHECK(lhs.initial_height == rhs.initial_height);
+  CHECK(lhs.last_block_height == rhs.last_block_height);
+  CHECK(lhs.last_block_id == rhs.last_block_id);
+  CHECK(lhs.last_block_time == rhs.last_block_time);
+  // CHECK(lhs.next_validators == rhs.next_validators);
+  // CHECK(lhs.validators == rhs.validators);
+  // CHECK(lhs.last_validators == rhs.last_validators);
+  CHECK(lhs.last_height_validators_changed == rhs.last_height_validators_changed);
+  // CHECK(lhs.consensus_params == rhs.consensus_params);
+  CHECK(lhs.last_height_consensus_params_changed == rhs.last_height_consensus_params_changed);
+  CHECK(lhs.last_result_hash == rhs.last_result_hash);
+  CHECK(lhs.app_hash == rhs.app_hash);
+}
+
+
 TEST_CASE("save/load validator_set", "[db_store]") {
   noir::consensus::db_store dbs("simple");
 
@@ -53,21 +72,7 @@ TEST_CASE("save/load state", "[db_store]") {
 
   CHECK(dbs.save(st) == true);
   CHECK(dbs.load(ret) == true);
-
-  CHECK(st.version == ret.version);
-  CHECK(st.chain_id == ret.chain_id);
-  CHECK(st.initial_height == ret.initial_height);
-  CHECK(st.last_block_height == ret.last_block_height);
-  //  CHECK(st.last_block_id == ret.last_block_id);
-  CHECK(st.last_block_time == ret.last_block_time);
-  //  CHECK(st.next_validators == ret.next_validators);
-  //  CHECK(st.validators == ret.validators);
-  //  CHECK(st.last_validators == ret.last_validators);
-  CHECK(st.last_height_validators_changed == ret.last_height_validators_changed);
-  //  CHECK(st.consensus_params == ret.consensus_params);
-  CHECK(st.last_height_consensus_params_changed == ret.last_height_consensus_params_changed);
-  CHECK(st.last_result_hash == ret.last_result_hash);
-  //  CHECK(st.app_hash == ret.app_hash);
+  check_state_equal(st, ret);
 }
 
 TEST_CASE("bootstrap", "[db_store]") {
@@ -80,21 +85,7 @@ TEST_CASE("bootstrap", "[db_store]") {
 
   CHECK_NOTHROW(dbs.bootstrap(st));
   CHECK(dbs.load(ret) == true);
-
-  CHECK(st.version == ret.version);
-  CHECK(st.chain_id == ret.chain_id);
-  CHECK(st.initial_height == ret.initial_height);
-  CHECK(st.last_block_height == ret.last_block_height);
-  //  CHECK(st.last_block_id == ret.last_block_id);
-  CHECK(st.last_block_time == ret.last_block_time);
-  //  CHECK(st.next_validators == ret.next_validators);
-  //  CHECK(st.validators == ret.validators);
-  //  CHECK(st.last_validators == ret.last_validators);
-  CHECK(st.last_height_validators_changed == ret.last_height_validators_changed);
-  //  CHECK(st.consensus_params == ret.consensus_params);
-  CHECK(st.last_height_consensus_params_changed == ret.last_height_consensus_params_changed);
-  CHECK(st.last_result_hash == ret.last_result_hash);
-  //  CHECK(st.app_hash == ret.app_hash);
+  check_state_equal(st, ret);
 }
 
 TEST_CASE("prune_state", "[db_store]") {
@@ -230,4 +221,6 @@ TEST_CASE("block_store", "[store]") {
   CHECK_NOTHROW(bls.load_block_part(0, 0));
   CHECK_NOTHROW(bls.load_block_commit(0));
   CHECK_NOTHROW(bls.load_seen_commit());
+}
+
 }
