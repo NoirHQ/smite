@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/for_each.h>
 #include <noir/consensus/block.h>
 #include <noir/consensus/tx.h>
 #include <noir/consensus/types.h>
@@ -55,3 +56,7 @@ public:
 };
 
 } // namespace noir::consensus
+
+NOIR_FOR_EACH_FIELD(noir::consensus::state, version, chain_id, initial_height, last_block_height, last_block_id,
+  last_block_time, next_validators, validators, last_validators, last_height_validators_changed, consensus_params,
+  last_height_consensus_params_changed, last_result_hash, app_hash);
