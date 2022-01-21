@@ -47,11 +47,11 @@ consensus_state::consensus_state()
     internal_mq_channel(appbase::app().get_channel<channels::internal_message_queue>()),
     peer_mq_channel(appbase::app().get_channel<channels::peer_message_queue>()) {
   timeout_ticker_subscription = appbase::app().get_channel<channels::timeout_ticker>().subscribe(
-    std::bind(&consensus_state::tock, shared_from_this(), std::placeholders::_1));
+    std::bind(&consensus_state::tock, this, std::placeholders::_1));
   internal_mq_subscription = appbase::app().get_channel<channels::internal_message_queue>().subscribe(
-    std::bind(&consensus_state::receive_routine, shared_from_this(), std::placeholders::_1));
+    std::bind(&consensus_state::receive_routine, this, std::placeholders::_1));
   peer_mq_subscription = appbase::app().get_channel<channels::peer_message_queue>().subscribe(
-    std::bind(&consensus_state::receive_routine, shared_from_this(), std::placeholders::_1));
+    std::bind(&consensus_state::receive_routine, this, std::placeholders::_1));
 
   thread_pool.emplace("consensus", thread_pool_size);
   {

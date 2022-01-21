@@ -3,9 +3,12 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
+#include <noir/consensus/common_test.h>
 #include <noir/consensus/consensus_state.h>
+
+#include <catch2/catch_all.hpp>
+
 #include <stdlib.h>
 
 using namespace noir::consensus;
@@ -17,7 +20,8 @@ config config_setup() {
 }
 
 std::unique_ptr<consensus_state> rand_cs(config& config_, int validator_number) {
-  auto state_ = state::make_genesis_state();
+  auto gen_doc = rand_genesis_doc(config_, validator_number, false, 10);
+  auto state_ = state::make_genesis_state(gen_doc);
   for (auto i = 0; i < validator_number; i++)
     state_.validators.validators.push_back(validator{noir::from_hex("AAAA" + std::to_string(i)), {}, std::rand(), 0});
   return consensus_state::new_state(config_.consensus, state_);

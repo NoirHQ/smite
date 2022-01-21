@@ -5,6 +5,8 @@
 //
 #pragma once
 #include <noir/consensus/block.h>
+#include <noir/consensus/crypto.h>
+#include <noir/consensus/params.h>
 #include <noir/consensus/validator.h>
 #include <noir/consensus/vote.h>
 #include <noir/p2p/protocol.h>
@@ -15,6 +17,23 @@
 #include <fmt/core.h>
 
 namespace noir::consensus {
+
+struct genesis_validator {
+  p2p::bytes address;
+  pub_key pub_key_;
+  int64_t power;
+  std::string name;
+};
+
+struct genesis_doc {
+  p2p::tstamp genesis_time;
+  std::string chain_id;
+  int64_t initial_height;
+  consensus_params cs_params;
+  std::vector<genesis_validator> validators;
+  p2p::bytes app_hash;
+  p2p::bytes app_state;
+};
 
 struct part {
   uint32_t index;
