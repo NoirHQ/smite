@@ -17,16 +17,7 @@ using P2PID = std::string;
 /**
  * represents a prevote, precommit, or commit vote from validators for consensus
  */
-struct vote {
-  p2p::signed_msg_type type;
-  int64_t height;
-  int32_t round;
-  p2p::block_id block_id_;
-  p2p::tstamp timestamp;
-  p2p::bytes validator_address;
-  int32_t validator_index;
-  p2p::bytes signature;
-  p2p::vote_extension vote_extension_;
+struct vote : p2p::vote_message {
 
   commit_sig to_commit_sig() {
     block_id_flag flag;
@@ -269,6 +260,11 @@ struct vote_set {
   bool has_two_thirds_any() {
     // todo - use mtx
     return sum > val_set.total_voting_power * 2 / 3;
+  }
+
+  bool has_all() {
+    // todo - use mtx
+    return sum == val_set.total_voting_power;
   }
 
   /**
