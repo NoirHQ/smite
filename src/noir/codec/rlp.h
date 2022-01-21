@@ -81,14 +81,14 @@ namespace detail {
 } // namespace detail
 
 // integers
-template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
+template<typename Stream, typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   static_assert(sizeof(T) <= 55);
   detail::encode_bytes(ds, v, 0x80);
   return ds;
 }
 
-template<typename Stream, typename T, std::enable_if_t<std::numeric_limits<T>::is_integer, bool> = true>
+template<typename Stream, typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   if (prefix < 0xb8) {
