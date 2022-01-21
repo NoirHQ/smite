@@ -1,0 +1,2 @@
+add_executable(chain_db_test rocks_session_tests.cpp session_tests.cpp session_undo_stack_tests.cpp shared_bytes_tests.cpp undo_stack_tests.cpp view_tests.cpp write_session_tests.cpp)
+target_link_libraries(chain_db_test noir Catch2WithMain)

@@ -13,6 +13,8 @@ target_link_libraries(noir
   expected
   fc
   fmt
+  rocksdb
+  softfloat
   tendermint
   websocketpp
 )
@@ -23,6 +25,7 @@ endif()
 add_subdirectory(codec)
 add_subdirectory(common)
 add_subdirectory(consensus)
+add_subdirectory(db)
 add_subdirectory(p2p)
 add_subdirectory(tendermint)
 add_subdirectory(rpc)
