@@ -78,6 +78,14 @@ struct validator_set {
     return {};
   }
 
+  int32_t get_index_by_address(const p2p::bytes& address) {
+    for (auto idx = 0; idx < validators.size(); idx++) {
+      if (validators[idx].address == address)
+        return idx;
+    }
+    return -1;
+  }
+
   std::optional<validator> get_by_index(int32_t index) {
     if (index < 0 || index >= validators.size())
       return {};
