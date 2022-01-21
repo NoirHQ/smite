@@ -145,7 +145,7 @@ struct height_vote_set {
   }
 
   void add_round(int32_t round_) {
-    if (round_vote_sets.contains(round))
+    if (round_vote_sets.contains(round_))
       throw std::runtime_error("add_round() for an existing round");
 
     auto prevotes = vote_set::new_vote_set(chain_id, height, round_, p2p::Prevote, val_set);
@@ -158,7 +158,7 @@ struct height_vote_set {
     auto new_round_ = round - 1; // todo - safe subtract
     if (round != 0 && round_ < new_round_)
       throw std::runtime_error("set_round() must increment round");
-    for (auto r = new_round_; r <= round; r++) {
+    for (auto r = new_round_; r <= round_; r++) {
       if (round_vote_sets.contains(r))
         continue; // Already exists because peer_catchup_rounds
       add_round(r);
