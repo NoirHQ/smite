@@ -14,7 +14,7 @@ using tx_id_type = bytes32;
 
 struct tx {
   sender_type sender;
-  std::optional<bytes32> _id;
+  std::optional<tx_id_type> _id;
 
   uint64_t gas;
   uint64_t nonce;
@@ -32,5 +32,6 @@ struct tx {
 };
 
 using tx_ptr = std::shared_ptr<tx>;
+
 
 } // namespace noir::consensus

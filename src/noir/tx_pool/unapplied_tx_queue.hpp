@@ -7,9 +7,7 @@
 #include <noir/common/types.h>
 #include <noir/consensus/tx.h>
 #include <boost/multi_index/composite_key.hpp>
-#include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
-#include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
@@ -30,7 +28,6 @@ struct unapplied_tx {
 //  unapplied_tx(unapplied_tx&&) = default;
 //  unapplied_tx(const consensus::tx_ptr, uint64_t, uint64_t);
 };
-
 
 class unapplied_tx_queue {
 public:
@@ -87,10 +84,10 @@ public:
     return incoming_count_;
   }
 
-  consensus::tx_ptr get_tx(const consensus::tx_id_type& id) const {
+  std::optional<consensus::tx_ptr> get_tx(const consensus::tx_id_type& id) const {
     auto itr = queue_.get<by_tx_id>().find(id);
     if (itr == queue_.get<by_tx_id>().end()) {
-      return {};
+      return std::nullopt;
     }
     return itr->tx_ptr;
   }
@@ -100,12 +97,19 @@ public:
     if (itr != queue_.get<by_tx_id>().end()) {
       return false;
     }
-    auto insert_itr = queue_.insert({tx_ptr});
-    if (insert_itr.second) {
-      size_in_bytes_ += bytes_size(tx_ptr);
+
+    auto size = bytes_size(tx_ptr);
+    if (size_in_bytes_ + size > max_tx_queue_size_) {
+      return false;
     }
 
-    return insert_itr.second;
+    auto res = queue_.insert({tx_ptr});
+    if (res.second) {
+      size_in_bytes_ += bytes_size(tx_ptr);
+      incoming_count_++;
+    }
+
+    return res.second;
   }
 
   template<typename Tag>
@@ -113,6 +117,14 @@ public:
 
   template<typename Tag>
   using reverse_iterator = typename unapplied_tx_queue_type::index<Tag>::type::reverse_iterator;
+
+  iterator<by_tx_id> begin() {
+    return begin<by_tx_id>();
+  }
+
+  iterator<by_tx_id> end() {
+    return end<by_tx_id>();
+  }
 
   template<typename Tag>
   iterator<Tag> begin() { return queue_.get<Tag>().begin(); }
@@ -136,10 +148,22 @@ public:
     return queue_.get<Tag>().upper_bound(val);
   }
 
+  bool erase(const consensus::tx_id_type& id) {
+    auto itr = queue_.get<by_tx_id>().find(id);
+    if (itr == queue_.get<by_tx_id>().end()) {
+      return false;
+    }
+
+    incoming_count_--;
+    size_in_bytes_ -= bytes_size(itr->tx_ptr);
+    queue_.get<by_tx_id>().erase(itr);
+    return true;
+  }
+
   static uint64_t bytes_size(const consensus::tx_ptr& tx_ptr) {
     return sizeof(unapplied_tx) + tx_ptr->size();
   }
 
 };
 
-} // namespace noir::mempool
+} // namespace noir::tx_pool
