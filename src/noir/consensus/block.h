@@ -9,9 +9,13 @@
 
 namespace noir::consensus {
 
+struct block_header {
+  p2p::tstamp time;
+};
+
 struct block {
   // mutex mtx;
-  // header header;
+  block_header header;
   // data data;
   // evidence evidence;
   // commit last_commit;

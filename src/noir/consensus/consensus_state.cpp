@@ -542,14 +542,14 @@ void consensus_state::do_prevote(int64_t height, int32_t round) {
   // If a block is locked, prevote that
   if (rs.locked_block.has_value()) {
     dlog("prevote step; already locked on a block; prevoting on a locked block");
-    sign_and_vote(p2p::signed_msg_type::Prevote, rs.locked_block->get_hash(), rs.locked_block_parts->header());
+    sign_add_vote(p2p::signed_msg_type::Prevote, rs.locked_block->get_hash(), rs.locked_block_parts->header());
     return;
   }
 
   // If proposal_block is nil, prevote nil
   if (!rs.proposal_block.has_value()) {
     dlog("prevote step; proposal_block is nil");
-    sign_and_vote(p2p::Prevote, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Prevote, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -557,7 +557,7 @@ void consensus_state::do_prevote(int64_t height, int32_t round) {
 
   // Prevote rs.proposal_block
   dlog("prevote step; proposal_block is valid");
-  sign_and_vote(p2p::Prevote, rs.proposal_block->get_hash(), rs.proposal_block_parts->header());
+  sign_add_vote(p2p::Prevote, rs.proposal_block->get_hash(), rs.proposal_block_parts->header());
 }
 
 void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
@@ -608,7 +608,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
       dlog("precommit step; no +2/3 prevotes during enterPrecommit while we are locked; precommitting nil");
     else
       dlog("precommit step; no +2/3 prevotes during enterPrecommit; precommitting nil");
-    sign_and_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -631,7 +631,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
       rs.locked_block_parts = {};
       // publish event unlock // todo
     }
-    sign_and_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -641,7 +641,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
     dlog("precommit step; +2/3 prevoted locked block; relocking");
     rs.locked_round = round;
     // publish event relock // todo
-    sign_and_vote(p2p::Precommit, block_id_->hash, block_id_->parts);
+    sign_add_vote(p2p::Precommit, block_id_->hash, block_id_->parts);
     return;
   }
 
@@ -656,7 +656,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
     rs.locked_block_parts = rs.proposal_block_parts;
 
     // publish event lock // todo
-    sign_and_vote(p2p::Precommit, block_id_->hash, block_id_->parts);
+    sign_add_vote(p2p::Precommit, block_id_->hash, block_id_->parts);
     return;
   }
 
@@ -675,7 +675,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
   }
 
   // publish event unlock // todo
-  sign_and_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+  sign_add_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
 }
 
 /**
@@ -1035,16 +1035,99 @@ bool consensus_state::add_vote(vote& vote_, p2p::node_id peer_id) {
   return added;
 }
 
-vote consensus_state::sign_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
-  // todo
+std::optional<vote> consensus_state::sign_vote(
+  p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
+  // Flush the WAL. Otherwise, we may not recompute the same vote to sign,
+  // and the privValidator will refuse to sign anything.
+  // if err := cs.wal.FlushAndSync(); err != nil { // todo
+
+  if (local_priv_validator_pub_key.empty()) {
+    elog("pubkey is not set. Look for \"Can't get private validator pubkey\" errors");
+    return {};
+  }
+
+  auto addr = local_priv_validator_pub_key.address();
+  auto val_idx = rs.validators->get_index_by_address(addr);
+  if (val_idx < 0) {
+    elog("sign_vote failed: unable to determine validator index");
+    return {};
+  }
+
+  auto vote_ = vote{msg_type, rs.height, rs.round, p2p::block_id{hash, header}, vote_time(), addr, val_idx};
+
+  // If the signedMessageType is for precommit,
+  // use our local precommit Timeout as the max wait time for getting a singed commit. The same goes for prevote.
+  std::chrono::system_clock::duration timeout;
+
+  switch (msg_type) {
+  case p2p::Precommit: {
+    timeout = cs_config.timeout_precommit;
+    // if the signedMessage type is for a precommit, add VoteExtension
+    // extend_vote // todo
+    // vote_.vote_extension_ = ext;
+    break;
+  }
+  case p2p::Prevote:
+    timeout = cs_config.timeout_prevote;
+  default:
+    timeout = std::chrono::seconds(1);
+  }
+
+  // auto v = vote_.to_proto(); // todo
+  // local_priv_validator->sign_vote(); // todo
+  // vote_.signature = v.signature; // todo
+  // vote_.timestamp = v.timestamp; // todo
+  return vote_;
 }
 
+/**
+ * Ensure monotonicity of the time a validator votes on.
+ * It ensures that for a prior block with a BFT-timestamp of T,
+ * any vote from this validator will have time at least time T + 1ms.
+ * This is needed, as monotonicity of time is a guarantee that BFT time provides.
+ */
 p2p::tstamp consensus_state::vote_time() {
-  // todo
+  auto now = get_time();
+  auto min_vote_time = now;
+  // Minimum time increment between blocks
+  if (rs.locked_block.has_value()) {
+    min_vote_time = rs.locked_block->header.time + std::chrono::milliseconds(1).count();
+  } else if (rs.proposal_block.has_value()) {
+    min_vote_time = rs.proposal_block->header.time + std::chrono::milliseconds(1).count();
+  }
+
+  if (now > min_vote_time)
+    return now;
+  return min_vote_time;
 }
 
-vote consensus_state::sign_and_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
-  // todo
+/**
+ * sign vote and publish on internal_msg_channel
+ */
+vote consensus_state::sign_add_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
+  if (!local_priv_validator.has_value())
+    return {};
+
+  if (local_priv_validator_pub_key.empty()) {
+    // Vote won't be signed, but it's not critical
+    elog("sign_add_vote: pubkey is not set. Look for \"Can't get private validator pubkey\" errors");
+    return {};
+  }
+
+  // If the node not in the validator set, do nothing.
+  if (!rs.validators->has_address(local_priv_validator_pub_key.address()))
+    return {};
+
+  auto vote_ = sign_vote(msg_type, hash, header);
+  if (vote_.has_value()) {
+    internal_mq_channel.publish(
+      appbase::priority::medium, std::make_shared<msg_info>(msg_info{p2p::vote_message(vote_.value()), ""}));
+    dlog(fmt::format("signed and pushed vote: height={} round={}", rs.height, rs.round));
+    return vote_.value();
+  }
+
+  dlog(fmt::format("failed signing vote: height={} round={}", rs.height, rs.round));
+  return {};
 }
 
 } // namespace noir::consensus
