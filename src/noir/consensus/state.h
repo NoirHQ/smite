@@ -5,10 +5,8 @@
 //
 #pragma once
 #include <noir/consensus/block.h>
-#include <noir/consensus/params.h>
 #include <noir/consensus/tx.h>
-#include <noir/consensus/validator.h>
-#include <noir/p2p/protocol.h>
+#include <noir/consensus/types.h>
 
 namespace noir::consensus {
 
@@ -30,7 +28,7 @@ public:
 
   bool is_empty();
 
-  static state make_genesis_state(/*genDoc*/);
+  static state make_genesis_state(genesis_doc& gen_doc);
 
 public:
   std::string version;

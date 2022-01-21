@@ -5,7 +5,7 @@
 //
 #pragma once
 #include <noir/common/hex.h>
-#include <noir/consensus/types.h>
+#include <noir/p2p/protocol.h>
 
 namespace noir::consensus {
 struct pub_key {

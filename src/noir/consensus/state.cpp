@@ -104,9 +104,12 @@ bool state::is_empty() {
   return validators.validators.empty();
 }
 
-state state::make_genesis_state(/* genDoc*/) {
+state state::make_genesis_state(genesis_doc& gen_doc) {
   // todo - read from genDoc
-  return state{};
+  state state_{};
+  state_.chain_id = gen_doc.chain_id;
+  state_.initial_height = gen_doc.initial_height;
+  return state_;
 }
 
 } // namespace noir::consensus
