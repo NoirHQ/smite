@@ -885,16 +885,154 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p:
  * Attempt to add vote. If it's a duplicate signature, dupeout? the validator
  */
 bool consensus_state::try_add_vote(p2p::vote_message& msg, p2p::node_id peer_id) {
-  auto added = add_vote(msg, peer_id);
+  auto vote_ = vote{msg};
+  auto added = add_vote(vote_, peer_id);
 
   // todo - implement; it's very long
+  // todo - must handle err from add_vote
+
+  return added;
 }
 
-bool consensus_state::add_vote(p2p::vote_message& msg, p2p::node_id peer_id) {
-  dlog(fmt::format(
-    "adding vote: height={} type={} index={} cs_height={}", msg.height, msg.type, msg.validator_index, rs.height));
+bool consensus_state::add_vote(vote& vote_, p2p::node_id peer_id) {
+  dlog(fmt::format("adding vote: height={} type={} index={} cs_height={}", vote_.height, vote_.type,
+    vote_.validator_index, rs.height));
 
-  // todo - implement; it's very long
+  // A precommit for the previous height?
+  // These come in while we wait timeoutCommit
+  if (vote_.height + 1 == rs.height && vote_.type == p2p::Precommit) {
+    if (rs.step != NewHeight) {
+      dlog("precommit vote came in after commit timeout and has been ignored");
+      return false;
+    }
+    auto added = rs.last_commit->add_vote(vote_);
+    if (!added)
+      return false;
+
+    dlog("added vote to last precommits");
+
+    // fire event // todo
+
+    // if we can skip timeoutCommit and have all the votes now,
+    if (cs_config.skip_timeout_commit && rs.last_commit->has_all()) {
+      // go straight to new round (skip timeout commit)
+      // cs.scheduleTimeout(time.Duration(0), cs.Height, 0, cstypes.RoundStepNewHeight)
+      enter_new_round(rs.height, 0);
+    }
+    return false;
+  }
+
+  // Height mismatch is ignored.
+  // Not necessarily a bad peer, but not favorable behavior.
+  if (vote_.height != rs.height) {
+    dlog(fmt::format(
+      "vote ignored and not added: vote_height={} cs_height={} peer_id={}", vote_.height, rs.height, peer_id));
+    return false;
+  }
+
+  // Verify VoteExtension if precommit
+  if (vote_.type == p2p::Precommit) {
+    // verify // todo
+  }
+
+  auto height = rs.height;
+  auto added = rs.votes->add_vote(vote_, peer_id);
+  if (!added) {
+    // Either duplicate, or error upon cs.Votes.AddByIndex()
+    return false;
+  }
+
+  // fire event vote value // todo
+
+  switch (vote_.type) {
+  case p2p::Prevote: {
+    auto prevotes = rs.votes->prevotes(vote_.round);
+    dlog("added vote to prevote");
+    auto block_id_ = prevotes->two_thirds_majority();
+
+    // If +2/3 prevotes for a block or nil for *any* round:
+    if (block_id_.has_value()) {
+      // There was a polka!
+      // If we're locked but this is a recent polka, unlock.
+      // If it matches our ProposalBlock, update the ValidBlock
+
+      // Unlock if `cs.LockedRound < vote.Round <= cs.Round`
+      // NOTE: If vote.Round > cs.Round, we'll deal with it when we get to vote.Round
+      if (rs.locked_block.has_value() && rs.locked_round < vote_.round && vote_.round <= rs.round &&
+        !rs.locked_block->hashes_to(block_id_->hash)) {
+        dlog(fmt::format("unlocking because of POL: locked_round={} pol_round={}", rs.locked_round, vote_.round));
+        rs.locked_round = -1;
+        rs.locked_block = {};
+        rs.locked_block_parts = {};
+      }
+
+      // Update Valid* if we can.
+      // NOTE: our proposal block may be nil or not what received a polka
+      if (!block_id_->hash.empty() && rs.valid_round < vote_.round && vote_.round == rs.round) {
+        if (rs.proposal_block->hashes_to(block_id_->hash)) {
+          dlog(fmt::format(
+            "updating valid block because of POL: valid_round={} pol_round={}", rs.valid_round, vote_.round));
+          rs.valid_round = vote_.round;
+          rs.valid_block = rs.proposal_block;
+          rs.valid_block_parts = rs.proposal_block_parts;
+        } else {
+          dlog("valid block we do not know about; set ProposalBlock=nil");
+          // we're getting the wrong block
+          rs.proposal_block = {};
+        }
+
+        if (!rs.proposal_block_parts->has_header(block_id_->parts)) {
+          rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
+        }
+
+        // fire event valid block value // todo
+      }
+    }
+
+    // If +2/3 prevotes for *anything* for future round:
+    if (rs.round < vote_.round && prevotes->has_two_thirds_any()) {
+      // Round-skip if there is any 2/3+ of votes ahead of us
+      enter_new_round(height, vote_.round);
+    } else if (rs.round == vote_.round && Prevote <= rs.step) {
+      auto b_id = prevotes->two_thirds_majority();
+      if (b_id.has_value() && (is_proposal_complete() || b_id->hash.empty()))
+        enter_precommit(height, vote_.round);
+      else if (prevotes->has_two_thirds_any())
+        enter_prevote_wait(height, vote_.round);
+    } else if (rs.proposal.has_value() && 0 <= rs.proposal->pol_round && rs.proposal->pol_round == vote_.round) {
+      // If the proposal is now complete, enter prevote of cs.Round.
+      if (is_proposal_complete())
+        enter_prevote(height, rs.round);
+    }
+    break;
+  }
+  case p2p::Precommit: {
+    auto precommits = rs.votes->precommits(vote_.round);
+    dlog("added vote to precommit");
+    auto block_id_ = precommits->two_thirds_majority();
+    if (block_id_.has_value()) {
+      // Executed as TwoThirdsMajority could be from a higher round
+      enter_new_round(height, vote_.round);
+      enter_precommit(height, vote_.round);
+
+      if (!block_id_->hash.empty()) {
+        enter_commit(height, vote_.round);
+        if (cs_config.skip_timeout_commit && precommits->has_all())
+          enter_new_round(rs.height, 0);
+      } else {
+        enter_precommit_wait(height, vote_.round);
+      }
+    } else if (rs.round <= vote_.round && precommits->has_two_thirds_any()) {
+      enter_new_round(height, vote_.round);
+      enter_precommit_wait(height, vote_.round);
+    }
+    break;
+  }
+  default:
+    throw std::runtime_error(fmt::format("unexpected vote type={}", vote_.type));
+  }
+
+  return added;
 }
 
 vote consensus_state::sign_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
