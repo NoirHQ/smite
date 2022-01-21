@@ -143,4 +143,20 @@ TEST_CASE("[rlp] list", "[codec]") {
     CHECK(to_hex(encode(t.first)) == t.second);
     CHECK(t.first == decode<std::vector<std::vector<std::string>>>(from_hex(t.second)));
   }
+
+  SECTION("a list of strings, c-array") {
+    std::string test[] = {
+      "aaa", "bbb", "ccc", "ddd", "eee", "fff", "ggg", "hhh", "iii", "jjj", "kkk", "lll", "mmm", "nnn", "ooo"};
+    auto data_s = "f83c836161618362626283636363836464648365656583666666836767678368686883696969836a6a6a836b6b6b836c6c6c"
+                  "836d6d6d836e6e6e836f6f6f";
+
+    CHECK(to_hex(encode(test)) == data_s);
+
+    std::string decoded[std::span(test).size()];
+    auto data = from_hex(data_s);
+    datastream<const char> ds(data);
+    ds >> decoded;
+
+    CHECK(std::equal(std::begin(test), std::end(test), std::begin(decoded)));
+  }
 }

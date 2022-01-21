@@ -104,8 +104,8 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
 }
 
 // list
-template<typename Stream, typename T>
-datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) {
+template<typename Stream, typename T, size_t N>
+datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T, N> v) {
   auto size = 0ull;
   for (const auto& val : v) {
     size += encode_size(val);
@@ -114,6 +114,38 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) 
   for (const auto& val : v) {
     ds << val;
   }
+  return ds;
+}
+
+template<typename Stream, typename T, size_t N>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
+  auto prefix = static_cast<unsigned char>(ds.get());
+  check(prefix >= 0xc0, "not matched prefix type");
+  auto size = detail::decode_prefix(ds, prefix, 0xc0);
+  auto i = 0;
+  while (size > 0) {
+    auto start = ds.tellp();
+    ds >> v[i++];
+    size -= (ds.tellp() - start);
+  }
+  return ds;
+}
+
+template<typename Stream, typename T, size_t N>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const T (&v)[N]) {
+  ds << std::span(v);
+  return ds;
+}
+
+template<typename Stream, typename T, size_t N>
+datastream<Stream>& operator>>(datastream<Stream>& ds, T (&v)[N]) {
+  ds >> std::span(v);
+  return ds;
+}
+
+template<typename Stream, typename T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) {
+  ds << std::span(v);
   return ds;
 }
 
