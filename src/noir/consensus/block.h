@@ -10,6 +10,7 @@
 namespace noir::consensus {
 
 struct block_header {
+  int64_t height;
   p2p::tstamp time;
 };
 
