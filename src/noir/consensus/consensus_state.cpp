@@ -876,7 +876,34 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p:
     return added;
   }
   if (added && rs.proposal_block_parts->is_complete()) {
-    // todo - implement; it's very long
+    // derive block from proto // todo
+    // rs.proposal_block = block; // todo - requires converting block from proto
+
+    // NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
+    ilog(fmt::format("received complete proposal block: height={}", rs.proposal_block->header.height));
+
+    // Update Valid if we can
+    auto prevotes = rs.votes->prevotes(rs.round);
+    auto block_id_ = prevotes->two_thirds_majority();
+    if (block_id_.has_value() && !block_id_->is_zero() && rs.valid_round < rs.round) {
+      if (rs.proposal_block->hashes_to(block_id_->hash)) {
+        dlog("updating valid block to new proposal block");
+        rs.valid_round = rs.round;
+        rs.valid_block = rs.proposal_block;
+        rs.valid_block_parts = rs.proposal_block_parts;
+      }
+    }
+
+    if (rs.step <= Propose && is_proposal_complete()) {
+      // Move to the next step
+      enter_prevote(height_, rs.round);
+      if (block_id_.has_value())
+        enter_precommit(height_, rs.round);
+    } else if (rs.step == Commit) {
+      // If we're waiting on the proposal block...
+      try_finalize_commit(height_);
+    }
+    return added;
   }
   return added;
 }
