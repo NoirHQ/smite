@@ -160,3 +160,28 @@ TEST_CASE("[rlp] list", "[codec]") {
     CHECK(std::equal(std::begin(test), std::end(test), std::begin(decoded)));
   }
 }
+
+TEST_CASE("[rlp] structs", "[codec]") {
+  struct simplestruct {
+    unsigned int A;
+    std::string B;
+  };
+
+  SECTION("empty") {
+    auto v = simplestruct{};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "c28080");
+
+    auto w = decode<simplestruct>(data);
+    CHECK(std::tie(v.A, v.B) == std::tie(w.A, w.B));
+  }
+
+  SECTION("with value") {
+    auto v = simplestruct{3, "foo"};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "c50383666f6f");
+
+    auto w = decode<simplestruct>(data);
+    CHECK(std::tie(v.A, v.B) == std::tie(w.A, w.B));
+  }
+}
