@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/codec/datastream.h>
 #include <noir/common/check.h>
+#include <noir/common/for_each.h>
 #include <span>
 
 NOIR_CODEC(rlp) {
@@ -190,6 +191,30 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
   } else {
     check(false, "not matched prefix type");
   }
+  return ds;
+}
+
+// structs
+template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
+  auto size = 0ull;
+  for_each_field(v, [&](const auto& val) { size += encode_size(val); });
+  detail::encode_prefix(ds, size, 0xc0);
+  for_each_field(v, [&](const auto& val) { ds << val; });
+  return ds;
+}
+
+template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
+datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
+  auto prefix = static_cast<unsigned char>(ds.get());
+  check(prefix >= 0xc0, "not matched prefix type");
+  auto size = detail::decode_prefix(ds, prefix, 0xc0);
+  for_each_field(v, [&](auto& val) {
+    auto start = ds.tellp();
+    ds >> val;
+    size -= (ds.tellp() - start);
+    check(size >= 0, "insufficient bytes provided");
+  });
   return ds;
 }
 
