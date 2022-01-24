@@ -35,7 +35,7 @@ struct error {
 struct response {
   std::string jsonrpc = "2.0";
   std::optional<fc::variant> result;
-  std::optional<error> error;
+  std::optional<class error> error;
   fc::variant id;
 
   operator fc::variant() {
