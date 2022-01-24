@@ -8,7 +8,31 @@
 #include <noir/consensus/store/state_store.h>
 
 namespace {
-inline bool check_state_equal(noir::consensus::state& lhs, noir::consensus::state& rhs) {
+
+inline std::shared_ptr<rocksdb::DB> make_rocks_db(const std::string& name = "/tmp/testdb") {
+  rocksdb::DestroyDB(name.c_str(), rocksdb::Options{});
+
+  rocksdb::DB* cache_ptr{nullptr};
+  auto cache = std::shared_ptr<rocksdb::DB>{};
+
+  auto options = rocksdb::Options{};
+  options.create_if_missing = true;
+  options.level_compaction_dynamic_level_bytes = true;
+  options.bytes_per_sync = 1048576;
+  options.OptimizeLevelStyleCompaction(256ull << 20);
+
+  auto status = rocksdb::DB::Open(options, name.c_str(), &cache_ptr);
+  cache.reset(cache_ptr);
+
+  return cache;
+}
+
+inline noir::db::session::session<noir::db::session::rocksdb_t> make_session(const std::string& name = "/tmp/testdb") {
+  auto rocksdb = make_rocks_db(name);
+  return noir::db::session::make_session(std::move(rocksdb), 16);
+}
+
+inline void check_state_equal(noir::consensus::state& lhs, noir::consensus::state& rhs) {
   CHECK(lhs.version == rhs.version);
   CHECK(lhs.chain_id == rhs.chain_id);
   CHECK(lhs.initial_height == rhs.initial_height);
@@ -25,9 +49,9 @@ inline bool check_state_equal(noir::consensus::state& lhs, noir::consensus::stat
   CHECK(lhs.app_hash == rhs.app_hash);
 }
 
-
 TEST_CASE("save/load validator_set", "[db_store]") {
-  noir::consensus::db_store dbs("simple");
+  noir::consensus::db_store dbs(
+    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
 
   std::vector<noir::consensus::validator> validator_list;
   validator_list.push_back(noir::consensus::validator{
@@ -49,14 +73,16 @@ TEST_CASE("save/load validator_set", "[db_store]") {
 }
 
 TEST_CASE("save/load consensus_param", "[db_store]") {
-  noir::consensus::db_store dbs("simple");
+  noir::consensus::db_store dbs(
+    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   noir::consensus::consensus_params cs_param{};
 
   CHECK_NOTHROW(dbs.load_consensus_params(0, cs_param));
 }
 
 TEST_CASE("save/load abci_response", "[db_store]") {
-  noir::consensus::db_store dbs("simple");
+  noir::consensus::db_store dbs(
+    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   //  noir::consensus::abci_response rsp{};
 
   bool ret;
@@ -65,7 +91,8 @@ TEST_CASE("save/load abci_response", "[db_store]") {
 }
 
 TEST_CASE("save/load state", "[db_store]") {
-  noir::consensus::db_store dbs("simple");
+  noir::consensus::db_store dbs(
+    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   noir::consensus::state st{};
   st.last_height_validators_changed = 0;
   noir::consensus::state ret{};
@@ -76,7 +103,8 @@ TEST_CASE("save/load state", "[db_store]") {
 }
 
 TEST_CASE("bootstrap", "[db_store]") {
-  noir::consensus::db_store dbs("simple");
+  noir::consensus::db_store dbs(
+    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   noir::consensus::state st{};
   st.last_block_height = 1;
   st.initial_height = 0;
@@ -111,7 +139,9 @@ TEST_CASE("prune_state", "[db_store]") {
 
   std::for_each(tests.begin(), tests.end(), [&](const test_case& t) {
     SECTION(t.name) {
-      noir::consensus::db_store dbs("simple");
+      static int test_num = 0;
+      noir::consensus::db_store dbs(
+        std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
 
       std::vector<noir::consensus::validator> validator_list;
       validator_list.push_back(noir::consensus::validator{
@@ -223,4 +253,4 @@ TEST_CASE("block_store", "[store]") {
   CHECK_NOTHROW(bls.load_seen_commit());
 }
 
-}
+} // namespace
