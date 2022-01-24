@@ -1,9 +1,13 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
 #pragma once
-
 #include <fc/variant.hpp>
 #include <fc/reflect/variant.hpp>
 
-namespace eosio { namespace jsonrpc {
+namespace noir::jsonrpc {
 
   enum error_code {
     undefined        = 0,
@@ -17,24 +21,20 @@ namespace eosio { namespace jsonrpc {
 
   typedef std::function<fc::variant(const fc::variant&)> request_handler;
 
-  // TODO: fc::optional is removed in the development version of eosio, replace this with std::optional later.
-  template <typename T>
-  using optional = fc::optional<T>;
-
   struct error {
     error(): code( error_code::undefined ) {}
 
-    error( error_code c, std::string m, optional<fc::variant> d = optional<fc::variant>() ): code( c ), message( m ), data( d ) {}
+    error( error_code c, std::string m, std::optional<fc::variant> d = std::optional<fc::variant>() ): code( c ), message( m ), data( d ) {}
 
     error_code code;
     std::string message;
-    optional<fc::variant> data;
+    std::optional<fc::variant> data;
   };
 
   struct response {
     std::string jsonrpc = "2.0";
-    optional<fc::variant> result;
-    optional<error> error;
+    std::optional<fc::variant> result;
+    std::optional<error> error;
     fc::variant id;
 
     operator fc::variant() {
@@ -43,8 +43,6 @@ namespace eosio { namespace jsonrpc {
       return out;
     }
   };
-
-  typedef std::function<fc::variant(const fc::variant&)> request_handler;
 
   namespace detail {
     class endpoint_impl {
@@ -72,18 +70,18 @@ class endpoint {
     std::unique_ptr<detail::endpoint_impl> my;
   };
 
-} } /// namespace eosio::jsonrpc
+} // namespace noir::jsonrpc
 
 namespace fc {
 
-inline void from_variant(const variant& v, eosio::jsonrpc::error_code& c) {
-  c = static_cast<eosio::jsonrpc::error_code>(v.as_int64());
+inline void from_variant(const variant& v, noir::jsonrpc::error_code& c) {
+  c = static_cast<noir::jsonrpc::error_code>(v.as_int64());
 }
-inline void to_variant(const eosio::jsonrpc::error_code& c, variant& v) {
+inline void to_variant(const noir::jsonrpc::error_code& c, variant& v) {
   v = variant(static_cast<int64_t>(c));
 }
 
-} /// namespace fc
+} // namespace fc
 
-FC_REFLECT( eosio::jsonrpc::error, (code)(message)(data) )
-FC_REFLECT( eosio::jsonrpc::response, (jsonrpc)(result)(error)(id) )
+FC_REFLECT( noir::jsonrpc::error, (code)(message)(data) )
+FC_REFLECT( noir::jsonrpc::response, (jsonrpc)(result)(error)(id) )
