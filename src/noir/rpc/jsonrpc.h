@@ -16,12 +16,12 @@ namespace noir::rpc {
  * This was adapted from steem:
  * https://github.com/steemit/steem/blob/ff9b801/libraries/plugins/json_rpc/json_rpc_plugin.cpp
  */
-class jsonrpc: public appbase::plugin<jsonrpc> {
+class jsonrpc : public appbase::plugin<jsonrpc> {
 public:
   jsonrpc();
   virtual ~jsonrpc();
 
-  APPBASE_PLUGIN_REQUIRES( (rpc) )
+  APPBASE_PLUGIN_REQUIRES((rpc))
   virtual void set_program_options(CLI::App& cli, CLI::App& config) override {}
 
   void plugin_initialize(const CLI::App& cli, const CLI::App& config);
