@@ -10,8 +10,8 @@
 #include <noir/consensus/state.h>
 
 #include <noir/codec/scale.h>
-#include <noir/common/scope_exit.h>
-#include <noir/consensus/db/db.h>
+#include <noir/db/rocks_session.hpp>
+#include <noir/db/session.hpp>
 
 namespace noir::consensus {
 
@@ -65,6 +65,8 @@ public:
 };
 
 class db_store : public state_store {
+  using db_session_type = noir::db::session::session<noir::db::session::rocksdb_t>;
+
 private:
   // TEMP struct for encoding
   struct validators_info {
@@ -80,11 +82,18 @@ private:
   };
 
 public:
-  explicit db_store(const std::string& db_type = "simple")
-    : db_(new simple_db<noir::p2p::bytes, noir::p2p::bytes>),
-      state_key_(noir::codec::scale::encode(static_cast<char>(prefix::state))) {}
+  explicit db_store(std::string db_path_) {}
+  explicit db_store(std::shared_ptr<db_session_type> session_)
+    : db_session_(std::move(session_)), state_key_(noir::codec::scale::encode(static_cast<char>(prefix::state))) {}
 
-  db_store(db_store&& other) noexcept : db_(std::move(other.db_)) {}
+  db_store(db_store&& other) noexcept
+    : db_session_(std::move(other.db_session_)),
+      state_key_(noir::codec::scale::encode(static_cast<char>(prefix::state))) {
+    other.db_session_ = nullptr;
+  }
+
+  db_store(const db_store& other) noexcept
+    : db_session_(other.db_session_), state_key_(noir::codec::scale::encode(static_cast<char>(prefix::state))) {}
 
   bool load(state& st) const override {
     return load_internal(st);
@@ -141,18 +150,13 @@ public:
   }
 
   bool save_validator_sets(int64_t lower_height, int64_t upper_height, const validator_set& v_set) override {
-    auto batch = db_->new_batch();
-    auto batch_close = make_scoped_exit<std::function<void()>>([&batch]() { batch->close(); });
-
     for (auto height = lower_height; height <= upper_height; ++height) {
-      if (!save_validators_info(height, lower_height, v_set, batch.get())) {
-        batch->close();
+      if (!save_validators_info(height, lower_height, v_set)) {
         return false;
       }
     }
-
-    bool ret = batch->write_sync();
-    return ret;
+    db_session_->commit();
+    return true;
   }
 
   bool bootstrap(const state& st) override {
@@ -184,7 +188,7 @@ private:
     state = 8,
   };
   static constexpr int val_set_checkpoint_interval = 100000;
-  std::unique_ptr<db<noir::p2p::bytes, noir::p2p::bytes>> db_;
+  std::shared_ptr<db_session_type> db_session_;
   noir::p2p::bytes state_key_;
 
   template<prefix key_prefix>
@@ -194,66 +198,56 @@ private:
   }
 
   bool save_internal(const state& st) {
-    auto batch = db_->new_batch();
-    auto batch_close = make_scoped_exit<std::function<void()>>([&batch]() { batch->close(); });
-
     auto next_height = st.last_block_height + 1;
     if (next_height == 1) {
       next_height = st.initial_height;
-      if (!save_validators_info(next_height, next_height, st.validators, batch.get())) {
+      if (!save_validators_info(next_height, next_height, st.validators)) {
         return false;
       }
     }
-    if (!save_validators_info(next_height + 1, st.last_height_validators_changed, st.next_validators, batch.get())) {
+    if (!save_validators_info(next_height + 1, st.last_height_validators_changed, st.next_validators)) {
       return false;
     }
 
-    if (!save_consensus_params_info(
-          next_height, st.last_height_consensus_params_changed, st.consensus_params, batch.get())) {
+    if (!save_consensus_params_info(next_height, st.last_height_consensus_params_changed, st.consensus_params)) {
       return false;
     }
 
-    if (!batch->set(state_key_, noir::codec::scale::encode(st))) {
-      return false;
-    }
-    return batch->write_sync();
+    db_session_->write_from_bytes(state_key_, noir::codec::scale::encode(st));
+    db_session_->commit();
+    return true;
   }
 
   bool bootstrap_internal(const state& st) {
-    auto batch = db_->new_batch();
-    auto batch_close = make_scoped_exit<std::function<void()>>([&batch]() { batch->close(); });
     auto height = st.last_block_height + 1;
     if (height == 1) {
       height = st.initial_height;
     } else if (!st.last_validators.validators.empty()) { // height > 1, can height < 0 ?
-      if (!save_validators_info(height, height, st.validators, batch.get())) {
+      if (!save_validators_info(height, height, st.validators)) {
         return false;
       }
     }
-    if (!save_validators_info(height + 1, height + 1, st.validators, batch.get())) {
+    if (!save_validators_info(height + 1, height + 1, st.validators)) {
       return false;
     }
-    if (!save_consensus_params_info(
-          height, st.last_height_consensus_params_changed, st.consensus_params, batch.get())) {
+    if (!save_consensus_params_info(height, st.last_height_consensus_params_changed, st.consensus_params)) {
       return false;
     }
-    if (!batch->set(state_key_, noir::codec::scale::encode(st))) {
-      return false;
-    }
-    return batch->write_sync();
-  }
-
-  bool load_internal(state& st) const {
-    p2p::bytes buf;
-    if (auto ret = db_->get(state_key_, buf); !ret || buf.empty()) {
-      return false;
-    }
-    st = noir::codec::scale::decode<state>(buf);
+    db_session_->write_from_bytes(state_key_, noir::codec::scale::encode(st));
+    db_session_->commit();
     return true;
   }
 
-  static bool save_validators_info(int64_t height, int64_t last_height_changed, const validator_set& v_set,
-    db<noir::p2p::bytes, noir::p2p::bytes>::batch* batch) {
+  bool load_internal(state& st) const {
+    auto ret = db_session_->read_from_bytes(state_key_);
+    if (ret == std::nullopt || ret->empty()) {
+      return false;
+    }
+    st = noir::codec::scale::decode<state>(ret.value());
+    return true;
+  }
+
+  bool save_validators_info(int64_t height, int64_t last_height_changed, const validator_set& v_set) {
     if (last_height_changed > height) {
       return false;
     }
@@ -264,15 +258,16 @@ private:
         : std::nullopt,
     };
     auto buf = noir::codec::scale::encode(v_info);
-    return batch->set(encode_key<prefix::validators>(height), buf);
+    db_session_->write_from_bytes(encode_key<prefix::validators>(height), buf);
+    return true;
   } // namespace noir::consensus
 
   bool load_validators_info(int64_t height, validators_info& v_info) const {
-    noir::p2p::bytes buf;
-    if (auto ret = db_->get(encode_key<prefix::validators>(height), buf); !ret || buf.empty()) {
+    auto ret = db_session_->read_from_bytes(encode_key<prefix::validators>(height));
+    if (ret == std::nullopt || ret->empty()) {
       return false;
     }
-    v_info = noir::codec::scale::decode<validators_info>(buf);
+    v_info = noir::codec::scale::decode<validators_info>(ret.value());
     return true;
   }
 
@@ -281,22 +276,22 @@ private:
     return std::max(checkpoint_height, last_height_changed);
   }
 
-  static bool save_consensus_params_info(int64_t next_height, int64_t change_height, const consensus_params& cs_params,
-    db<noir::p2p::bytes, noir::p2p::bytes>::batch* batch) {
+  bool save_consensus_params_info(int64_t next_height, int64_t change_height, const consensus_params& cs_params) {
     consensus_params_info cs_param_info{
       .last_height_changed = change_height,
       .cs_param = (change_height == next_height) ? std::optional<consensus_params>(cs_params) : std::nullopt,
     };
     auto buf = noir::codec::scale::encode(cs_param_info);
-    return batch->set(encode_key<prefix::consensus_params>(next_height), buf);
+    db_session_->write_from_bytes(encode_key<prefix::consensus_params>(next_height), buf);
+    return true;
   }
 
   bool load_consensus_params_info(int64_t height, consensus_params_info& cs_param_info) const {
-    noir::p2p::bytes buf;
-    if (auto ret = db_->get(encode_key<prefix::consensus_params>(height), buf); !ret || buf.empty()) {
+    auto ret = db_session_->read_from_bytes(encode_key<prefix::consensus_params>(height));
+    if (ret == std::nullopt || ret->empty()) {
       return false;
     }
-    cs_param_info = noir::codec::scale::decode<consensus_params_info>(buf);
+    cs_param_info = noir::codec::scale::decode<consensus_params_info>(ret.value());
     return true;
   }
 
@@ -308,16 +303,16 @@ private:
     //      }
     //    });
     auto buf = noir::codec::scale::encode(txs);
-    return db_->set(encode_key<prefix::abci_response>(height), buf);
+    db_session_->write_from_bytes(encode_key<prefix::abci_response>(height), buf);
+    return true;
   }
 
   bool load_abci_response_internal(int64_t height /* , abci_response& rsp */) const {
-    noir::p2p::bytes buf;
-    if (auto ret = db_->get(encode_key<prefix::abci_response>(height), buf); !ret || buf.empty()) {
+    auto ret = db_session_->read_from_bytes(encode_key<prefix::abci_response>(height));
+    if (ret == std::nullopt || ret->empty()) {
       return false;
     }
-
-    auto txs = noir::codec::scale::decode<std::vector<response_deliver_tx>>(buf);
+    auto txs = noir::codec::scale::decode<std::vector<response_deliver_tx>>(ret.value());
     //    rsp.deliver_txs = txs;
     return true;
   }
@@ -371,44 +366,39 @@ private:
     p2p::bytes start;
     p2p::bytes end;
     start = encode_key<key_prefix>(start_);
-    end = encode_key<key_prefix>(end_ - 1);
-    do {
-      auto batch = db_->new_batch();
-      if (!reverse_batch_delete(batch.get(), start, end, end)) {
+    end = encode_key<key_prefix>(end_);
+    while (start != end) { // TODO: change to safer
+      if (!reverse_batch_delete(start, end, end)) {
         return false;
-      }
-      bool fin = (start == end);
-      bool ret = (fin) ? batch->write_sync() : batch->write();
-
-      if (!batch->close() || !ret) {
-        return false;
-      }
-      if (fin) {
-        break;
-      }
-    } while (true); // TODO: change to safer
-
-    return true;
-  }
-
-  bool reverse_batch_delete(
-    db<p2p::bytes, p2p::bytes>::batch* batch, const p2p::bytes& start, const p2p::bytes& end, p2p::bytes& new_end) {
-    auto db_it = db_->get_reverse_iterator(start, end);
-    size_t size = 0;
-    for (auto it = db_it.begin(); it != db_it.end(); ++it) { // TODO: need safe exit
-      if (!batch->del(it.key())) {
-        new_end = end;
-        return false;
-      }
-      if (++size == 1000) {
-        new_end = it.key();
-        return true;
       }
     }
-    new_end = start;
+    db_session_->commit();
     return true;
   }
 
+  bool reverse_batch_delete(const p2p::bytes& start, const p2p::bytes& end, p2p::bytes& new_end) {
+    auto start_it = db_session_->lower_bound_from_bytes(start);
+    auto end_it = db_session_->lower_bound_from_bytes(end);
+    if (end_it == db_session_->begin()) {
+      return false;
+    }
+    --end_it;
+    size_t size = 0;
+
+    for (auto it = end_it;; --it) {
+      db_session_->erase(it.key());
+      if (++size == 1000) {
+        auto key_ = it.key();
+        new_end = noir::p2p::bytes{key_.begin(), key_.end()};
+        break;
+      } else if (it == start_it) {
+        new_end = start;
+        break;
+      }
+    }
+
+    return true;
+  }
 };
 
 /// }
