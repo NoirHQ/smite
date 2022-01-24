@@ -5,6 +5,7 @@
 //
 #include <noir/commands/commands.h>
 #include <noir/common/log.h>
+#include <noir/rpc/jsonrpc.h>
 #include <noir/rpc/rpc.h>
 #include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
@@ -38,6 +39,7 @@ int main(int argc, char** argv) {
   // register plugins
   app.register_plugin<tendermint::tendermint>();
   app.register_plugin<rpc::rpc>();
+  app.register_plugin<rpc::jsonrpc>();
 
   return app.run(argc, argv);
 }

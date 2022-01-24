@@ -1,10 +1,13 @@
-#include <eosio/jsonrpc_plugin/jsonrpc.hpp>
-#include <fc/optional.hpp>
-#include <fc/variant_object.hpp>
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+#include <noir/rpc/jsonrpc/endpoint.h>
 #include <fc/exception/exception.hpp>
 #include <fc/io/json.hpp>
 
-namespace eosio { namespace jsonrpc {
+namespace noir::jsonrpc {
 
   void detail::endpoint_impl::add_handler( const std::string& method_name, request_handler handler ) {
     handlers.emplace( method_name, handler );
@@ -121,4 +124,4 @@ namespace eosio { namespace jsonrpc {
     return my->handle_request( message );
   }
 
-} } /// namespace eosio::jsonrpc
+} // namespace noir::jsonrpc

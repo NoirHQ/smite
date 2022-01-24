@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/rpc/jsonrpc.h>
 #include <noir/rpc/rpc.h>
 #include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
@@ -19,7 +20,7 @@ CLI::App* start(CLI::App& root) {
     config::set("home", home_dir.c_str());
     config::load();
 
-    if (!app.initialize<class tendermint, class rpc>()) {
+    if (!app.initialize<class tendermint, class rpc, class jsonrpc>()) {
       throw CLI::Success();
     }
     app.startup();

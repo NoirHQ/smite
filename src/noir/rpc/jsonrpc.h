@@ -1,33 +1,37 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
 #pragma once
-
+#include <noir/rpc/jsonrpc/endpoint.h>
+#include <noir/rpc/rpc.h>
 #include <appbase/application.hpp>
-#include <eosio/http_plugin/http_plugin.hpp>
-#include <eosio/jsonrpc_plugin/jsonrpc.hpp>
 
-namespace eosio {
+namespace noir::rpc {
 
 /**
- * This plugin provides json-rpc 2.0 api endpoint over eosio::http_plugin.
+ * This plugin provides json-rpc 2.0 api endpoint over noir::rpc.
  *
  * This was adapted from steem:
  * https://github.com/steemit/steem/blob/ff9b801/libraries/plugins/json_rpc/json_rpc_plugin.cpp
  */
-class jsonrpc_plugin: public appbase::plugin<jsonrpc_plugin> {
+class jsonrpc: public appbase::plugin<jsonrpc> {
 public:
-  jsonrpc_plugin();
-  virtual ~jsonrpc_plugin();
+  jsonrpc();
+  virtual ~jsonrpc();
 
-  APPBASE_PLUGIN_REQUIRES( (http_plugin) )
-  virtual void set_program_options(options_description&, options_description& cfg) override {}
+  APPBASE_PLUGIN_REQUIRES( (rpc) )
+  virtual void set_program_options(CLI::App& cli, CLI::App& config) override {}
 
-  void plugin_initialize(const variables_map& options);
+  void plugin_initialize(const CLI::App& cli, const CLI::App& config);
   void plugin_startup();
   void plugin_shutdown();
 
-  jsonrpc::endpoint& get_or_create_endpoint(const std::string& url);
+  noir::jsonrpc::endpoint& get_or_create_endpoint(const std::string& url);
 
 private:
-  std::unique_ptr<class jsonrpc_plugin_impl> my;
+  std::shared_ptr<class jsonrpc_impl> my;
 };
 
-} /// namespace eosio
+} // namespace noir::rpc
