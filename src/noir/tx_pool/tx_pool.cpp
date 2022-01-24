@@ -38,9 +38,12 @@ bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs) {
 }
 
 size_t tx_pool::size() const {
+  return tx_queue_.size();
 }
 
 void tx_pool::flush() {
+  std::lock_guard<std::mutex> lock_guard(mutex_);
+  tx_queue_.clear();
 }
 
 } // namespace noir::tx_pool
