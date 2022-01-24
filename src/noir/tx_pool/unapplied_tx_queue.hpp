@@ -59,14 +59,14 @@ private:
   > unapplied_tx_queue_type;
 
   unapplied_tx_queue_type queue_;
-  uint64_t max_tx_queue_size_ = 1024 * 1024;
+  uint64_t max_tx_queue_bytes_size_ = 1024 * 1024;
   uint64_t size_in_bytes_ = 0;
   size_t incoming_count_ = 0;
 
 public:
   unapplied_tx_queue() = default;
 
-  explicit unapplied_tx_queue(uint64_t size) { max_tx_queue_size_ = size; }
+  unapplied_tx_queue(uint64_t size) { max_tx_queue_bytes_size_ = size; }
 
   bool empty() const {
     return queue_.empty();
@@ -76,8 +76,14 @@ public:
     return queue_.size();
   }
 
+  uint64_t bytes_size() const {
+    return size_in_bytes_;
+  }
+
   void clear() {
     queue_.clear();
+    size_in_bytes_ = 0;
+    incoming_count_ = 0;
   }
 
   size_t incoming_size() const {
@@ -99,7 +105,7 @@ public:
     }
 
     auto size = bytes_size(tx_ptr);
-    if (size_in_bytes_ + size > max_tx_queue_size_) {
+    if (size_in_bytes_ + size > max_tx_queue_bytes_size_) {
       return false;
     }
 
