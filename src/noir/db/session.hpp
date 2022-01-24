@@ -15,6 +15,7 @@
 #include <unordered_set>
 
 #include <noir/db/shared_bytes.hpp>
+#include <noir/p2p/types.h>
 
 namespace noir::db::session {
 
@@ -177,8 +178,11 @@ public:
 
   std::optional<shared_bytes> read(const shared_bytes& key);
   void write(const shared_bytes& key, const shared_bytes& value);
+  std::optional<noir::p2p::bytes> read_from_bytes(const noir::p2p::bytes& key);
+  void write_from_bytes(const noir::p2p::bytes& key, const noir::p2p::bytes& value);
   bool contains(const shared_bytes& key);
   void erase(const shared_bytes& key);
+  void erase_from_bytes(const noir::p2p::bytes& key);
   void clear();
 
   /// \brief Reads a batch of keys from this session.
@@ -216,6 +220,7 @@ public:
   /// \param key The key to search for.
   /// \return An iterator to the key if found, the end iterator otherwise.
   iterator find(const shared_bytes& key);
+  iterator find_from_bytes(const noir::p2p::bytes& key);
   iterator begin();
   iterator end();
 
@@ -224,6 +229,7 @@ public:
   /// \return An iterator to the first key that is not less than the given key, or the end iterator if there is no key
   /// that matches that criteria.
   iterator lower_bound(const shared_bytes& key);
+  iterator lower_bound_from_bytes(const noir::p2p::bytes& key);
 
 private:
   /// \brief Sets the lower/upper bounds of the session's cache based on the parent's cache lower/upper bound
@@ -570,6 +576,21 @@ void session<Parent>::write(const shared_bytes& key, const shared_bytes& value) 
   it->second.updated = true;
 }
 
+// TODO: decide K/V type of session
+template<typename Parent>
+std::optional<noir::p2p::bytes> session<Parent>::read_from_bytes(const noir::p2p::bytes& key) {
+  auto ret = read(shared_bytes(key.data(), key.size()));
+  if (ret == std::nullopt) {
+    return std::nullopt;
+  }
+  return {ret.get()};
+}
+// TODO: decide K/V type of session
+template<typename Parent>
+void session<Parent>::write_from_bytes(const noir::p2p::bytes& key, const noir::p2p::bytes& value) {
+  write(shared_bytes(key.data(), key.size()), shared_bytes(value.data(), value.size()));
+}
+
 template<typename Parent>
 bool session<Parent>::contains(const shared_bytes& key) {
   // Traverse the heirarchy to see if this session (and its parent session)
@@ -604,6 +625,11 @@ void session<Parent>::erase(const shared_bytes& key) {
   it->second.deleted = true;
   it->second.updated = false;
   ++it->second.version;
+}
+
+template<typename Parent>
+void session<Parent>::erase_from_bytes(const noir::p2p::bytes& key) {
+  erase(shared_bytes(key.data(), key.size()));
 }
 
 template<typename Parent>
@@ -726,6 +752,11 @@ typename session<Parent>::iterator session<Parent>::find(const shared_bytes& key
 }
 
 template<typename Parent>
+typename session<Parent>::iterator session<Parent>::find_from_bytes(const noir::p2p::bytes& key) {
+  return find(shared_bytes(key.data(), key.size()));
+}
+
+template<typename Parent>
 typename session<Parent>::iterator session<Parent>::begin() {
   auto end = std::end(m_cache);
   auto begin = std::begin(m_cache);
@@ -813,6 +844,12 @@ typename session<Parent>::iterator session<Parent>::lower_bound(const shared_byt
     }
   }
   return {const_cast<session*>(this), std::move(it), version};
+}
+
+// TODO: decide K/V type of session
+template<typename Parent>
+typename session<Parent>::iterator session<Parent>::lower_bound_from_bytes(const noir::p2p::bytes& key) {
+  return lower_bound(shared_bytes(key.data(), key.size()));
 }
 
 template<typename Parent>
