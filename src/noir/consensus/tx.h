@@ -32,6 +32,6 @@ struct tx {
 };
 
 using tx_ptr = std::shared_ptr<tx>;
-
+using tx_ptrs = std::vector<tx_ptr>;
 
 } // namespace noir::consensus
