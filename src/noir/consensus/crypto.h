@@ -17,7 +17,9 @@ struct pub_key {
 
   p2p::bytes address() {
     // todo - check key length
-    return std::vector<char>(from_hex("000000"));
+    if (key.empty())
+      throw std::runtime_error("pub_key: unable to get address as key is empty");
+    return key; // todo - convert address from key
   }
 };
 

@@ -110,7 +110,7 @@ state state::make_genesis_state(genesis_doc& gen_doc) {
 
   validator_set val_set;
   for (const auto& val : gen_doc.validators) {
-    val_set.validators.push_back(validator{val.address, {}, val.power, 0});
+    val_set.validators.push_back(validator{val.address, val.pub_key_, val.power, 0});
   }
   validator_set next_val_set = val_set.copy_increment_proposer_priority(1);
   state_.validators = val_set;
