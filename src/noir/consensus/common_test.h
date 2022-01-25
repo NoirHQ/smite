@@ -29,6 +29,11 @@ struct validator_stub {
 
 using validator_stub_list = std::vector<validator_stub>;
 
+void increment_height(validator_stub_list& vss, size_t begin_at) {
+  for (auto it = vss.begin() + begin_at; it != vss.end(); it++)
+    it->height++;
+}
+
 config config_setup() {
   auto config_ = config::default_config();
   config_.base.chain_id = "test_chain";
@@ -70,11 +75,13 @@ std::tuple<std::unique_ptr<consensus_state>, validator_stub_list> rand_cs(config
   validator_stub_list vss;
 
   auto cs = consensus_state::new_state(config_.consensus, state_);
-  cs->set_priv_validator(priv_vals[0]); //todo - requires many other fields to be properly initialized
+  cs->set_priv_validator(priv_vals[0]); // todo - requires many other fields to be properly initialized
 
   for (auto i = 0; i < num_validators; i++) {
     vss.push_back(validator_stub{i, 0, 0, priv_vals[i], test_min_power});
   }
+
+  increment_height(vss, 1);
 
   return {move(cs), vss};
 }
