@@ -42,7 +42,6 @@ std::optional<consensus::abci::response_check_tx> tx_pool::check_tx(const consen
       if (res.code != consensus::abci::code_type_ok) {
         return false;
       }
-
       // add tx to failed tx_pool
     }
 
@@ -55,9 +54,7 @@ std::optional<consensus::abci::response_check_tx> tx_pool::check_tx(const consen
   });
 
   if (sync) {
-    if (!res.result.get()) {
-      return std::nullopt;
-    }
+    res.result.wait();
   }
   return res;
 }
@@ -67,7 +64,19 @@ consensus::tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t 
 }
 
 consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
-  return {};
+  std::lock_guard<std::mutex> lock(mutex_);
+  uint64_t count = MIN(tx_count, tx_queue_.size());
+
+  consensus::tx_ptrs tx_ptrs;
+  for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
+    if (tx_ptrs.size() >= count) {
+      break;
+    }
+    tx_ptrs.push_back(itr->tx_ptr);
+    tx_queue_.erase(itr->tx_ptr->id());
+  }
+
+  return tx_ptrs;
 }
 
 bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs) {
