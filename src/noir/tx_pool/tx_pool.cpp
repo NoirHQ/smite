@@ -37,7 +37,7 @@ std::optional<consensus::abci::response_check_tx> tx_pool::check_tx(const consen
   }
 
   consensus::abci::response_check_tx res;
-  res.result = async_thread_pool(thread_->get_executor(), [&res, tx_ptr, this](){
+  res.result = async_thread_pool(thread_->get_executor(), [&res, tx_ptr, this]() {
     if (postcheck_ && !postcheck_(*tx_ptr, res)) {
       if (res.code != consensus::abci::code_type_ok) {
         return false;
