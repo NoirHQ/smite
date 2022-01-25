@@ -17,16 +17,24 @@ namespace noir::tx_pool {
 struct unapplied_tx {
   const consensus::tx_ptr tx_ptr;
 
-  const uint64_t gas() const { return tx_ptr->gas; }
-  const uint64_t nonce() const { return tx_ptr->nonce; }
-  const consensus::sender_type sender() const { return tx_ptr->sender; }
-  const consensus::tx_id_type id() const { return tx_ptr->id(); }
+  const uint64_t gas() const {
+    return tx_ptr->gas;
+  }
+  const uint64_t nonce() const {
+    return tx_ptr->nonce;
+  }
+  const consensus::sender_type sender() const {
+    return tx_ptr->sender;
+  }
+  const consensus::tx_id_type id() const {
+    return tx_ptr->id();
+  }
 
-//  unapplied_tx(const unapplied_tx&) = delete;
-//  unapplied_tx() = delete;
-//  unapplied_tx& operator=(const unapplied_tx&) = delete;
-//  unapplied_tx(unapplied_tx&&) = default;
-//  unapplied_tx(const consensus::tx_ptr, uint64_t, uint64_t);
+  //  unapplied_tx(const unapplied_tx&) = delete;
+  //  unapplied_tx() = delete;
+  //  unapplied_tx& operator=(const unapplied_tx&) = delete;
+  //  unapplied_tx(unapplied_tx&&) = default;
+  //  unapplied_tx(const consensus::tx_ptr, uint64_t, uint64_t);
 };
 
 class unapplied_tx_queue {
@@ -36,27 +44,17 @@ public:
   struct by_nonce;
 
 private:
-  typedef boost::multi_index::multi_index_container<
-    unapplied_tx,
+  typedef boost::multi_index::multi_index_container<unapplied_tx,
     boost::multi_index::indexed_by<
-      boost::multi_index::ordered_unique<
-        boost::multi_index::tag<by_tx_id>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::tx_id_type, &unapplied_tx::id>
-      >,
-      boost::multi_index::ordered_non_unique<
-        boost::multi_index::tag<by_gas>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::gas>
-      >,
-      boost::multi_index::ordered_unique<
-        boost::multi_index::tag<by_nonce>,
-        boost::multi_index::composite_key<
-          unapplied_tx,
+      boost::multi_index::ordered_unique<boost::multi_index::tag<by_tx_id>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::tx_id_type, &unapplied_tx::id>>,
+      boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_gas>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::gas>>,
+      boost::multi_index::ordered_unique<boost::multi_index::tag<by_nonce>,
+        boost::multi_index::composite_key<unapplied_tx,
           boost::multi_index::const_mem_fun<unapplied_tx, const consensus::sender_type, &unapplied_tx::sender>,
-          boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::nonce>
-        >
-      >
-    >
-  > unapplied_tx_queue_type;
+          boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::nonce>>>>>
+    unapplied_tx_queue_type;
 
   unapplied_tx_queue_type queue_;
   uint64_t max_tx_queue_bytes_size_ = 1024 * 1024;
@@ -66,7 +64,9 @@ private:
 public:
   unapplied_tx_queue() = default;
 
-  unapplied_tx_queue(uint64_t size) { max_tx_queue_bytes_size_ = size; }
+  unapplied_tx_queue(uint64_t size) {
+    max_tx_queue_bytes_size_ = size;
+  }
 
   bool empty() const {
     return queue_.empty();
@@ -133,16 +133,24 @@ public:
   }
 
   template<typename Tag>
-  iterator<Tag> begin() { return queue_.get<Tag>().begin(); }
+  iterator<Tag> begin() {
+    return queue_.get<Tag>().begin();
+  }
 
   template<typename Tag>
-  iterator<Tag> end() { return queue_.get<Tag>().end(); }
+  iterator<Tag> end() {
+    return queue_.get<Tag>().end();
+  }
 
   template<typename Tag>
-  reverse_iterator<Tag> rbegin() { return queue_.get<Tag>().rbegin(); }
+  reverse_iterator<Tag> rbegin() {
+    return queue_.get<Tag>().rbegin();
+  }
 
   template<typename Tag>
-  reverse_iterator<Tag> rend() { return queue_.get<Tag>().rend(); }
+  reverse_iterator<Tag> rend() {
+    return queue_.get<Tag>().rend();
+  }
 
   template<typename Tag, typename ValType>
   iterator<Tag> lower_bound(const ValType& val) {
@@ -169,7 +177,6 @@ public:
   static uint64_t bytes_size(const consensus::tx_ptr& tx_ptr) {
     return sizeof(unapplied_tx) + tx_ptr->size();
   }
-
 };
 
 } // namespace noir::tx_pool
