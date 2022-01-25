@@ -4,9 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/common/hex.h>
+#include <noir/common/thread_pool.h>
+#include <noir/tx_pool/tx_pool.h>
 #include <noir/tx_pool/unapplied_tx_queue.hpp>
 #include <catch2/catch_all.hpp>
-#include <catch2/benchmark/catch_benchmark_all.hpp>
 
 using namespace noir;
 using namespace noir::consensus;
@@ -89,4 +90,165 @@ TEST_CASE("[tx_pool] Fully add tx", "[tx_pool][unapplied_tx_queue]") {
     CHECK(tx_queue->erase(tx_id_type{to_hex(std::to_string(i))}));
   }
   CHECK(tx_queue->empty());
+}
+
+TEST_CASE("Push/Pop tx", "[tx_pool]") {
+  class tx_pool tp;
+  tx tx1{"user", tx_id_type{to_hex(std::to_string(0))}, 0, 0};
+
+  auto add_tx = [&tp](uint64_t count, uint64_t offset, bool sync = true) {
+    std::vector<std::optional<consensus::abci::response_check_tx>> res_vec;
+    for (uint64_t i = offset; i < count + offset; i++) {
+      tx tx{"user", tx_id_type{to_hex(std::to_string(i))}, i, i};
+      res_vec.push_back(std::move(tp.check_tx(std::make_shared<::tx>(tx), sync)));
+    }
+    return res_vec;
+  };
+
+  auto get_tx = [&tp](uint64_t count) { return tp.reap_max_txs(count); };
+
+  SECTION("sync") {
+    auto res = add_tx(100, 0);
+    for (auto& r : res) {
+      REQUIRE(r.has_value());
+      CHECK(r.value().result.get());
+    }
+
+    // fail case : same tx_id
+    auto res_failed = add_tx(100, 0);
+    for (auto& r : res_failed) {
+      REQUIRE(r.has_value());
+      CHECK(r.value().result.get() == false);
+    }
+
+    auto tx_ptrs = get_tx(100);
+    CHECK(tx_ptrs.size() == 100);
+    CHECK(tp.size() == 0);
+  }
+
+  SECTION("async") {
+    auto thread = std::make_unique<named_thread_pool>("test_thread", 4);
+
+    SECTION("2 thread add") {
+      std::atomic<bool> start = false;
+      auto add_res1 = async_thread_pool(thread->get_executor(), [&add_tx, &start]() {
+        while (!start.load(std::memory_order_seq_cst)) {
+        } // wait thread 2
+        return add_tx(500, 0, false);
+      });
+
+      auto add_res2 = async_thread_pool(thread->get_executor(), [&add_tx, &start]() {
+        while (!start.load(std::memory_order_seq_cst)) {
+        } // wait thread 1
+        return add_tx(500, 500, false);
+      });
+
+      start.store(true, std::memory_order_seq_cst);
+      add_res1.wait();
+      add_res2.wait();
+
+      auto res1 = add_res1.get();
+      for (auto& r : res1) {
+        REQUIRE(r.has_value());
+        CHECK(r.value().result.get());
+      }
+
+      auto res2 = add_res2.get();
+      for (auto& r : res2) {
+        REQUIRE(r.has_value());
+        CHECK(r.value().result.get());
+      }
+
+      CHECK(tp.size() == 1000);
+    }
+
+    SECTION("1 thread add / 1 thread get") {
+      std::atomic<bool> start = false;
+      std::atomic<bool> add_end = false;
+
+      auto add_res = async_thread_pool(thread->get_executor(), [&add_tx, &start]() {
+        while (!start.load(std::memory_order_seq_cst)) {
+        } // wait getter thread
+        return add_tx(1000, 0, false);
+      });
+
+      auto get_res = async_thread_pool(thread->get_executor(), [&get_tx, &start, &add_end]() {
+        while (!start.load(std::memory_order_seq_cst)) {
+        } // wait setter thread
+
+        uint64_t get_count = 0;
+        while (get_count < 1000 && !add_end.load(std::memory_order_acquire)) {
+          auto res = get_tx(1000 - get_count);
+          get_count += res.size();
+        }
+        return get_count;
+      });
+
+      start.store(true, std::memory_order_seq_cst);
+      add_res.wait();
+
+      auto res = add_res.get();
+      for (auto& r : res) {
+        REQUIRE(r.has_value());
+        CHECK(r.value().result.get());
+      }
+
+      add_end.store(true, std::memory_order_seq_cst);
+
+      CHECK(get_res.get() == 1000);
+      CHECK(tp.size() == 0);
+    }
+
+    SECTION("1 thread add / 2 thread get") {
+      std::atomic<bool> start = false;
+      std::atomic<bool> add_end = false;
+
+      auto add_res = async_thread_pool(thread->get_executor(), [&add_tx, &start]() {
+        while (!start.load(std::memory_order_seq_cst)) {
+        } // wait other thread
+        return add_tx(1000, 0, false);
+      });
+
+      auto get_res1 = async_thread_pool(thread->get_executor(), [&get_tx, &start, &add_end]() {
+        while (!start.load(std::memory_order_seq_cst)) {
+        } // wait other thread
+
+        uint64_t get_count = 0;
+        while (get_count < 1000 && !add_end.load(std::memory_order_acquire)) {
+          auto res = get_tx(1000 - get_count);
+          get_count += res.size();
+        }
+        return get_count;
+      });
+
+      auto get_res2 = async_thread_pool(thread->get_executor(), [&get_tx, &start, &add_end]() {
+        while (!start.load(std::memory_order_seq_cst)) {
+        } // wait other thread
+
+        uint64_t get_count = 0;
+        while (get_count < 1000 && !add_end.load(std::memory_order_acquire)) {
+          auto res = get_tx(1000 - get_count);
+          get_count += res.size();
+        }
+        return get_count;
+      });
+
+      start.store(true, std::memory_order_seq_cst);
+      add_res.wait();
+
+      auto res = add_res.get();
+      for (auto& r : res) {
+        REQUIRE(r.has_value());
+        CHECK(r.value().result.get());
+      }
+
+      add_end.store(true, std::memory_order_seq_cst);
+
+      uint64_t get_count = 0;
+      get_count += get_res1.get();
+      get_count += get_res2.get();
+      CHECK(get_count == 1000);
+      CHECK(tp.size() == 0);
+    }
+  }
 }
