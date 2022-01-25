@@ -13,7 +13,7 @@ using namespace noir;
 using namespace noir::consensus;
 using namespace noir::tx_pool;
 
-TEST_CASE("[tx_pool] Add tx/Erase tx", "[tx_pool][unapplied_tx_queue]") {
+TEST_CASE("Add/Get/Erase tx", "[tx_pool][unapplied_tx_queue]") {
   unapplied_tx_queue tx_queue;
 
   const uint64_t tx_count = 10;
@@ -39,18 +39,21 @@ TEST_CASE("[tx_pool] Add tx/Erase tx", "[tx_pool][unapplied_tx_queue]") {
   }
   CHECK(tx_queue.size() == tx_count);
 
-  SECTION("Add same tx id") {
+  SECTION("Add same tx id") { // fail case
     tx tx{"user", id[0], 0, 20};
     CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(tx))) == false);
     CHECK(tx_queue.size() == tx_count);
     CHECK(tx_queue.get_tx(id[0]));
+    CHECK(tx_queue.get_tx("user"));
   }
 
-  SECTION("Add same user & nonce tx") {
-    tx tx{"user", tx_id_type{to_hex("11")}, 0, 1};
+  SECTION("Add same user & nonce tx") { // fail case
+    auto invalid_tx_id = tx_id_type{to_hex("11")};
+    tx tx{"user", invalid_tx_id, 0, 1};
     CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(tx))) == false);
     CHECK(tx_queue.size() == tx_count);
-    CHECK(tx_queue.get_tx(tx_id_type{to_hex("11")}) == std::nullopt);
+    CHECK(tx_queue.get_tx(invalid_tx_id) == std::nullopt);
+    CHECK(tx_queue.get_tx("invalid_user") == std::nullopt);
   }
 
   SECTION("Erase tx") {
@@ -59,6 +62,7 @@ TEST_CASE("[tx_pool] Add tx/Erase tx", "[tx_pool][unapplied_tx_queue]") {
     }
     CHECK(tx_queue.empty());
 
+    // fail case
     for (auto& i : id) {
       CHECK(tx_queue.erase(i) == false);
     }
@@ -75,7 +79,7 @@ TEST_CASE("[tx_pool] Add tx/Erase tx", "[tx_pool][unapplied_tx_queue]") {
   }
 }
 
-TEST_CASE("[tx_pool] Fully add tx", "[tx_pool][unapplied_tx_queue]") {
+TEST_CASE("Fully add tx", "[tx_pool][unapplied_tx_queue]") {
   uint64_t tx_count = 10000;
   uint64_t queue_size = (sizeof(unapplied_tx) + sizeof(tx)) * tx_count;
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
@@ -90,6 +94,84 @@ TEST_CASE("[tx_pool] Fully add tx", "[tx_pool][unapplied_tx_queue]") {
     CHECK(tx_queue->erase(tx_id_type{to_hex(std::to_string(i))}));
   }
   CHECK(tx_queue->empty());
+}
+
+TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
+  uint64_t tx_count = 10000;
+  uint64_t user_count = tx_count / 100;
+  uint64_t queue_size = (sizeof(unapplied_tx) + sizeof(tx)) * tx_count;
+  auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
+
+  for (uint64_t i = 0; i < tx_count; i++) {
+    sender_type sender = "user" + std::to_string(i / user_count);
+    tx tx{sender, tx_id_type{to_hex(std::to_string(i))}, i, i};
+    CHECK(tx_queue->add_tx(std::make_shared<::tx>(tx)));
+  }
+  CHECK(tx_queue->size() == tx_count);
+
+  SECTION("by nonce") {
+    auto begin = tx_queue->begin<unapplied_tx_queue::by_nonce>();
+    auto end = tx_queue->end<unapplied_tx_queue::by_nonce>();
+
+    uint64_t count = 0;
+    for (auto itr = begin; itr != end; itr++) {
+      count++;
+    }
+    CHECK(count == tx_count);
+  }
+
+  SECTION("a specific sender's txs") {
+    SECTION("all txs") {
+      uint64_t tx_count_per_user = tx_count / user_count;
+      for (uint64_t i = 0; i < user_count; i++) {
+        sender_type sender = "user" + std::to_string(i);
+        auto begin = tx_queue->begin(sender);
+        auto end = tx_queue->end(sender);
+
+        uint64_t count = 0;
+        for (auto itr = begin; itr != end; itr++) {
+          count++;
+        }
+        CHECK(count == tx_count_per_user);
+      }
+    }
+  }
+
+  SECTION("ordering") {
+    SECTION("ascending") {
+      auto begin = tx_queue->begin<unapplied_tx_queue::by_gas>();
+      auto end = tx_queue->end<unapplied_tx_queue::by_gas>();
+
+      uint64_t prev_gas = 0;
+      for (auto itr = begin; itr != end; itr++) {
+        CHECK(itr->gas() >= prev_gas);
+        prev_gas = itr->gas();
+      }
+    }
+
+    SECTION("descending") {
+      auto rbegin = tx_queue->rbegin<unapplied_tx_queue::by_gas>();
+      auto rend = tx_queue->rend<unapplied_tx_queue::by_gas>();
+
+      uint64_t prev_gas = std::numeric_limits<uint64_t>::max();
+      for (auto itr = rbegin; itr != rend; itr++) {
+        CHECK(itr->gas() <= prev_gas);
+        prev_gas = itr->gas();
+      }
+    }
+  }
+
+  SECTION("bound") {
+    uint64_t lowest = 10;
+    uint64_t highest = 50;
+    auto begin = tx_queue->lower_bound<unapplied_tx_queue::by_gas>(lowest);
+    auto end = tx_queue->upper_bound<unapplied_tx_queue::by_gas>(highest);
+
+    for (auto itr = begin; itr != end; itr++) {
+      CHECK(lowest <= itr->gas());
+      CHECK(itr->gas() <= highest);
+    }
+  }
 }
 
 TEST_CASE("Push/Pop tx", "[tx_pool]") {
