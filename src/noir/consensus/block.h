@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/for_each.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 
@@ -78,3 +79,7 @@ struct commit {
 using block_ptr = std::shared_ptr<block>;
 
 } // namespace noir::consensus
+
+NOIR_FOR_EACH_FIELD(
+  noir::consensus::commit_sig, /* TODO: flag, */ validator_address, timestamp, signature, vote_extension);
+NOIR_FOR_EACH_FIELD(noir::consensus::commit, height, round, my_block_id, signatures);
