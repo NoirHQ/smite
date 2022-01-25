@@ -3,11 +3,11 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
 #include <noir/common/thread_pool.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <noir/tx_pool/unapplied_tx_queue.hpp>
-#include <catch2/catch_all.hpp>
 
 using namespace noir;
 using namespace noir::consensus;
@@ -54,12 +54,12 @@ TEST_CASE("[tx_pool] Add tx/Erase tx", "[tx_pool][unapplied_tx_queue]") {
   }
 
   SECTION("Erase tx") {
-    for (auto & i : id) {
+    for (auto& i : id) {
       CHECK(tx_queue.erase(i));
     }
     CHECK(tx_queue.empty());
 
-    for (auto & i : id) {
+    for (auto& i : id) {
       CHECK(tx_queue.erase(i) == false);
     }
     CHECK(tx_queue.empty());
@@ -67,7 +67,7 @@ TEST_CASE("[tx_pool] Add tx/Erase tx", "[tx_pool][unapplied_tx_queue]") {
 
   SECTION("Erase tx by iterator") {
     auto itr = tx_queue.begin();
-    while(itr != tx_queue.end()) {
+    while (itr != tx_queue.end()) {
       CHECK(tx_queue.erase(itr->id()));
       itr++;
     }

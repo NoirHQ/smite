@@ -24,8 +24,8 @@ public:
     uint64_t max_batch_bytes;
     uint64_t cache_size = 10000;
     bool keep_invalid_txs_in_cache = false;
-//    fc::time_point ttl_duration;
-//    uint64_t ttl_num_blocks = 0;
+    //    fc::time_point ttl_duration;
+    //    uint64_t ttl_num_blocks = 0;
   };
 
   using precheck_func = bool(const consensus::tx&);
