@@ -37,11 +37,12 @@ config config_setup() {
 
 std::tuple<validator, priv_validator> rand_validator(bool rand_power, int64_t min_power) {
   static int i = 0;
-  auto priv_val = priv_validator{}; // todo - generate random priv key
+  auto pub_key_ = pub_key{noir::from_hex("AAAA" + std::to_string(i++))}; // todo - generate a complete key
+  auto priv_val = priv_validator{pub_key_, MockSignerClient};
   auto vote_power = min_power;
   if (rand_power)
     vote_power += std::rand();
-  return {validator{noir::from_hex("AAAA" + std::to_string(i++)), {}, vote_power, 0}, priv_val};
+  return {validator{priv_val.pub_key_.address(), priv_val.pub_key_, vote_power, 0}, priv_val};
 }
 
 std::tuple<genesis_doc, std::vector<priv_validator>> rand_genesis_doc(
@@ -50,7 +51,7 @@ std::tuple<genesis_doc, std::vector<priv_validator>> rand_genesis_doc(
   std::vector<priv_validator> priv_validators;
   for (auto i = 0; i < num_validators; i++) {
     auto [val, priv_val] = rand_validator(rand_power, min_power);
-    validators.push_back(genesis_validator{val.address, {}, val.voting_power});
+    validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
     priv_validators.push_back(priv_val);
   }
   return {genesis_doc{get_time(), config_.base.chain_id, 1, {}, validators}, priv_validators};
@@ -69,6 +70,7 @@ std::tuple<std::unique_ptr<consensus_state>, validator_stub_list> rand_cs(config
   validator_stub_list vss;
 
   auto cs = consensus_state::new_state(config_.consensus, state_);
+  cs->set_priv_validator(priv_vals[0]); //todo - requires many other fields to be properly initialized
 
   for (auto i = 0; i < num_validators; i++) {
     vss.push_back(validator_stub{i, 0, 0, priv_vals[i], test_min_power});

@@ -25,7 +25,7 @@ constexpr int64_t priority_window_size_factor{2};
 
 struct validator {
   p2p::bytes address;
-  p2p::bytes pub_key;
+  pub_key pub_key_;
   int64_t voting_power;
   int64_t proposer_priority;
 
