@@ -25,7 +25,7 @@ TEST_CASE("Proposer Selection 0", "[consensus_state]") {
 
   auto addr = pv.address();
 
-  //  CHECK(prop->address == addr);
+  CHECK(prop->address == addr);
 
   // wait for complete proposal // todo - how?
   force_tick(cs1); // ensureNewProposal
