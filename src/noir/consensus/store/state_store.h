@@ -10,6 +10,7 @@
 #include <noir/consensus/state.h>
 
 #include <noir/codec/scale.h>
+#include <noir/common/hex.h>
 #include <noir/db/rocks_session.hpp>
 #include <noir/db/session.hpp>
 
@@ -82,7 +83,6 @@ private:
   };
 
 public:
-  explicit db_store(std::string db_path_) {}
   explicit db_store(std::shared_ptr<db_session_type> session_)
     : db_session_(std::move(session_)), state_key_(noir::codec::scale::encode(static_cast<char>(prefix::state))) {}
 
@@ -192,9 +192,12 @@ private:
   noir::p2p::bytes state_key_;
 
   template<prefix key_prefix>
-  static noir::p2p::bytes encode_key(int64_t height) {
-    std::string s = static_cast<char>(key_prefix) + fmt::format("{:08x}", height);
-    return {s.begin(), s.end()};
+  static noir::p2p::bytes encode_key(int64_t val) {
+    noir::p2p::bytes ret{};
+    auto hex_ = from_hex(fmt::format("{:016x}", static_cast<uint64_t>(val)));
+    ret.push_back(static_cast<char>(key_prefix));
+    ret.insert(ret.end(), hex_.begin(), hex_.end());
+    return ret;
   }
 
   bool save_internal(const state& st) {
