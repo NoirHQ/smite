@@ -107,6 +107,15 @@ bool state::is_empty() {
 state state::make_genesis_state(genesis_doc& gen_doc) {
   // todo - read from genDoc
   state state_{};
+
+  validator_set val_set;
+  for (const auto& val : gen_doc.validators) {
+    val_set.validators.push_back(validator{val.address, {}, val.power, 0});
+  }
+  validator_set next_val_set = val_set.copy_increment_proposer_priority(1);
+  state_.validators = val_set;
+  state_.next_validators = next_val_set;
+
   state_.chain_id = gen_doc.chain_id;
   state_.initial_height = gen_doc.initial_height;
   return state_;

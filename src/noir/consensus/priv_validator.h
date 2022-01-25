@@ -18,11 +18,11 @@ enum priv_validator_type {
 };
 
 struct priv_validator {
-  p2p::bytes pub_key;
+  pub_key pub_key_;
   priv_validator_type type;
 
-  p2p::bytes get_pub_key() {
-    return pub_key;
+  pub_key get_pub_key() {
+    return pub_key_;
   }
 
   void sign_vote();
