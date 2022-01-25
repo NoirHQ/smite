@@ -5,6 +5,7 @@
 //
 #pragma once
 
+#include <noir/common/thread_pool.h>
 #include <noir/consensus/abci.h>
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/unapplied_tx_queue.hpp>
@@ -28,12 +29,14 @@ public:
   };
 
   using precheck_func = bool(const consensus::tx&);
-  using postcheck_func = bool(const consensus::tx&, consensus::response_check_tx&);
+  using postcheck_func = bool(const consensus::tx&, consensus::abci::response_check_tx&);
 
 private:
   std::mutex mutex_;
   config config_;
   unapplied_tx_queue tx_queue_;
+
+  std::unique_ptr<named_thread_pool> thread_;
 
   precheck_func* precheck_;
   postcheck_func* postcheck_;
@@ -42,10 +45,12 @@ public:
   tx_pool();
   tx_pool(const config& cfg);
 
+  ~tx_pool();
+
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
 
-  bool check_tx(const consensus::tx_ptr& tx_ptr);
+  std::optional<consensus::abci::response_check_tx> check_tx(const consensus::tx_ptr& tx_ptr, bool sync);
   consensus::tx_ptrs reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
   consensus::tx_ptrs reap_max_txs(uint64_t tx_count);
   bool update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs);
