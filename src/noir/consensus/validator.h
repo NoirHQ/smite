@@ -347,6 +347,12 @@ struct validator_set {
     }
   }
 
+  validator_set copy_increment_proposer_priority(int32_t times) {
+    auto cp = *this;
+    cp.increment_proposer_priority(times);
+    return cp;
+  }
+
   void increment_proposer_priority(int32_t times) {
     if (validators.empty())
       throw std::runtime_error("empty validator set");
