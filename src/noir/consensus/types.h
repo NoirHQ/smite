@@ -209,7 +209,7 @@ struct height_vote_set {
       vote_set_ = get_vote_set(vote_.round, vote_.type);
       it->second.push_back(vote_.round);
     }
-    vote_set_->add_vote(vote_);
+    return vote_set_->add_vote(vote_);
   }
 
   std::optional<vote_set> prevotes(int32_t round_) {
