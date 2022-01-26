@@ -164,10 +164,18 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
   SECTION("bound") {
     uint64_t lowest = 10;
     uint64_t highest = 50;
-    auto begin = tx_queue->lower_bound<unapplied_tx_queue::by_gas>(lowest);
-    auto end = tx_queue->upper_bound<unapplied_tx_queue::by_gas>(highest);
+    auto begin = tx_queue->begin<unapplied_tx_queue::by_gas>(lowest);
+    auto end = tx_queue->end<unapplied_tx_queue::by_gas>(highest);
 
     for (auto itr = begin; itr != end; itr++) {
+      CHECK(lowest <= itr->gas());
+      CHECK(itr->gas() <= highest);
+    }
+
+    auto rbegin = tx_queue->rbegin<unapplied_tx_queue::by_gas>(highest);
+    auto rend = tx_queue->rend<unapplied_tx_queue::by_gas>(lowest);
+
+    for (auto itr = rbegin; itr != rend; itr++) {
       CHECK(lowest <= itr->gas());
       CHECK(itr->gas() <= highest);
     }
