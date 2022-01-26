@@ -209,122 +209,115 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
   }
 
   SECTION("async") {
-    auto thread = std::make_unique<named_thread_pool>("test_thread", 4);
+    uint64_t max_thread_num = 10;
+    auto thread = std::make_unique<named_thread_pool>("test_thread", max_thread_num);
 
-    SECTION("2 thread add") {
-      std::atomic<bool> start = false;
-      auto add_res1 = async_thread_pool(thread->get_executor(), [&add_tx, &start]() {
-        while (!start.load(std::memory_order_seq_cst)) {
-        } // wait thread 2
-        return add_tx(500, 0, false);
-      });
-
-      auto add_res2 = async_thread_pool(thread->get_executor(), [&add_tx, &start]() {
-        while (!start.load(std::memory_order_seq_cst)) {
-        } // wait thread 1
-        return add_tx(500, 500, false);
-      });
-
-      start.store(true, std::memory_order_seq_cst);
-      add_res1.wait();
-      add_res2.wait();
-
-      auto res1 = add_res1.get();
-      for (auto& r : res1) {
-        REQUIRE(r.has_value());
-        CHECK(r.value().result.get());
+    SECTION("multi thread add") {
+      uint64_t thread_num = MIN(5, max_thread_num);
+      uint64_t total_tx_num = 10000;
+      std::atomic<uint64_t> token = thread_num;
+      std::future<std::vector<std::optional<consensus::abci::response_check_tx>>> res[thread_num];
+      uint64_t tx_num_per_thread = total_tx_num / thread_num;
+      for (uint64_t t = 0; t < thread_num; t++) {
+        uint64_t offset = t * tx_num_per_thread;
+        res[t] = async_thread_pool(thread->get_executor(), [&token, &add_tx, tx_num_per_thread, offset]() {
+          token.fetch_sub(1, std::memory_order_seq_cst);
+          while (token.load(std::memory_order_seq_cst)) {
+          } // wait other thread
+          return add_tx(tx_num_per_thread, offset, false);
+        });
       }
 
-      auto res2 = add_res2.get();
-      for (auto& r : res2) {
-        REQUIRE(r.has_value());
-        CHECK(r.value().result.get());
+      for (uint64_t t = 0; t < thread_num; t++) {
+        uint64_t added_tx = 0;
+        auto result = res[t].get();
+        for (auto& r : result) {
+          REQUIRE(r.has_value());
+          if (r.value().result.get()) {
+            added_tx++;
+          }
+        }
+        CHECK(added_tx == tx_num_per_thread);
       }
 
-      CHECK(tp.size() == 1000);
+      CHECK(tp.size() == total_tx_num);
     }
 
     SECTION("1 thread add / 1 thread get") {
-      std::atomic<bool> start = false;
-      std::atomic<bool> add_end = false;
+      std::atomic<uint64_t> token = 2;
 
-      auto add_res = async_thread_pool(thread->get_executor(), [&add_tx, &start]() {
-        while (!start.load(std::memory_order_seq_cst)) {
-        } // wait getter thread
+      auto add_res = async_thread_pool(thread->get_executor(), [&add_tx, &token]() {
+        token.fetch_sub(1, std::memory_order_seq_cst);
+        while (token.load(std::memory_order_seq_cst)) {
+        } // wait other thread
         return add_tx(1000, 0, false);
       });
 
-      auto get_res = async_thread_pool(thread->get_executor(), [&get_tx, &start, &add_end]() {
-        while (!start.load(std::memory_order_seq_cst)) {
-        } // wait setter thread
+      auto get_res = async_thread_pool(thread->get_executor(), [&get_tx, &token]() {
+        token.fetch_sub(1, std::memory_order_seq_cst);
+        while (token.load(std::memory_order_seq_cst)) {
+        } // wait other thread
 
         uint64_t get_count = 0;
-        while (get_count < 1000 && !add_end.load(std::memory_order_acquire)) {
+        while (get_count < 1000) {
           auto res = get_tx(1000 - get_count);
           get_count += res.size();
         }
         return get_count;
       });
 
-      start.store(true, std::memory_order_seq_cst);
       add_res.wait();
-
       auto res = add_res.get();
       for (auto& r : res) {
         REQUIRE(r.has_value());
         CHECK(r.value().result.get());
       }
-
-      add_end.store(true, std::memory_order_seq_cst);
 
       CHECK(get_res.get() == 1000);
       CHECK(tp.size() == 0);
     }
 
     SECTION("1 thread add / 2 thread get") {
-      std::atomic<bool> start = false;
-      std::atomic<bool> add_end = false;
-
-      auto add_res = async_thread_pool(thread->get_executor(), [&add_tx, &start]() {
-        while (!start.load(std::memory_order_seq_cst)) {
+      std::atomic<uint64_t> token = 3;
+      auto add_res = async_thread_pool(thread->get_executor(), [&add_tx, &token]() {
+        token.fetch_sub(1, std::memory_order_seq_cst);
+        while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
         return add_tx(1000, 0, false);
       });
 
-      auto get_res1 = async_thread_pool(thread->get_executor(), [&get_tx, &start, &add_end]() {
-        while (!start.load(std::memory_order_seq_cst)) {
+      auto get_res1 = async_thread_pool(thread->get_executor(), [&get_tx, &token]() {
+        token.fetch_sub(1, std::memory_order_seq_cst);
+        while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
 
         uint64_t get_count = 0;
-        while (get_count < 1000 && !add_end.load(std::memory_order_acquire)) {
-          auto res = get_tx(1000 - get_count);
+        while (get_count < 500) {
+          auto res = get_tx(500 - get_count);
           get_count += res.size();
         }
         return get_count;
       });
 
-      auto get_res2 = async_thread_pool(thread->get_executor(), [&get_tx, &start, &add_end]() {
-        while (!start.load(std::memory_order_seq_cst)) {
+      auto get_res2 = async_thread_pool(thread->get_executor(), [&get_tx, &token]() {
+        token.fetch_sub(1, std::memory_order_seq_cst);
+        while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
 
         uint64_t get_count = 0;
-        while (get_count < 1000 && !add_end.load(std::memory_order_acquire)) {
-          auto res = get_tx(1000 - get_count);
+        while (get_count < 500) {
+          auto res = get_tx(500 - get_count);
           get_count += res.size();
         }
         return get_count;
       });
 
-      start.store(true, std::memory_order_seq_cst);
       add_res.wait();
-
       auto res = add_res.get();
       for (auto& r : res) {
         REQUIRE(r.has_value());
         CHECK(r.value().result.get());
       }
-
-      add_end.store(true, std::memory_order_seq_cst);
 
       uint64_t get_count = 0;
       get_count += get_res1.get();
