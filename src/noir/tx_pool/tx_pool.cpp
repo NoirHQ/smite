@@ -9,7 +9,7 @@ namespace noir::tx_pool {
 
 tx_pool::tx_pool()
   : config_(config{}), tx_queue_(config_.cache_size * config_.max_tx_bytes), precheck_(nullptr), postcheck_(nullptr) {
-  thread_ = std::make_unique<named_thread_pool>("tx_pool", 1);
+  thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
 }
 
 tx_pool::tx_pool(const config& cfg)
