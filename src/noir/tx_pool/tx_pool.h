@@ -18,6 +18,7 @@ public:
     std::string root_dir = "/";
     bool recheck = true;
     bool broadcast = true;
+    uint32_t thread_num = 5;
     uint32_t size = 5000;
     uint64_t max_tx_bytes = 1024 * 1024;
     uint64_t max_txs_bytes = 1024 * 1024 * 1024;
