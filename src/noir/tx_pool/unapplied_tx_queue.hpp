@@ -174,14 +174,25 @@ public:
   }
 
   template<typename Tag, typename ValType>
-  iterator<Tag> lower_bound(const ValType& val) {
+  iterator<Tag> begin(const ValType& val) {
     return queue_.get<Tag>().lower_bound(val);
   }
 
   template<typename Tag, typename ValType>
-  iterator<Tag> upper_bound(const ValType& val) {
+  iterator<Tag> end(const ValType& val) {
     return queue_.get<Tag>().upper_bound(val);
   }
+
+  template<typename Tag, typename ValType>
+  reverse_iterator<Tag> rbegin(const ValType& val) {
+    return reverse_iterator<Tag>(queue_.get<Tag>().upper_bound(val));
+  }
+
+  template<typename Tag, typename ValType>
+  reverse_iterator<Tag> rend(const ValType& val) {
+    return reverse_iterator<Tag>(queue_.get<Tag>().lower_bound(val));
+  }
+
 
   bool erase(const consensus::tx_id_type& id) {
     auto itr = queue_.get<by_tx_id>().find(id);
