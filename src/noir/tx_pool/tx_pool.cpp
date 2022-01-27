@@ -60,7 +60,31 @@ std::optional<consensus::abci::response_check_tx> tx_pool::check_tx(const consen
 }
 
 consensus::tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
-  return {};
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  consensus::tx_ptrs tx_ptrs;
+  auto rbegin = tx_queue_.rbegin<unapplied_tx_queue::by_gas>(max_gas);
+  auto rend = tx_queue_.rend<unapplied_tx_queue::by_gas>(0);
+
+  uint64_t bytes = 0;
+  uint64_t gas = 0;
+  for (auto itr = rbegin; itr != rend; itr++) {
+    auto tx_ptr = itr->tx_ptr;
+    if (gas + tx_ptr->gas > max_gas) {
+      continue;
+    }
+
+    if (bytes + tx_ptr->size() > max_bytes) {
+      break;
+    }
+
+    bytes += tx_ptr->size();
+    gas += tx_ptr->gas;
+    tx_ptrs.push_back(tx_ptr);
+    tx_queue_.erase(tx_ptr->id());
+  }
+
+  return tx_ptrs;
 }
 
 consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
