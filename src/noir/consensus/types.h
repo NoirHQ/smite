@@ -80,7 +80,9 @@ struct part_set {
     // If part already exists, return false.
     try {
       auto p = parts.at(part_.index);
-      return false;
+      if (!p.bytes_.empty() || !p.proof.empty()) {
+        return false;
+      }
     } catch (std::out_of_range&) {
     }
 
