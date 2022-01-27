@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/log.h>
+#include <noir/consensus/crypto.h>
 #include <noir/p2p/types.h>
 
 namespace noir::consensus {
