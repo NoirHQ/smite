@@ -14,6 +14,7 @@ target_link_libraries(noir
   fc
   fmt
   tendermint
+  websocketpp
 )
 if(APPLE)
   target_link_libraries(noir "-framework CoreFoundation" "-framework Security")
@@ -24,4 +25,4 @@ add_subdirectory(common)
 add_subdirectory(consensus)
 add_subdirectory(p2p)
 add_subdirectory(tendermint)
-
+add_subdirectory(rpc)

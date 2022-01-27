@@ -13,3 +13,6 @@
 [submodule "libs/fmt"]
 	path = libs/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "libs/websocketpp"]
+	path = libs/websocketpp
+	url = https://github.com/zaphoyd/websocketpp

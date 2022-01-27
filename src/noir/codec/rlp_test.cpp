@@ -10,7 +10,7 @@
 using namespace noir;
 using namespace noir::codec::rlp;
 
-TEST_CASE("booleans", "[codec][rlp]") {
+TEST_CASE("[rlp] booleans", "[codec]") {
   auto tests = std::to_array<std::pair<bool, const char*>>({
     {true, "01"},
     {false, "80"},
@@ -22,7 +22,7 @@ TEST_CASE("booleans", "[codec][rlp]") {
   });
 }
 
-TEST_CASE("integers", "[codec][rlp]") {
+TEST_CASE("[rlp] integers", "[codec]") {
   SECTION("uint32_t") {
     auto tests = std::to_array<std::pair<uint32_t, const char*>>({
       {0, "80"},
@@ -56,7 +56,7 @@ TEST_CASE("integers", "[codec][rlp]") {
   }
 }
 
-TEST_CASE("strings", "[codec][rlp]") {
+TEST_CASE("[rlp] strings", "[codec]") {
   auto tests = std::to_array<std::pair<std::string, const char*>>({
     {"", "80"},
     {"\x7e", "7e"},
@@ -106,7 +106,7 @@ TEST_CASE("strings", "[codec][rlp]") {
   });
 }
 
-TEST_CASE("list", "[codec][rlp]") {
+TEST_CASE("[rlp] list", "[codec]") {
   SECTION("a list of uint32_t") {
     auto tests = std::to_array<std::pair<std::vector<uint32_t>, const char*>>({
       {{}, "c0"},
@@ -142,5 +142,46 @@ TEST_CASE("list", "[codec][rlp]") {
 
     CHECK(to_hex(encode(t.first)) == t.second);
     CHECK(t.first == decode<std::vector<std::vector<std::string>>>(from_hex(t.second)));
+  }
+
+  SECTION("a list of strings, c-array") {
+    std::string test[] = {
+      "aaa", "bbb", "ccc", "ddd", "eee", "fff", "ggg", "hhh", "iii", "jjj", "kkk", "lll", "mmm", "nnn", "ooo"};
+    auto data_s = "f83c836161618362626283636363836464648365656583666666836767678368686883696969836a6a6a836b6b6b836c6c6c"
+                  "836d6d6d836e6e6e836f6f6f";
+
+    CHECK(to_hex(encode(test)) == data_s);
+
+    std::string decoded[std::span(test).size()];
+    auto data = from_hex(data_s);
+    datastream<const char> ds(data);
+    ds >> decoded;
+
+    CHECK(std::equal(std::begin(test), std::end(test), std::begin(decoded)));
+  }
+}
+
+TEST_CASE("[rlp] structs", "[codec]") {
+  struct simplestruct {
+    unsigned int A;
+    std::string B;
+  };
+
+  SECTION("empty") {
+    auto v = simplestruct{};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "c28080");
+
+    auto w = decode<simplestruct>(data);
+    CHECK(std::tie(v.A, v.B) == std::tie(w.A, w.B));
+  }
+
+  SECTION("with value") {
+    auto v = simplestruct{3, "foo"};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "c50383666f6f");
+
+    auto w = decode<simplestruct>(data);
+    CHECK(std::tie(v.A, v.B) == std::tie(w.A, w.B));
   }
 }

@@ -3,10 +3,12 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/rpc/rpc.h>
 #include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
 
 using namespace noir::tendermint;
+using namespace noir::rpc;
 
 namespace noir::commands {
 
@@ -17,7 +19,7 @@ CLI::App* start(CLI::App& root) {
     config::set("home", home_dir.c_str());
     config::load();
 
-    if (!app.initialize<class tendermint>()) {
+    if (!app.initialize<class tendermint, class rpc>()) {
       throw CLI::Success();
     }
     app.startup();
