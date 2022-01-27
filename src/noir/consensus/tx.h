@@ -9,9 +9,6 @@
 
 namespace noir::consensus {
 
-using sender_type = std::string;
-using tx_id_type = bytes32;
-
 struct tx {
   sender_type sender;
   std::optional<tx_id_type> _id;
