@@ -32,7 +32,7 @@ TEST_CASE("save/load validator_set", "[db_store]") {
 
   std::vector<noir::consensus::validator> validator_list;
   validator_list.push_back(noir::consensus::validator{
-    .address = noir::p2p::bytes{0, 1, 2, 3},
+    .address = gen_random_bytes(32),
     .voting_power = 1,
   });
   auto v_set = noir::consensus::validator_set::new_validator_set(validator_list);
@@ -122,7 +122,7 @@ TEST_CASE("prune_state", "[db_store]") {
 
       std::vector<noir::consensus::validator> validator_list;
       validator_list.push_back(noir::consensus::validator{
-        .address = noir::p2p::bytes{0, 1, 2, 3},
+        .address = gen_random_bytes(32),
         .voting_power = 1,
       });
       auto v_set = noir::consensus::validator_set::new_validator_set(validator_list);
