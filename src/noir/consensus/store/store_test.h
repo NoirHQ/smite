@@ -31,3 +31,14 @@ inline noir::db::session::session<noir::db::session::rocksdb_t> make_session(con
   auto rocksdb = make_rocks_db(name);
   return noir::db::session::make_session(std::move(rocksdb), 16);
 }
+
+inline noir::p2p::bytes gen_random_bytes(size_t num) {
+  noir::p2p::bytes ret{};
+  std::random_device rd;
+  std::uniform_int_distribution<int> dist(0, 255);
+
+  for (auto i = 0; i < num; ++i) {
+    ret.push_back(dist(rd) & 0xff);
+  }
+  return ret;
+}
