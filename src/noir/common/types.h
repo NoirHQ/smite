@@ -13,4 +13,7 @@ namespace noir {
 using ::fc::signed_int;
 using ::fc::unsigned_int;
 
+using sender_type = std::string;
+using tx_id_type = bytes32;
+
 } // namespace noir
