@@ -15,9 +15,9 @@ class jsonrpc_impl : std::enable_shared_from_this<jsonrpc_impl> {
 public:
   endpoint& get_or_create_endpoint(const std::string& url) {
     if (endpoints.find(url) != endpoints.end())
-      return *endpoints[url];
+      return endpoints[url];
 
-    endpoints[url] = std::make_unique<endpoint>();
+    endpoints.emplace(std::make_pair(url, endpoint{}));
 
     app().get_plugin<rpc>().add_api({
       {url,
@@ -25,18 +25,18 @@ public:
           try {
             if (body.empty())
               body = "{}";
-            auto result = endpoints[url]->handle_request(body);
+            auto result = endpoints[url].handle_request(body);
             cb(200, result);
           } catch (...) {
             rpc::handle_exception("jsonrpc", "jsonrpc", body, cb);
           }
         }},
     });
-    return *endpoints[url];
+    return endpoints[url];
   }
 
 private:
-  std::map<std::string, std::unique_ptr<endpoint>> endpoints;
+  std::map<std::string, endpoint> endpoints;
 };
 
 jsonrpc::jsonrpc() : my(new jsonrpc_impl()) {}
