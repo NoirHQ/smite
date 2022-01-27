@@ -34,13 +34,13 @@ TEST_CASE("Add/Get/Erase tx", "[tx_pool][unapplied_tx_queue]") {
 
   // Add tx
   for (auto i = 0; i < tx_count; i++) {
-    tx tx{"user", id[i], gas[i], nonce[i]};
+    tx tx{"user", id[i], {}, gas[i], nonce[i]};
     CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(tx))));
   }
   CHECK(tx_queue.size() == tx_count);
 
   SECTION("Add same tx id") { // fail case
-    tx tx{"user", id[0], 0, 20};
+    tx tx{"user", id[0], {}, 0, 20};
     CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(tx))) == false);
     CHECK(tx_queue.size() == tx_count);
     CHECK(tx_queue.get_tx(id[0]));
@@ -49,7 +49,7 @@ TEST_CASE("Add/Get/Erase tx", "[tx_pool][unapplied_tx_queue]") {
 
   SECTION("Add same user & nonce tx") { // fail case
     auto invalid_tx_id = tx_id_type{to_hex("11")};
-    tx tx{"user", invalid_tx_id, 0, 1};
+    tx tx{"user", invalid_tx_id, {}, 0, 1};
     CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(tx))) == false);
     CHECK(tx_queue.size() == tx_count);
     CHECK(tx_queue.get_tx(invalid_tx_id) == std::nullopt);
@@ -85,7 +85,7 @@ TEST_CASE("Fully add tx", "[tx_pool][unapplied_tx_queue]") {
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
 
   for (uint64_t i = 0; i < tx_count; i++) {
-    tx tx{"user", tx_id_type{to_hex(std::to_string(i))}, i, i};
+    tx tx{"user", tx_id_type{to_hex(std::to_string(i))}, {}, i, i};
     CHECK(tx_queue->add_tx(std::make_shared<::tx>(std::move(tx))));
   }
   CHECK(tx_queue->size() == tx_count);
@@ -104,7 +104,7 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
 
   for (uint64_t i = 0; i < tx_count; i++) {
     sender_type sender = "user" + std::to_string(i / user_count);
-    tx tx{sender, tx_id_type{to_hex(std::to_string(i))}, i, i};
+    tx tx{sender, tx_id_type{to_hex(std::to_string(i))}, {}, i, i};
     CHECK(tx_queue->add_tx(std::make_shared<::tx>(tx)));
   }
   CHECK(tx_queue->size() == tx_count);
@@ -184,12 +184,12 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
 
 TEST_CASE("Push/Pop tx", "[tx_pool]") {
   class tx_pool tp;
-  tx tx1{"user", tx_id_type{to_hex(std::to_string(0))}, 0, 0};
+  tx tx1{"user", tx_id_type{to_hex(std::to_string(0))}, {}, 0, 0};
 
   auto add_tx = [&tp](uint64_t count, uint64_t offset, bool sync = true) {
     std::vector<std::optional<consensus::abci::response_check_tx>> res_vec;
     for (uint64_t i = offset; i < count + offset; i++) {
-      tx tx{"user", tx_id_type{to_hex(std::to_string(i))}, i, i};
+      tx tx{"user", tx_id_type{to_hex(std::to_string(i))}, {}, i, i};
       res_vec.push_back(std::move(tp.check_tx(std::make_shared<::tx>(tx), sync)));
     }
     return res_vec;

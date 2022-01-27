@@ -13,6 +13,7 @@ struct tx {
   sender_type sender;
   std::optional<tx_id_type> _id;
 
+  p2p::bytes data;
   uint64_t gas;
   uint64_t nonce;
 
@@ -23,8 +24,8 @@ struct tx {
     return _id.value();
   }
 
-  static uint64_t size() {
-    return sizeof(tx);
+  uint64_t size() const {
+    return sizeof(*this) + data.size();
   }
 };
 
