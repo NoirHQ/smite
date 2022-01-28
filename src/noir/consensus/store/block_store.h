@@ -11,6 +11,7 @@
 #include <noir/codec/scale.h>
 
 #include <noir/common/hex.h>
+#include <noir/consensus/block_meta.h>
 #include <noir/consensus/types.h>
 #include <noir/db/rocks_session.hpp>
 #include <noir/db/session.hpp>
@@ -19,30 +20,6 @@ namespace noir::consensus {
 
 /// \addtogroup consensus
 /// \{
-
-// TODO: move to block_meta.h
-struct block_meta {
-  noir::p2p::block_id bl_id;
-  int32_t bl_size;
-  noir::consensus::block_header header;
-  int32_t num_txs;
-  static block_meta new_block_meta(const block& bl_, const part_set& bl_parts) {
-    auto hash_ = const_cast<block&>(bl_).get_hash();
-    auto parts_ = const_cast<part_set&>(bl_parts);
-    return {
-      .bl_id = noir::p2p::block_id{.hash{hash_}, .parts{parts_.header()}},
-      .bl_size = static_cast<int32_t>(noir::codec::scale::encode_size(bl_)),
-      .header = bl_.header,
-      .num_txs = 0, // TODO: bl_.data.size()
-    };
-  }
-};
-
-// TODO: move to light_block.h?
-struct signed_header {
-  noir::consensus::block_header header;
-  std::optional<noir::consensus::commit> commit;
-};
 
 /// \brief BlockStore is a simple low level store for blocks.
 /// There are three types of information stored:
