@@ -30,6 +30,9 @@ struct unapplied_tx {
   const tx_id_type id() const {
     return tx_ptr->id();
   }
+  const uint64_t height() const {
+    return tx_ptr->height;
+  }
 
   //  unapplied_tx(const unapplied_tx&) = delete;
   //  unapplied_tx() = delete;
@@ -44,6 +47,7 @@ public:
   struct by_gas;
   struct by_sender;
   struct by_nonce;
+  struct by_height;
 
 private:
   typedef boost::multi_index::multi_index_container<unapplied_tx,
@@ -57,11 +61,13 @@ private:
       boost::multi_index::ordered_unique<boost::multi_index::tag<by_nonce>,
         boost::multi_index::composite_key<unapplied_tx,
           boost::multi_index::const_mem_fun<unapplied_tx, const sender_type, &unapplied_tx::sender>,
-          boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::nonce>>>>>
+          boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::nonce>>>,
+      boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_height>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::height>>>>
     unapplied_tx_queue_type;
 
   unapplied_tx_queue_type queue_;
-  uint64_t max_tx_queue_bytes_size_ = 1024 * 1024;
+  uint64_t max_tx_queue_bytes_size_ = 1024 * 1024 * 1024;
   uint64_t size_in_bytes_ = 0;
   size_t incoming_count_ = 0;
 
@@ -193,6 +199,9 @@ public:
     return reverse_iterator<Tag>(queue_.get<Tag>().lower_bound(val));
   }
 
+  bool erase(const consensus::tx_ptr& tx_ptr) {
+    return erase(tx_ptr->id());
+  }
 
   bool erase(const tx_id_type& id) {
     auto itr = queue_.get<by_tx_id>().find(id);
