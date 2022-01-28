@@ -8,12 +8,14 @@
 namespace noir::tx_pool {
 
 tx_pool::tx_pool()
-  : config_(config{}), tx_queue_(config_.cache_size * config_.max_tx_bytes), precheck_(nullptr), postcheck_(nullptr) {
+  : config_(config{}), tx_queue_(config_.cache_size * config_.max_tx_bytes), precheck_(nullptr), postcheck_(nullptr),
+    block_height_(0) {
   thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
 }
 
-tx_pool::tx_pool(const config& cfg)
-  : config_(cfg), tx_queue_(config_.cache_size * config_.max_tx_bytes), precheck_(nullptr), postcheck_(nullptr) {}
+tx_pool::tx_pool(const config& cfg, uint64_t block_height)
+  : config_(cfg), tx_queue_(config_.cache_size * config_.max_tx_bytes), precheck_(nullptr), postcheck_(nullptr),
+    block_height_(block_height) {}
 
 tx_pool::~tx_pool() {
   thread_.reset();
@@ -103,7 +105,38 @@ consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
   return tx_ptrs;
 }
 
-bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs) {
+bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs,
+  consensus::abci::response_deliver_txs& responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
+  block_height_ = block_height;
+
+  if (new_precheck) {
+    precheck_ = new_precheck;
+  }
+
+  if (new_postcheck) {
+    postcheck_ = new_postcheck;
+  }
+
+  size_t size = MIN(tx_ptrs.size(), responses.size()); //
+  std::lock_guard<std::mutex> lock(mutex_);
+  for (auto i = 0; i < size; i++) {
+    if (responses[i].code == consensus::abci::code_type_ok) {
+      tx_queue_.add_tx(tx_ptrs[i]);
+    } else if (!config_.keep_invalid_txs_in_cache) {
+      tx_queue_.erase(tx_ptrs[i]->id());
+    }
+    // TBD : remove from tx store
+  }
+
+  if (config_.ttl_num_blocks > 0) {
+    uint64_t expired_block_height = block_height_ - config_.ttl_num_blocks;
+    std::for_each(tx_queue_.begin<unapplied_tx_queue::by_height>(0),
+      tx_queue_.end<unapplied_tx_queue::by_height>(expired_block_height),
+      [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->id()); });
+  }
+
+  // TBD : clean expired tx by time
+
   return true;
 }
 
