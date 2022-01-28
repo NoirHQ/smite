@@ -17,6 +17,9 @@
 
 namespace noir::consensus {
 
+/// \addtogroup consensus
+/// \{
+
 // TODO: move to block_meta.h
 struct block_meta {
   noir::p2p::block_id bl_id;
@@ -497,5 +500,7 @@ private:
     return true;
   }
 };
+
+/// }
 
 } // namespace noir::consensus
