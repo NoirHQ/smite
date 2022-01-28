@@ -16,6 +16,7 @@ struct tx {
   p2p::bytes data;
   uint64_t gas;
   uint64_t nonce;
+  uint64_t height;
 
   tx_id_type id() {
     if (_id == std::nullopt) {
