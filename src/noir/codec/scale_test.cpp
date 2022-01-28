@@ -160,8 +160,18 @@ TEST_CASE("[scale] Enumerations", "[codec]") {
   }
 }
 
-TEST_CASE("[scale] bytes32", "[codec]") {
-  auto v = bytes32("ff000000");
-  auto data = encode(v);
-  CHECK(data[0] == -1);
+TEST_CASE("[scale] bytes", "[codec]") {
+  SECTION("bytes20") {
+    auto s = std::string{"9c1185a5c5e9fc54612808977ee8f548b2258d31"};
+    auto v = bytes20(s);
+    auto data = encode(v);
+    CHECK(to_hex(data) == s);
+  }
+
+  SECTION("bytes32") {
+    auto s = std::string{"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
+    auto v = bytes32(s);
+    auto data = encode(v);
+    CHECK(to_hex(data) == s);
+  }
 }

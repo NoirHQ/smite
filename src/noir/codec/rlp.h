@@ -22,7 +22,7 @@ namespace detail {
     });
     auto trimmed = std::distance(nonzero, s.rend());
     // encode a value less than 128 (0x80) as single byte
-    if (trimmed == 1 && ((v & 0xff) < 0x80u)) {
+    if (trimmed == 1 && !(v & 0x80)) {
       ds.put(v & 0xff);
       return;
     }
@@ -132,6 +132,34 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
   return ds;
 }
 
+template<typename Stream, typename T, std::enable_if_t<std::is_same_v<std::remove_cv_t<T>, char>, bool> = true>
+datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T> v) {
+  auto size = v.size();
+  if (size == 1 && !(v[0] & 0x80)) {
+    ds.put(v[0]);
+  } else {
+    detail::encode_prefix(ds, size, 0x80);
+    ds.write(v.data(), size);
+  }
+  return ds;
+}
+
+template<typename Stream, typename T, std::enable_if_t<std::is_same_v<std::remove_cv_t<T>, char>, bool> = true>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T> v) {
+  auto prefix = static_cast<unsigned char>(ds.get());
+  if (prefix < 0x80) {
+    check(v.size() == 1, "not matched length");
+    v[0] = prefix;
+  } else if (prefix < 0xc0) {
+    auto size = detail::decode_prefix(ds, prefix, 0x80);
+    check(v.size() == size, "not matched length");
+    ds.read(v);
+  } else {
+    check(false, "not matched prefix type");
+  }
+  return ds;
+}
+
 template<typename Stream, typename T, size_t N>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T (&v)[N]) {
   ds << std::span(v);
@@ -169,7 +197,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
 template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
   auto size = v.size();
-  if (size == 1 && v[0] < 0x80u) {
+  if (size == 1 && !(v[0] & 0x80)) {
     ds.put(v[0]);
   } else {
     detail::encode_prefix(ds, size, 0x80);
@@ -195,7 +223,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
 }
 
 // structs
-template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
+template<typename Stream, typename T, std::enable_if_t<is_foreachable_v<T>, bool> = true>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   auto size = 0ull;
   for_each_field(v, [&](const auto& val) { size += encode_size(val); });
@@ -204,7 +232,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   return ds;
 }
 
-template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
+template<typename Stream, typename T, std::enable_if_t<is_foreachable_v<T>, bool> = true>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   check(prefix >= 0xc0, "not matched prefix type");

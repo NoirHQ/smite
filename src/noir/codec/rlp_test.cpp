@@ -6,6 +6,7 @@
 #include <catch2/catch_all.hpp>
 #include <noir/codec/rlp.h>
 #include <noir/common/hex.h>
+#include <noir/common/types.h>
 
 using namespace noir;
 using namespace noir::codec::rlp;
@@ -158,6 +159,22 @@ TEST_CASE("[rlp] list", "[codec]") {
     ds >> decoded;
 
     CHECK(std::equal(std::begin(test), std::end(test), std::begin(decoded)));
+  }
+
+  SECTION("byte array") {
+    {
+      auto s = std::string{"949c1185a5c5e9fc54612808977ee8f548b2258d31"};
+      auto v = bytes20(s.substr(2));
+      auto data = encode(v);
+      CHECK(to_hex(data) == s);
+    }
+
+    {
+      auto s = std::string{"a0e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
+      auto v = bytes32(s.substr(2));
+      auto data = encode(v);
+      CHECK(to_hex(data) == s);
+    }
   }
 }
 
