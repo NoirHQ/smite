@@ -12,6 +12,15 @@
 
 namespace noir {
 
+template<typename T, typename = void>
+struct is_foreachable : std::false_type {};
+
+template<typename T>
+struct is_foreachable<T, std::enable_if_t<std::is_class_v<T>>> : std::true_type {};
+
+template<typename T>
+constexpr bool is_foreachable_v = is_foreachable<T>::value;
+
 template<typename T, typename F>
 void for_each_field(T& v, F&& f) {
   boost::pfr::for_each_field(v, f);

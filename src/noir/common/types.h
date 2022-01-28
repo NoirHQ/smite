@@ -8,6 +8,7 @@
 #include <fc/crypto/ripemd160.hpp>
 #include <fc/crypto/sha256.hpp>
 #include <fc/io/varint.hpp>
+#include <span>
 
 namespace noir {
 
@@ -18,14 +19,38 @@ struct bytes20 : fc::ripemd160 {
   using ripemd160::ripemd160;
 };
 
+template<>
+struct is_foreachable<bytes20> : std::false_type {};
+
+template<typename DataStream>
+DataStream& operator<<(DataStream& ds, const bytes20& v) {
+  ds << std::span((const char*)v._hash, 20);
+  return ds;
+}
+
+template<typename DataStream>
+DataStream& operator>>(DataStream& ds, bytes20& v) {
+  ds >> std::span((char*)v._hash, 20);
+  return ds;
+}
+
 struct bytes32 : fc::sha256 {
   using sha256::sha256;
 };
 
+template<>
+struct is_foreachable<bytes32> : std::false_type {};
+
+template<typename DataStream>
+DataStream& operator<<(DataStream& ds, const bytes32& v) {
+  ds << std::span((const char*)v._hash, 32);
+  return ds;
+}
+
+template<typename DataStream>
+DataStream& operator>>(DataStream& ds, bytes32& v) {
+  ds >> std::span((char*)v._hash, 32);
+  return ds;
+}
+
 } // namespace noir
-
-NOIR_FOR_EACH_FIELD(fc::ripemd160, _hash);
-NOIR_FOR_EACH_FIELD_DERIVED(bytes20, fc::ripemd160);
-
-NOIR_FOR_EACH_FIELD(fc::sha256, _hash);
-NOIR_FOR_EACH_FIELD_DERIVED(bytes32, fc::sha256);

@@ -195,6 +195,18 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T (&v)[N]) {
   return ds;
 }
 
+template<typename Stream, typename T, std::enable_if_t<std::is_same_v<std::remove_cv_t<T>, char>, bool> = true>
+datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T> v) {
+  ds.write(v.data(), v.size());
+  return ds;
+}
+
+template<typename Stream, typename T, std::enable_if_t<std::is_same_v<std::remove_cv_t<T>, char>, bool> = true>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T> v) {
+  ds.read(v.data(), v.size());
+  return ds;
+}
+
 // Strings
 template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
@@ -231,13 +243,13 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::tuple<Ts...>& v) {
 }
 
 // Data Structures
-template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
+template<typename Stream, typename T, std::enable_if_t<is_foreachable_v<T>, bool> = true>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   for_each_field(v, [&](const auto& val) { ds << val; });
   return ds;
 }
 
-template<typename Stream, typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
+template<typename Stream, typename T, std::enable_if_t<is_foreachable_v<T>, bool> = true>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   auto f = [&](auto& val) { ds >> val; };
   for_each_field(v, [&](auto& val) { ds >> val; });
