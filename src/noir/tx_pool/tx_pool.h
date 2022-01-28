@@ -26,7 +26,7 @@ public:
     uint64_t cache_size = 10000;
     bool keep_invalid_txs_in_cache = false;
     //    fc::time_point ttl_duration;
-    //    uint64_t ttl_num_blocks = 0;
+    uint64_t ttl_num_blocks = 0;
   };
 
   using precheck_func = bool(const consensus::tx&);
@@ -39,12 +39,14 @@ private:
 
   std::unique_ptr<named_thread_pool> thread_;
 
+  uint64_t block_height_;
+
   precheck_func* precheck_;
   postcheck_func* postcheck_;
 
 public:
   tx_pool();
-  tx_pool(const config& cfg);
+  tx_pool(const config& cfg, uint64_t block_height);
 
   ~tx_pool();
 
@@ -54,7 +56,8 @@ public:
   std::optional<consensus::abci::response_check_tx> check_tx(const consensus::tx_ptr& tx_ptr, bool sync);
   consensus::tx_ptrs reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
   consensus::tx_ptrs reap_max_txs(uint64_t tx_count);
-  bool update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs);
+  bool update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs, consensus::abci::response_deliver_txs& responses,
+    precheck_func* new_precheck = nullptr, postcheck_func* new_postcheck = nullptr);
 
   size_t size() const;
   void flush();
