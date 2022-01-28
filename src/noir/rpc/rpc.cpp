@@ -468,7 +468,7 @@ public:
    */
   template<typename T>
   struct in_flight {
-    in_flight(T&& object, rpc_impl_ptr impl) : _object(std::move(object)), _impl(std::move(impl)) {
+    in_flight(T&& object, rpc_impl_ptr impl): _object(std::move(object)), _impl(std::move(impl)) {
       _count = detail::in_flight_sizeof(_object);
       _impl->bytes_in_flight += _count;
     }
@@ -481,7 +481,7 @@ public:
 
     // No copy constructor, but allow move
     in_flight(const in_flight&) = delete;
-    in_flight(in_flight&& from) : _object(std::move(from._object)), _count(from._count), _impl(std::move(from._impl)) {
+    in_flight(in_flight&& from): _object(std::move(from._object)), _count(from._count), _impl(std::move(from._impl)) {
       from._count = 0;
     }
 
@@ -698,7 +698,7 @@ public:
 //}
 //#endif
 
-rpc::rpc() : my(new rpc_impl()) {}
+rpc::rpc(): my(new rpc_impl()) {}
 rpc::~rpc() = default;
 
 void rpc::set_program_options(CLI::App& cli, CLI::App& config) {

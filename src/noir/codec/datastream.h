@@ -27,12 +27,12 @@ class basic_datastream {
 public:
   /// \brief constructs new datastream object
   /// \param s contiguous sequence of characters
-  basic_datastream(std::span<T> s) : span(s), pos_(s.begin()) {}
+  basic_datastream(std::span<T> s): span(s), pos_(s.begin()) {}
 
   /// \brief constructs new datastream object
   /// \param s pointer to the first element of the sequence
   /// \param count number of elements in the sequence
-  basic_datastream(T* s, size_t count) : span(s, count), pos_(span.begin()) {}
+  basic_datastream(T* s, size_t count): span(s, count), pos_(span.begin()) {}
 
   /// \brief move forward the position indicator without extracting
   /// \param s offset from the current position
@@ -155,7 +155,7 @@ class basic_datastream<size_t> {
 public:
   /// \brief constructs new datastream object
   /// \param init_size initial size
-  constexpr basic_datastream(size_t init_size = 0) : size(init_size) {}
+  constexpr basic_datastream(size_t init_size = 0): size(init_size) {}
 
   /// \brief increase the size indicator
   /// \param s value to be added to the calculated size

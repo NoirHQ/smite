@@ -135,7 +135,7 @@ constexpr auto reason_str(go_away_reason rsn) {
 }
 
 struct go_away_message {
-  go_away_message(go_away_reason r = no_reason) : reason(r), node_id() {}
+  go_away_message(go_away_reason r = no_reason): reason(r), node_id() {}
 
   go_away_reason reason{no_reason};
   fc::sha256 node_id; ///< for duplicate notification

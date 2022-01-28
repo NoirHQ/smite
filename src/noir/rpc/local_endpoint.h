@@ -35,7 +35,7 @@ namespace transport {
         /// Type of a shared pointer to the socket being used.
         typedef lib::shared_ptr<socket_type> socket_ptr;
 
-        explicit local_connection() : m_state(UNINITIALIZED) {}
+        explicit local_connection(): m_state(UNINITIALIZED) {}
 
         ptr get_shared() {
           return shared_from_this();
@@ -193,7 +193,7 @@ namespace transport {
       typedef lib::shared_ptr<lib::asio::io_service::work> work_ptr;
 
       // generate and manage our own io_service
-      explicit local_endpoint() : m_io_service(NULL), m_state(UNINITIALIZED) {
+      explicit local_endpoint(): m_io_service(NULL), m_state(UNINITIALIZED) {
         // std::cout << "transport::asio::endpoint constructor" << std::endl;
       }
 
