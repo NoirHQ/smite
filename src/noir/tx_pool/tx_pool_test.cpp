@@ -13,58 +13,78 @@ using namespace noir;
 using namespace noir::consensus;
 using namespace noir::tx_pool;
 
+namespace test_detail {
+
+class test_helper {
+private:
+  uint64_t tx_id = 0;
+
+  std::mutex mutex;
+
+  std::random_device random_device;
+  std::mt19937 generator{random_device()};
+  std::uniform_int_distribution<uint16_t> dist_gas{0, std::numeric_limits<uint16_t>::max()};
+
+public:
+  auto make_random_tx(const sender_type& sender) {
+    tx new_tx;
+    new_tx.sender = sender;
+    new_tx.gas = dist_gas(generator);
+
+    std::lock_guard<std::mutex> lock(mutex);
+    new_tx._id = tx_id_type{to_hex(std::to_string(tx_id))};
+    new_tx.nonce = tx_id;
+    tx_id++;
+    return new_tx;
+  }
+
+  uint64_t get_tx_id() const {
+    return tx_id;
+  }
+
+  void reset_tx_id() {
+    std::lock_guard<std::mutex> lock(mutex);
+    tx_id = 0;
+  }
+};
+
+} // namespace test_detail
+
 TEST_CASE("Add/Get/Erase tx", "[tx_pool][unapplied_tx_queue]") {
+  auto test_helper = std::make_unique<test_detail::test_helper>();
   unapplied_tx_queue tx_queue;
 
   const uint64_t tx_count = 10;
-  tx_id_type id[tx_count] = {
-    tx_id_type{to_hex("1")},
-    tx_id_type{to_hex("2")},
-    tx_id_type{to_hex("3")},
-    tx_id_type{to_hex("4")},
-    tx_id_type{to_hex("5")},
-    tx_id_type{to_hex("6")},
-    tx_id_type{to_hex("7")},
-    tx_id_type{to_hex("8")},
-    tx_id_type{to_hex("9")},
-    tx_id_type{to_hex("10")},
-  };
-  uint64_t gas[tx_count] = {100, 200, 500, 800, 1500, 7000, 300, 400, 500, 500};
-  uint64_t nonce[tx_count] = {9, 5, 6, 7, 8, 1, 2, 3, 10, 4};
+  std::vector<tx> txs;
+
+  for (auto i = 0; i < tx_count; i++) {
+    txs.push_back(test_helper->make_random_tx("user"));
+  }
 
   // Add tx
   for (auto i = 0; i < tx_count; i++) {
-    tx tx{"user", id[i], {}, gas[i], nonce[i]};
-    CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(tx))));
+    CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(txs[i]))));
   }
   CHECK(tx_queue.size() == tx_count);
 
   SECTION("Add same tx id") { // fail case
-    tx tx{"user", id[0], {}, 0, 20};
+    auto tx = txs[0];
+    tx.nonce = test_helper->get_tx_id() + 1;
     CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(tx))) == false);
     CHECK(tx_queue.size() == tx_count);
-    CHECK(tx_queue.get_tx(id[0]));
+    CHECK(tx_queue.get_tx(txs[0].id()));
     CHECK(tx_queue.get_tx("user"));
   }
 
-  SECTION("Add same user & nonce tx") { // fail case
-    auto invalid_tx_id = tx_id_type{to_hex("11")};
-    tx tx{"user", invalid_tx_id, {}, 0, 1};
-    CHECK(tx_queue.add_tx(std::make_shared<::tx>(std::move(tx))) == false);
-    CHECK(tx_queue.size() == tx_count);
-    CHECK(tx_queue.get_tx(invalid_tx_id) == std::nullopt);
-    CHECK(tx_queue.get_tx("invalid_user") == std::nullopt);
-  }
-
   SECTION("Erase tx") {
-    for (auto& i : id) {
-      CHECK(tx_queue.erase(i));
+    for (auto& tx : txs) {
+      CHECK(tx_queue.erase(tx.id()));
     }
     CHECK(tx_queue.empty());
 
     // fail case
-    for (auto& i : id) {
-      CHECK(tx_queue.erase(i) == false);
+    for (auto& tx : txs) {
+      CHECK(tx_queue.erase(tx.id()) == false);
     }
     CHECK(tx_queue.empty());
   }
@@ -80,13 +100,13 @@ TEST_CASE("Add/Get/Erase tx", "[tx_pool][unapplied_tx_queue]") {
 }
 
 TEST_CASE("Fully add tx", "[tx_pool][unapplied_tx_queue]") {
+  auto test_helper = std::make_unique<test_detail::test_helper>();
   uint64_t tx_count = 10000;
   uint64_t queue_size = (sizeof(unapplied_tx) + sizeof(tx)) * tx_count;
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
 
   for (uint64_t i = 0; i < tx_count; i++) {
-    tx tx{"user", tx_id_type{to_hex(std::to_string(i))}, {}, i, i};
-    CHECK(tx_queue->add_tx(std::make_shared<::tx>(std::move(tx))));
+    CHECK(tx_queue->add_tx(std::make_shared<::tx>(std::move(test_helper->make_random_tx("user")))));
   }
   CHECK(tx_queue->size() == tx_count);
 
@@ -97,15 +117,15 @@ TEST_CASE("Fully add tx", "[tx_pool][unapplied_tx_queue]") {
 }
 
 TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
+  auto test_helper = std::make_unique<test_detail::test_helper>();
   uint64_t tx_count = 10000;
   uint64_t user_count = tx_count / 100;
-  uint64_t queue_size = (sizeof(unapplied_tx) + sizeof(tx)) * tx_count;
+  uint64_t queue_size = noir::tx_pool::tx_pool::config{}.max_tx_bytes * tx_count;
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
 
   for (uint64_t i = 0; i < tx_count; i++) {
     sender_type sender = "user" + std::to_string(i / user_count);
-    tx tx{sender, tx_id_type{to_hex(std::to_string(i))}, {}, i, i};
-    CHECK(tx_queue->add_tx(std::make_shared<::tx>(tx)));
+    CHECK(tx_queue->add_tx(std::make_shared<::tx>(test_helper->make_random_tx(sender))));
   }
   CHECK(tx_queue->size() == tx_count);
 
@@ -162,8 +182,8 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
   }
 
   SECTION("bound") {
-    uint64_t lowest = 10;
-    uint64_t highest = 50;
+    uint64_t lowest = 1000;
+    uint64_t highest = 50000;
     auto begin = tx_queue->begin<unapplied_tx_queue::by_gas>(lowest);
     auto end = tx_queue->end<unapplied_tx_queue::by_gas>(highest);
 
@@ -183,35 +203,37 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
 }
 
 TEST_CASE("Push/Pop tx", "[tx_pool]") {
+  auto test_helper = std::make_unique<test_detail::test_helper>();
   class tx_pool tp;
-  tx tx1{"user", tx_id_type{to_hex(std::to_string(0))}, {}, 0, 0};
 
-  auto add_tx = [&tp](uint64_t count, uint64_t offset, bool sync = true) {
+  auto push_tx = [&tp, &test_helper](uint64_t count, uint64_t offset, bool sync = true) {
     std::vector<std::optional<consensus::abci::response_check_tx>> res_vec;
     for (uint64_t i = offset; i < count + offset; i++) {
-      tx tx{"user", tx_id_type{to_hex(std::to_string(i))}, {}, i, i};
-      res_vec.push_back(std::move(tp.check_tx(std::make_shared<::tx>(tx), sync)));
+      res_vec.push_back(std::move(tp.check_tx(std::make_shared<::tx>(test_helper->make_random_tx("user")), sync)));
     }
     return res_vec;
   };
 
-  auto get_tx = [&tp](uint64_t count) { return tp.reap_max_txs(count); };
+  auto pop_tx = [&tp](uint64_t count) { return tp.reap_max_txs(count); };
 
   SECTION("sync") {
-    auto res = add_tx(100, 0);
+    auto res = push_tx(100, 0);
     for (auto& r : res) {
-      REQUIRE(r.has_value());
-      CHECK(r.value().result.get());
+      CHECKED_IF(r.has_value()) {
+        CHECK(r.value().result.get());
+      }
     }
 
     // fail case : same tx_id
-    auto res_failed = add_tx(100, 0);
+    test_helper->reset_tx_id();
+    auto res_failed = push_tx(100, 0);
     for (auto& r : res_failed) {
-      REQUIRE(r.has_value());
-      CHECK(r.value().result.get() == false);
+      CHECKED_IF(r.has_value()) {
+        CHECK(r.value().result.get() == false);
+      }
     }
 
-    auto tx_ptrs = get_tx(100);
+    auto tx_ptrs = pop_tx(100);
     CHECK(tx_ptrs.size() == 100);
     CHECK(tp.size() == 0);
   }
@@ -222,17 +244,17 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
 
     SECTION("multi thread add") {
       uint64_t thread_num = MIN(5, max_thread_num);
-      uint64_t total_tx_num = 10000;
+      uint64_t total_tx_num = 1000;
       std::atomic<uint64_t> token = thread_num;
       std::future<std::vector<std::optional<consensus::abci::response_check_tx>>> res[thread_num];
       uint64_t tx_num_per_thread = total_tx_num / thread_num;
       for (uint64_t t = 0; t < thread_num; t++) {
         uint64_t offset = t * tx_num_per_thread;
-        res[t] = async_thread_pool(thread->get_executor(), [&token, &add_tx, tx_num_per_thread, offset]() {
+        res[t] = async_thread_pool(thread->get_executor(), [&token, &push_tx, tx_num_per_thread, offset]() {
           token.fetch_sub(1, std::memory_order_seq_cst);
           while (token.load(std::memory_order_seq_cst)) {
           } // wait other thread
-          return add_tx(tx_num_per_thread, offset, false);
+          return push_tx(tx_num_per_thread, offset, false);
         });
       }
 
@@ -240,9 +262,10 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
         uint64_t added_tx = 0;
         auto result = res[t].get();
         for (auto& r : result) {
-          REQUIRE(r.has_value());
-          if (r.value().result.get()) {
-            added_tx++;
+          CHECKED_IF(r.has_value()) {
+            CHECKED_IF(r.value().result.get()) {
+              added_tx++;
+            }
           }
         }
         CHECK(added_tx == tx_num_per_thread);
@@ -254,82 +277,84 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
     SECTION("1 thread add / 1 thread get") {
       std::atomic<uint64_t> token = 2;
 
-      auto add_res = async_thread_pool(thread->get_executor(), [&add_tx, &token]() {
+      auto push_res = async_thread_pool(thread->get_executor(), [&push_tx, &token]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
-        return add_tx(1000, 0, false);
+        return push_tx(1000, 0, false);
       });
 
-      auto get_res = async_thread_pool(thread->get_executor(), [&get_tx, &token]() {
+      auto pop_res = async_thread_pool(thread->get_executor(), [&pop_tx, &token]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
 
         uint64_t get_count = 0;
         while (get_count < 1000) {
-          auto res = get_tx(1000 - get_count);
+          auto res = pop_tx(1000 - get_count);
           get_count += res.size();
         }
         return get_count;
       });
 
-      add_res.wait();
-      auto res = add_res.get();
+      push_res.wait();
+      auto res = push_res.get();
       for (auto& r : res) {
-        REQUIRE(r.has_value());
-        CHECK(r.value().result.get());
+        CHECKED_IF(r.has_value()) {
+          CHECK(r.value().result.get());
+        }
       }
 
-      CHECK(get_res.get() == 1000);
+      CHECK(pop_res.get() == 1000);
       CHECK(tp.size() == 0);
     }
 
     SECTION("1 thread add / 2 thread get") {
       std::atomic<uint64_t> token = 3;
-      auto add_res = async_thread_pool(thread->get_executor(), [&add_tx, &token]() {
+      auto push_res = async_thread_pool(thread->get_executor(), [&push_tx, &token]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
-        return add_tx(1000, 0, false);
+        return push_tx(1000, 0, false);
       });
 
-      auto get_res1 = async_thread_pool(thread->get_executor(), [&get_tx, &token]() {
-        token.fetch_sub(1, std::memory_order_seq_cst);
-        while (token.load(std::memory_order_seq_cst)) {
-        } // wait other thread
-
-        uint64_t get_count = 0;
-        while (get_count < 500) {
-          auto res = get_tx(500 - get_count);
-          get_count += res.size();
-        }
-        return get_count;
-      });
-
-      auto get_res2 = async_thread_pool(thread->get_executor(), [&get_tx, &token]() {
+      auto pop_res1 = async_thread_pool(thread->get_executor(), [&pop_tx, &token]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
 
         uint64_t get_count = 0;
         while (get_count < 500) {
-          auto res = get_tx(500 - get_count);
+          auto res = pop_tx(500 - get_count);
           get_count += res.size();
         }
         return get_count;
       });
 
-      add_res.wait();
-      auto res = add_res.get();
+      auto pop_res2 = async_thread_pool(thread->get_executor(), [&pop_tx, &token]() {
+        token.fetch_sub(1, std::memory_order_seq_cst);
+        while (token.load(std::memory_order_seq_cst)) {
+        } // wait other thread
+
+        uint64_t get_count = 0;
+        while (get_count < 500) {
+          auto res = pop_tx(500 - get_count);
+          get_count += res.size();
+        }
+        return get_count;
+      });
+
+      push_res.wait();
+      auto res = push_res.get();
       for (auto& r : res) {
-        REQUIRE(r.has_value());
-        CHECK(r.value().result.get());
+        CHECKED_IF(r.has_value()) {
+          CHECK(r.value().result.get());
+        }
       }
 
       uint64_t get_count = 0;
-      get_count += get_res1.get();
-      get_count += get_res2.get();
+      get_count += pop_res1.get();
+      get_count += pop_res2.get();
       CHECK(get_count == 1000);
       CHECK(tp.size() == 0);
     }
