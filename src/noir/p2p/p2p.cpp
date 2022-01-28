@@ -278,7 +278,7 @@ const string connection::unknown = "<unknown>";
 struct msg_handler : public fc::visitor<void> {
   connection_ptr c;
 
-  explicit msg_handler(const connection_ptr& conn) : c(conn) {}
+  explicit msg_handler(const connection_ptr& conn): c(conn) {}
 
   //  template<typename T>
   //  void operator()( const T& ) const {
@@ -665,7 +665,7 @@ void p2p_impl::ticker() {
 //------------------------------------------------------------------------
 // p2p
 //------------------------------------------------------------------------
-p2p::p2p() : my(new p2p_impl) {
+p2p::p2p(): my(new p2p_impl) {
   my_impl = my.get();
 }
 

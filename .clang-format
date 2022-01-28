@@ -31,5 +31,6 @@ NamespaceMacros: [NOIR_CODEC]
 NamespaceIndentation: Inner
 PointerAlignment: Left
 SpaceAfterTemplateKeyword: false
+SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1
 UseTab: Never
