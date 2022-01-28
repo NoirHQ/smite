@@ -31,6 +31,8 @@ jobs:
           platform_version: 20.04
           boost_install_dir: /opt
 
+      - run: sudo apt-get install -y libgflags-dev
+
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -57,6 +59,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - run: brew install boost
+
+      - run: brew install gflags
 
       - uses: actions/checkout@v2
         with:
