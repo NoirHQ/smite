@@ -31,6 +31,22 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   return ds;
 }
 
+template<typename Stream>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const uint256_t& v) {
+  uint64_t data[4] = {0};
+  boost::multiprecision::export_bits(v, std::begin(data), 64, false);
+  ds << std::span((const char*)data, 32);
+  return ds;
+}
+
+template<typename Stream>
+datastream<Stream>& operator>>(datastream<Stream>& ds, uint256_t& v) {
+  uint64_t data[4] = {0};
+  ds >> std::span((char*)data, 32);
+  boost::multiprecision::import_bits(v, std::begin(data), std::end(data), 64, false);
+  return ds;
+}
+
 // Compact/general integers
 template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const unsigned_int& v) {
