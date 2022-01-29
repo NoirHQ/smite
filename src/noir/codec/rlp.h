@@ -107,7 +107,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
 
 template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const uint256_t& v) {
-  uint64_t data[4] = {0,};
+  uint64_t data[4] = {0};
   boost::multiprecision::export_bits(v, std::begin(data), 64, false);
   detail::encode_bytes(ds, std::span((const char*)data, 32), 0x80);
   return ds;
@@ -115,7 +115,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const uint256_t& v) {
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, uint256_t& v) {
-  uint64_t data[4] = {0,};
+  uint64_t data[4] = {0};
   auto prefix = static_cast<unsigned char>(ds.get());
   detail::decode_bytes(ds, std::span((char*)&data, 32), prefix, 0x80);
   boost::multiprecision::import_bits(v, std::begin(data), std::end(data), 64, false);
