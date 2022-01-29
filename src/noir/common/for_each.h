@@ -21,6 +21,9 @@ struct is_foreachable<T, std::enable_if_t<std::is_class_v<T>>> : std::true_type 
 template<typename T>
 constexpr bool is_foreachable_v = is_foreachable<T>::value;
 
+template<typename T>
+concept foreachable = is_foreachable_v<T>;
+
 template<typename T, typename F>
 void for_each_field(T& v, F&& f) {
   boost::pfr::for_each_field(v, f);
