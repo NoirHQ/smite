@@ -39,7 +39,7 @@ private:
   std::map<std::string, endpoint> endpoints;
 };
 
-jsonrpc::jsonrpc() : my(new jsonrpc_impl()) {}
+jsonrpc::jsonrpc(): my(new jsonrpc_impl()) {}
 
 void jsonrpc::plugin_initialize(const CLI::App& cli, const CLI::App& config) {}
 

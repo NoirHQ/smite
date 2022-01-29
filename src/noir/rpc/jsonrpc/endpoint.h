@@ -22,7 +22,7 @@ enum error_code {
 typedef std::function<fc::variant(const fc::variant&)> request_handler;
 
 struct error {
-  error() : code(error_code::undefined) {}
+  error(): code(error_code::undefined) {}
 
   error(error_code c, std::string m, std::optional<fc::variant> d = std::optional<fc::variant>())
     : code(c), message(m), data(d) {}
@@ -62,7 +62,7 @@ namespace detail {
 
 class endpoint {
 public:
-  endpoint() : my(new detail::endpoint_impl()) {}
+  endpoint(): my(new detail::endpoint_impl()) {}
 
   void add_handler(const std::string& method, request_handler handler);
   fc::variant handle_request(const std::string& message);

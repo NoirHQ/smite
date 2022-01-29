@@ -24,7 +24,7 @@ struct is_foreachable<int256_t> : std::false_type {};
 //   ds << std::span((const char*)data, 32);
 //   return ds;
 // }
-// 
+//
 // template<typename DataStream>
 // DataStream& operator>>(DataStream& ds, int256_t& v) {
 //   uint64_t data[4] = {0};
@@ -47,7 +47,7 @@ struct is_foreachable<uint256_t> : std::false_type {};
 //   ds << std::span((const char*)data, 32);
 //   return ds;
 // }
-// 
+//
 // template<typename DataStream>
 // DataStream& operator>>(DataStream& ds, uint256_t& v) {
 //   uint64_t data[4] = {0};
