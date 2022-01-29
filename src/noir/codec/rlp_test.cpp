@@ -201,6 +201,35 @@ TEST_CASE("[rlp] structs", "[codec]") {
     auto w = decode<simplestruct>(data);
     CHECK(std::tie(v.A, v.B) == std::tie(w.A, w.B));
   }
+
+  SECTION("more complex") {
+    struct foo {
+      uint64_t nonce;
+      uint256_t gas_price;
+      uint64_t gas;
+      bytes20 to;
+      uint256_t value;
+      bytes data;
+      uint8_t w;
+      bytes32 r;
+      bytes32 s;
+    };
+
+    auto s = std::string{"f86b80850ba43b7400825208947917bc33eea648809c285607579c9919fb864f8f8703baf82d03a0008025a0067940651530790861714b2e8fd8b080361d1ada048189000c07a66848afde46a069b041db7c29dbcc6becf42017ca7ac086b12bd53ec8ee494596f790fb6a0a69"};
+    auto data = from_hex(s);
+    auto v = decode<foo>(data);
+    CHECK(v.nonce == 0);
+    CHECK(v.gas_price == 50000000000);
+    CHECK(v.gas == 21000);
+    CHECK(v.to.str() == "7917bc33eea648809c285607579c9919fb864f8f");
+    CHECK(v.value == 1050000000000000);
+    CHECK(to_hex(v.data) == "");
+    CHECK(v.w == 37);
+    CHECK(v.r.str() == "067940651530790861714b2e8fd8b080361d1ada048189000c07a66848afde46");
+    CHECK(v.s.str() == "69b041db7c29dbcc6becf42017ca7ac086b12bd53ec8ee494596f790fb6a0a69");
+
+    CHECK(to_hex(encode(v)) == s);
+  }
 }
 
 TEST_CASE("[rlp] big integer", "[codec]") {
