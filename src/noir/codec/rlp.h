@@ -8,14 +8,14 @@
 #include <noir/common/check.h>
 #include <noir/common/concepts.h>
 #include <noir/common/for_each.h>
+#include <noir/common/types/inttypes.h>
 #include <span>
 
 NOIR_CODEC(rlp) {
 
 namespace detail {
-  template<typename Stream, typename T>
-  void encode_bytes(datastream<Stream>& ds, const T& v, unsigned char mod) {
-    auto s = std::span((const char*)&v, sizeof(T));
+  template<typename Stream>
+  void encode_bytes(datastream<Stream>& ds, std::span<const char> s, unsigned char mod) {
     auto nonzero = std::find_if(s.rbegin(), s.rend(), [](const auto& c) {
       if (c != 0)
         return true;
@@ -23,8 +23,8 @@ namespace detail {
     });
     auto trimmed = std::distance(nonzero, s.rend());
     // encode a value less than 128 (0x80) as single byte
-    if (trimmed == 1 && !(v & 0x80)) {
-      ds.put(v & 0xff);
+    if (trimmed == 1 && !(s[0] & 0x80)) {
+      ds.put(s[0]);
       return;
     }
     ds.put(trimmed + mod);
@@ -53,16 +53,16 @@ namespace detail {
   }
 
   template<typename Stream>
-  uint64_t decode_bytes(datastream<Stream>& ds, unsigned char prefix, unsigned char mod) {
+  void decode_bytes(datastream<Stream>& ds, std::span<char> s, unsigned char prefix, unsigned char mod) {
     // decode a value less than 128 (0x80)
     if (prefix < 0x80) {
-      return prefix;
+      s[0] = prefix;
+      std::fill(s.begin() + 1, s.end(), 0);
+      return;
     }
     auto size = prefix - mod;
-    auto v = 0ull;
-    auto s = std::span((char*)&v, sizeof(v));
+    std::fill(s.rbegin(), s.rend() - size, 0);
     std::for_each(s.rend() - size, s.rend(), [&](auto& c) { ds.get(c); });
-    return v;
   }
 
   template<typename Stream>
@@ -86,7 +86,7 @@ namespace detail {
 template<typename Stream, integral T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   static_assert(sizeof(T) <= 55);
-  detail::encode_bytes(ds, v, 0x80);
+  detail::encode_bytes(ds, std::span((const char*)&v, sizeof(T)), 0x80);
   return ds;
 }
 
@@ -95,13 +95,30 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   if (prefix < 0xb8) {
     check(prefix <= 0x80 + sizeof(T), "not sufficient output size");
-    v = detail::decode_bytes(ds, prefix, 0x80);
+    detail::decode_bytes(ds, std::span((char*)&v, sizeof(T)), prefix, 0x80);
   } else if (prefix < 0xc0) {
     // TODO
     check(false, "not implemented");
   } else {
     check(false, "not matched prefix type");
   }
+  return ds;
+}
+
+template<typename Stream>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const uint256_t& v) {
+  uint64_t data[4] = {0,};
+  boost::multiprecision::export_bits(v, std::begin(data), 64, false);
+  detail::encode_bytes(ds, std::span((const char*)data, 32), 0x80);
+  return ds;
+}
+
+template<typename Stream>
+datastream<Stream>& operator>>(datastream<Stream>& ds, uint256_t& v) {
+  uint64_t data[4] = {0,};
+  auto prefix = static_cast<unsigned char>(ds.get());
+  detail::decode_bytes(ds, std::span((char*)&data, 32), prefix, 0x80);
+  boost::multiprecision::import_bits(v, std::begin(data), std::end(data), 64, false);
   return ds;
 }
 

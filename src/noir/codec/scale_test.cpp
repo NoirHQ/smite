@@ -175,3 +175,14 @@ TEST_CASE("[scale] bytes", "[codec]") {
     CHECK(to_hex(data) == s);
   }
 }
+
+TEST_CASE("[scale] big integer", "[codec]") {
+  auto s = std::string{"0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
+  auto v = uint256_t(s);
+  auto data = encode(v);
+  auto input = from_hex(s.substr(2));
+  CHECK(std::equal(input.begin(), input.end(), data.rbegin(), data.rend()));
+
+  auto w = decode<uint256_t>(data);
+  CHECK(v == w);
+}
