@@ -196,7 +196,23 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) 
   return ds;
 }
 
-template<typename Stream, typename T>
+template<typename Stream, Byte T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
+  auto prefix = static_cast<unsigned char>(ds.get());
+  if (prefix < 0x80) {
+    v.resize(1);
+    v[0] = prefix;
+  } else if (prefix < 0xc0) {
+    auto size = detail::decode_prefix(ds, prefix, 0x80);
+    v.resize(size);
+    ds.read(v.data(), v.size());
+  } else {
+    check(false, "not matched prefix type");
+  }
+  return ds;
+}
+
+template<typename Stream, NonByte T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   check(prefix >= 0xc0, "not matched prefix type");
