@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/codec/datastream.h>
 #include <noir/common/check.h>
+#include <noir/common/concepts.h>
 #include <noir/common/for_each.h>
 #include <span>
 
@@ -82,14 +83,14 @@ namespace detail {
 } // namespace detail
 
 // integers
-template<typename Stream, typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
+template<typename Stream, integral T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   static_assert(sizeof(T) <= 55);
   detail::encode_bytes(ds, v, 0x80);
   return ds;
 }
 
-template<typename Stream, typename T, std::enable_if_t<std::is_integral_v<T>, bool> = true>
+template<typename Stream, integral T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   if (prefix < 0xb8) {
@@ -105,7 +106,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
 }
 
 // list
-template<typename Stream, typename T, size_t N>
+template<typename Stream, NonByte T, size_t N>
 datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T, N> v) {
   auto size = 0ull;
   for (const auto& val : v) {
@@ -118,7 +119,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T, N> v) {
   return ds;
 }
 
-template<typename Stream, typename T, size_t N>
+template<typename Stream, NonByte T, size_t N>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   check(prefix >= 0xc0, "not matched prefix type");
@@ -132,7 +133,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
   return ds;
 }
 
-template<typename Stream, typename T, std::enable_if_t<std::is_same_v<std::remove_cv_t<T>, char>, bool> = true>
+template<typename Stream, Byte T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T> v) {
   auto size = v.size();
   if (size == 1 && !(v[0] & 0x80)) {
@@ -144,7 +145,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T> v) {
   return ds;
 }
 
-template<typename Stream, typename T, std::enable_if_t<std::is_same_v<std::remove_cv_t<T>, char>, bool> = true>
+template<typename Stream, Byte T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T> v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   if (prefix < 0x80) {
@@ -223,7 +224,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
 }
 
 // structs
-template<typename Stream, typename T, std::enable_if_t<is_foreachable_v<T>, bool> = true>
+template<typename Stream, foreachable T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   auto size = 0ull;
   for_each_field(v, [&](const auto& val) { size += encode_size(val); });
@@ -232,7 +233,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   return ds;
 }
 
-template<typename Stream, typename T, std::enable_if_t<is_foreachable_v<T>, bool> = true>
+template<typename Stream, foreachable T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   check(prefix >= 0xc0, "not matched prefix type");
