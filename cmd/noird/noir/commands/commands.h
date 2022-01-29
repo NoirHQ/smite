@@ -17,6 +17,7 @@ using add_command_callback = std::function<CLI::App*(CLI::App&)>;
 
 CLI::App* add_command(CLI::App& root, add_command_callback cb);
 
+CLI::App* consensus_test(CLI::App&);
 CLI::App* debug(CLI::App&);
 CLI::App* init(CLI::App&);
 CLI::App* p2p_test(CLI::App&);
