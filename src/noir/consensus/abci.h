@@ -31,11 +31,11 @@ public:
     auto round = cs1->rs.round;
     start_test_round(cs1, height, round);
 
-    my_cs = move(cs1);
+    my_cs = cs1;
   }
   void plugin_shutdown() {}
 
-  std::unique_ptr<consensus_state> my_cs;
+  std::shared_ptr<consensus_state> my_cs;
 };
 
 } // namespace noir::consensus

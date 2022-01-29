@@ -61,8 +61,8 @@ consensus_state::consensus_state()
   old_ti = std::make_shared<timeout_info>(timeout_info{});
 }
 
-std::unique_ptr<consensus_state> consensus_state::new_state(const consensus_config& cs_config_, state& state_) {
-  auto consensus_state_ = std::make_unique<consensus_state>();
+std::shared_ptr<consensus_state> consensus_state::new_state(const consensus_config& cs_config_, state& state_) {
+  auto consensus_state_ = std::make_shared<consensus_state>();
   consensus_state_->cs_config = cs_config_;
 
   if (state_.last_block_height > 0) {
