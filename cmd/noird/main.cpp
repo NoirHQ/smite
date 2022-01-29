@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
   noir::log::initialize("tmlog");
 
   // add subcommands
+  commands::add_command(app.config(), &commands::consensus_test);
   commands::add_command(app.config(), &commands::debug);
   commands::add_command(app.config(), &commands::init);
   commands::add_command(app.config(), &commands::p2p_test);

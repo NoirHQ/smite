@@ -212,11 +212,10 @@ void consensus_state::update_to_state(state& state_) {
   update_height(height);
   update_round_step(0, NewHeight);
 
-  // todo
-  //  if (rs.commit_time == 0)
-  //    rs.start_time = config.;
-  //  else
-  //    rs.start_time =
+  if (rs.commit_time == 0)
+    rs.start_time = cs_config.commit(get_time());
+  else
+    rs.start_time = cs_config.commit(rs.commit_time);
 
   rs.proposal = {};
   rs.proposal_block = {};
@@ -270,7 +269,9 @@ void consensus_state::schedule_timeout(
 
 void consensus_state::tick(timeout_info_ptr ti) {
   std::lock_guard<std::mutex> g(timeout_ticker_mtx);
-  elog("received tick: old_ti=${old_ti}, new_ti=${new_ti}", ("old_ti", old_ti)("new_ti", ti));
+  dlog(fmt::format("received tick: old_ti=[duration={} {}/{}/{}], new_ti=[duration={} {}/{}/{}]",
+    old_ti->duration_.count(), old_ti->height, old_ti->round, old_ti->step, ti->duration_.count(), ti->height,
+    ti->round, old_ti->step));
 
   // ignore tickers for old height/round/step
   if (ti->height < old_ti->height) {
@@ -295,7 +296,7 @@ void consensus_state::tick(timeout_info_ptr ti) {
       wlog("consensus_state timeout error: ${m}", ("m", ec.message()));
       // return; // by commenting this line out, we'll process the last tock
     }
-    //    timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock
+    // timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock
     tock(ti); // directly call (temporary workaround) // todo - use channel instead
   });
 }
@@ -307,8 +308,8 @@ void consensus_state::tock(timeout_info_ptr ti) {
 
 void consensus_state::handle_timeout(timeout_info_ptr ti) {
   std::lock_guard<std::mutex> g(mtx);
-  elog("Received tock: tock=${ti} timeout=${timeout} height=${height} round={round} step=${step}",
-    ("ti", ti)("timeout", ti->duration_)("height", ti->height)("round", ti->round)("step", ti->step));
+  dlog("Received tock: timeout=${timeout} height=${height} round=${round} step=${step}",
+    ("timeout", ti->duration_.count())("height", ti->height)("round", ti->round)("step", ti->step));
 
   // timeouts must be for current height, round, step
   if ((ti->height != rs.height) || (ti->round < rs.round) || (ti->round == rs.round && ti->step < rs.step)) {
@@ -480,6 +481,8 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     auto proposer_addr = local_priv_validator_pub_key.address();
 
     // block_exec.create_proposal_block // todo - requires interface to mempool?
+    block_ = block{}; // todo - remove after connected to mempool; for now always return empty
+    block_parts_ = part_set{}; // todo - remove after connected to mempool; for now always return empty
 
     if (!block_.has_value()) {
       wlog("MUST CONNECT TO MEMPOOL IN ORDER TO RETRIEVE SOME BLOCKS"); // todo - remove once mempool is ready
@@ -495,7 +498,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
   auto proposal_ = proposal::new_proposal(height, round, rs.valid_round, prop_block_id);
 
   // todo - sign and send internal msg queue
-  // proposal sign - todo requires filePV, which requires querying for late saved file state
+  // proposal sign - todo requires filePV, which requires querying for last saved file state
   //               - for now assume it is signed right away
   // if (local_priv_validator->sign_proposal()) {
   if (true) {

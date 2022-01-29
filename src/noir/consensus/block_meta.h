@@ -33,4 +33,4 @@ struct block_meta {
 
 /// \}
 
-}
+} // namespace noir::consensus
