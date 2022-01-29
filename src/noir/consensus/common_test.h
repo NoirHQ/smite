@@ -69,7 +69,7 @@ std::tuple<state, std::vector<priv_validator>> rand_genesis_state(
   return {state_, priv_vals};
 }
 
-std::tuple<std::unique_ptr<consensus_state>, validator_stub_list> rand_cs(config& config_, int num_validators) {
+std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config& config_, int num_validators) {
   auto [state_, priv_vals] = rand_genesis_state(config_, num_validators, false, 10);
 
   validator_stub_list vss;
@@ -86,16 +86,16 @@ std::tuple<std::unique_ptr<consensus_state>, validator_stub_list> rand_cs(config
   return {move(cs), vss};
 }
 
-void start_test_round(std::unique_ptr<consensus_state>& cs, int64_t height, int32_t round) {
+void start_test_round(std::shared_ptr<consensus_state>& cs, int64_t height, int32_t round) {
   cs->enter_new_round(height, round);
   //  cs.startRoutines(0) // not needed for noir
 }
 
-void force_tick(std::unique_ptr<consensus_state>& cs) {
+void force_tick(std::shared_ptr<consensus_state>& cs) {
   cs->timeout_ticker_timer->cancel(); // forces tick
 }
 
-void sign_add_votes(config& config_, std::unique_ptr<consensus_state>& cs, p2p::signed_msg_type type, p2p::bytes hash,
+void sign_add_votes(config& config_, std::shared_ptr<consensus_state>& cs, p2p::signed_msg_type type, p2p::bytes hash,
   p2p::part_set_header header) {}
 
 } // namespace noir::consensus

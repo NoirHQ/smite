@@ -22,7 +22,7 @@ namespace noir::consensus {
 struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   consensus_state();
 
-  static std::unique_ptr<consensus_state> new_state(const consensus_config& cs_config_, state& state_);
+  static std::shared_ptr<consensus_state> new_state(const consensus_config& cs_config_, state& state_);
 
   state get_state();
   int64_t get_last_height();

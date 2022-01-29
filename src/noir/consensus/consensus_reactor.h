@@ -43,7 +43,7 @@ public:
 
 private:
   //  state    *State
-  std::unique_ptr<consensus_state> local_state;
+  std::shared_ptr<consensus_state> local_state;
 
   //  eventBus *types.EventBus
   //  Metrics  *Metrics
