@@ -202,3 +202,13 @@ TEST_CASE("[rlp] structs", "[codec]") {
     CHECK(std::tie(v.A, v.B) == std::tie(w.A, w.B));
   }
 }
+
+TEST_CASE("[rlp] big integer", "[codec]") {
+  auto s = std::string{"0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
+  auto v = uint256_t(s);
+  auto data = encode(v);
+  CHECK((data[0] == char(0xa0) && to_hex(data).substr(2) == s.substr(2)));
+
+  auto w = decode<uint256_t>(data);
+  CHECK(v == w);
+}
