@@ -175,7 +175,7 @@ struct vote_set {
     std::optional<vote> conflicting;
 
     // Already exists in vote_set.votes?
-    if (votes.size() <= val_index) {
+    if (votes.size() > 0 && votes.size() >= val_index) {
       auto existing = votes[val_index];
       if (existing.block_id_ == vote_->block_id_) {
         throw std::runtime_error("add_vote() does not expect duplicate votes");
@@ -239,7 +239,7 @@ struct vote_set {
   }
 
   std::optional<vote> get_vote(int32_t val_index, const std::string& block_key) {
-    if (votes.size() >= val_index) {
+    if (votes.size() > 0 && votes.size() >= val_index) {
       auto existing = votes[val_index];
       if (existing.block_id_.key() == block_key)
         return existing;
