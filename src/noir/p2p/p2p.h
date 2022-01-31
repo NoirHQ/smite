@@ -23,9 +23,9 @@ public:
   p2p();
   virtual ~p2p();
 
-  void set_program_options(CLI::App& cli, CLI::App& config) override;
+  void set_program_options(CLI::App& config) override;
 
-  void plugin_initialize(const CLI::App& cli, const CLI::App& config);
+  void plugin_initialize(const CLI::App& config);
   void plugin_startup();
   void plugin_shutdown();
 
