@@ -54,7 +54,7 @@ struct block_votes {
   }
 
   std::optional<vote> get_by_index(int32_t index) {
-    if (votes.size() <= index)
+    if (!votes.empty() && votes.size() >= index)
       return votes[index];
     return {};
   }
