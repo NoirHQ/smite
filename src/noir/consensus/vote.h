@@ -45,7 +45,7 @@ struct block_votes {
 
   void add_verified_vote(const vote& vote_, int64_t voting_power) {
     auto val_index = vote_.validator_index;
-    if (votes.size() <= val_index) {
+    if (!votes.empty() && votes.size() >= val_index) {
       auto existing = votes[val_index];
       // vs.bitArray.SetIndex(int(valIndex), true) // todo - bit_array
       votes[val_index] = vote_;
@@ -170,7 +170,6 @@ struct vote_set {
     // todo
 
     // Add vote and get conflicting vote if any
-    // todo - directly implement addVerifiedVote() here
     auto voting_power = val->voting_power;
     std::optional<vote> conflicting;
 

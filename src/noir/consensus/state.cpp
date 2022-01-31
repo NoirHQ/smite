@@ -108,10 +108,12 @@ state state::make_genesis_state(genesis_doc& gen_doc) {
   // todo - read from genDoc
   state state_{};
 
+  std::vector<validator> validators;
   validator_set val_set;
   for (const auto& val : gen_doc.validators) {
-    val_set.validators.push_back(validator{val.address, val.pub_key_, val.power, 0});
+    validators.push_back(validator{val.address, val.pub_key_, val.power, 0});
   }
+  val_set = validator_set::new_validator_set(validators);
   validator_set next_val_set = val_set.copy_increment_proposer_priority(1);
   state_.validators = val_set;
   state_.next_validators = next_val_set;
