@@ -103,8 +103,8 @@ struct part_set {
 };
 
 struct round_vote_set {
-  vote_set prevotes;
-  vote_set precommits;
+  std::shared_ptr<vote_set> prevotes;
+  std::shared_ptr<vote_set> precommits;
 };
 
 /**
@@ -152,7 +152,8 @@ struct height_vote_set {
 
     auto prevotes = vote_set::new_vote_set(chain_id, height, round_, p2p::Prevote, val_set);
     auto precommits = vote_set::new_vote_set(chain_id, height, round_, p2p::Precommit, val_set);
-    round_vote_sets[round_] = round_vote_set{prevotes, precommits};
+    round_vote_sets[round_] =
+      round_vote_set{std::make_shared<vote_set>(prevotes), std::make_shared<vote_set>(precommits)};
   }
 
   void set_round(int32_t round_) {
@@ -168,10 +169,10 @@ struct height_vote_set {
     round = round_;
   }
 
-  std::optional<vote_set> get_vote_set(int32_t round_, p2p::signed_msg_type vote_type) {
+  std::shared_ptr<vote_set> get_vote_set(int32_t round_, p2p::signed_msg_type vote_type) {
     auto it = round_vote_sets.find(round_);
     if (it == round_vote_sets.end())
-      return {};
+      return nullptr;
     switch (vote_type) {
     case p2p::Prevote:
       return it->second.prevotes;
@@ -200,7 +201,7 @@ struct height_vote_set {
     if (!p2p::is_vote_type_valid(vote_.type))
       return false;
     auto vote_set_ = get_vote_set(vote_.round, vote_.type);
-    if (!vote_set_.has_value()) {
+    if (vote_set_ == nullptr) {
       auto it = peer_catchup_rounds.find(peer_id);
       if (it == peer_catchup_rounds.end() || it->second.size() >= 2) {
         // punish peer // todo - how?
@@ -214,12 +215,12 @@ struct height_vote_set {
     return vote_set_->add_vote(vote_);
   }
 
-  std::optional<vote_set> prevotes(int32_t round_) {
+  std::shared_ptr<vote_set> prevotes(int32_t round_) {
     std::lock_guard<std::mutex> g(mtx);
     return get_vote_set(round_, p2p::Prevote);
   }
 
-  std::optional<vote_set> precommits(int32_t round_) {
+  std::shared_ptr<vote_set> precommits(int32_t round_) {
     std::lock_guard<std::mutex> g(mtx);
     return get_vote_set(round_, p2p::Precommit);
   }
@@ -263,7 +264,7 @@ struct round_state {
   std::optional<part_set> valid_block_parts;
   std::shared_ptr<height_vote_set> votes;
   int32_t commit_round;
-  std::optional<vote_set> last_commit;
+  std::shared_ptr<vote_set> last_commit;
   std::shared_ptr<validator_set> last_validators;
   bool triggered_timeout_precommit;
 };
