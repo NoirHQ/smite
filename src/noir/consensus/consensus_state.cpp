@@ -188,7 +188,7 @@ void consensus_state::update_to_state(state& state_) {
 
   if (state_.last_block_height == 0) {
     // very first commit should be empty
-    rs.last_commit = {};
+    rs.last_commit = nullptr;
   } else if (rs.commit_round > -1 && rs.votes != nullptr) {
     // Use rs.votes
     if (!rs.votes->precommits(rs.commit_round)->has_two_thirds_majority()) {
@@ -196,7 +196,7 @@ void consensus_state::update_to_state(state& state_) {
         state_.last_block_height, rs.commit_round));
     }
     rs.last_commit = rs.votes->precommits(rs.commit_round);
-  } else if (!rs.last_commit.has_value()) {
+  } else if (rs.last_commit == nullptr) {
     // NOTE: when Tendermint starts, it has no votes. reconstructLastCommit
     // must be called to reconstruct LastCommit from SeenCommit.
     throw std::runtime_error(
