@@ -671,20 +671,22 @@ p2p::p2p(): my(new p2p_impl) {
 
 p2p::~p2p() {}
 
-void p2p::set_program_options(CLI::App& cli, CLI::App& config) {
-  auto p2p_options = config.add_subcommand("p2p", "Peer-to-peer configuration");
-  p2p_options->configurable();
+void p2p::set_program_options(CLI::App& config) {
+  auto p2p_options = config.add_section("p2p",
+    "###############################################\n"
+    "###        P2P Configuration Options        ###\n"
+    "###############################################");
 
   p2p_options
     ->add_option(
-      "p2p-listen-endpoint", my->p2p_address, "The actual host:port used to listen for incoming p2p connections.")
+      "--p2p-listen-endpoint", my->p2p_address, "The actual host:port used to listen for incoming p2p connections.")
     ->force_callback()
     ->default_str("0.0.0.0:9876");
-  p2p_options->add_option("p2p-peer-address", my->supplied_peers, "The public endpoint of a peer node to connect to.")
+  p2p_options->add_option("--p2p-peer-address", my->supplied_peers, "The public endpoint of a peer node to connect to.")
     ->take_all();
 }
 
-void p2p::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
+void p2p::plugin_initialize(const CLI::App& config) {
   ilog("Initialize p2p");
   try {
     auto p2p_options = config.get_subcommand("p2p");

@@ -41,7 +41,7 @@ private:
 
 jsonrpc::jsonrpc(): my(new jsonrpc_impl()) {}
 
-void jsonrpc::plugin_initialize(const CLI::App& cli, const CLI::App& config) {}
+void jsonrpc::plugin_initialize(const CLI::App& config) {}
 
 void jsonrpc::plugin_startup() {
   ilog("starting jsonrpc");

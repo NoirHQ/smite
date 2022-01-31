@@ -16,10 +16,10 @@ int main(int argc, char** argv) {
   auto& app = appbase::app();
 
   // set default configuration
-  app.cli().require_subcommand();
-  app.cli().failure_message(CLI::FailureMessage::help);
-  app.cli().name("noird");
-  app.cli().description("NOIR Protocol App");
+  app.config().require_subcommand();
+  app.config().failure_message(CLI::FailureMessage::help);
+  app.config().name("noird");
+  app.config().description("NOIR Protocol App");
   std::filesystem::path home_dir;
   if (auto arg = std::getenv("HOME")) {
     home_dir = arg;
@@ -30,11 +30,11 @@ int main(int argc, char** argv) {
   noir::log::initialize("tmlog");
 
   // add subcommands
-  commands::add_command(app.cli(), &commands::debug);
-  commands::add_command(app.cli(), &commands::init);
-  commands::add_command(app.cli(), &commands::p2p_test);
-  commands::add_command(app.cli(), &commands::start);
-  commands::add_command(app.cli(), &commands::version);
+  commands::add_command(app.config(), &commands::debug);
+  commands::add_command(app.config(), &commands::init);
+  commands::add_command(app.config(), &commands::p2p_test);
+  commands::add_command(app.config(), &commands::start);
+  commands::add_command(app.config(), &commands::version);
 
   // register plugins
   app.register_plugin<tendermint::tendermint>();

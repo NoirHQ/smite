@@ -74,9 +74,9 @@ public:
   static void set_defaults(const rpc_defaults& config);
 
   APPBASE_PLUGIN_REQUIRES()
-  void set_program_options(CLI::App& cli, CLI::App& config) override;
+  void set_program_options(CLI::App& config) override;
 
-  void plugin_initialize(const CLI::App& cli, const CLI::App& config);
+  void plugin_initialize(const CLI::App& config);
   void plugin_startup();
   void plugin_shutdown();
   void handle_sighup() override;

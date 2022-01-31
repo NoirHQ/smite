@@ -9,11 +9,11 @@ extern void abci_init();
 
 namespace noir::tendermint {
 
-void tendermint::set_program_options(CLI::App& cli, CLI::App& config) {
+void tendermint::set_program_options(CLI::App& config) {
   abci_init();
 }
 
-void tendermint::plugin_initialize(const CLI::App& cli, const CLI::App& config) {
+void tendermint::plugin_initialize(const CLI::App& config) {
   log::info("tendermint init");
 }
 
