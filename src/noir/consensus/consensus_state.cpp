@@ -793,10 +793,17 @@ void consensus_state::finalize_commit(int64_t height) {
 
   // validate block // todo
 
-  ilog(fmt::format("finalizing commit of block: num_txs={}"));
-  dlog("block=");
+  ilog(fmt::format("finalizing commit of block: hash={}", to_hex(block_id_->hash)));
+  dlog(fmt::format("block: hash={}", to_hex(block_->get_hash())));
 
   // save to blockstore // todo
+  if (true) { // todo
+    auto precommits = rs.votes->precommits(rs.commit_round);
+    auto seen_commit = precommits->make_commit();
+    // cs.blockStore.SaveBlock(block, blockParts, seenCommit) // todo
+  } else {
+    dlog("calling finalizeCommit on already stored block");
+  }
 
   // write to wal // todo
 
