@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+
 project(noir)
 
 include(CTest)
@@ -23,6 +25,8 @@ if(APPLE)
   set(BOOST_ROOT "/usr/local/opt/boost")
   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
 endif()
+
+find_package(rocksdb)
 
 add_subdirectory(libs)
 add_subdirectory(src)
