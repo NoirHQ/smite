@@ -282,7 +282,7 @@ struct vote_set {
    */
   commit make_commit() {
     // todo - use mtx
-    if (signed_msg_type_ == p2p::Precommit)
+    if (signed_msg_type_ != p2p::Precommit)
       throw std::runtime_error("cannot make_commit() unless signed_msg_type_ is Precommit");
     // Make sure we have a 2/3 majority
     if (!maj23.has_value())
