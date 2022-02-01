@@ -57,8 +57,8 @@ inline noir::consensus::commit make_commit(int64_t height, noir::p2p::tstamp tim
     .my_block_id = {.hash = gen_random_bytes(32),
       .parts =
         {
-          .hash = gen_random_bytes(32),
           .total = 2,
+          .hash = gen_random_bytes(32),
         }},
     .signatures = {sig_},
   };
