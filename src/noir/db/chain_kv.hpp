@@ -21,7 +21,7 @@ class exception : public std::exception {
   std::string msg;
 
 public:
-  exception(std::string&& msg) : msg(std::move(msg)) {}
+  exception(std::string&& msg): msg(std::move(msg)) {}
   exception(const exception&) = default;
   exception(exception&&) = default;
 
@@ -673,7 +673,7 @@ struct write_session {
   cache_map cache;
   cache_map::iterator change_list = cache.end();
 
-  write_session(database& db, const rocksdb::Snapshot* snapshot = nullptr) : db{db}, snapshot{snapshot} {}
+  write_session(database& db, const rocksdb::Snapshot* snapshot = nullptr): db{db}, snapshot{snapshot} {}
 
   rocksdb::ReadOptions read_options() {
     rocksdb::ReadOptions r;
@@ -1063,7 +1063,7 @@ public:
     }
   };
 
-  view(struct write_session& write_session, bytes prefix) : write_session{write_session}, prefix{std::move(prefix)} {
+  view(struct write_session& write_session, bytes prefix): write_session{write_session}, prefix{std::move(prefix)} {
     if (this->prefix.empty())
       throw exception("kv view may not have empty prefix");
 

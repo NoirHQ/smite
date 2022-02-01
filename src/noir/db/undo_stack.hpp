@@ -92,7 +92,7 @@ private:
 };
 
 template<typename Session>
-undo_stack<Session>::undo_stack(Session& head, const fc::path& datadir) : m_head{&head}, m_datadir{datadir} {
+undo_stack<Session>::undo_stack(Session& head, const fc::path& datadir): m_head{&head}, m_datadir{datadir} {
   open();
 }
 

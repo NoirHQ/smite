@@ -135,7 +135,7 @@ private:
 
 template<typename... T>
 template<typename U>
-session_variant<T...>::session_variant(U& session, std::nullptr_t) : m_holder{&session} {}
+session_variant<T...>::session_variant(U& session, std::nullptr_t): m_holder{&session} {}
 
 template<typename... T>
 std::unordered_set<shared_bytes> session_variant<T...>::updated_keys() const {
