@@ -31,7 +31,7 @@ state::state() {
   //  last_validators = nil;
   //  last_height_validators_changed = genDoc.initial_height;
 
-  //  consensus_params = genDoc.consensus_params;
+  //  consensus_params_ = genDoc.consensus_params;
   //  last_height_consensus_params_changed = genDoc.initial_height;
 
   //  app_hash = genDoc.app_hash;
