@@ -4,15 +4,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/hex.h>
+#include <noir/common/types.h>
 #include <noir/common/for_each.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 
+#include <fc/crypto/rand.hpp>
+
 namespace noir::consensus {
 
 struct block_header {
-  int64_t height;
-  p2p::tstamp time;
+  int64_t height{};
+  p2p::tstamp time{};
+
+  bytes32 hash_; // todo - remove later after properly compute hash
+
+  p2p::bytes get_hash() {
+    // todo - properly compute hash
+    if (hash_ == bytes32())
+      fc::rand_pseudo_bytes(hash_.data(), hash_.data_size());
+    return from_hex(hash_.str());
+  }
 };
 
 struct block {
@@ -24,7 +37,8 @@ struct block {
 
   p2p::bytes get_hash() {
     // todo - lock mtx
-    return std::vector<char>();
+    // todo - implement
+    return header.get_hash();
   }
 
   bool hashes_to(p2p::bytes hash) {
