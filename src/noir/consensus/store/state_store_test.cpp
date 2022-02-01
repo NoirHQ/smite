@@ -143,7 +143,7 @@ TEST_CASE("prune_state", "[db_store]") {
         st.last_block_height = height - 1;
         st.validators = v_set;
         st.next_validators = v_set;
-        st.consensus_params = noir::consensus::consensus_params{
+        st.consensus_params_ = noir::consensus::consensus_params{
           .block{10000000},
         };
         st.last_height_validators_changed = vals_changed;
