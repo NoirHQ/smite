@@ -15,7 +15,7 @@ namespace noir::consensus {
 struct message_handler : public fc::visitor<void> {
   std::shared_ptr<consensus_state> cs;
 
-  explicit message_handler(const std::shared_ptr<consensus_state>& cs_) : cs(cs_) {}
+  explicit message_handler(const std::shared_ptr<consensus_state>& cs_): cs(cs_) {}
 
   void operator()(p2p::proposal_message& msg) {
     std::lock_guard<std::mutex> g(cs->mtx);
@@ -487,7 +487,6 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     block_parts_->total = 1; // todo - remove later
     block_parts_->parts.push_back(part{0, p2p::bytes{'1'}, p2p::bytes{'2'}}); // todo - remove later
 
-
     if (!block_.has_value()) {
       wlog("MUST CONNECT TO MEMPOOL IN ORDER TO RETRIEVE SOME BLOCKS"); // todo - remove once mempool is ready
       return;
@@ -514,8 +513,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     for (auto i = 0; i < block_parts_->total; i++) {
       auto part_ = block_parts_->get_part(i);
       auto msg = p2p::block_part_message{rs.height, rs.round, part_.index, part_.bytes_, part_.proof};
-      internal_mq_channel.publish(appbase::priority::medium,
-        std::make_shared<msg_info>(msg_info{msg, ""}));
+      internal_mq_channel.publish(appbase::priority::medium, std::make_shared<msg_info>(msg_info{msg, ""}));
     }
     dlog(fmt::format("signed proposal: height={} round={}", height, round));
   } else {

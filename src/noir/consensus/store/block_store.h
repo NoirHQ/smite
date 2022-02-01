@@ -39,10 +39,10 @@ class block_store {
   using db_session_type = noir::db::session::session<noir::db::session::rocksdb_t>;
 
 public:
-  explicit block_store(std::shared_ptr<db_session_type> session_) : db_session_(std::move(session_)) {}
+  explicit block_store(std::shared_ptr<db_session_type> session_): db_session_(std::move(session_)) {}
 
-  block_store(block_store&& other) noexcept : db_session_(std::move(other.db_session_)) {}
-  block_store(const block_store& other) noexcept : db_session_(other.db_session_) {}
+  block_store(block_store&& other) noexcept: db_session_(std::move(other.db_session_)) {}
+  block_store(const block_store& other) noexcept: db_session_(other.db_session_) {}
 
   /// \brief gets the first known contiguous block height, or 0 for empty block stores.
   /// \return base height
