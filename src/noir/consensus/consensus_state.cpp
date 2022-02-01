@@ -481,8 +481,12 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     auto proposer_addr = local_priv_validator_pub_key.address();
 
     // block_exec.create_proposal_block // todo - requires interface to mempool?
-    block_ = block{}; // todo - remove after connected to mempool; for now always return empty
-    block_parts_ = part_set{}; // todo - remove after connected to mempool; for now always return empty
+    block_ = block{}; // todo - remove after connected to mempool
+    block_parts_ = part_set{}; // todo - remove after connected to mempool
+    block_->get_hash(); // todo - remove later; initializes some random hash
+    block_parts_->total = 1; // todo - remove later
+    block_parts_->parts.push_back(part{0, p2p::bytes{'1'}, p2p::bytes{'2'}}); // todo - remove later
+
 
     if (!block_.has_value()) {
       wlog("MUST CONNECT TO MEMPOOL IN ORDER TO RETRIEVE SOME BLOCKS"); // todo - remove once mempool is ready
@@ -510,7 +514,8 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     for (auto i = 0; i < block_parts_->total; i++) {
       auto part_ = block_parts_->get_part(i);
       auto msg = p2p::block_part_message{rs.height, rs.round, part_.index, part_.bytes_, part_.proof};
-      internal_mq_channel.publish(appbase::priority::medium, std::make_shared<msg_info>(msg_info{proposal_, ""}));
+      internal_mq_channel.publish(appbase::priority::medium,
+        std::make_shared<msg_info>(msg_info{msg, ""}));
     }
     dlog(fmt::format("signed proposal: height={} round={}", height, round));
   } else {
@@ -817,7 +822,7 @@ void consensus_state::finalize_commit(int64_t height) {
 }
 
 void consensus_state::set_proposal(p2p::proposal_message& msg) {
-  if (!rs.proposal.has_value()) {
+  if (rs.proposal.has_value()) {
     dlog("set_proposal; already have one");
     return; // Already have one
   }
@@ -881,6 +886,7 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p:
   if (added && rs.proposal_block_parts->is_complete()) {
     // derive block from proto // todo
     // rs.proposal_block = block; // todo - requires converting block from proto
+    rs.proposal_block = block{block_header{height_}}; // todo - remove later
 
     // NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
     ilog(fmt::format("received complete proposal block: height={}", rs.proposal_block->header.height));
