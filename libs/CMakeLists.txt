@@ -18,9 +18,7 @@ add_subdirectory(fmt)
 add_subdirectory(tendermint)
 add_subdirectory(websocketpp)
 
-if(rocksdb_FOUND)
-  add_library(rocksdb ALIAS RocksDB::rocksdb)
-else()
+if(NOT rocksdb_FOUND)
   # override rocksdb cmake options
   set(ROCKSDB_BUILD_SHARED OFF)
   set(WITH_TESTS OFF)
