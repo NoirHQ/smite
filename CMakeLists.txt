@@ -27,6 +27,9 @@ if(APPLE)
 endif()
 
 find_package(rocksdb)
+if(rocksdb_FOUND)
+  add_library(rocksdb ALIAS RocksDB::rocksdb)
+endif()
 
 add_subdirectory(libs)
 add_subdirectory(src)
