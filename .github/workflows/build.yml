@@ -38,6 +38,11 @@ jobs:
         run: |
           echo "::set-output name=go-build::$(go env GOCACHE)"
           echo "::set-output name=go-mod::$(go env GOMODCACHE)"
+      # checkout
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      # restore go package cache
       - uses: actions/cache@v2
         with:
           path: ${{ steps.go-cache-paths.outputs.go-build }}
@@ -46,17 +51,12 @@ jobs:
         with:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
-
-      # checkout
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      # rocksdb
+      # restore rocksdb build cache
       - id: rocksdb-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/rocksdb/{ print $1 }')"
       - uses: actions/cache@v2
         with:
-          path: ./build/libs/rocksdb
+          path: build/libs/rocksdb
           key: ${{ runner.os }}-rocksdb-${{ steps.rocksdb-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
@@ -69,6 +69,10 @@ jobs:
     steps:
       # setup build dependencies
       - run: brew install boost gflags rocksdb
+      # checkout
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
       # restore go package cache
       - id: go-cache-paths
         run: |
@@ -82,11 +86,6 @@ jobs:
         with:
           path: ${{ steps.go-cache-paths.outputs.go-mod }}
           key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
-
-      # checkout
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
       # build
       - run: cmake -E make_directory build
       - run: cmake .. && make -j2
