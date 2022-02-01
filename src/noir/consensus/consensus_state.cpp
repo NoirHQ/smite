@@ -886,9 +886,9 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p:
 
   auto added = rs.proposal_block_parts->add_part(part_);
 
-  if (rs.proposal_block_parts->byte_size > local_state.consensus_params.block.max_bytes) {
+  if (rs.proposal_block_parts->byte_size > local_state.consensus_params_.block.max_bytes) {
     elog(fmt::format("total size of proposal block parts exceeds maximum block bytes ({} > {})",
-      rs.proposal_block_parts->byte_size, local_state.consensus_params.block.max_bytes));
+      rs.proposal_block_parts->byte_size, local_state.consensus_params_.block.max_bytes));
     return added;
   }
   if (added && rs.proposal_block_parts->is_complete()) {

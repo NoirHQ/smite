@@ -47,7 +47,7 @@ public:
   validator_set last_validators; // used to validate block.LastCommit
   int64_t last_height_validators_changed;
 
-  consensus_params consensus_params;
+  consensus_params consensus_params_;
   int64_t last_height_consensus_params_changed;
 
   p2p::bytes last_result_hash;
@@ -58,5 +58,5 @@ public:
 } // namespace noir::consensus
 
 NOIR_FOR_EACH_FIELD(noir::consensus::state, version, chain_id, initial_height, last_block_height, last_block_id,
-  last_block_time, next_validators, validators, last_validators, last_height_validators_changed, consensus_params,
+  last_block_time, next_validators, validators, last_validators, last_height_validators_changed, consensus_params_,
   last_height_consensus_params_changed, last_result_hash, app_hash);
