@@ -809,6 +809,9 @@ void consensus_state::finalize_commit(int64_t height) {
 
   auto state_copy = local_state;
   // apply block // todo
+  state_copy.last_block_height = block_->header.height; // todo - remove after implementing apply_block()
+  state_copy.last_result_hash = block_->get_hash(); // todo - remove
+  state_copy.app_hash = block_->get_hash(); // todo - remove
 
   // record metric
 
