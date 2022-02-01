@@ -310,17 +310,17 @@ void session<Parent>::clear() {
 }
 
 template<typename Parent>
-session<Parent>::session(Parent& parent) : m_parent{&parent} {
+session<Parent>::session(Parent& parent): m_parent{&parent} {
   attach(parent);
 }
 
 template<typename Parent>
-session<Parent>::session(session& parent, std::nullptr_t) : m_parent{&parent} {
+session<Parent>::session(session& parent, std::nullptr_t): m_parent{&parent} {
   attach(parent);
 }
 
 template<typename Parent>
-session<Parent>::session(session&& other) : m_parent{std::move(other.m_parent)}, m_cache{std::move(other.m_cache)} {
+session<Parent>::session(session&& other): m_parent{std::move(other.m_parent)}, m_cache{std::move(other.m_cache)} {
   session* null_parent = nullptr;
   other.m_parent = null_parent;
 }
