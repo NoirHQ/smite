@@ -212,7 +212,7 @@ private:
       return false;
     }
 
-    if (!save_consensus_params_info(next_height, st.last_height_consensus_params_changed, st.consensus_params)) {
+    if (!save_consensus_params_info(next_height, st.last_height_consensus_params_changed, st.consensus_params_)) {
       return false;
     }
 
@@ -233,7 +233,7 @@ private:
     if (!save_validators_info(height + 1, height + 1, st.validators)) {
       return false;
     }
-    if (!save_consensus_params_info(height, st.last_height_consensus_params_changed, st.consensus_params)) {
+    if (!save_consensus_params_info(height, st.last_height_consensus_params_changed, st.consensus_params_)) {
       return false;
     }
     db_session_->write_from_bytes(state_key_, noir::codec::scale::encode(st));
