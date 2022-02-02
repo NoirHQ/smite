@@ -18,6 +18,15 @@ add_subdirectory(fmt)
 add_subdirectory(tendermint)
 add_subdirectory(websocketpp)
 
+# use cached rocksdb in github build workflow
+set(ROCKSDB_CACHED ${CMAKE_CURRENT_BINARY_DIR}/rocksdb/librocksdb.a)
+if(EXISTS ${ROCKSDB_CACHED})
+  add_library(rocksdb STATIC IMPORTED GLOBAL)
+  set_target_properties(rocksdb PROPERTIES IMPORTED_LOCATION ${ROCKSDB_CACHED})
+  target_include_directories(rocksdb INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/rocksdb/include)
+  set(rocksdb_FOUND TRUE)
+endif()
+
 if(NOT rocksdb_FOUND)
   # override rocksdb cmake options
   set(ROCKSDB_BUILD_SHARED OFF)
