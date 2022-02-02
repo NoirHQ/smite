@@ -25,7 +25,7 @@ constexpr int64_t max_total_voting_power{std::numeric_limits<int64_t>::max() / 8
 constexpr int64_t priority_window_size_factor{2};
 
 struct validator {
-  p2p::bytes address;
+  bytes address;
   pub_key pub_key_;
   int64_t voting_power;
   int64_t proposer_priority;
@@ -63,7 +63,7 @@ struct validator_set {
     return validators.size();
   }
 
-  bool has_address(const p2p::bytes& address) {
+  bool has_address(const bytes& address) {
     for (const auto& val : validators) {
       if (val.address == address)
         return true;
@@ -71,7 +71,7 @@ struct validator_set {
     return false;
   }
 
-  std::optional<validator> get_by_address(const p2p::bytes& address) {
+  std::optional<validator> get_by_address(const bytes& address) {
     for (auto val : validators) {
       if (val.address == address)
         return val;
@@ -79,7 +79,7 @@ struct validator_set {
     return {};
   }
 
-  int32_t get_index_by_address(const p2p::bytes& address) {
+  int32_t get_index_by_address(const bytes& address) {
     for (auto idx = 0; idx < validators.size(); idx++) {
       if (validators[idx].address == address)
         return idx;
@@ -225,7 +225,7 @@ struct validator_set {
     std::vector<validator> changesCopy(changes);
     sort(changesCopy.begin(), changesCopy.end(), [](validator a, validator b) { return a.address < b.address; });
     std::vector<validator> updates, deletes;
-    p2p::bytes prevAddr;
+    bytes prevAddr;
     for (auto val_update : changesCopy) {
       if (val_update.address == prevAddr) {
         elog("duplicate entry ${val_update} in changes", ("val_update", val_update.address));

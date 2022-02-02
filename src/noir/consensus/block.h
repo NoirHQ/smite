@@ -20,7 +20,7 @@ struct block_header {
 
   bytes32 hash_; // todo - remove later after properly compute hash
 
-  p2p::bytes get_hash() {
+  bytes get_hash() {
     // todo - properly compute hash
     if (hash_ == bytes32())
       fc::rand_pseudo_bytes(hash_.data(), hash_.data_size());
@@ -35,13 +35,13 @@ struct block {
   // evidence evidence;
   // commit last_commit;
 
-  p2p::bytes get_hash() {
+  bytes get_hash() {
     // todo - lock mtx
     // todo - implement
     return header.get_hash();
   }
 
-  bool hashes_to(p2p::bytes hash) {
+  bool hashes_to(bytes hash) {
     if (hash.empty())
       return false;
     return get_hash() == hash;
@@ -56,9 +56,9 @@ enum block_id_flag {
 
 struct commit_sig {
   block_id_flag flag;
-  p2p::bytes validator_address;
+  bytes validator_address;
   p2p::tstamp timestamp;
-  p2p::bytes signature;
+  bytes signature;
   p2p::vote_extension_to_sign vote_extension;
 
   static commit_sig new_commit_sig_absent() {

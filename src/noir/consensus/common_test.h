@@ -95,7 +95,7 @@ void force_tick(std::shared_ptr<consensus_state>& cs) {
   cs->timeout_ticker_timer->cancel(); // forces tick
 }
 
-void sign_add_votes(config& config_, std::shared_ptr<consensus_state>& cs, p2p::signed_msg_type type, p2p::bytes hash,
+void sign_add_votes(config& config_, std::shared_ptr<consensus_state>& cs, p2p::signed_msg_type type, bytes hash,
   p2p::part_set_header header) {}
 
 } // namespace noir::consensus

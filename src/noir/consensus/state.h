@@ -20,7 +20,7 @@ class state {
 public:
   state();
 
-  block make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address);
+  block make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ bytes proposal_address);
 
   p2p::tstamp get_median_time();
 
@@ -50,9 +50,9 @@ public:
   consensus_params consensus_params_;
   int64_t last_height_consensus_params_changed;
 
-  p2p::bytes last_result_hash;
+  bytes last_result_hash;
 
-  p2p::bytes app_hash;
+  bytes app_hash;
 };
 
 } // namespace noir::consensus

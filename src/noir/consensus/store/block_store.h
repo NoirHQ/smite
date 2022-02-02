@@ -53,7 +53,7 @@ public:
       return 0;
     }
     auto tmp = begin_it.key();
-    noir::p2p::bytes key_{tmp.begin(), tmp.end()};
+    bytes key_{tmp.begin(), tmp.end()};
     int64_t height_;
     assert(decode_block_meta_key(key_, height_)); // TODO: handle panic in consensus
     return height_;
@@ -68,7 +68,7 @@ public:
       return 0;
     }
     auto tmp = (--end_it).key();
-    noir::p2p::bytes key_{tmp.begin(), tmp.end()};
+    bytes key_{tmp.begin(), tmp.end()};
     int64_t height_;
     assert(decode_block_meta_key(key_, height_)); // TODO: handle panic in consensus
     return height_;
@@ -87,13 +87,13 @@ public:
   bool load_base_meta(block_meta& bl_meta) const {
     auto tmp_it = db_session_->lower_bound_from_bytes(encode_key<prefix::block_meta>(1));
     auto tmp_bytes = tmp_it.key();
-    noir::p2p::bytes key_{tmp_bytes.begin(), tmp_bytes.end()};
+    bytes key_{tmp_bytes.begin(), tmp_bytes.end()};
     int64_t height_;
     if (!decode_block_meta_key(key_, height_) || ((*tmp_it).second == std::nullopt)) {
       return false;
     }
     tmp_bytes = (*tmp_it).second.value();
-    bl_meta = noir::codec::scale::decode<block_meta>(noir::p2p::bytes{tmp_bytes.begin(), tmp_bytes.end()});
+    bl_meta = noir::codec::scale::decode<block_meta>(bytes{tmp_bytes.begin(), tmp_bytes.end()});
     return true;
   }
 
@@ -125,7 +125,7 @@ public:
   /// \param[in] hash hash to load
   /// \param[out] bl loaded block object
   /// \return true on success, false otherwise
-  bool load_block_by_hash(const noir::p2p::bytes& hash, block& bl) const {
+  bool load_block_by_hash(const bytes& hash, block& bl) const {
     auto tmp = db_session_->read_from_bytes(encode_key<prefix::block_hash>(hash));
     if (!tmp.has_value()) {
       return false;
@@ -145,7 +145,7 @@ public:
       return false;
     }
     part_ = noir::codec::scale::decode<part>(tmp.value());
-    part_.proof = noir::p2p::bytes{}; // TODO: codec merkle proof
+    part_.proof = bytes{}; // TODO: codec merkle proof
     return true;
   }
 
@@ -329,29 +329,29 @@ private:
 
   std::shared_ptr<db_session_type> db_session_;
 
-  static noir::p2p::bytes encode_val(int64_t val) {
+  static bytes encode_val(int64_t val) {
     auto hex_ = from_hex(fmt::format("{:016x}", static_cast<uint64_t>(val)));
     return {hex_.begin(), hex_.end()};
   }
 
   template<typename... int64s>
-  static noir::p2p::bytes encode_val(int64_t val, int64s... args) {
+  static bytes encode_val(int64_t val, int64s... args) {
     auto hex_ = from_hex(fmt::format("{:016x}", static_cast<uint64_t>(val)));
-    noir::p2p::bytes lhs{hex_.begin(), hex_.end()};
+    bytes lhs{hex_.begin(), hex_.end()};
     auto rhs = append_key(args...);
     lhs.insert(lhs.end(), rhs.begin(), rhs.end());
     return lhs;
   }
 
   template<prefix key_prefix>
-  static noir::p2p::bytes encode_key() {
-    noir::p2p::bytes key_{};
+  static bytes encode_key() {
+    bytes key_{};
     key_.push_back(static_cast<char>(key_prefix));
     return key_;
   }
 
   template<prefix key_prefix>
-  static noir::p2p::bytes encode_key(int64_t val) {
+  static bytes encode_key(int64_t val) {
     auto lhs = encode_key<key_prefix>();
     auto rhs = encode_val(val); // TODO: might need reserve() to optimize
     lhs.insert(lhs.end(), rhs.begin(), rhs.end());
@@ -359,7 +359,7 @@ private:
   }
 
   template<prefix key_prefix, typename... int64s>
-  static noir::p2p::bytes encode_key(int64_t val, int64s... args) {
+  static bytes encode_key(int64_t val, int64s... args) {
     auto lhs = encode_key<key_prefix>(val);
     auto rhs = encode_val(args...); // TODO: might need reserve() to optimize
     lhs.insert(lhs.end(), rhs.begin(), rhs.end());
@@ -367,20 +367,20 @@ private:
   }
 
   template<prefix key_prefix>
-  static noir::p2p::bytes encode_key(noir::p2p::bytes bytes_) {
+  static bytes encode_key(bytes bytes_) {
     auto lhs = encode_key<key_prefix>();
     // std::string(bytes_.begin(), bytes_.end());
     lhs.insert(lhs.end(), bytes_.begin(), bytes_.end());
     return lhs;
   }
 
-  static bool decode_block_meta_key(const noir::p2p::bytes& key, int64_t& height_) {
+  static bool decode_block_meta_key(const bytes& key, int64_t& height_) {
     static constexpr size_t size_ = sizeof(char) + sizeof(int64_t);
     if ((key.size() != size_) || (key[0] != static_cast<char>(prefix::block_meta))) {
       return false;
     }
 
-    auto height_hex = to_hex(noir::p2p::bytes{key.begin() + 1, key.end()});
+    auto height_hex = to_hex(bytes{key.begin() + 1, key.end()});
     height_ = stoull(height_hex, nullptr, 16);
     return true;
   }
@@ -426,10 +426,10 @@ private:
     return true;
   }
 
-  using pre_deletion_hook_type = std::function<bool(const noir::p2p::bytes& key, const noir::p2p::bytes& val)>;
-  bool prune_range(const noir::p2p::bytes& start, const noir::p2p::bytes& end,
-    std::optional<pre_deletion_hook_type> pre_deletion_hook, uint64_t& total_pruned) {
-    noir::p2p::bytes start_ = start;
+  using pre_deletion_hook_type = std::function<bool(const bytes& key, const bytes& val)>;
+  bool prune_range(const bytes& start, const bytes& end, std::optional<pre_deletion_hook_type> pre_deletion_hook,
+    uint64_t& total_pruned) {
+    bytes start_ = start;
 
     // loop until we have finished iterating over all the keys by writing, opening a new batch
     // and incrementing through the next range of keys.
@@ -445,8 +445,8 @@ private:
     return true;
   }
 
-  bool batch_delete(const noir::p2p::bytes& start, const noir::p2p::bytes& end,
-    std::optional<pre_deletion_hook_type> pre_deletion_hook, uint64_t& total_pruned, noir::p2p::bytes& new_end) {
+  bool batch_delete(const bytes& start, const bytes& end, std::optional<pre_deletion_hook_type> pre_deletion_hook,
+    uint64_t& total_pruned, bytes& new_end) {
     uint64_t pruned = 0;
 
     auto begin_ = db_session_->lower_bound_from_bytes(start);

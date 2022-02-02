@@ -16,7 +16,6 @@ namespace noir::p2p {
 using node_id = std::string; // a hex-encoded crypto.Address. It must be lower-cased
 
 using tstamp = std::chrono::system_clock::duration::rep;
-using bytes = std::vector<char>;
 
 using block_id_type = fc::sha256;
 
