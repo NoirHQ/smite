@@ -3,11 +3,6 @@ target_sources(noir
     consensus_state.cpp
     state.cpp)
 
-add_executable(validator_test validator_test.cpp)
-target_link_libraries(validator_test noir Catch2WithMain)
-
-add_executable(consensus_state_test consensus_state_test.cpp)
-target_link_libraries(consensus_state_test noir Catch2WithMain)
-
-add_executable(store_test store/state_store_test.cpp store/block_store_test.cpp)
-target_link_libraries(store_test noir Catch2WithMain)
+add_noir_test(validator_test validator_test.cpp)
+add_noir_test(consensus_state_test consensus_state_test.cpp)
+add_noir_test(store_test store/state_store_test.cpp store/block_store_test.cpp)
