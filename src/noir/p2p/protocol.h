@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
+#include <noir/common/types.h>
 #include <noir/p2p/types.h>
 
 namespace noir::p2p {
@@ -51,7 +52,7 @@ inline bool is_vote_type_valid(signed_msg_type type) {
 
 struct part_set_header {
   uint32_t total;
-  p2p::bytes hash;
+  bytes hash;
 
   bool operator==(const part_set_header& rhs) const {
     return (total == rhs.total) && (hash == rhs.hash);
@@ -63,7 +64,7 @@ struct part_set_header {
 };
 
 struct block_id {
-  p2p::bytes hash;
+  bytes hash;
   part_set_header parts;
 
   bool operator==(const block_id& rhs) const {
@@ -86,7 +87,7 @@ struct block_id {
 };
 
 struct vote_extension_to_sign {
-  p2p::bytes add_data_to_sign;
+  bytes add_data_to_sign;
 };
 
 struct vote_extension {

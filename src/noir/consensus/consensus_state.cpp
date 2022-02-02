@@ -445,7 +445,7 @@ bool consensus_state::is_proposal_complete() {
   return rs.votes->prevotes(rs.proposal->pol_round)->has_two_thirds_majority();
 }
 
-bool consensus_state::is_proposal(p2p::bytes address) {
+bool consensus_state::is_proposal(bytes address) {
   return rs.validators->get_proposer()->address == address;
 }
 
@@ -485,7 +485,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     block_parts_ = part_set{}; // todo - remove after connected to mempool
     block_->get_hash(); // todo - remove later; initializes some random hash
     block_parts_->total = 1; // todo - remove later
-    block_parts_->parts.push_back(part{0, p2p::bytes{'1'}, p2p::bytes{'2'}}); // todo - remove later
+    block_parts_->parts.push_back(part{0, bytes{'1'}, bytes{'2'}}); // todo - remove later
 
     if (!block_.has_value()) {
       wlog("MUST CONNECT TO MEMPOOL IN ORDER TO RETRIEVE SOME BLOCKS"); // todo - remove once mempool is ready
@@ -555,7 +555,7 @@ void consensus_state::do_prevote(int64_t height, int32_t round) {
   // If proposal_block is nil, prevote nil
   if (!rs.proposal_block.has_value()) {
     dlog("prevote step; proposal_block is nil");
-    sign_add_vote(p2p::Prevote, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Prevote, bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -614,7 +614,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
       dlog("precommit step; no +2/3 prevotes during enterPrecommit while we are locked; precommitting nil");
     else
       dlog("precommit step; no +2/3 prevotes during enterPrecommit; precommitting nil");
-    sign_add_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Precommit, bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -637,7 +637,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
       rs.locked_block_parts = {};
       // publish event unlock // todo
     }
-    sign_add_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Precommit, bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -681,7 +681,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
   }
 
   // publish event unlock // todo
-  sign_add_vote(p2p::Precommit, p2p::bytes{} /* todo - nil */, p2p::part_set_header{});
+  sign_add_vote(p2p::Precommit, bytes{} /* todo - nil */, p2p::part_set_header{});
 }
 
 /**
@@ -1079,8 +1079,7 @@ bool consensus_state::add_vote(vote& vote_, p2p::node_id peer_id) {
   return added;
 }
 
-std::optional<vote> consensus_state::sign_vote(
-  p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
+std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header) {
   // Flush the WAL. Otherwise, we may not recompute the same vote to sign,
   // and the privValidator will refuse to sign anything.
   // if err := cs.wal.FlushAndSync(); err != nil { // todo
@@ -1148,7 +1147,7 @@ p2p::tstamp consensus_state::vote_time() {
 /**
  * sign vote and publish on internal_msg_channel
  */
-vote consensus_state::sign_add_vote(p2p::signed_msg_type msg_type, p2p::bytes hash, p2p::part_set_header header) {
+vote consensus_state::sign_add_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header) {
   if (!local_priv_validator.has_value())
     return {};
 

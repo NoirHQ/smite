@@ -9,13 +9,13 @@
 
 namespace noir::consensus {
 struct pub_key {
-  p2p::bytes key;
+  bytes key;
 
   bool empty() {
     return key.empty();
   }
 
-  p2p::bytes address() {
+  bytes address() {
     // todo - check key length
     if (key.empty())
       throw std::runtime_error("pub_key: unable to get address as key is empty");

@@ -79,7 +79,7 @@ private:
     std::optional<consensus_params> cs_param;
   };
   struct response_deliver_tx {
-    noir::p2p::bytes data; // dummy
+    bytes data; // dummy
   };
 
 public:
@@ -189,11 +189,11 @@ private:
   };
   static constexpr int val_set_checkpoint_interval = 100000;
   std::shared_ptr<db_session_type> db_session_;
-  noir::p2p::bytes state_key_;
+  bytes state_key_;
 
   template<prefix key_prefix>
-  static noir::p2p::bytes encode_key(int64_t val) {
-    noir::p2p::bytes ret{};
+  static bytes encode_key(int64_t val) {
+    bytes ret{};
     auto hex_ = from_hex(fmt::format("{:016x}", static_cast<uint64_t>(val)));
     ret.push_back(static_cast<char>(key_prefix));
     ret.insert(ret.end(), hex_.begin(), hex_.end());
@@ -366,8 +366,8 @@ private:
 
   template<prefix key_prefix>
   bool prune_range(int64_t start_, int64_t end_) {
-    p2p::bytes start;
-    p2p::bytes end;
+    bytes start;
+    bytes end;
     start = encode_key<key_prefix>(start_);
     end = encode_key<key_prefix>(end_);
     while (start != end) { // TODO: change to safer
@@ -379,7 +379,7 @@ private:
     return true;
   }
 
-  bool reverse_batch_delete(const p2p::bytes& start, const p2p::bytes& end, p2p::bytes& new_end) {
+  bool reverse_batch_delete(const bytes& start, const bytes& end, bytes& new_end) {
     auto start_it = db_session_->lower_bound_from_bytes(start);
     auto end_it = db_session_->lower_bound_from_bytes(end);
     if (end_it == db_session_->begin()) {
@@ -392,7 +392,7 @@ private:
       db_session_->erase(it.key());
       if (++size == 1000) {
         auto key_ = it.key();
-        new_end = noir::p2p::bytes{key_.begin(), key_.end()};
+        new_end = bytes{key_.begin(), key_.end()};
         break;
       } else if (it == start_it) {
         new_end = start;

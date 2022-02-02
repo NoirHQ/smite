@@ -37,8 +37,7 @@ state::state() {
   //  app_hash = genDoc.app_hash;
 }
 
-block state::make_block(
-  int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ p2p::bytes proposal_address) {
+block state::make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ bytes proposal_address) {
   // Set time
   p2p::tstamp timestamp;
   //    if (height == initial_height) {

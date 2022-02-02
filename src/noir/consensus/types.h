@@ -19,7 +19,7 @@
 namespace noir::consensus {
 
 struct genesis_validator {
-  p2p::bytes address;
+  bytes address;
   pub_key pub_key_;
   int64_t power;
   std::string name;
@@ -31,19 +31,19 @@ struct genesis_doc {
   int64_t initial_height;
   consensus_params cs_params;
   std::vector<genesis_validator> validators;
-  p2p::bytes app_hash;
-  p2p::bytes app_state;
+  bytes app_hash;
+  bytes app_state;
 };
 
 struct part {
   uint32_t index;
-  p2p::bytes bytes_;
-  p2p::bytes proof;
+  bytes bytes_;
+  bytes proof;
 };
 
 struct part_set {
   uint32_t total;
-  p2p::bytes hash;
+  bytes hash;
 
   //  std::mutex mtx;
   std::vector<part> parts;

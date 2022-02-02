@@ -63,8 +63,8 @@ public:
     bool operator!=(const rocks_iterator& other) const;
 
     shared_bytes key() const;
-    noir::p2p::bytes key_from_bytes() const;
-    std::optional<noir::p2p::bytes> value_from_bytes() const;
+    bytes key_from_bytes() const;
+    std::optional<bytes> value_from_bytes() const;
     bool deleted() const;
 
   private:
@@ -103,11 +103,11 @@ public:
 
   std::optional<shared_bytes> read(const shared_bytes& key);
   void write(const shared_bytes& key, const shared_bytes& value);
-  std::optional<noir::p2p::bytes> read_from_bytes(const noir::p2p::bytes& key);
-  void write_from_bytes(const noir::p2p::bytes& key, const noir::p2p::bytes& value);
+  std::optional<bytes> read_from_bytes(const bytes& key);
+  void write_from_bytes(const bytes& key, const bytes& value);
   bool contains(const shared_bytes& key);
   void erase(const shared_bytes& key);
-  void erase_from_bytes(const noir::p2p::bytes& key);
+  void erase_from_bytes(const bytes& key);
   void clear();
   bool is_deleted(const shared_bytes& key) const;
 
@@ -128,11 +128,11 @@ public:
   void read_from(Other_data_store& ds, const Iterable& keys);
 
   iterator find(const shared_bytes& key);
-  iterator find_from_bytes(const noir::p2p::bytes& key);
+  iterator find_from_bytes(const bytes& key);
   iterator begin();
   iterator end();
   iterator lower_bound(const shared_bytes& key);
-  iterator lower_bound_from_bytes(const noir::p2p::bytes& key);
+  iterator lower_bound_from_bytes(const bytes& key);
 
   void undo();
   void commit();
@@ -267,16 +267,16 @@ inline void session<rocksdb_t>::write(const shared_bytes& key, const shared_byte
 }
 
 // TODO: decide K/V type of session
-inline std::optional<noir::p2p::bytes> session<rocksdb_t>::read_from_bytes(const noir::p2p::bytes& key) {
+inline std::optional<bytes> session<rocksdb_t>::read_from_bytes(const bytes& key) {
   auto ret = read(shared_bytes(key.data(), key.size()));
   if (ret == std::nullopt) {
     return std::nullopt;
   }
   auto val = ret.value();
-  return {noir::p2p::bytes{val.begin(), val.end()}};
+  return {bytes{val.begin(), val.end()}};
 }
 // TODO: decide K/V type of session
-inline void session<rocksdb_t>::write_from_bytes(const noir::p2p::bytes& key, const noir::p2p::bytes& value) {
+inline void session<rocksdb_t>::write_from_bytes(const bytes& key, const bytes& value) {
   write(shared_bytes(key.data(), key.size()), shared_bytes(value.data(), value.size()));
 }
 
@@ -291,7 +291,7 @@ inline void session<rocksdb_t>::erase(const shared_bytes& key) {
   auto status = m_db->Delete(m_write_options, column_family_(), key_slice);
 }
 
-inline void session<rocksdb_t>::erase_from_bytes(const noir::p2p::bytes& key) {
+inline void session<rocksdb_t>::erase_from_bytes(const bytes& key) {
   erase(shared_bytes(key.data(), key.size()));
 }
 
@@ -397,7 +397,7 @@ inline typename session<rocksdb_t>::iterator session<rocksdb_t>::find(const shar
   return make_iterator_(predicate);
 }
 
-inline typename session<rocksdb_t>::iterator session<rocksdb_t>::find_from_bytes(const noir::p2p::bytes& key) {
+inline typename session<rocksdb_t>::iterator session<rocksdb_t>::find_from_bytes(const bytes& key) {
   return find(shared_bytes(key.data(), key.size()));
 }
 
@@ -413,7 +413,7 @@ inline typename session<rocksdb_t>::iterator session<rocksdb_t>::lower_bound(con
   return make_iterator_([&](auto& it) { it.Seek(rocksdb::Slice{key.data(), key.size()}); });
 }
 
-inline typename session<rocksdb_t>::iterator session<rocksdb_t>::lower_bound_from_bytes(const noir::p2p::bytes& key) {
+inline typename session<rocksdb_t>::iterator session<rocksdb_t>::lower_bound_from_bytes(const bytes& key) {
   return lower_bound(shared_bytes(key.data(), key.size()));
 }
 
@@ -570,7 +570,7 @@ shared_bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key() const {
 }
 
 template<typename Iterator_traits>
-noir::p2p::bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key_from_bytes() const {
+bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key_from_bytes() const {
   if (!m_iterator->Valid()) {
     return {};
   }
@@ -581,13 +581,13 @@ noir::p2p::bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key_from_b
 }
 
 template<typename Iterator_traits>
-std::optional<noir::p2p::bytes> session<rocksdb_t>::rocks_iterator<Iterator_traits>::value_from_bytes() const {
+std::optional<bytes> session<rocksdb_t>::rocks_iterator<Iterator_traits>::value_from_bytes() const {
 
   if (!operator*().second.has_value()) {
     return std::nullopt;
   }
   auto tmp = operator*().second.value();
-  return std::optional<noir::p2p::bytes>{noir::p2p::bytes{tmp.begin(), tmp.end()}};
+  return std::optional<bytes>{bytes{tmp.begin(), tmp.end()}};
 }
 
 template<typename Iterator_traits>
