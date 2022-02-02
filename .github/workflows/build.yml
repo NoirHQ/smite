@@ -56,7 +56,7 @@ jobs:
         run: echo "::set-output name=version::$(git submodule status | awk '/rocksdb/{ print $1 }')"
       - uses: actions/cache@v2
         with:
-          path: build/libs/rocksdb
+          path: build/libs/rocksdb/librocksdb.a
           key: ${{ runner.os }}-rocksdb-${{ steps.rocksdb-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
