@@ -33,12 +33,7 @@ inline noir::db::session::session<noir::db::session::rocksdb_t> make_session(con
 }
 
 inline noir::bytes gen_random_bytes(size_t num) {
-  noir::bytes ret{};
-  std::random_device rd;
-  std::uniform_int_distribution<int> dist(0, 255);
-
-  for (auto i = 0; i < num; ++i) {
-    ret.push_back(dist(rd) & 0xff);
-  }
+  noir::bytes ret(num);
+  fc::rand_pseudo_bytes(ret.data(), ret.size());
   return ret;
 }
