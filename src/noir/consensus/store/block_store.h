@@ -203,8 +203,8 @@ public:
     auto height_ = bl.header.height;
     auto hash_ = const_cast<block&>(bl).get_hash();
     auto parts_ = const_cast<part_set&>(bl_parts);
-    assert((base() == 0) || (height_ == height() + 1)); // TODO: might need reserve() to optimize
-    assert(parts_.is_complete()); // TODO: might need reserve() to optimize
+    assert((base() == 0) || (height_ == height() + 1)); // TODO: handle panic in consensus
+    assert(parts_.is_complete()); // TODO: handle panic in consensus
 
     // Save block parts. This must be done before the block meta, since callers
     // typically load the block meta first as an indication that the block exists
