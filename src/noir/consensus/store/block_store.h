@@ -130,7 +130,7 @@ public:
     if (!tmp.has_value()) {
       return false;
     }
-    auto height_ = noir::codec::scale::decode<int64_t>(tmp.value());
+    auto height_ = decode_val(tmp.value());
     return load_block(height_, bl);
   }
 
@@ -329,9 +329,14 @@ private:
 
   std::shared_ptr<db_session_type> db_session_;
 
-  static bytes encode_val(int64_t val) {
+  static inline bytes encode_val(int64_t val) {
     auto hex_ = from_hex(fmt::format("{:016x}", static_cast<uint64_t>(val)));
     return {hex_.begin(), hex_.end()};
+  }
+
+  static inline int64_t decode_val(bytes buf) {
+    auto height_hex = to_hex(buf);
+    return stoull(height_hex, nullptr, 16);
   }
 
   template<typename... int64s>
@@ -380,8 +385,7 @@ private:
       return false;
     }
 
-    auto height_hex = to_hex(bytes{key.begin() + 1, key.end()});
-    height_ = stoull(height_hex, nullptr, 16);
+    height_ = decode_val(bytes{key.begin() + 1, key.end()});
     return true;
   }
 
