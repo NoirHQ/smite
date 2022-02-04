@@ -7,6 +7,7 @@
 #include <noir/rpc/rpc.h>
 #include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
+#include <eth/rpc/rpc.h>
 
 using namespace noir::tendermint;
 using namespace noir::rpc;
@@ -20,7 +21,7 @@ CLI::App* start(CLI::App& root) {
     config::set("home", home_dir.c_str());
     config::load();
 
-    if (!app.initialize<class tendermint, class rpc, class jsonrpc>()) {
+    if (!app.initialize<class tendermint, noir::rpc::rpc, class jsonrpc, eth::rpc::rpc>()) {
       throw CLI::Success();
     }
     app.startup();

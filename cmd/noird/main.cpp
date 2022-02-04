@@ -9,6 +9,7 @@
 #include <noir/rpc/rpc.h>
 #include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
+#include <eth/rpc/rpc.h>
 
 using namespace noir;
 
@@ -39,8 +40,9 @@ int main(int argc, char** argv) {
 
   // register plugins
   app.register_plugin<tendermint::tendermint>();
-  app.register_plugin<rpc::rpc>();
-  app.register_plugin<rpc::jsonrpc>();
+  app.register_plugin<noir::rpc::rpc>();
+  app.register_plugin<noir::rpc::jsonrpc>();
+  app.register_plugin<eth::rpc::rpc>();
 
   return app.run(argc, argv);
 }
