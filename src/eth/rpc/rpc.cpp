@@ -7,9 +7,6 @@
 
 namespace eth::rpc {
 
-rpc::rpc() = default;
-rpc::~rpc() = default;
-
 void rpc::plugin_initialize(const CLI::App& config) {
   ilog("initializing ethereum rpc");
 }
