@@ -7,12 +7,18 @@
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
 #include <noir/common/types.h>
+#include <noir/consensus/tx.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 
 #include <fc/crypto/rand.hpp>
 
 namespace noir::consensus {
+
+struct block_data {
+  std::vector<tx> txs;
+  bytes hash;
+};
 
 struct block_header {
   int64_t height{};
@@ -31,7 +37,7 @@ struct block_header {
 struct block {
   // mutex mtx;
   block_header header;
-  // data data;
+  block_data data;
   // evidence evidence;
   // commit last_commit;
 
