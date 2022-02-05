@@ -1,4 +1,28 @@
+function(add_noir_test TARGET)
+  if(BUILD_TESTING)
+    add_executable(${TARGET} ${ARGN})
+    target_link_libraries(${TARGET} noir Catch2WithMain)
+    catch_discover_tests(${TARGET})
+  endif()
+endfunction()
+
 set(NOIR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_subdirectory(noir)
+add_library(noir STATIC)
+target_include_directories(noir PUBLIC ${NOIR_SOURCE_DIR})
+target_link_libraries(noir
+  appbase
+  expected
+  fc
+  fmt
+  rocksdb
+  softfloat
+  tendermint
+  websocketpp
+)
+if(APPLE)
+  target_link_libraries(noir "-framework CoreFoundation" "-framework Security")
+endif()
+
 add_subdirectory(eth)
+add_subdirectory(noir)
