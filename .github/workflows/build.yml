@@ -30,27 +30,10 @@ jobs:
           boost_install_dir: /opt
       # gflags (for rocksdb)
       - run: sudo apt install -y libgflags-dev
-      # go toolchain
-      - uses: actions/setup-go@v2
-        with:
-          go-version: "1.17"
-      - id: go-cache-paths
-        run: |
-          echo "::set-output name=go-build::$(go env GOCACHE)"
-          echo "::set-output name=go-mod::$(go env GOMODCACHE)"
       # checkout
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      # restore go package cache
-      - uses: actions/cache@v2
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-build }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
-      - uses: actions/cache@v2
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
       # restore rocksdb build cache
       - id: rocksdb-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/rocksdb/{ print $1 }')"
@@ -73,19 +56,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      # restore go package cache
-      - id: go-cache-paths
-        run: |
-          echo "::set-output name=go-build::$(go env GOCACHE)"
-          echo "::set-output name=go-mod::$(go env GOMODCACHE)"
-      - uses: actions/cache@v2
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-build }}
-          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
-      - uses: actions/cache@v2
-        with:
-          path: ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
       # build
       - run: cmake -E make_directory build
       - run: cmake .. && make -j2
