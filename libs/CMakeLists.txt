@@ -20,7 +20,7 @@ add_subdirectory(websocketpp)
 
 # use cached rocksdb in github build workflow
 set(ROCKSDB_CACHED ${CMAKE_CURRENT_BINARY_DIR}/rocksdb/librocksdb.a)
-if(EXISTS ${ROCKSDB_CACHED})
+if(NOT TARGET rocksdb AND EXISTS ${ROCKSDB_CACHED})
   add_library(rocksdb STATIC IMPORTED GLOBAL)
   set_target_properties(rocksdb PROPERTIES IMPORTED_LOCATION ${ROCKSDB_CACHED})
   target_include_directories(rocksdb INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/rocksdb/include)
