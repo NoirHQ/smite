@@ -9,4 +9,4 @@ add_executable(noird
   noir/commands/version.cpp
 )
 target_include_directories(noird PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(noird eth noir)
+target_link_libraries(noird noir)

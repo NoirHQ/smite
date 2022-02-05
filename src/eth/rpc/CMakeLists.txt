@@ -1,4 +1,4 @@
-target_sources(eth
+target_sources(noir
   PRIVATE
     rpc.cpp
 )
