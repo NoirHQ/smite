@@ -7,7 +7,6 @@
 #include <noir/common/log.h>
 #include <noir/rpc/jsonrpc.h>
 #include <noir/rpc/rpc.h>
-#include <noir/tendermint/tendermint.h>
 #include <appbase/application.hpp>
 #include <eth/rpc/rpc.h>
 
@@ -28,7 +27,7 @@ int main(int argc, char** argv) {
   app.set_home_dir(home_dir / ".noir");
   app.set_config_file("app.toml");
 
-  noir::log::initialize("tmlog");
+  noir::log::initialize("console");
 
   // add subcommands
   commands::add_command(app.config(), &commands::consensus_test);
@@ -39,7 +38,6 @@ int main(int argc, char** argv) {
   commands::add_command(app.config(), &commands::version);
 
   // register plugins
-  app.register_plugin<tendermint::tendermint>();
   app.register_plugin<noir::rpc::rpc>();
   app.register_plugin<noir::rpc::jsonrpc>();
   app.register_plugin<eth::rpc::rpc>();

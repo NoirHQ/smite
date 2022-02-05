@@ -15,7 +15,6 @@ add_subdirectory(Catch2)
 add_subdirectory(expected)
 add_subdirectory(fc)
 add_subdirectory(fmt)
-add_subdirectory(tendermint)
 add_subdirectory(websocketpp)
 
 # use cached rocksdb in github build workflow

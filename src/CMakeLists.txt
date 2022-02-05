@@ -17,7 +17,6 @@ target_link_libraries(noir
   fmt
   rocksdb
   softfloat
-  tendermint
   websocketpp
 )
 if(APPLE)

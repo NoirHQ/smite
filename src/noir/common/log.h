@@ -8,7 +8,8 @@
 
 namespace noir::log {
 
-static const char* default_logger_name = "tmlog";
+extern const char* default_logger_name;
+
 void initialize(const char* logger_name);
 
 #define FC_DEBUG_LOG(LOGGER_NAME, FORMAT, ...) fc_dlog(fc::logger::get(LOGGER_NAME), FORMAT, __VA_ARGS__)
