@@ -44,6 +44,10 @@ struct validator {
     else
       return other;
   }
+
+  static validator new_validator(pub_key key, int64_t voting_power) {
+    return validator{key.address(), key, voting_power, 0};
+  }
 };
 
 struct validator_set {
