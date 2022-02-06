@@ -301,4 +301,12 @@ struct vote_set {
   }
 };
 
+/**
+ * a set of data provided by application that will be included in vote
+ */
+struct vote_extension {
+  bytes app_data_to_sign;
+  bytes app_data_self_authenticating;
+};
+
 } // namespace noir::consensus
