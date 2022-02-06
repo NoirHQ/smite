@@ -15,45 +15,6 @@
 
 namespace noir::consensus {
 
-struct block_data {
-  std::vector<tx> txs;
-  bytes hash;
-};
-
-struct block_header {
-  int64_t height{};
-  p2p::tstamp time{};
-
-  bytes32 hash_; // todo - remove later after properly compute hash
-
-  bytes get_hash() {
-    // todo - properly compute hash
-    if (hash_ == bytes32())
-      fc::rand_pseudo_bytes(hash_.data(), hash_.data_size());
-    return from_hex(hash_.str());
-  }
-};
-
-struct block {
-  // mutex mtx;
-  block_header header;
-  block_data data;
-  // evidence evidence;
-  // commit last_commit;
-
-  bytes get_hash() {
-    // todo - lock mtx
-    // todo - implement
-    return header.get_hash();
-  }
-
-  bool hashes_to(bytes hash) {
-    if (hash.empty())
-      return false;
-    return get_hash() == hash;
-  }
-};
-
 enum block_id_flag {
   FlagAbsent = 1,
   FlagCommit,
@@ -93,6 +54,49 @@ struct commit {
   static commit new_commit(
     int64_t height_, int32_t round_, p2p::block_id block_id_, std::vector<commit_sig>& commit_sigs) {
     return commit{height_, round_, block_id_, commit_sigs};
+  }
+
+  size_t size() const {
+    return signatures.size();
+  }
+};
+
+struct block_data {
+  std::vector<tx> txs;
+  bytes hash;
+};
+
+struct block_header {
+  int64_t height{};
+  p2p::tstamp time{};
+
+  bytes32 hash_; // todo - remove later after properly compute hash
+
+  bytes get_hash() {
+    // todo - properly compute hash
+    if (hash_ == bytes32())
+      fc::rand_pseudo_bytes(hash_.data(), hash_.data_size());
+    return from_hex(hash_.str());
+  }
+};
+
+struct block {
+  // mutex mtx;
+  block_header header;
+  block_data data;
+  // evidence evidence;
+  std::shared_ptr<commit> last_commit;
+
+  bytes get_hash() {
+    // todo - lock mtx
+    // todo - implement
+    return header.get_hash();
+  }
+
+  bool hashes_to(bytes hash) {
+    if (hash.empty())
+      return false;
+    return get_hash() == hash;
   }
 };
 
