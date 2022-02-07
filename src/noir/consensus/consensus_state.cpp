@@ -894,7 +894,7 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p:
   if (added && rs.proposal_block_parts->is_complete()) {
     // derive block from proto // todo
     // rs.proposal_block = block; // todo - requires converting block from proto
-    rs.proposal_block = block{block_header{height_}}; // todo - remove later
+    rs.proposal_block = block{block_header{"", "", height_}}; // todo - remove later
 
     // NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
     ilog(fmt::format("received complete proposal block: height={}", rs.proposal_block->header.height));
