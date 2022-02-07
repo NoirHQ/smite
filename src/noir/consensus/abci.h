@@ -43,7 +43,7 @@ public:
     std::string sender;
   };
 
-  const uint32_t code_type_ok = 0;
+  static constexpr uint32_t code_type_ok = 0;
 
   struct response_deliver_tx {
     uint32_t code;
