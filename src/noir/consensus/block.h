@@ -67,8 +67,27 @@ struct block_data {
 };
 
 struct block_header {
+  std::string version;
+  std::string chain_id;
   int64_t height{};
   p2p::tstamp time{};
+
+  // Previous block info
+  p2p::block_id last_block_id;
+
+  // Hashes of block data
+  bytes last_commit_hash;
+  bytes data_hash;
+
+  // Hashes from app for previous block
+  bytes validators_hash;
+  bytes next_validators_hash;
+  bytes consensus_hash;
+  bytes app_hash;
+  bytes last_result_hash; // root hash of all results from txs of previous block
+
+  // bytes evidence_hash;
+  bytes proposer_address; // todo - use address type?
 
   bytes32 hash_; // todo - remove later after properly compute hash
 
