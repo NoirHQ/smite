@@ -19,6 +19,16 @@ struct event {
   std::vector<event_attribute> attributes;
 };
 
+struct vote_info {
+  validator validator_; // todo - do we need another data structure?
+  bool signed_last_block;
+};
+
+struct last_commit_info {
+  int32_t round;
+  std::vector<vote_info> votes;
+};
+
 struct validator_update {
   // pubkey
   int64_t power;
@@ -44,8 +54,19 @@ struct response_deliver_tx {
   std::string codespace;
 };
 
+struct requst_begin_block {
+  bytes hash;
+  block_header header_;
+  last_commit_info last_commit_info_;
+  // evidence
+};
+
 struct response_begin_block {
   std::vector<event> events;
+};
+
+struct request_end_block {
+  int64_t height;
 };
 
 struct response_end_block {
@@ -54,28 +75,56 @@ struct response_end_block {
   std::vector<event> events;
 };
 
+struct response_commit {
+  bytes data;
+  int64_t retain_height;
+};
+
 struct abci_responses {
   std::vector<response_deliver_tx> deliver_txs;
   response_end_block end_block;
   response_begin_block begin_block;
 };
 
-struct vote_info {
-  validator validator_; // todo - do we need another data structure?
-  bool signed_last_block;
-};
-
-struct last_commit_info {
-  int32_t round;
-  std::vector<vote_info> votes;
-};
-
 struct request_extend_vote {
   vote vote_;
 };
 
+struct response_extend_vote {
+  vote_extension vote_extension_;
+};
+
 struct request_verify_vote_extension {
   vote vote_;
+};
+
+struct response_verify_vote_extension {
+  int32_t result;
+};
+
+struct request_init_chain {
+  p2p::tstamp time;
+  std::string chain_id;
+  consensus_params consensus_params_;
+  std::vector<validator_update> validators;
+  bytes app_state_bytes;
+  int64_t initial_height;
+};
+
+struct response_init_chain {
+  consensus_params consensus_params_;
+  std::vector<validator_update> validators;
+  bytes app_hash;
+};
+
+struct request_prepare_proposal {
+  bytes block_data;
+  int64_t block_data_size;
+  std::vector<vote> votes;
+};
+
+struct response_prepare_proposal {
+  bytes block_data;
 };
 
 } // namespace noir::consensus
