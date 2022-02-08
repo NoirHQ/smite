@@ -30,6 +30,8 @@ jobs:
           boost_install_dir: /opt
       # gflags (for rocksdb)
       - run: sudo apt install -y libgflags-dev
+      # xsltproc (for XKCP)
+      - run: sudo apt install -y xsltproc
       # checkout
       - uses: actions/checkout@v2
         with:
