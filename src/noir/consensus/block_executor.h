@@ -207,7 +207,7 @@ struct block_executor {
 
   last_commit_info get_begin_block_validator_info(block& block_, db_store& store_, int64_t initial_height) {
     std::vector<vote_info> vote_infos;
-    vote_infos.resize(block_.last_commit->size());
+    vote_infos.resize(block_.last_commit.size());
     if (block_.header.height > initial_height) {
       validator_set last_val_set;
       if (!store_.load_validators(block_.header.height - 1, last_val_set)) {
@@ -215,18 +215,18 @@ struct block_executor {
       }
 
       // Check if commit_size matches validator_set size
-      auto commit_size = block_.last_commit->size();
+      auto commit_size = block_.last_commit.size();
       auto val_set_len = last_val_set.validators.size();
       if (commit_size != val_set_len) {
         throw std::runtime_error("panic: commit_size doesn't match val_set length");
       }
 
       for (auto i = 0; i < last_val_set.validators.size(); i++) {
-        auto commit_sig = block_.last_commit->signatures[i];
+        auto commit_sig = block_.last_commit.signatures[i];
         vote_infos[i] = vote_info{last_val_set.validators[i], !commit_sig.absent()};
       }
     }
-    return last_commit_info{block_.last_commit->round, vote_infos};
+    return last_commit_info{block_.last_commit.round, vote_infos};
   }
 
   bool validate_validator_update(std::vector<validator_update> abci_updates, validator_params params) {
