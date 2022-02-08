@@ -6,9 +6,11 @@
 #pragma once
 #include <noir/common/types.h>
 #include <noir/p2p/protocol.h>
+#include <future>
 
 namespace noir::consensus {
 
+// FIXME : These types are temporary.
 struct tx {
   sender_type sender;
   std::optional<tx_id_type> _id;
@@ -32,5 +34,19 @@ struct tx {
 
 using tx_ptr = std::shared_ptr<tx>;
 using tx_ptrs = std::vector<tx_ptr>;
+
+struct response_check_tx {
+  std::future<bool> result;
+  uint32_t code;
+  std::string sender;
+};
+
+static constexpr uint32_t code_type_ok = 0;
+
+struct response_deliver_tx {
+  uint32_t code;
+};
+
+using response_deliver_txs = std::vector<response_deliver_tx>;
 
 } // namespace noir::consensus
