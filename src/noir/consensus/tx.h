@@ -8,7 +8,8 @@
 
 namespace noir::consensus {
 
-struct tx {};
+//struct tx {};
+using tx = bytes;
 
 using tx_ptr = std::shared_ptr<tx>;
 
