@@ -8,6 +8,8 @@
 
 namespace noir::consensus {
 
+constexpr uint32_t code_type_ok{0};
+
 struct event_attribute {
   std::string key;
   std::string value;
