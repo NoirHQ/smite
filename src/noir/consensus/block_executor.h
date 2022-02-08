@@ -129,13 +129,15 @@ struct block_executor {
     /// directly implement commit()
     // mempool lock - todo
 
-    // proxyApp_.commit_sync(); // todo
+    // Commit block and get hash
+    auto commit_res = proxyApp_->commit_sync();
 
-    ilog(fmt::format("committed state: height={}, num_txs... app_hash...", block_.header.height));
+    ilog(
+      fmt::format("committed state: height={}, num_txs... app_hash={}", block_.header.height, to_hex(commit_res.data)));
 
     // mempool update - todo
-    bytes app_hash{}; // = res.data // todo
-    int64_t retain_height{}; // = res.retain_height; // todo
+    bytes app_hash = commit_res.data;
+    int64_t retain_height = commit_res.retain_height;
     /// commit() ends
 
     // Update app_hash and save the state
@@ -174,16 +176,11 @@ struct block_executor {
 
   std::shared_ptr<abci_responses> exec_block_on_proxy_app(
     std::shared_ptr<app_connection> proxyAppConn, block& block_, db_store& db_store, int64_t initial_height) {
-    uint valid_txs = 0, invalid_txs = 0, tx_index = 0;
+    uint valid_txs = 0, invalid_txs = 0;
     auto abci_responses_ = std::make_shared<abci_responses>();
     std::vector<response_deliver_tx> dtxs;
     dtxs.resize(block_.data.txs.size());
     abci_responses_->deliver_txs = dtxs;
-
-    auto proxy_cb = [](/* req, res - todo */) {
-      // todo - implement
-    };
-    // proxyAppConn.set_response_callback(proxy_cb); // todo
 
     auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
 
@@ -192,10 +189,17 @@ struct block_executor {
       proxyAppConn->begin_block_sync(requst_begin_block{block_.get_hash(), block_.header, commit_info});
 
     // run txs of block
-    for (auto tx : block_.data.txs) {
-      auto req = request_deliver_tx{};
-      req.tx = bytes{}; // todo use tx
-      proxyAppConn->deliver_tx_async(request_deliver_tx{req});
+    for (const auto& tx : block_.data.txs) {
+      auto deliver_res = proxyAppConn->deliver_tx_async(request_deliver_tx{tx});
+      /* todo - verify if implementation is correct;
+       *        basically removed the original callback func and directly applied it here */
+      if (deliver_res.code == code_type_ok) {
+        valid_txs++;
+      } else {
+        dlog(fmt::format("invalid tx: code=", deliver_res.code));
+        invalid_txs++;
+      }
+      abci_responses_->deliver_txs.push_back(deliver_res);
     }
 
     abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_.header.height});
