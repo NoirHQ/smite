@@ -8,13 +8,13 @@
 namespace noir::tx_pool {
 
 tx_pool::tx_pool()
-  : config_(config{}), tx_queue_(config_.cache_size * config_.max_tx_bytes), precheck_(nullptr), postcheck_(nullptr),
+  : config_(config{}), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size), precheck_(nullptr), postcheck_(nullptr),
     block_height_(0) {
   thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
 }
 
 tx_pool::tx_pool(const config& cfg, uint64_t block_height)
-  : config_(cfg), tx_queue_(config_.cache_size * config_.max_tx_bytes), precheck_(nullptr), postcheck_(nullptr),
+  : config_(cfg), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size), precheck_(nullptr), postcheck_(nullptr),
     block_height_(block_height) {}
 
 tx_pool::~tx_pool() {
@@ -38,10 +38,19 @@ std::optional<consensus::abci::response_check_tx> tx_pool::check_tx(const consen
     return std::nullopt;
   }
 
+  if (tx_cache_.has(tx_ptr->id())) {
+    // already in cache
+    tx_cache_.put(tx_ptr->id(), tx_ptr);
+    return std::nullopt;
+  }
+
+  tx_cache_.put(tx_ptr->id(), tx_ptr);
+
   consensus::abci::response_check_tx res;
-  res.result = async_thread_pool(thread_->get_executor(), [&res, tx_ptr, this]() {
+  res.result = async_thread_pool(thread_->get_executor(), [&, tx_ptr]() {
     if (postcheck_ && !postcheck_(*tx_ptr, res)) {
       if (res.code != consensus::abci::code_type_ok) {
+        tx_cache_.del(tx_ptr->id());
         return false;
       }
       // add tx to failed tx_pool
@@ -52,7 +61,13 @@ std::optional<consensus::abci::response_check_tx> tx_pool::check_tx(const consen
     }
 
     std::lock_guard<std::mutex> lock(mutex_);
-    return tx_queue_.add_tx(tx_ptr);
+    if (!tx_queue_.add_tx(tx_ptr)) {
+      if (!config_.keep_invalid_txs_in_cache) {
+        tx_cache_.del(tx_ptr->id());
+      }
+      return false;
+    }
+    return true;
   });
 
   if (sync) {
@@ -83,7 +98,6 @@ consensus::tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t 
     bytes += tx_ptr->size();
     gas += tx_ptr->gas;
     tx_ptrs.push_back(tx_ptr);
-    tx_queue_.erase(tx_ptr->id());
   }
 
   return tx_ptrs;
@@ -99,14 +113,14 @@ consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
       break;
     }
     tx_ptrs.push_back(itr->tx_ptr);
-    tx_queue_.erase(itr->tx_ptr->id());
   }
 
   return tx_ptrs;
 }
 
-bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs,
+bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& block_txs,
   consensus::abci::response_deliver_txs& responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
+  std::lock_guard<std::mutex> lock(mutex_);
   block_height_ = block_height;
 
   if (new_precheck) {
@@ -117,15 +131,15 @@ bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs,
     postcheck_ = new_postcheck;
   }
 
-  size_t size = MIN(tx_ptrs.size(), responses.size()); //
-  std::lock_guard<std::mutex> lock(mutex_);
+  size_t size = MIN(block_txs.size(), responses.size()); //
   for (auto i = 0; i < size; i++) {
     if (responses[i].code == consensus::abci::code_type_ok) {
-      tx_queue_.add_tx(tx_ptrs[i]);
+      tx_cache_.put(block_txs[i]->id(), block_txs[i]);
     } else if (!config_.keep_invalid_txs_in_cache) {
-      tx_queue_.erase(tx_ptrs[i]->id());
+      tx_cache_.del(block_txs[i]->id());
     }
-    // TBD : remove from tx store
+
+    tx_queue_.erase(block_txs[i]->id());
   }
 
   if (config_.ttl_num_blocks > 0) {
@@ -147,6 +161,7 @@ size_t tx_pool::size() const {
 void tx_pool::flush() {
   std::lock_guard<std::mutex> lock_guard(mutex_);
   tx_queue_.clear();
+  tx_cache_.reset();
 }
 
 } // namespace noir::tx_pool

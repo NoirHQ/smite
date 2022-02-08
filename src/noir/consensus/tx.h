@@ -13,7 +13,7 @@ struct tx {
   sender_type sender;
   std::optional<tx_id_type> _id;
 
-  p2p::bytes data;
+  bytes data;
   uint64_t gas;
   uint64_t nonce;
   uint64_t height;

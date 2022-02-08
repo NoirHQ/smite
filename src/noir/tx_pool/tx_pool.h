@@ -9,6 +9,7 @@
 #include <noir/consensus/abci.h>
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/unapplied_tx_queue.hpp>
+#include <noir/tx_pool/LRU_cache.h>
 
 namespace noir::tx_pool {
 class tx_pool {
@@ -19,10 +20,10 @@ public:
     bool recheck = true;
     bool broadcast = true;
     uint32_t thread_num = 5;
-    uint32_t size = 5000;
     uint64_t max_tx_bytes = 1024 * 1024;
     uint64_t max_txs_bytes = 1024 * 1024 * 1024;
     uint64_t max_batch_bytes;
+    uint32_t pool_size = 10000;
     uint64_t cache_size = 10000;
     bool keep_invalid_txs_in_cache = false;
     //    fc::time_point ttl_duration;
@@ -36,6 +37,7 @@ private:
   std::mutex mutex_;
   config config_;
   unapplied_tx_queue tx_queue_;
+  LRU_cache<tx_id_type, consensus::tx_ptr> tx_cache_;
 
   std::unique_ptr<named_thread_pool> thread_;
 

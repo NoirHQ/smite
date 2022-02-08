@@ -6,6 +6,7 @@
 #include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
 #include <noir/common/thread_pool.h>
+#include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <noir/tx_pool/unapplied_tx_queue.hpp>
 
@@ -50,7 +51,7 @@ public:
 
 } // namespace test_detail
 
-TEST_CASE("Add/Get/Erase tx", "[tx_pool][unapplied_tx_queue]") {
+TEST_CASE("Basic test", "[tx_pool][unapplied_tx_queue]") {
   auto test_helper = std::make_unique<test_detail::test_helper>();
   unapplied_tx_queue tx_queue;
 
@@ -97,9 +98,15 @@ TEST_CASE("Add/Get/Erase tx", "[tx_pool][unapplied_tx_queue]") {
     }
     CHECK(tx_queue.empty());
   }
+
+  SECTION("Flush") {
+    tx_queue.clear();
+    CHECK(tx_queue.size() == 0);
+    CHECK(tx_queue.empty());
+  }
 }
 
-TEST_CASE("Fully add tx", "[tx_pool][unapplied_tx_queue]") {
+TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
   auto test_helper = std::make_unique<test_detail::test_helper>();
   uint64_t tx_count = 10000;
   uint64_t queue_size = (sizeof(unapplied_tx) + sizeof(tx)) * tx_count;
@@ -206,18 +213,18 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
   auto test_helper = std::make_unique<test_detail::test_helper>();
   class tx_pool tp;
 
-  auto push_tx = [&tp, &test_helper](uint64_t count, uint64_t offset, bool sync = true) {
+  auto push_tx = [&](uint64_t count, bool sync = true) {
     std::vector<std::optional<consensus::abci::response_check_tx>> res_vec;
-    for (uint64_t i = offset; i < count + offset; i++) {
+    for (uint64_t i = 0; i < count; i++) {
       res_vec.push_back(std::move(tp.check_tx(std::make_shared<::tx>(test_helper->make_random_tx("user")), sync)));
     }
     return res_vec;
   };
 
-  auto pop_tx = [&tp](uint64_t count) { return tp.reap_max_txs(count); };
+  auto pop_tx = [&](uint64_t count) { return tp.reap_max_txs(count); };
 
   SECTION("sync") {
-    auto res = push_tx(100, 0);
+    auto res = push_tx(100);
     for (auto& r : res) {
       CHECKED_IF(r.has_value()) {
         CHECK(r.value().result.get());
@@ -226,7 +233,7 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
 
     // fail case : same tx_id
     test_helper->reset_tx_id();
-    auto res_failed = push_tx(100, 0);
+    auto res_failed = push_tx(100);
     for (auto& r : res_failed) {
       CHECKED_IF(r.has_value()) {
         CHECK(r.value().result.get() == false);
@@ -235,7 +242,6 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
 
     auto tx_ptrs = pop_tx(100);
     CHECK(tx_ptrs.size() == 100);
-    CHECK(tp.size() == 0);
   }
 
   SECTION("async") {
@@ -249,12 +255,11 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
       std::future<std::vector<std::optional<consensus::abci::response_check_tx>>> res[thread_num];
       uint64_t tx_num_per_thread = total_tx_num / thread_num;
       for (uint64_t t = 0; t < thread_num; t++) {
-        uint64_t offset = t * tx_num_per_thread;
-        res[t] = async_thread_pool(thread->get_executor(), [&token, &push_tx, tx_num_per_thread, offset]() {
+        res[t] = async_thread_pool(thread->get_executor(), [&]() {
           token.fetch_sub(1, std::memory_order_seq_cst);
           while (token.load(std::memory_order_seq_cst)) {
           } // wait other thread
-          return push_tx(tx_num_per_thread, offset, false);
+          return push_tx(tx_num_per_thread, false);
         });
       }
 
@@ -277,14 +282,14 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
     SECTION("1 thread add / 1 thread get") {
       std::atomic<uint64_t> token = 2;
 
-      auto push_res = async_thread_pool(thread->get_executor(), [&push_tx, &token]() {
+      auto push_res = async_thread_pool(thread->get_executor(), [&]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
-        return push_tx(1000, 0, false);
+        return push_tx(1000, false);
       });
 
-      auto pop_res = async_thread_pool(thread->get_executor(), [&pop_tx, &token]() {
+      auto pop_res = async_thread_pool(thread->get_executor(), [&]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
@@ -306,19 +311,18 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
       }
 
       CHECK(pop_res.get() == 1000);
-      CHECK(tp.size() == 0);
     }
 
     SECTION("1 thread add / 2 thread get") {
       std::atomic<uint64_t> token = 3;
-      auto push_res = async_thread_pool(thread->get_executor(), [&push_tx, &token]() {
+      auto push_res = async_thread_pool(thread->get_executor(), [&]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
-        return push_tx(1000, 0, false);
+        return push_tx(1000, false);
       });
 
-      auto pop_res1 = async_thread_pool(thread->get_executor(), [&pop_tx, &token]() {
+      auto pop_res1 = async_thread_pool(thread->get_executor(), [&]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
@@ -331,7 +335,7 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
         return get_count;
       });
 
-      auto pop_res2 = async_thread_pool(thread->get_executor(), [&pop_tx, &token]() {
+      auto pop_res2 = async_thread_pool(thread->get_executor(), [&]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
@@ -356,7 +360,62 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
       get_count += pop_res1.get();
       get_count += pop_res2.get();
       CHECK(get_count == 1000);
-      CHECK(tp.size() == 0);
+    }
+  }
+}
+
+TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
+  auto test_helper = std::make_unique<test_detail::test_helper>();
+  uint tx_count = 1000;
+  uint cache_size = 1000;
+
+  LRU_cache<tx_id_type, consensus::tx_ptr> c{cache_size};
+
+  consensus::tx_ptr txs[tx_count];
+  for (auto& tx : txs) {
+    tx = std::make_shared<::tx>(test_helper->make_random_tx("user"));
+    c.put(tx->id(), tx);
+  }
+
+  SECTION("put") {
+    CHECK(c.size() == tx_count);
+    for (auto& tx : txs) {
+      CHECK(c.has(tx->id()));
+    }
+
+    // new tx, replace the oldest tx in cache
+    auto tx = std::make_shared<::tx>(test_helper->make_random_tx("user"));
+    c.put(tx->id(), tx); // tx0 is replaced by new one
+    CHECK(c.size() == tx_count);
+    CHECK(c.has(tx->id()));
+    CHECK(!c.has(txs[0]->id()));
+
+    // put again tx1
+    c.put(txs[1]->id(), txs[1]);
+    tx = std::make_shared<::tx>(test_helper->make_random_tx("user"));
+    c.put(tx->id(), tx); // tx2 is replaced by new one
+    CHECK(c.has(tx->id()));
+    CHECK(c.has(txs[1]->id()));
+    CHECK(!c.has(txs[2]->id()));
+  }
+
+  SECTION("invalid") {
+    auto tx = std::make_shared<::tx>(test_helper->make_random_tx("user"));
+    auto item = c.get(tx->id());
+    CHECK(!item.has_value());
+  }
+
+  SECTION("del") {
+    CHECK(c.has(txs[3]->id()));
+    c.del(txs[3]->id());
+    CHECK(!c.has(txs[3]->id()));
+    CHECK(c.size() == tx_count - 1);
+  }
+
+  SECTION("get") {
+    auto res = c.get(txs[0]->id());
+    CHECKED_IF(res.has_value()) {
+      CHECK(!txs[0]->id().str().compare(res.value()->id().str()));
     }
   }
 }
