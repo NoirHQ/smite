@@ -24,17 +24,17 @@ private:
 
   std::random_device random_device;
   std::mt19937 generator{random_device()};
-  std::uniform_int_distribution<uint16_t> dist_gas{0, std::numeric_limits<uint16_t>::max()};
 
 public:
   auto make_random_tx(const sender_type& sender) {
     tx new_tx;
     new_tx.sender = sender;
-    new_tx.gas = dist_gas(generator);
+    new_tx.gas = rand_gas();
 
     std::lock_guard<std::mutex> lock(mutex);
     new_tx._id = tx_id_type{to_hex(std::to_string(tx_id))};
     new_tx.nonce = tx_id;
+    new_tx.height = tx_id;
     tx_id++;
     return new_tx;
   }
@@ -47,11 +47,16 @@ public:
     std::lock_guard<std::mutex> lock(mutex);
     tx_id = 0;
   }
+
+  uint64_t rand_gas(uint64_t max = 0xFFFF, uint64_t min = 0) {
+    std::uniform_int_distribution<uint64_t> dist_gas{min, max};
+    return dist_gas(generator);
+  }
 };
 
 } // namespace test_detail
 
-TEST_CASE("Basic test", "[tx_pool][unapplied_tx_queue]") {
+TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
   auto test_helper = std::make_unique<test_detail::test_helper>();
   unapplied_tx_queue tx_queue;
 
@@ -351,6 +356,81 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
       get_count += get_res[1].get();
       CHECK(get_count == 1000);
     }
+  }
+}
+
+TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
+  auto test_helper = std::make_unique<test_detail::test_helper>();
+  class tx_pool tp;
+
+  const uint64_t tx_count = 10000;
+  consensus::tx_ptrs txs;
+  for (auto i = 0; i < tx_count; i++) {
+    txs.push_back(std::make_shared<::tx>(test_helper->make_random_tx("user")));
+  }
+
+  for (auto& tx : txs) {
+    auto res = tp.check_tx(tx, true);
+    CHECKED_IF(res.has_value()) {
+      CHECK(res.value().result.get());
+    }
+  }
+
+  consensus::tx_ptrs tx_vec;
+  auto get_total_bytes = [&](){
+    uint64_t total_bytes = 0;
+    for(auto& tx : tx_vec) { total_bytes += tx->size(); }
+    return total_bytes;
+  };
+
+  auto get_total_gas = [&](){
+    uint64_t total_gas = 0;
+    for(auto& tx : tx_vec) { total_gas += tx->gas; }
+    return total_gas;
+  };
+
+  uint tc = 100;
+  for (uint i = 0; i < tc; i++) {
+    uint64_t max_bytes = 1000;
+    uint64_t max_gas = test_helper->rand_gas(1000000, 100000);
+    tx_vec = tp.reap_max_bytes_max_gas(max_bytes, max_gas);
+    CHECK(get_total_bytes() <= max_bytes);
+    CHECK(get_total_gas() <= max_gas);
+  }
+}
+
+TEST_CASE("Update", "[tx_pool]") {
+  auto test_helper = std::make_unique<test_detail::test_helper>();
+  noir::tx_pool::tx_pool::config config{.ttl_num_blocks = 10,};
+  class tx_pool tp{config, 0};
+
+  const uint64_t tx_count = 10;
+  consensus::tx_ptrs txs;
+  for (auto i = 0; i < tx_count; i++) {
+    txs.push_back(std::make_shared<::tx>(test_helper->make_random_tx("user")));
+  }
+
+  for (auto& tx : txs) {
+    auto res = tp.check_tx(tx, true);
+    CHECKED_IF(res.has_value()) {
+      CHECK(res.value().result.get());
+    }
+  }
+
+  SECTION("Erase committed tx") {
+    consensus::abci::response_deliver_txs res;
+    CHECK(tp.update(0, txs, res));
+    CHECK(tp.empty());
+  }
+
+  SECTION("Erase expired tx") {
+    consensus::abci::response_deliver_txs res;
+    consensus::tx_ptrs empty_txs;
+    for (uint64_t i = 0; i < tx_count; i++) {
+      CHECK(tp.update(config.ttl_num_blocks + i, empty_txs, res));
+      CHECK(tp.size() == tx_count - i - 1);
+    }
+    CHECK(tp.empty());
   }
 }
 
