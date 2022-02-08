@@ -111,7 +111,7 @@ struct block {
   block_header header;
   block_data data;
   // evidence evidence;
-  std::shared_ptr<commit> last_commit;
+  commit last_commit;
 
   bytes get_hash() {
     // todo - lock mtx
