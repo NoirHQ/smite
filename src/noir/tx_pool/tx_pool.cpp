@@ -15,7 +15,9 @@ tx_pool::tx_pool()
 
 tx_pool::tx_pool(const config& cfg, uint64_t block_height)
   : config_(cfg), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size), precheck_(nullptr), postcheck_(nullptr),
-    block_height_(block_height) {}
+    block_height_(block_height) {
+  thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
+}
 
 tx_pool::~tx_pool() {
   thread_.reset();
@@ -156,6 +158,10 @@ bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& block_txs,
 
 size_t tx_pool::size() const {
   return tx_queue_.size();
+}
+
+bool tx_pool::empty() const {
+  return tx_queue_.empty();
 }
 
 void tx_pool::flush() {
