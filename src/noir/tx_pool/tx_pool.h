@@ -8,8 +8,8 @@
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/abci.h>
 #include <noir/consensus/tx.h>
-#include <noir/tx_pool/unapplied_tx_queue.hpp>
 #include <noir/tx_pool/LRU_cache.h>
+#include <noir/tx_pool/unapplied_tx_queue.hpp>
 
 namespace noir::tx_pool {
 class tx_pool {
