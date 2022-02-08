@@ -1,6 +1,7 @@
 add_subdirectory(codec)
 add_subdirectory(common)
 add_subdirectory(consensus)
+add_subdirectory(crypto)
 add_subdirectory(db)
 add_subdirectory(p2p)
 add_subdirectory(rpc)
