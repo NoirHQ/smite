@@ -328,7 +328,7 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
       });
 
       std::future<uint64_t> get_res[2];
-      for (auto& res: get_res) {
+      for (auto& res : get_res) {
         res = async_thread_pool(thread->get_executor(), [&]() {
           token.fetch_sub(1, std::memory_order_seq_cst);
           while (token.load(std::memory_order_seq_cst)) {
@@ -377,15 +377,19 @@ TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
   }
 
   consensus::tx_ptrs tx_vec;
-  auto get_total_bytes = [&](){
+  auto get_total_bytes = [&]() {
     uint64_t total_bytes = 0;
-    for(auto& tx : tx_vec) { total_bytes += tx->size(); }
+    for (auto& tx : tx_vec) {
+      total_bytes += tx->size();
+    }
     return total_bytes;
   };
 
-  auto get_total_gas = [&](){
+  auto get_total_gas = [&]() {
     uint64_t total_gas = 0;
-    for(auto& tx : tx_vec) { total_gas += tx->gas; }
+    for (auto& tx : tx_vec) {
+      total_gas += tx->gas;
+    }
     return total_gas;
   };
 
@@ -401,8 +405,12 @@ TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
 
 TEST_CASE("Update", "[tx_pool]") {
   auto test_helper = std::make_unique<test_detail::test_helper>();
-  noir::tx_pool::tx_pool::config config{.ttl_num_blocks = 10,};
-  class tx_pool tp{config, 0};
+  noir::tx_pool::tx_pool::config config{
+    .ttl_num_blocks = 10,
+  };
+  class tx_pool tp {
+    config, 0
+  };
 
   const uint64_t tx_count = 10;
   consensus::tx_ptrs txs;
