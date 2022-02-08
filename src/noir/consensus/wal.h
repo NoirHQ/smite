@@ -103,6 +103,83 @@ private:
   std::unique_ptr<class wal_codec_impl> impl_;
 };
 
+/// \brief WAL is an interface for any write-ahead logger.
+class wal {
+public:
+  /// \brief Write is called in newStep and for each receive on the peerMsgQueue and the timeoutTicker.
+  /// \param[in] msg
+  /// \return true on success, false otherwise
+  virtual bool write(const wal_message& msg) = 0;
+
+  /// \brief WriteSync is called when we receive a msg from ourselves so that we write to disk before sending signed
+  /// messages.
+  /// \param[in] msg
+  /// \return true on success, false otherwise
+  virtual bool write_sync(const wal_message& msg) = 0;
+
+  /// \brief FlushAndSync flushes and fsync the underlying group's data to disk.
+  /// \return true on success, false otherwise
+  virtual bool flush_and_sync() = 0;
+
+  /// \brief SearchForEndHeight searches for the EndHeightMessage with the given height
+  /// \param[in] height
+  /// \param[in] options
+  /// \param[out] found
+  /// \return shared_ptr of wal_decoder, nullptr if not found
+  virtual std::shared_ptr<wal_decoder> search_for_end_height(
+    int64_t height, wal_search_options options, bool& found) = 0;
+};
+
+/// \brief Write ahead logger writes msgs to disk before they are processed.
+/// Can be used for crash-recovery and deterministic replay.
+/// \todo currently the wal is overwritten during replay catchup, give it a mode so it's either reading or
+/// appending - must read to end to start appending again.
+class base_wal : public wal {
+public:
+  base_wal(const std::string& path): codec_(std::make_unique<wal_codec>(path)) {}
+  bool write(const wal_message& msg) override {
+    // TODO: implement
+    return false;
+  }
+
+  bool write_sync(const wal_message& msg) override {
+    // TODO: implement
+    return false;
+  }
+
+  bool flush_and_sync() override {
+    // TODO: implement
+    return false;
+  }
+
+  bool on_start() {
+    // TODO: implement
+    return false;
+  }
+
+  bool on_stop() {
+    // TODO: implement
+    return false;
+  }
+
+  void wait() {
+    // TODO: implement
+  }
+
+  std::shared_ptr<wal_decoder> search_for_end_height(int64_t height, wal_search_options options, bool& found) override {
+    // TODO: implement
+    return {nullptr};
+  }
+
+  bool set_flush_interval(std::chrono::system_clock::duration interval) {
+    // TODO: implement
+    return false;
+  }
+
+private:
+  std::unique_ptr<wal_codec> codec_;
+};
+
 /// \}
 
 } // namespace noir::consensus
