@@ -37,3 +37,18 @@ if(NOT rocksdb_FOUND)
   add_subdirectory(rocksdb)
   target_include_directories(rocksdb INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/rocksdb/include>)
 endif()
+
+set(XKCP_ARCH ${CMAKE_CURRENT_SOURCE_DIR}/XKCP/bin/generic64)
+add_custom_command(
+  OUTPUT ${XKCP_ARCH}/libXKCP.a
+  COMMAND make generic64/libXKCP.a
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/XKCP)
+add_custom_target(XKCP_build DEPENDS ${XKCP_ARCH}/libXKCP.a)
+
+add_library(XKCP_include INTERFACE)
+target_include_directories(XKCP_include INTERFACE ${XKCP_ARCH}/libXKCP.a.headers)
+
+add_library(XKCP STATIC IMPORTED GLOBAL)
+set_target_properties(XKCP PROPERTIES IMPORTED_LOCATION ${XKCP_ARCH}/libXKCP.a)
+add_dependencies(XKCP XKCP_build)
+target_link_libraries(XKCP INTERFACE XKCP_include)
