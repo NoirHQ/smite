@@ -20,7 +20,8 @@ class state {
 public:
   state();
 
-  block make_block(int64_t height, std::vector<tx> txs, commit commit, /* evidence, */ bytes proposal_address);
+  std::tuple<block, part_set> make_block(
+    int64_t height, std::vector<bytes> txs, commit commit, /* evidence, */ bytes proposal_address);
 
   p2p::tstamp get_median_time();
 

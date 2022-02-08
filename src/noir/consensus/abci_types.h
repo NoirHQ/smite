@@ -43,17 +43,6 @@ struct validator_update {
   }
 };
 
-struct response_deliver_tx {
-  uint32_t code;
-  bytes data;
-  std::string log;
-  std::string info;
-  int64_t gas_wanted;
-  int64_t gas_used;
-  std::vector<event> events;
-  std::string codespace;
-};
-
 struct requst_begin_block {
   bytes hash;
   block_header header_;
@@ -78,12 +67,6 @@ struct response_end_block {
 struct response_commit {
   bytes data;
   int64_t retain_height;
-};
-
-struct abci_responses {
-  std::vector<response_deliver_tx> deliver_txs;
-  response_end_block end_block;
-  response_begin_block begin_block;
 };
 
 struct request_extend_vote {
@@ -124,7 +107,28 @@ struct request_prepare_proposal {
 };
 
 struct response_prepare_proposal {
-  bytes block_data;
+  std::vector<bytes> block_data;
+};
+
+struct request_deliver_tx {
+  bytes tx;
+};
+
+struct response_deliver_tx {
+  uint32_t code;
+  bytes data;
+  std::string log;
+  std::string info;
+  int64_t gas_wanted;
+  int64_t gas_used;
+  std::vector<event> events;
+  std::string codespace;
+};
+
+struct abci_responses {
+  std::vector<response_deliver_tx> deliver_txs;
+  response_end_block end_block;
+  response_begin_block begin_block;
 };
 
 } // namespace noir::consensus

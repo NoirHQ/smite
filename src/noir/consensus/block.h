@@ -15,6 +15,13 @@
 
 namespace noir::consensus {
 
+constexpr int64_t max_header_bytes{626};
+constexpr int64_t max_overhead_for_block{11};
+
+inline int64_t max_commit_bytes(int val_count) {
+  return 94 /* max_commit_overhead_bytes */ + (109 /* max_commit_sig_bytes */ * val_count);
+}
+
 enum block_id_flag {
   FlagAbsent = 1,
   FlagCommit,
