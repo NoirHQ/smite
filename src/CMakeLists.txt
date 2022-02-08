@@ -18,6 +18,7 @@ target_link_libraries(noir
   rocksdb
   softfloat
   websocketpp
+  XKCP
 )
 if(APPLE)
   target_link_libraries(noir "-framework CoreFoundation" "-framework Security")
