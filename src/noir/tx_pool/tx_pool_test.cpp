@@ -219,7 +219,7 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
   class tx_pool tp;
 
   auto push_tx = [&](uint64_t count, bool sync = true) {
-    std::vector<std::optional<consensus::abci::response_check_tx>> res_vec;
+    std::vector<std::optional<consensus::response_check_tx>> res_vec;
     for (uint64_t i = 0; i < count; i++) {
       res_vec.push_back(std::move(tp.check_tx(std::make_shared<::tx>(test_helper->make_random_tx("user")), sync)));
     }
@@ -257,7 +257,7 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
       uint64_t thread_num = MIN(5, max_thread_num);
       uint64_t total_tx_num = 1000;
       std::atomic<uint64_t> token = thread_num;
-      std::future<std::vector<std::optional<consensus::abci::response_check_tx>>> res[thread_num];
+      std::future<std::vector<std::optional<consensus::response_check_tx>>> res[thread_num];
       uint64_t tx_num_per_thread = total_tx_num / thread_num;
       for (uint64_t t = 0; t < thread_num; t++) {
         res[t] = async_thread_pool(thread->get_executor(), [&]() {
@@ -426,13 +426,13 @@ TEST_CASE("Update", "[tx_pool]") {
   }
 
   SECTION("Erase committed tx") {
-    consensus::abci::response_deliver_txs res;
+    consensus::response_deliver_txs res;
     CHECK(tp.update(0, txs, res));
     CHECK(tp.empty());
   }
 
   SECTION("Erase expired tx") {
-    consensus::abci::response_deliver_txs res;
+    consensus::response_deliver_txs res;
     consensus::tx_ptrs empty_txs;
     for (uint64_t i = 0; i < tx_count; i++) {
       CHECK(tp.update(config.ttl_num_blocks + i, empty_txs, res));
