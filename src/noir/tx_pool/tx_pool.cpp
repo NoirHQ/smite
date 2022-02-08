@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/tx_pool/tx_pool.h>
+#include <algorithm>
 
 namespace noir::tx_pool {
 
@@ -107,7 +108,7 @@ consensus::tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t 
 
 consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
   std::lock_guard<std::mutex> lock(mutex_);
-  uint64_t count = MIN(tx_count, tx_queue_.size());
+  uint64_t count = std::min<uint64_t>(tx_count, tx_queue_.size());
 
   consensus::tx_ptrs tx_ptrs;
   for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
@@ -133,7 +134,7 @@ bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& block_txs, conse
     postcheck_ = new_postcheck;
   }
 
-  size_t size = MIN(block_txs.size(), responses.size()); //
+  size_t size = std::min(block_txs.size(), responses.size());
   for (auto i = 0; i < size; i++) {
     if (responses[i].code == consensus::code_type_ok) {
       tx_cache_.put(block_txs[i]->id(), block_txs[i]);

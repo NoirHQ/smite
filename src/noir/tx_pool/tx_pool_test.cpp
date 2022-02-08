@@ -9,6 +9,7 @@
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <noir/tx_pool/unapplied_tx_queue.hpp>
+#include <algorithm>
 
 using namespace noir;
 using namespace noir::consensus;
@@ -254,7 +255,7 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
     auto thread = std::make_unique<named_thread_pool>("test_thread", max_thread_num);
 
     SECTION("multi thread add") {
-      uint64_t thread_num = MIN(5, max_thread_num);
+      uint64_t thread_num = std::min<uint64_t>(5, max_thread_num);
       uint64_t total_tx_num = 1000;
       std::atomic<uint64_t> token = thread_num;
       std::future<std::vector<std::optional<consensus::response_check_tx>>> res[thread_num];
