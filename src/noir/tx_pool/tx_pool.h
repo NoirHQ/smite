@@ -6,7 +6,6 @@
 #pragma once
 
 #include <noir/common/thread_pool.h>
-#include <noir/consensus/abci.h>
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/unapplied_tx_queue.hpp>
@@ -31,7 +30,7 @@ public:
   };
 
   using precheck_func = bool(const consensus::tx&);
-  using postcheck_func = bool(const consensus::tx&, consensus::abci::response_check_tx&);
+  using postcheck_func = bool(const consensus::tx&, consensus::response_check_tx&);
 
 private:
   std::mutex mutex_;
@@ -55,10 +54,10 @@ public:
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
 
-  std::optional<consensus::abci::response_check_tx> check_tx(const consensus::tx_ptr& tx_ptr, bool sync);
+  std::optional<consensus::response_check_tx> check_tx(const consensus::tx_ptr& tx_ptr, bool sync);
   consensus::tx_ptrs reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
   consensus::tx_ptrs reap_max_txs(uint64_t tx_count);
-  bool update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs, consensus::abci::response_deliver_txs& responses,
+  bool update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs, consensus::response_deliver_txs& responses,
     precheck_func* new_precheck = nullptr, postcheck_func* new_postcheck = nullptr);
 
   size_t size() const;
