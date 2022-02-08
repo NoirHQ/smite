@@ -100,6 +100,10 @@ public:
     return incoming_count_;
   }
 
+  bool has(const tx_id_type& id) const {
+    return queue_.get<by_tx_id>().find(id) != queue_.get<by_tx_id>().end();
+  }
+
   std::optional<consensus::tx_ptr> get_tx(const tx_id_type& id) const {
     auto itr = queue_.get<by_tx_id>().find(id);
     if (itr == queue_.get<by_tx_id>().end()) {
