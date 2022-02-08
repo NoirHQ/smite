@@ -4,13 +4,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/types.h>
 #include <noir/p2p/protocol.h>
 #include <future>
 
 namespace noir::consensus {
 
 // FIXME : These types are temporary.
+
+using sender_type = std::string;
+using tx_id_type = bytes32;
+
 struct tx {
   sender_type sender;
   std::optional<tx_id_type> _id;
