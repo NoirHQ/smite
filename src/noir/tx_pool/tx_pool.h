@@ -62,6 +62,7 @@ public:
     precheck_func* new_precheck = nullptr, postcheck_func* new_postcheck = nullptr);
 
   size_t size() const;
+  bool empty() const;
   void flush();
 };
 
