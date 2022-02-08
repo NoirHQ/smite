@@ -112,4 +112,6 @@ TEST_CASE("encode/decode with file rotation", "[wal_codec]") {
   fc::remove_all(tmp_path);
 }
 
+TEST_CASE("Basic WAL test", "[basic_wal]") {}
+
 } // namespace
