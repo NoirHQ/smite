@@ -8,14 +8,14 @@
 namespace noir::tx_pool {
 
 tx_pool::tx_pool()
-  : config_(config{}), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size), precheck_(nullptr), postcheck_(nullptr),
-    block_height_(0) {
+  : config_(config{}), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size),
+    precheck_(nullptr), postcheck_(nullptr), block_height_(0) {
   thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
 }
 
 tx_pool::tx_pool(const config& cfg, uint64_t block_height)
-  : config_(cfg), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size), precheck_(nullptr), postcheck_(nullptr),
-    block_height_(block_height) {
+  : config_(cfg), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size),
+    precheck_(nullptr), postcheck_(nullptr), block_height_(block_height) {
   thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
 }
 
