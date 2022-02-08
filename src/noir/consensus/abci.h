@@ -36,7 +36,6 @@ public:
   void plugin_shutdown() {}
 
   std::shared_ptr<consensus_state> my_cs;
-
 };
 
 } // namespace noir::consensus

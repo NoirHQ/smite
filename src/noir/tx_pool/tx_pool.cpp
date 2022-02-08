@@ -120,8 +120,8 @@ consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
   return tx_ptrs;
 }
 
-bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& block_txs,
-  consensus::response_deliver_txs& responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
+bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& block_txs, consensus::response_deliver_txs& responses,
+  precheck_func* new_precheck, postcheck_func* new_postcheck) {
   std::lock_guard<std::mutex> lock(mutex_);
   block_height_ = block_height;
 
