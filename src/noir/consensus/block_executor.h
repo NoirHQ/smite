@@ -43,8 +43,35 @@ struct block_executor {
     return res;
   }
 
-  /* todo - return block, part_set */ void create_proposal_block() {
-    // todo
+  std::tuple<block, part_set> create_proposal_block(
+    int64_t height, state& state_, commit& commit_, bytes proposer_addr, std::vector<vote>& votes) {
+    auto max_bytes = state_.consensus_params_.block.max_bytes;
+    auto max_gas = state_.consensus_params_.block.max_gas;
+
+    // evidence // todo
+
+    // Fetch a limited amount of valid txs
+    auto max_data_bytes =
+      max_bytes - max_overhead_for_block - max_header_bytes - max_commit_bytes(state_.validators.size());
+    if (max_data_bytes < 0)
+      throw std::runtime_error(fmt::format(
+        "negative max_data_bytes: max_bytes={} is too small to accommodate header and last_commit", max_bytes));
+
+    // auto txs = mempool.reap_max_bytes_max_gas(max_data_bytes, max_gas); // todo
+
+    auto prepared_proposal =
+      proxyApp_->prepare_proposal_sync(request_prepare_proposal{bytes{} /* todo - tx */, max_data_bytes, votes});
+    auto new_txs = prepared_proposal.block_data;
+    int tx_size{};
+    for (auto tx : new_txs) {
+      tx_size += tx.size();
+      if (max_data_bytes < tx_size)
+        throw std::runtime_error("block data exceeds max amount of allowed bytes");
+    }
+
+    auto modified_txs = prepared_proposal.block_data;
+
+    return state_.make_block(height, modified_txs, commit_, proposer_addr);
   }
 
   bool validate_block(state& state_, block& block_) {
@@ -75,7 +102,7 @@ struct block_executor {
       return {};
     }
 
-    if (!store_.save_abci_responses(block_.header.height /* todo abci_response*/)) {
+    if (!store_.save_abci_responses(block_.header.height /* todo abci_response */)) {
       return {};
     }
 
@@ -135,33 +162,47 @@ struct block_executor {
 
   vote_extension extend_vote(vote& vote_) {
     auto req = request_extend_vote{vote_};
-    // proxyApp_.extend_vote_sync(req); // todo
-
-    vote_extension ret;
-    return ret;
+    auto res = proxyApp_->extend_vote_sync(req);
+    return res.vote_extension_;
   }
 
   std::optional<std::string> verify_vote_extension(vote& vote_) {
     auto req = request_verify_vote_extension{vote_};
-    // proxyApp_.verify_vote_extension_sync(req); // todo
-
+    auto res = proxyApp_->verify_vote_extension_sync(req); // todo - check error
     return {};
   }
 
   std::shared_ptr<abci_responses> exec_block_on_proxy_app(
     std::shared_ptr<app_connection> proxyAppConn, block& block_, db_store& db_store, int64_t initial_height) {
     uint valid_txs = 0, invalid_txs = 0, tx_index = 0;
-    abci_responses abci_responses_;
+    auto abci_responses_ = std::make_shared<abci_responses>();
     std::vector<response_deliver_tx> dtxs;
     dtxs.resize(block_.data.txs.size());
-    abci_responses_.deliver_txs = dtxs;
+    abci_responses_->deliver_txs = dtxs;
 
     auto proxy_cb = [](/* req, res - todo */) {
       // todo - implement
     };
     // proxyAppConn.set_response_callback(proxy_cb); // todo
 
-    // todo - implement the rest
+    auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
+
+    // begin block
+    abci_responses_->begin_block =
+      proxyAppConn->begin_block_sync(requst_begin_block{block_.get_hash(), block_.header, commit_info});
+
+    // run txs of block
+    for (auto tx : block_.data.txs) {
+      auto req = request_deliver_tx{};
+      req.tx = bytes{}; // todo use tx
+      proxyAppConn->deliver_tx_async(request_deliver_tx{req});
+    }
+
+    abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_.header.height});
+
+    ilog(fmt::format(
+      "executed block: height={} num_valid_txs={} num_invalid_txs={}", block_.header.height, valid_txs, invalid_txs));
+    return abci_responses_;
   }
 
   last_commit_info get_begin_block_validator_info(block& block_, db_store& store_, int64_t initial_height) {
