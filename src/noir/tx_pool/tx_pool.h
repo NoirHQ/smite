@@ -36,7 +36,7 @@ private:
   std::mutex mutex_;
   config config_;
   unapplied_tx_queue tx_queue_;
-  LRU_cache<tx_id_type, consensus::tx_ptr> tx_cache_;
+  LRU_cache<consensus::tx_id_type, consensus::tx_ptr> tx_cache_;
 
   std::unique_ptr<named_thread_pool> thread_;
 
