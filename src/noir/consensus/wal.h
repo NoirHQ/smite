@@ -6,6 +6,8 @@
 #pragma once
 
 #include <noir/consensus/types.h>
+#include <boost/filesystem/operations.hpp>
+#include <fc/io/cfile.hpp>
 
 namespace noir::consensus {
 
@@ -49,55 +51,56 @@ public:
     corrupted,
   };
 
-  wal_decoder(){};
+  wal_decoder(const std::string& full_path, std::shared_ptr<std::mutex> mtx_);
 
   /// \brief reads the next custom-encoded value from its reader and returns it.
   /// \param[out] msg decoded timed_wal_message
   /// \return result
-  result decode(timed_wal_message& msg) {
-    return result::eof;
-  }
+  result decode(timed_wal_message& msg);
+
+private:
+  std::unique_ptr<::fc::cfile> file_;
+  std::shared_ptr<std::mutex> mtx;
 };
 
 /// \brief A WALCodec writes custom-encoded WAL messages to an output stream.
 /// Format: 4 bytes CRC sum + 4 bytes length + arbitrary-length value
 class wal_codec {
 public:
-  wal_codec();
+  wal_codec(const std::string& dir, size_t rotate_size = maxMsgSizeBytes, size_t num_file = default_num_file);
+  ~wal_codec();
 
   /// \brief writes the custom encoding of v to the stream. It returns an error if the encoded size of v is
   /// greater than 1MB. Any error encountered during the write is also returned.
   /// \param[in] msg
   /// \param[out] size written bytes size
   /// \return true on success, false otherwise
-  bool encode(const timed_wal_message& msg, size_t& size) {
-    return false;
-  }
+  bool encode(const timed_wal_message& msg, size_t& size);
 
   /// \brief flushes and fsync the underlying group's data to disk.
   /// \return true on success, false otherwise
-  bool flush_and_sync() {
-    return false;
-  }
+  bool flush_and_sync();
 
   /// brief gets the size of wal file of current index
   /// \return size
-  size_t size() {
-    return 0;
-  }
+  size_t size();
 
   /// \brief gets list of wal file indexes ordered by last modified
   /// \return vector of index
-  std::vector<int> reverse_file_index() {
-    return {};
-  }
+  std::vector<int> reverse_file_index();
 
   /// \brief gets wal_decoder of wal file of given index
   /// \param[in] index
   /// \return shared_ptr of wal_decoder
-  std::shared_ptr<wal_decoder> new_wal_decoder(int index) {
-    return {nullptr};
-  }
+  std::shared_ptr<wal_decoder> new_wal_decoder(int index);
+
+private:
+  static constexpr size_t maxMsgSize = 1048576; // 1 MB; NOTE: keep in sync with types.PartSet sizes.
+  static constexpr size_t maxMsgSizeBytes = maxMsgSize + 24; // time.Time + max consensus msg size
+  static constexpr size_t default_num_file = 1000; // TODO: find this value
+
+  std::shared_ptr<std::mutex> mtx;
+  std::unique_ptr<class wal_codec_impl> impl_;
 };
 
 /// \}
