@@ -209,7 +209,7 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
   }
 }
 
-TEST_CASE("Push/Pop tx", "[tx_pool]") {
+TEST_CASE("Push/Get tx", "[tx_pool]") {
   auto test_helper = std::make_unique<test_detail::test_helper>();
   class tx_pool tp;
 
@@ -221,7 +221,7 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
     return res_vec;
   };
 
-  auto pop_tx = [&](uint64_t count) { return tp.reap_max_txs(count); };
+  auto get_tx = [&](uint64_t count) { return tp.reap_max_txs(count); };
 
   SECTION("sync") {
     auto res = push_tx(100);
@@ -240,7 +240,7 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
       }
     }
 
-    auto tx_ptrs = pop_tx(100);
+    auto tx_ptrs = get_tx(100);
     CHECK(tx_ptrs.size() == 100);
   }
 
@@ -289,14 +289,14 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
         return push_tx(1000, false);
       });
 
-      auto pop_res = async_thread_pool(thread->get_executor(), [&]() {
+      auto get_res = async_thread_pool(thread->get_executor(), [&]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
 
         uint64_t get_count = 0;
         while (get_count < 1000) {
-          auto res = pop_tx(1000 - get_count);
+          auto res = get_tx(1000 - get_count);
           get_count += res.size();
         }
         return get_count;
@@ -310,7 +310,7 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
         }
       }
 
-      CHECK(pop_res.get() == 1000);
+      CHECK(get_res.get() == 1000);
     }
 
     SECTION("1 thread add / 2 thread get") {
@@ -322,31 +322,21 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
         return push_tx(1000, false);
       });
 
-      auto pop_res1 = async_thread_pool(thread->get_executor(), [&]() {
-        token.fetch_sub(1, std::memory_order_seq_cst);
-        while (token.load(std::memory_order_seq_cst)) {
-        } // wait other thread
+      std::future<uint64_t> get_res[2];
+      for (auto& res: get_res) {
+        res = async_thread_pool(thread->get_executor(), [&]() {
+          token.fetch_sub(1, std::memory_order_seq_cst);
+          while (token.load(std::memory_order_seq_cst)) {
+          } // wait other thread
 
-        uint64_t get_count = 0;
-        while (get_count < 500) {
-          auto res = pop_tx(500 - get_count);
-          get_count += res.size();
-        }
-        return get_count;
-      });
-
-      auto pop_res2 = async_thread_pool(thread->get_executor(), [&]() {
-        token.fetch_sub(1, std::memory_order_seq_cst);
-        while (token.load(std::memory_order_seq_cst)) {
-        } // wait other thread
-
-        uint64_t get_count = 0;
-        while (get_count < 500) {
-          auto res = pop_tx(500 - get_count);
-          get_count += res.size();
-        }
-        return get_count;
-      });
+          uint64_t get_count = 0;
+          while (get_count < 500) {
+            auto res = get_tx(500 - get_count);
+            get_count += res.size();
+          }
+          return get_count;
+        });
+      }
 
       push_res.wait();
       auto res = push_res.get();
@@ -357,8 +347,8 @@ TEST_CASE("Push/Pop tx", "[tx_pool]") {
       }
 
       uint64_t get_count = 0;
-      get_count += pop_res1.get();
-      get_count += pop_res2.get();
+      get_count += get_res[0].get();
+      get_count += get_res[1].get();
       CHECK(get_count == 1000);
     }
   }
