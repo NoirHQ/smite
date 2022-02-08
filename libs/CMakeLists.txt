@@ -39,6 +39,7 @@ if(NOT rocksdb_FOUND)
 endif()
 
 set(XKCP_ARCH ${CMAKE_CURRENT_SOURCE_DIR}/XKCP/bin/generic64)
+file(MAKE_DIRECTORY ${XKCP_ARCH}/libXKCP.a.headers)
 add_custom_command(
   OUTPUT ${XKCP_ARCH}/libXKCP.a
   COMMAND make generic64/libXKCP.a
