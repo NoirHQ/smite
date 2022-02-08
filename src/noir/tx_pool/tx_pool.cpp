@@ -31,7 +31,7 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
   postcheck_ = postcheck;
 }
 
-std::optional<consensus::abci::response_check_tx> tx_pool::check_tx(const consensus::tx_ptr& tx_ptr, bool sync) {
+std::optional<consensus::response_check_tx> tx_pool::check_tx(const consensus::tx_ptr& tx_ptr, bool sync) {
   if (tx_ptr->size() > config_.max_tx_bytes) {
     return std::nullopt;
   }
@@ -48,10 +48,10 @@ std::optional<consensus::abci::response_check_tx> tx_pool::check_tx(const consen
 
   tx_cache_.put(tx_ptr->id(), tx_ptr);
 
-  consensus::abci::response_check_tx res;
+  consensus::response_check_tx res;
   res.result = async_thread_pool(thread_->get_executor(), [&, tx_ptr]() {
     if (postcheck_ && !postcheck_(*tx_ptr, res)) {
-      if (res.code != consensus::abci::code_type_ok) {
+      if (res.code != consensus::code_type_ok) {
         tx_cache_.del(tx_ptr->id());
         return false;
       }
@@ -121,7 +121,7 @@ consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
 }
 
 bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& block_txs,
-  consensus::abci::response_deliver_txs& responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
+  consensus::response_deliver_txs& responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
   std::lock_guard<std::mutex> lock(mutex_);
   block_height_ = block_height;
 
@@ -135,7 +135,7 @@ bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& block_txs,
 
   size_t size = MIN(block_txs.size(), responses.size()); //
   for (auto i = 0; i < size; i++) {
-    if (responses[i].code == consensus::abci::code_type_ok) {
+    if (responses[i].code == consensus::code_type_ok) {
       tx_cache_.put(block_txs[i]->id(), block_txs[i]);
     } else if (!config_.keep_invalid_txs_in_cache) {
       tx_cache_.del(block_txs[i]->id());

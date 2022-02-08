@@ -37,20 +37,6 @@ public:
 
   std::shared_ptr<consensus_state> my_cs;
 
-  struct response_check_tx {
-    std::future<bool> result; // suitable type?
-    uint32_t code;
-    std::string sender;
-  };
-
-  static constexpr uint32_t code_type_ok = 0;
-
-  struct response_deliver_tx {
-    uint32_t code;
-  };
-
-  using response_deliver_txs = std::vector<response_deliver_tx>;
-
 };
 
 } // namespace noir::consensus
