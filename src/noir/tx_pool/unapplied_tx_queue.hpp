@@ -168,8 +168,7 @@ public:
     return queue_.get<by_nonce>().lower_bound(std::make_tuple(sender, begin));
   }
 
-  iterator<by_nonce> end(
-    const sender_type& sender, const uint64_t end = std::numeric_limits<uint64_t>::max()) {
+  iterator<by_nonce> end(const sender_type& sender, const uint64_t end = std::numeric_limits<uint64_t>::max()) {
     return queue_.get<by_nonce>().upper_bound(std::make_tuple(sender, end));
   }
 
