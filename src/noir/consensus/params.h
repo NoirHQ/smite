@@ -48,6 +48,11 @@ struct consensus_params {
     // check if key_type is known // todo
     return {};
   }
+
+  bytes hash_consensus_params() {
+    // todo
+    return bytes{};
+  }
 };
 
 } // namespace noir::consensus
