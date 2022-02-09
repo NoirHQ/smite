@@ -16,23 +16,7 @@ namespace noir::consensus {
  * It keeps all information necessary to validate new blocks,
  * including the last validator set and the consensus params.
  */
-class state {
-public:
-  state();
-
-  std::tuple<block, part_set> make_block(
-    int64_t height, std::vector<bytes> txs, commit commit, /* evidence, */ bytes proposal_address);
-
-  p2p::tstamp get_median_time();
-
-  state update_state(state new_state, p2p::block_id new_block_id, /* header, */ /* abci_response, */
-    std::vector<validator> validator_updates);
-
-  bool is_empty();
-
-  static state make_genesis_state(genesis_doc& gen_doc);
-
-public:
+struct state {
   std::string version;
 
   std::string chain_id;
@@ -54,6 +38,76 @@ public:
   bytes last_result_hash;
 
   bytes app_hash;
+
+  state() {
+    // read from config file, or restore from last saved state
+    validator_set validatorSet, nextValidatorSet;
+    //  if genDoc.Validators == nil || len(genDoc.Validators) == 0
+    //  {
+    //    validatorSet = types.NewValidatorSet(nil)
+    //    nextValidatorSet = types.NewValidatorSet(nil)
+    //  } else {
+
+    // read from genesis.json
+    //    validatorSet = types.NewValidatorSet(validators)
+    //    nextValidatorSet = types.NewValidatorSet(validators).CopyIncrementProposerPriority(1)
+    //  }
+
+    version = "0.0.0";
+    //  initial_height = genDoc.inital_height;
+    last_block_height = 0;
+    //  last_block_time = genDoc.GenesisTime;
+
+    next_validators = nextValidatorSet;
+    validators = validatorSet;
+    //  last_validators = nil;
+    //  last_height_validators_changed = genDoc.initial_height;
+
+    //  consensus_params_ = genDoc.consensus_params;
+    //  last_height_consensus_params_changed = genDoc.initial_height;
+
+    //  app_hash = genDoc.app_hash;
+  }
+
+  std::tuple<block, part_set> make_block(
+    int64_t height, std::vector<bytes> txs, commit commit, /* evidence, */ bytes proposal_address) {
+    // Set time
+    p2p::tstamp timestamp;
+    //    if (height == initial_height) {
+    //      timestamp = genesis_time;
+    //    } else {
+    //      timestamp = get_median_time();
+    //    }
+    return {block{}, part_set{}};
+  }
+
+  p2p::tstamp get_median_time() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch())
+      .count();
+  }
+
+  bool is_empty() {
+    return validators.validators.empty();
+  }
+
+  static state make_genesis_state(genesis_doc& gen_doc) {
+    // todo - read from genDoc
+    state state_{};
+
+    std::vector<validator> validators;
+    validator_set val_set;
+    for (const auto& val : gen_doc.validators) {
+      validators.push_back(validator{val.address, val.pub_key_, val.power, 0});
+    }
+    val_set = validator_set::new_validator_set(validators);
+    validator_set next_val_set = val_set.copy_increment_proposer_priority(1);
+    state_.validators = val_set;
+    state_.next_validators = next_val_set;
+
+    state_.chain_id = gen_doc.chain_id;
+    state_.initial_height = gen_doc.initial_height;
+    return state_;
+  }
 };
 
 } // namespace noir::consensus
