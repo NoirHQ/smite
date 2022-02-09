@@ -250,6 +250,25 @@ struct signed_header {
   std::optional<noir::consensus::commit> commit;
 };
 
+struct weighted_time {
+  p2p::tstamp time;
+  int64_t weight;
+};
+
+inline p2p::tstamp weighted_median(std::vector<weighted_time>& weight_times, int64_t total_voting_power) {
+  auto median = total_voting_power / 2;
+  sort(weight_times.begin(), weight_times.end(), [](weighted_time a, weighted_time b) { return a.time < b.time; });
+  p2p::tstamp res = 0;
+  for (auto t : weight_times) {
+    if (median <= t.weight) {
+      res = t.time;
+      break;
+    }
+    median -= t.weight;
+  }
+  return res;
+}
+
 } // namespace noir::consensus
 
 FC_REFLECT(noir::consensus::timeout_info, (duration_)(height)(round)(step))
