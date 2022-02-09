@@ -6,6 +6,7 @@
 #pragma once
 
 #include <noir/common/thread_pool.h>
+#include <noir/consensus/abci_types.h>
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/unapplied_tx_queue.hpp>
@@ -29,14 +30,14 @@ public:
     uint64_t ttl_num_blocks = 0;
   };
 
-  using precheck_func = bool(const consensus::tx&);
-  using postcheck_func = bool(const consensus::tx&, consensus::response_check_tx&);
+  using precheck_func = bool(const consensus::wrapped_tx&);
+  using postcheck_func = bool(const consensus::wrapped_tx&, consensus::response_check_tx&);
 
 private:
   std::mutex mutex_;
   config config_;
   unapplied_tx_queue tx_queue_;
-  LRU_cache<consensus::tx_id_type, consensus::tx_ptr> tx_cache_;
+  LRU_cache<consensus::tx_id_type, consensus::wrapped_tx_ptr> tx_cache_;
 
   std::unique_ptr<named_thread_pool> thread_;
 
@@ -54,11 +55,12 @@ public:
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
 
-  std::optional<consensus::response_check_tx> check_tx(const consensus::tx_ptr& tx_ptr, bool sync);
-  consensus::tx_ptrs reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
-  consensus::tx_ptrs reap_max_txs(uint64_t tx_count);
-  bool update(uint64_t block_height, consensus::tx_ptrs& tx_ptrs, consensus::response_deliver_txs& responses,
-    precheck_func* new_precheck = nullptr, postcheck_func* new_postcheck = nullptr);
+  std::optional<std::future<bool>> check_tx(const consensus::wrapped_tx_ptr& tx_ptr, bool sync);
+  consensus::wrapped_tx_ptrs reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
+  consensus::wrapped_tx_ptrs reap_max_txs(uint64_t tx_count);
+  bool update(uint64_t block_height, consensus::wrapped_tx_ptrs& tx_ptrs,
+    std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck = nullptr,
+    postcheck_func* new_postcheck = nullptr);
 
   size_t size() const;
   bool empty() const;

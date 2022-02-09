@@ -32,7 +32,7 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
   postcheck_ = postcheck;
 }
 
-std::optional<consensus::response_check_tx> tx_pool::check_tx(const consensus::tx_ptr& tx_ptr, bool sync) {
+std::optional<std::future<bool>> tx_pool::check_tx(const consensus::wrapped_tx_ptr& tx_ptr, bool sync) {
   if (tx_ptr->size() > config_.max_tx_bytes) {
     return std::nullopt;
   }
@@ -49,8 +49,8 @@ std::optional<consensus::response_check_tx> tx_pool::check_tx(const consensus::t
 
   tx_cache_.put(tx_ptr->id(), tx_ptr);
 
-  consensus::response_check_tx res;
-  res.result = async_thread_pool(thread_->get_executor(), [&, tx_ptr]() {
+  consensus::response_check_tx res; // FIXME : get from proxy_app_connector
+  auto result = async_thread_pool(thread_->get_executor(), [&, tx_ptr]() {
     if (postcheck_ && !postcheck_(*tx_ptr, res)) {
       if (res.code != consensus::code_type_ok) {
         tx_cache_.del(tx_ptr->id());
@@ -74,15 +74,15 @@ std::optional<consensus::response_check_tx> tx_pool::check_tx(const consensus::t
   });
 
   if (sync) {
-    res.result.wait();
+    result.wait();
   }
-  return res;
+  return result;
 }
 
-consensus::tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
+consensus::wrapped_tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  consensus::tx_ptrs tx_ptrs;
+  consensus::wrapped_tx_ptrs tx_ptrs;
   auto rbegin = tx_queue_.rbegin<unapplied_tx_queue::by_gas>(max_gas);
   auto rend = tx_queue_.rend<unapplied_tx_queue::by_gas>(0);
 
@@ -106,11 +106,11 @@ consensus::tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t 
   return tx_ptrs;
 }
 
-consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
+consensus::wrapped_tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
   std::lock_guard<std::mutex> lock(mutex_);
   uint64_t count = std::min<uint64_t>(tx_count, tx_queue_.size());
 
-  consensus::tx_ptrs tx_ptrs;
+  consensus::wrapped_tx_ptrs tx_ptrs;
   for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
     if (tx_ptrs.size() >= count) {
       break;
@@ -121,8 +121,8 @@ consensus::tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
   return tx_ptrs;
 }
 
-bool tx_pool::update(uint64_t block_height, consensus::tx_ptrs& block_txs, consensus::response_deliver_txs& responses,
-  precheck_func* new_precheck, postcheck_func* new_postcheck) {
+bool tx_pool::update(uint64_t block_height, consensus::wrapped_tx_ptrs& block_txs,
+  std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
   std::lock_guard<std::mutex> lock(mutex_);
   block_height_ = block_height;
 
