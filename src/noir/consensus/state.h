@@ -79,7 +79,7 @@ struct state {
     if (height == initial_height) {
       timestamp = last_block_time; // genesis_time;
     } else {
-      timestamp = get_median_time();
+      timestamp = get_median_time(commit_, last_validators);
     }
 
     // Fill rest of header
@@ -90,9 +90,19 @@ struct state {
     return {block_, block_.make_part_set(block_part_size_bytes)};
   }
 
-  p2p::tstamp get_median_time() {
-    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch())
-      .count();
+  p2p::tstamp get_median_time(commit& commit_, validator_set& validators) {
+    std::vector<weighted_time> weighted_times;
+    int64_t total_voting_power{};
+    for (auto commit_sig : commit_.signatures) {
+      if (commit_sig.absent())
+        continue;
+      auto validator = validators.get_by_address(commit_sig.validator_address);
+      if (validator.has_value()) {
+        total_voting_power += validator->voting_power;
+        weighted_times.push_back(weighted_time{commit_sig.timestamp, validator->voting_power});
+      }
+    }
+    return weighted_median(weighted_times, total_voting_power);
   }
 
   bool is_empty() {
