@@ -12,7 +12,7 @@
 
 namespace noir::consensus {
 
-class account : public noir::object<account_object_type, account> {
+class account : public object<account_object_type, account> {
 public:
   id_type id;
   account_name name;
@@ -27,9 +27,11 @@ using account_index = boost::multi_index::multi_index_container<account,
     boost::multi_index::ordered_unique<boost::multi_index::tag<by_name>,
       boost::multi_index::member<account, account_name, &account::name>>>>;
 
-class account_metadata : public noir::object<account_metadata_object_type, account_metadata> {
+class account_metadata : public object<account_metadata_object_type, account_metadata> {
 public:
-  enum class flags_fields : uint32_t { privileged = 1 };
+  enum class flags_fields : uint32_t {
+    privileged = 1
+  };
 
   id_type id;
   account_name name;
@@ -37,7 +39,7 @@ public:
   uint64_t auth_sequence = 0;
   uint64_t code_sequence = 0;
   uint64_t abi_sequence = 0;
-  digest_type code_hash;
+  p2p::digest_type code_hash;
   fc::time_point last_code_update;
   uint32_t flags = 0;
   uint8_t vm_type = 0;
@@ -61,7 +63,7 @@ using account_metadata_index = boost::multi_index::multi_index_container<account
     boost::multi_index::ordered_unique<boost::multi_index::tag<by_name>,
       boost::multi_index::member<account_metadata, account_name, &account_metadata::name>>>>;
 
-class account_ram_correction : public noir::object<account_ram_correction_object_type, account_ram_correction> {
+class account_ram_correction : public object<account_ram_correction_object_type, account_ram_correction> {
 public:
   id_type id;
   account_name name; //< name should not be changed within a chainbase modifier lambda
@@ -79,9 +81,9 @@ using account_ram_correction_index = boost::multi_index::multi_index_container<a
 
 } // namespace noir::consensus
 
- NOIR_SET_INDEX_TYPE(noir::consensus::account, noir::consensus::account_index)
- NOIR_SET_INDEX_TYPE(noir::consensus::account_metadata, noir::consensus::account_metadata_index)
- NOIR_SET_INDEX_TYPE(noir::consensus::account_ram_correction, noir::consensus::account_ram_correction_index)
+NOIR_SET_INDEX_TYPE(noir::consensus::account, noir::consensus::account_index)
+NOIR_SET_INDEX_TYPE(noir::consensus::account_metadata, noir::consensus::account_metadata_index)
+NOIR_SET_INDEX_TYPE(noir::consensus::account_ram_correction, noir::consensus::account_ram_correction_index)
 
 FC_REFLECT(noir::consensus::account, (name))
 FC_REFLECT(noir::consensus::account_metadata,

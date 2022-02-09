@@ -349,7 +349,7 @@ struct get_index_type {};
  */
 #define NOIR_SET_INDEX_TYPE(OBJECT_TYPE, INDEX_TYPE) \
   template<> \
-  struct get_index_type<OBJECT_TYPE> { \
+  struct noir::consensus::get_index_type<OBJECT_TYPE> { \
     typedef INDEX_TYPE type; \
   };
 
