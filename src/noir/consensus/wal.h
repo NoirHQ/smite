@@ -5,7 +5,9 @@
 //
 #pragma once
 
+#include <noir/common/thread_pool.h>
 #include <noir/consensus/types.h>
+#include <noir/p2p/protocol.h>
 #include <boost/filesystem/operations.hpp>
 #include <fc/io/cfile.hpp>
 
@@ -136,48 +138,145 @@ public:
 /// appending - must read to end to start appending again.
 class base_wal : public wal {
 public:
-  base_wal(const std::string& path): codec_(std::make_unique<wal_codec>(path)) {}
+  base_wal(const base_wal&) = delete; // do not allow copy
+  base_wal(const std::string& path, size_t rotate_size, size_t num_file)
+    : codec_(std::make_unique<wal_codec>(path, rotate_size, num_file)) {
+
+    thread_pool.emplace("consensus", thread_pool_size);
+    {
+      // std::lock_guard<std::mutex> g(flush_ticker_mtx);
+      flush_ticker.reset(new boost::asio::steady_timer(thread_pool->get_executor()));
+    }
+  }
   bool write(const wal_message& msg) override {
-    // TODO: implement
-    return false;
+    size_t len;
+    if (!codec_->encode(timed_wal_message{.time = get_time(), .msg = msg}, len) || len == 0) {
+      elog("Error writing msg to consensus wal. WARNING: recover may not be possible for the current height");
+      return false;
+    }
+    return true;
   }
 
   bool write_sync(const wal_message& msg) override {
-    // TODO: implement
-    return false;
+    if (!write(msg)) {
+      return false;
+    }
+    if (!flush_and_sync()) {
+      elog("WriteSync failed to flush consensus wal.\n"
+           "\t\tWARNING: may result in creating alternative proposals / votes for the current height iff the node "
+           "restarted");
+      return false;
+    }
+    return true;
   }
 
   bool flush_and_sync() override {
-    // TODO: implement
-    return false;
+    return codec_->flush_and_sync();
   }
 
   bool on_start() {
-    // TODO: implement
-    return false;
+    if (codec_->size() == 0) {
+      end_height_message msg{.height = 0};
+      if (write_sync({msg}) == false) {
+        return false;
+      }
+    }
+
+    // TODO: define codec as service
+    // codec_.start();
+
+    // initialize flush ticker
+    flush_ticker->cancel();
+    flush_ticker->expires_from_now(flush_interval);
+
+    flush_ticker->async_wait(process_flush_ticks);
+
+    return true;
   }
 
   bool on_stop() {
-    // TODO: implement
-    return false;
+    flush_ticker->cancel();
+    if (!flush_and_sync()) {
+      elog("error on flush data to disk");
+      return false;
+    }
+    // TODO: define codec as service
+    // if(!codec_->stop()) {
+    //   elog("error trying to stop wal");
+    //   return false;
+    // }
+
+    return true;
   }
 
   void wait() {
-    // TODO: implement
+    // TODO: define codec as service
+    // codec_->wait();
   }
 
   std::shared_ptr<wal_decoder> search_for_end_height(int64_t height, wal_search_options options, bool& found) override {
-    // TODO: implement
+    int64_t last_height_found{-1};
+    // NOTE: starting from the last file in the group because we're usually
+    // searching for the last height. See replay.cpp(?)
+    auto f_indexes = codec_->reverse_file_index(); // TODO: index?
+    for (auto it = f_indexes.begin(); it != f_indexes.end(); ++it) {
+      auto decoder = codec_->new_wal_decoder(*it);
+
+      while (true) { // TODO: check exit condition
+        using result = wal_decoder::result;
+        timed_wal_message msg{};
+        auto ret = decoder->decode(msg);
+        if (ret == result::eof) {
+          if (last_height_found > 0 && height > last_height_found) {
+            found = false; // OPTIMIZATION: no need to look for height in older files if we've seen h < height
+            return {nullptr};
+          }
+          break; // check next file
+        }
+        if (options.ignore_data_corruption_errors && ret == result::corrupted) {
+          elog("Corrupted entry. Skipping...");
+          // do nothing
+          continue;
+        } else if (ret != result::success) {
+          found = false;
+          return {nullptr};
+        }
+
+        if (auto* ret = std::get_if<end_height_message>(&msg.msg.msg); ret) {
+          if (ret->height == height) { // found
+            found = true;
+            return std::move(decoder);
+          }
+          last_height_found = ret->height;
+        }
+      }
+    }
+    found = false;
     return {nullptr};
   }
 
   bool set_flush_interval(std::chrono::system_clock::duration interval) {
-    // TODO: implement
+    // TODO: should flush ticker restart?
+    flush_interval = interval;
     return false;
   }
 
 private:
   std::unique_ptr<wal_codec> codec_;
+  std::unique_ptr<boost::asio::steady_timer> flush_ticker;
+  std::chrono::system_clock::duration flush_interval;
+  uint16_t thread_pool_size = 2;
+  std::optional<named_thread_pool> thread_pool;
+
+  std::function<void(boost::system::error_code)> process_flush_ticks = [this](boost::system::error_code ec) {
+    if (ec) {
+      wlog("wal flush ticker error: ${m}", ("m", ec.message()));
+      // return;
+    }
+    flush_and_sync();
+    flush_ticker->expires_from_now(flush_interval);
+    flush_ticker->async_wait(process_flush_ticks);
+  };
 };
 
 /// \}
