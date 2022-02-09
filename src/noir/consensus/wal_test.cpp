@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
+#include <noir/common/scope_exit.h>
 #include <noir/consensus/wal.h>
 
 namespace {
@@ -112,6 +113,116 @@ TEST_CASE("encode/decode with file rotation", "[wal_codec]") {
   fc::remove_all(tmp_path);
 }
 
-TEST_CASE("Basic WAL test", "[basic_wal]") {}
+auto prepare_wal = [](size_t enc_size) {
+  static constexpr size_t rotation_file_size = 5;
+  auto temp_dir = std::make_shared<fc::temp_directory>();
+  auto tmp_path = temp_dir->path().string();
+  REQUIRE(fc::is_directory(tmp_path) == true);
+  REQUIRE(count_dir(tmp_path) == 0);
+
+  auto wal_ = std::make_shared<base_wal>(tmp_path, enc_size, rotation_file_size);
+  wal_->set_flush_interval(std::chrono::milliseconds(100));
+
+  return std::tuple<std::shared_ptr<fc::temp_directory>, std::shared_ptr<base_wal>>(
+    std::move(temp_dir), std::move(wal_));
+};
+
+inline noir::bytes gen_random_bytes(size_t num) {
+  noir::bytes ret(num);
+  fc::rand_pseudo_bytes(ret.data(), static_cast<int>(ret.size()));
+  return ret;
+}
+
+TEST_CASE("WAL write", "[basic_wal]") {
+  static constexpr size_t enc_size = 0x100;
+  auto [temp_dir, wal_] = prepare_wal(enc_size);
+  wal_->on_start();
+  auto defer = noir::make_scoped_exit([&wal_ = wal_]() { wal_->on_stop(); });
+
+  noir::p2p::block_part_message bp_msg{
+    .height = 1,
+    .round = 1,
+    .index = 1,
+    .bytes_ = gen_random_bytes(32),
+    .proof = gen_random_bytes(32),
+  };
+
+  CHECK(wal_->write({bp_msg}) == true);
+  CHECK(wal_->flush_and_sync() == true);
+}
+
+TEST_CASE("WAL search_for_end_height", "[basic_wal]") {
+  static constexpr size_t enc_size = 4096;
+  auto [temp_dir, wal_] = prepare_wal(enc_size);
+
+  {
+    int64_t height = 0;
+    bool found;
+    auto dec = wal_->search_for_end_height(height, {.ignore_data_corruption_errors = false}, found);
+    CHECK(found == false);
+    CHECK(dec == nullptr);
+  }
+
+  wal_->on_start();
+  auto defer = noir::make_scoped_exit([&wal_ = wal_]() { wal_->on_stop(); });
+  {
+    int64_t height = 0;
+    bool found;
+    // starting wal should write end_height_message with height 0
+    auto dec = wal_->search_for_end_height(height, {.ignore_data_corruption_errors = false}, found);
+    CHECK(found == true);
+    CHECK(dec != nullptr);
+  }
+
+  for (int64_t height = 1; height < 50; ++height) {
+    uint32_t index;
+    for (index = 1; index < 10; ++index) {
+      noir::p2p::block_part_message bp_msg{
+        .height = height,
+        .round = 1,
+        .index = index,
+        .bytes_ = gen_random_bytes(32),
+        .proof = gen_random_bytes(32),
+      };
+      CHECK(wal_->write({bp_msg}) == true);
+    }
+    CHECK(wal_->write({noir::consensus::end_height_message{height}}) == true);
+  }
+  CHECK(wal_->flush_and_sync() == true);
+
+  {
+    int64_t height = 49;
+    bool found;
+    auto dec = wal_->search_for_end_height(height, {.ignore_data_corruption_errors = false}, found);
+    CHECK(found == true);
+    REQUIRE(dec != nullptr);
+    timed_wal_message msg{};
+    CHECK(dec->decode(msg) == wal_decoder::result::eof);
+  }
+  {
+    int64_t height;
+    bool deleted = false;
+    for (height = 48; height >= 0; --height) {
+      bool found;
+      auto dec = wal_->search_for_end_height(height, {.ignore_data_corruption_errors = false}, found);
+      if (deleted) {
+        // decoder with deleted height should not be found
+        CHECK(found == false);
+      }
+      if (!found) {
+        deleted = true;
+        CHECK(dec == nullptr);
+        continue;
+      }
+      REQUIRE(dec != nullptr);
+      timed_wal_message msg{};
+      CHECK(dec->decode(msg) == wal_decoder::result::success);
+      auto* body = get_if<noir::p2p::block_part_message>(&msg.msg.msg);
+      REQUIRE(body != nullptr);
+      CHECK(body->height == height + 1);
+    }
+  }
+  CHECK(wal_->flush_and_sync() == true);
+}
 
 } // namespace
