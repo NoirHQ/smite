@@ -1,7 +1,6 @@
 target_sources(noir
   PRIVATE
-    consensus_state.cpp
-    state.cpp)
+    consensus_state.cpp)
 
 add_noir_test(validator_test validator_test.cpp)
 add_noir_test(consensus_state_test consensus_state_test.cpp)
