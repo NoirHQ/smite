@@ -5,51 +5,39 @@
 //
 #pragma once
 #include <noir/p2p/protocol.h>
-#include <future>
 
 namespace noir::consensus {
 
-// FIXME : These types are temporary.
+// struct tx {};
+using tx = bytes;
+
+using tx_ptr = std::shared_ptr<tx>;
 
 using sender_type = std::string;
 using tx_id_type = bytes32;
 
-struct tx {
+struct wrapped_tx {
   sender_type sender;
   std::optional<tx_id_type> _id;
 
-  bytes data;
+  tx tx_data;
   uint64_t gas;
   uint64_t nonce;
   uint64_t height;
 
   tx_id_type id() {
-    if (_id == std::nullopt) {
+    if (!_id.has_value()) {
       _id = tx_id_type{}; // FIXME
     }
     return _id.value();
   }
 
   uint64_t size() const {
-    return sizeof(*this) + data.size();
+    return sizeof(*this) + tx_data.size();
   }
 };
 
-using tx_ptr = std::shared_ptr<tx>;
-using tx_ptrs = std::vector<tx_ptr>;
-
-struct response_check_tx {
-  std::future<bool> result;
-  uint32_t code;
-  std::string sender;
-};
-
-static constexpr uint32_t code_type_ok = 0;
-
-struct response_deliver_tx {
-  uint32_t code;
-};
-
-using response_deliver_txs = std::vector<response_deliver_tx>;
+using wrapped_tx_ptr = std::shared_ptr<wrapped_tx>;
+using wrapped_tx_ptrs = std::vector<wrapped_tx_ptr>;
 
 } // namespace noir::consensus
