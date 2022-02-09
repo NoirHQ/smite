@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/consensus/block.h>
 #include <noir/consensus/crypto.h>
+#include <noir/consensus/name.hpp>
 #include <noir/consensus/params.h>
 #include <noir/consensus/validator.h>
 #include <noir/consensus/vote.h>
@@ -268,6 +269,137 @@ inline p2p::tstamp weighted_median(std::vector<weighted_time>& weight_times, int
   }
   return res;
 }
+
+using action_name = name;
+using scope_name = name;
+using account_name = name;
+using permission_name = name;
+using table_name = name;
+
+template<typename E, typename F>
+static inline auto has_field(F flags, E field) -> std::enable_if_t<std::is_integral<F>::value &&
+    std::is_unsigned<F>::value && std::is_enum<E>::value && std::is_same<F, std::underlying_type_t<E>>::value,
+  bool> {
+  return ((flags & static_cast<F>(field)) != 0);
+}
+
+template<typename E, typename F>
+static inline auto set_field(F flags, E field, bool value = true) -> std::enable_if_t<std::is_integral<F>::value &&
+    std::is_unsigned<F>::value && std::is_enum<E>::value && std::is_same<F, std::underlying_type_t<E>>::value,
+  F> {
+  if (value)
+    return (flags | static_cast<F>(field));
+  else
+    return (flags & ~static_cast<F>(field));
+}
+
+/**
+ *  Object ID type that includes the type of the object it references
+ */
+template<typename T>
+class oid {
+public:
+  oid(int64_t i = 0): _id(i) {}
+
+  oid& operator++() {
+    ++_id;
+    return *this;
+  }
+
+  friend bool operator<(const oid& a, const oid& b) {
+    return a._id < b._id;
+  }
+  friend bool operator>(const oid& a, const oid& b) {
+    return a._id > b._id;
+  }
+  friend bool operator<=(const oid& a, const oid& b) {
+    return a._id <= b._id;
+  }
+  friend bool operator>=(const oid& a, const oid& b) {
+    return a._id >= b._id;
+  }
+  friend bool operator==(const oid& a, const oid& b) {
+    return a._id == b._id;
+  }
+  friend bool operator!=(const oid& a, const oid& b) {
+    return a._id != b._id;
+  }
+  friend std::ostream& operator<<(std::ostream& s, const oid& id) {
+    s << boost::core::demangle(typeid(oid<T>).name()) << '(' << id._id << ')';
+    return s;
+  }
+
+  int64_t _id = 0;
+};
+
+template<uint16_t TypeNumber, typename Derived>
+struct object {
+  typedef oid<Derived> id_type;
+  static const uint16_t type_id = TypeNumber;
+};
+
+/** this class is ment to be specified to enable lookup of index type by object type using
+ * the SET_INDEX_TYPE macro.
+ **/
+template<typename T>
+struct get_index_type {};
+
+/**
+ *  This macro must be used at global scope and OBJECT_TYPE and INDEX_TYPE must be fully qualified
+ */
+#define NOIR_SET_INDEX_TYPE(OBJECT_TYPE, INDEX_TYPE) \
+  template<> \
+  struct get_index_type<OBJECT_TYPE> { \
+    typedef INDEX_TYPE type; \
+  };
+
+enum object_type {
+  null_object_type = 0,
+  account_object_type,
+  account_metadata_object_type,
+  permission_object_type,
+  permission_usage_object_type,
+  permission_link_object_type,
+  UNUSED_action_code_object_type,
+  key_value_object_type,
+  index64_object_type,
+  index128_object_type,
+  index256_object_type,
+  index_double_object_type,
+  index_long_double_object_type,
+  global_property_object_type,
+  dynamic_global_property_object_type,
+  block_summary_object_type,
+  transaction_object_type,
+  generated_transaction_object_type,
+  UNUSED_producer_object_type,
+  UNUSED_chain_property_object_type,
+  account_control_history_object_type, ///< Defined by history_plugin
+  UNUSED_account_transaction_history_object_type,
+  UNUSED_transaction_history_object_type,
+  public_key_history_object_type, ///< Defined by history_plugin
+  UNUSED_balance_object_type,
+  UNUSED_staked_balance_object_type,
+  UNUSED_producer_votes_object_type,
+  UNUSED_producer_schedule_object_type,
+  UNUSED_proxy_vote_object_type,
+  UNUSED_scope_sequence_object_type,
+  table_id_object_type,
+  resource_limits_object_type,
+  resource_usage_object_type,
+  resource_limits_state_object_type,
+  resource_limits_config_object_type,
+  account_history_object_type, ///< Defined by history_plugin
+  action_history_object_type, ///< Defined by history_plugin
+  reversible_block_object_type,
+  protocol_state_object_type,
+  account_ram_correction_object_type,
+  code_object_type,
+  database_header_object_type,
+  kv_object_type,
+  kv_db_config_object_type,
+  OBJECT_TYPE_COUNT ///< Sentry value which contains the number of different object types
+};
 
 } // namespace noir::consensus
 
