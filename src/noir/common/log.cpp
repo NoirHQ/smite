@@ -11,7 +11,7 @@ using namespace fc;
 
 namespace noir::log {
 
-const char* default_logger_name = "console";
+const char* default_logger_name = "default";
 
 void initialize(const char* logger_name) {
   log_config::configure_logging(logging_config::default_config());

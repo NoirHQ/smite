@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   app.set_home_dir(home_dir / ".noir");
   app.set_config_file("app.toml");
 
-  noir::log::initialize("console");
+  noir::log::initialize("default");
 
   // add subcommands
   commands::add_command(app.config(), &commands::consensus_test);
