@@ -133,4 +133,23 @@ struct abci_responses {
   response_begin_block begin_block;
 };
 
+struct request_check_tx {
+  bytes tx;
+  std::string type;
+};
+
+struct response_check_tx {
+  uint32_t code;
+  bytes data;
+  std::string log;
+  std::string info;
+  int64_t gas_wanted;
+  int64_t gas_used;
+  std::vector<event> events;
+  std::string codespace;
+  std::string sender;
+  int64_t priority;
+  std::string mempool_error;
+};
+
 } // namespace noir::consensus

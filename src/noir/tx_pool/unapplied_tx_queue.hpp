@@ -10,13 +10,12 @@
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
 namespace noir::tx_pool {
 
 struct unapplied_tx {
-  const consensus::tx_ptr tx_ptr;
+  const consensus::wrapped_tx_ptr tx_ptr;
 
   const uint64_t gas() const {
     return tx_ptr->gas;
@@ -104,7 +103,7 @@ public:
     return queue_.get<by_tx_id>().find(id) != queue_.get<by_tx_id>().end();
   }
 
-  std::optional<consensus::tx_ptr> get_tx(const consensus::tx_id_type& id) const {
+  std::optional<consensus::wrapped_tx_ptr> get_tx(const consensus::tx_id_type& id) const {
     auto itr = queue_.get<by_tx_id>().find(id);
     if (itr == queue_.get<by_tx_id>().end()) {
       return std::nullopt;
@@ -112,7 +111,7 @@ public:
     return itr->tx_ptr;
   }
 
-  std::optional<consensus::tx_ptr> get_tx(const consensus::sender_type& sender) const {
+  std::optional<consensus::wrapped_tx_ptr> get_tx(const consensus::sender_type& sender) const {
     if (queue_.get<by_sender>().count(sender) == 0) {
       return std::nullopt;
     }
@@ -120,7 +119,7 @@ public:
     return queue_.get<by_sender>().find(sender)->tx_ptr;
   }
 
-  bool add_tx(const consensus::tx_ptr& tx_ptr) {
+  bool add_tx(const consensus::wrapped_tx_ptr& tx_ptr) {
     auto itr = queue_.get<by_tx_id>().find(tx_ptr->id());
     if (itr != queue_.get<by_tx_id>().end()) {
       return false;
@@ -203,7 +202,7 @@ public:
     return reverse_iterator<Tag>(queue_.get<Tag>().lower_bound(val));
   }
 
-  bool erase(const consensus::tx_ptr& tx_ptr) {
+  bool erase(const consensus::wrapped_tx_ptr& tx_ptr) {
     return erase(tx_ptr->id());
   }
 
@@ -219,7 +218,7 @@ public:
     return true;
   }
 
-  static uint64_t bytes_size(const consensus::tx_ptr& tx_ptr) {
+  static uint64_t bytes_size(const consensus::wrapped_tx_ptr& tx_ptr) {
     return sizeof(unapplied_tx) + tx_ptr->size();
   }
 };
