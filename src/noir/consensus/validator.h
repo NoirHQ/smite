@@ -67,6 +67,13 @@ struct validator_set {
     return validators.size();
   }
 
+  bytes get_hash() {
+    for (auto val : validators) {
+      // todo
+    }
+    return bytes{};
+  }
+
   bool has_address(const bytes& address) {
     for (const auto& val : validators) {
       if (val.address == address)

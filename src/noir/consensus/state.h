@@ -70,15 +70,24 @@ struct state {
   }
 
   std::tuple<block, part_set> make_block(
-    int64_t height, std::vector<bytes> txs, commit commit, /* evidence, */ bytes proposal_address) {
+    int64_t height, std::vector<bytes> txs, commit commit_, /* evidence, */ bytes proposal_address) {
+    // Build base block
+    auto block_ = block::make_block(height, txs, commit_);
+
     // Set time
     p2p::tstamp timestamp;
-    //    if (height == initial_height) {
-    //      timestamp = genesis_time;
-    //    } else {
-    //      timestamp = get_median_time();
-    //    }
-    return {block{}, part_set{}};
+    if (height == initial_height) {
+      timestamp = last_block_time; // genesis_time;
+    } else {
+      timestamp = get_median_time();
+    }
+
+    // Fill rest of header
+    block_.header.populate(version, chain_id, timestamp, last_block_id, validators.get_hash(),
+      next_validators.get_hash(), consensus_params_.hash_consensus_params(), app_hash, last_result_hash,
+      proposal_address);
+
+    return {block_, block_.make_part_set(block_part_size_bytes)};
   }
 
   p2p::tstamp get_median_time() {
