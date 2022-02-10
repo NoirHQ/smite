@@ -13,20 +13,36 @@ constexpr int64_t max_block_size_bytes{104857600};
 struct block_params {
   int64_t max_bytes;
   int64_t max_gas;
+
+  static block_params get_default() {
+    return block_params{22020096, -1};
+  }
 };
 
 struct evidence_params {
   int64_t max_age_num_blocks;
   int64_t max_age_duration; // todo - use duration
   int64_t max_bytes;
+
+  static evidence_params get_default() {
+    return evidence_params{100000, std::chrono::hours(48).count(), 1048576};
+  }
 };
 
 struct validator_params {
   std::vector<std::string> pub_key_types;
+
+  static validator_params get_default() {
+    return validator_params{{"ed25519"}};
+  }
 };
 
 struct version_params {
   uint64_t app_version;
+
+  static version_params get_default() {
+    return version_params{0};
+  }
 };
 
 struct consensus_params {
@@ -47,6 +63,11 @@ struct consensus_params {
     //  return "validator.pub_key_types must not be empty.";
     // check if key_type is known // todo
     return {};
+  }
+
+  static consensus_params get_default() {
+    return consensus_params{block_params::get_default(), evidence_params::get_default(),
+      validator_params::get_default(), version_params::get_default()};
   }
 
   bytes hash_consensus_params() {
