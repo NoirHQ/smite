@@ -17,6 +17,11 @@ using namespace noir::tx_pool;
 
 namespace test_detail {
 
+static address_type str_to_addr(const std::string& str) {
+  address_type addr(str.begin(), str.end());
+  return addr;
+}
+
 class test_helper {
 private:
   uint64_t tx_id = 0;
@@ -27,9 +32,9 @@ private:
   std::mt19937 generator{random_device()};
 
 public:
-  auto make_random_wrapped_tx(const sender_type& sender) {
+  auto make_random_wrapped_tx(const std::string& sender) {
     wrapped_tx new_wrapped_tx;
-    new_wrapped_tx.sender = sender;
+    new_wrapped_tx.sender = str_to_addr(sender);
     new_wrapped_tx.gas = rand_gas();
 
     std::lock_guard<std::mutex> lock(mutex);
@@ -57,8 +62,10 @@ public:
 
 } // namespace test_detail
 
+using namespace test_detail;
+
 TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
-  auto test_helper = std::make_unique<test_detail::test_helper>();
+  auto test_helper = std::make_unique<::test_helper>();
   unapplied_tx_queue tx_queue;
 
   const uint64_t tx_count = 10;
@@ -80,7 +87,7 @@ TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
     CHECK(tx_queue.add_tx(std::make_shared<::wrapped_tx>(std::move(wrapped_tx))) == false);
     CHECK(tx_queue.size() == tx_count);
     CHECK(tx_queue.get_tx(wrapped_txs[0].id()));
-    CHECK(tx_queue.get_tx("user"));
+    CHECK(tx_queue.get_tx(str_to_addr("user")));
   }
 
   SECTION("Erase tx") {
@@ -113,7 +120,7 @@ TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
 }
 
 TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
-  auto test_helper = std::make_unique<test_detail::test_helper>();
+  auto test_helper = std::make_unique<::test_helper>();
   uint64_t tx_count = 10000;
   uint64_t queue_size = (sizeof(unapplied_tx) + sizeof(wrapped_tx)) * tx_count;
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
@@ -130,15 +137,15 @@ TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
 }
 
 TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
-  auto test_helper = std::make_unique<test_detail::test_helper>();
+  auto test_helper = std::make_unique<::test_helper>();
   uint64_t tx_count = 10000;
   uint64_t user_count = tx_count / 100;
   uint64_t queue_size = noir::tx_pool::tx_pool::config{}.max_tx_bytes * tx_count;
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
 
   for (uint64_t i = 0; i < tx_count; i++) {
-    sender_type sender = "user" + std::to_string(i / user_count);
-    CHECK(tx_queue->add_tx(std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx(sender))));
+    CHECK(tx_queue->add_tx(
+      std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user" + std::to_string(i / user_count)))));
   }
   CHECK(tx_queue->size() == tx_count);
 
@@ -157,7 +164,7 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
     SECTION("all txs") {
       uint64_t tx_count_per_user = tx_count / user_count;
       for (uint64_t i = 0; i < user_count; i++) {
-        sender_type sender = "user" + std::to_string(i);
+        address_type sender = str_to_addr("user" + std::to_string(i));
         auto begin = tx_queue->begin(sender);
         auto end = tx_queue->end(sender);
 
@@ -216,7 +223,7 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
 }
 
 TEST_CASE("Push/Get tx", "[tx_pool]") {
-  auto test_helper = std::make_unique<test_detail::test_helper>();
+  auto test_helper = std::make_unique<::test_helper>();
   class tx_pool tp;
 
   auto push_tx = [&](uint64_t count, bool sync = true) {
@@ -362,7 +369,7 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
 }
 
 TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
-  auto test_helper = std::make_unique<test_detail::test_helper>();
+  auto test_helper = std::make_unique<::test_helper>();
   class tx_pool tp;
 
   const uint64_t tx_count = 10000;
@@ -406,7 +413,7 @@ TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
 }
 
 TEST_CASE("Update", "[tx_pool]") {
-  auto test_helper = std::make_unique<test_detail::test_helper>();
+  auto test_helper = std::make_unique<::test_helper>();
   noir::tx_pool::tx_pool::config config{
     .ttl_num_blocks = 10,
   };
@@ -445,7 +452,7 @@ TEST_CASE("Update", "[tx_pool]") {
 }
 
 TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
-  auto test_helper = std::make_unique<test_detail::test_helper>();
+  auto test_helper = std::make_unique<::test_helper>();
   uint tx_count = 1000;
   uint cache_size = 1000;
 
