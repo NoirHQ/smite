@@ -23,7 +23,7 @@ struct unapplied_tx {
   const uint64_t nonce() const {
     return tx_ptr->nonce;
   }
-  const consensus::sender_type sender() const {
+  const consensus::address_type sender() const {
     return tx_ptr->sender;
   }
   const consensus::tx_id_type id() const {
@@ -56,10 +56,10 @@ private:
       boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_gas>,
         boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::gas>>,
       boost::multi_index::hashed_non_unique<boost::multi_index::tag<by_sender>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::sender_type, &unapplied_tx::sender>>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::address_type, &unapplied_tx::sender>>,
       boost::multi_index::ordered_unique<boost::multi_index::tag<by_nonce>,
         boost::multi_index::composite_key<unapplied_tx,
-          boost::multi_index::const_mem_fun<unapplied_tx, const consensus::sender_type, &unapplied_tx::sender>,
+          boost::multi_index::const_mem_fun<unapplied_tx, const consensus::address_type, &unapplied_tx::sender>,
           boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::nonce>>>,
       boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_height>,
         boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::height>>>>
@@ -111,7 +111,7 @@ public:
     return itr->tx_ptr;
   }
 
-  std::optional<consensus::wrapped_tx_ptr> get_tx(const consensus::sender_type& sender) const {
+  std::optional<consensus::wrapped_tx_ptr> get_tx(const consensus::address_type& sender) const {
     if (queue_.get<by_sender>().count(sender) == 0) {
       return std::nullopt;
     }
@@ -163,12 +163,12 @@ public:
     return queue_.get<Tag>().end();
   }
 
-  iterator<by_nonce> begin(const consensus::sender_type& sender, const uint64_t begin = 0) {
+  iterator<by_nonce> begin(const consensus::address_type& sender, const uint64_t begin = 0) {
     return queue_.get<by_nonce>().lower_bound(std::make_tuple(sender, begin));
   }
 
   iterator<by_nonce> end(
-    const consensus::sender_type& sender, const uint64_t end = std::numeric_limits<uint64_t>::max()) {
+    const consensus::address_type& sender, const uint64_t end = std::numeric_limits<uint64_t>::max()) {
     return queue_.get<by_nonce>().upper_bound(std::make_tuple(sender, end));
   }
 
