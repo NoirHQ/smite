@@ -101,7 +101,7 @@ struct vote_set {
   p2p::signed_msg_type signed_msg_type_;
   validator_set val_set;
 
-  //  std::mutex mtx;
+  std::mutex mtx;
   // bit_array
   std::vector<vote> votes;
   int64_t sum;
@@ -109,18 +109,25 @@ struct vote_set {
   std::map<std::string, block_votes> votes_by_block;
   std::map<P2PID, p2p::block_id> peer_maj23s;
 
-  static vote_set new_vote_set(std::string chain_id, int64_t height, int32_t round,
-    p2p::signed_msg_type signed_msg_type_, validator_set val_set_) {
-    if (height == 0)
+  static std::shared_ptr<vote_set> new_vote_set(std::string& chain_id_, int64_t height_, int32_t round_,
+    p2p::signed_msg_type signed_msg_type, validator_set& val_set_) {
+    if (height_ == 0)
       throw std::runtime_error("Cannot make vote_set for height = 0, doesn't make sense");
-    auto ret = vote_set{chain_id, height, round, signed_msg_type_, val_set_};
-    ret.sum = 0;
+    auto ret = std::make_shared<vote_set>();
+    ret->chain_id = chain_id_;
+    ret->height = height_;
+    ret->round = round_;
+    ret->signed_msg_type_ = signed_msg_type;
+    ret->val_set = val_set_;
+    ret->sum = 0;
     return ret;
   }
 
   bool add_vote(std::optional<vote> vote_) {
     if (!vote_.has_value())
       throw std::runtime_error("add_vote() on empty vote_set");
+
+    std::lock_guard<std::mutex> g(mtx);
 
     auto val_index = vote_->validator_index;
     auto val_addr = vote_->validator_address;
@@ -252,17 +259,17 @@ struct vote_set {
   }
 
   bool has_two_thirds_majority() {
-    // todo - use mtx
+    std::lock_guard<std::mutex> g(mtx);
     return maj23.has_value();
   }
 
   bool has_two_thirds_any() {
-    // todo - use mtx
+    std::lock_guard<std::mutex> g(mtx);
     return sum > val_set.total_voting_power * 2 / 3;
   }
 
   bool has_all() {
-    // todo - use mtx
+    std::lock_guard<std::mutex> g(mtx);
     return sum == val_set.total_voting_power;
   }
 
@@ -270,7 +277,7 @@ struct vote_set {
    * if there is a 2/3+ majority for block_id, return block_id
    */
   std::optional<p2p::block_id> two_thirds_majority() {
-    // todo - use mtx
+    std::lock_guard<std::mutex> g(mtx);
     // if (maj23.has_value())
     //  return maj23;
     // return {};
@@ -281,7 +288,7 @@ struct vote_set {
    * constructs a commit from the vote_set. It only include precommits for the block, which has 2/3+ majority and nil
    */
   commit make_commit() {
-    // todo - use mtx
+    std::lock_guard<std::mutex> g(mtx);
     if (signed_msg_type_ != p2p::Precommit)
       throw std::runtime_error("cannot make_commit() unless signed_msg_type_ is Precommit");
     // Make sure we have a 2/3 majority
