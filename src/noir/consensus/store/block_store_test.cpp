@@ -65,7 +65,7 @@ inline noir::consensus::commit make_commit(int64_t height, noir::p2p::tstamp tim
 }
 
 inline noir::consensus::state make_genesis_state() {
-  auto config_ = noir::consensus::config::default_config();
+  auto config_ = noir::consensus::config::get_default();
   config_.base.chain_id = "test_block_store";
   auto [gen_doc, priv_vals] = noir::consensus::rand_genesis_doc(config_, 1, false, 10);
   return noir::consensus::state::make_genesis_state(gen_doc);

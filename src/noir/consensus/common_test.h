@@ -35,7 +35,7 @@ void increment_height(validator_stub_list& vss, size_t begin_at) {
 }
 
 config config_setup() {
-  auto config_ = config::default_config();
+  auto config_ = config::get_default();
   config_.base.chain_id = "test_chain";
   return config_;
 }

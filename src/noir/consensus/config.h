@@ -24,15 +24,22 @@ struct base_config {
   std::string abci;
   bool filter_peers;
 
-  static base_config default_consensus_config() {
-    return base_config{};
+  static base_config get_default() {
+    base_config cfg;
+    cfg.genesis = "genesis.json";
+    cfg.node_key = "node_key.json";
+    cfg.mode = "full";
+    cfg.abci = "local";
+    cfg.log_level = "info";
+    cfg.db_path = "data";
+    return cfg;
   }
 };
 
 struct consensus_config {
-  //  std::string root_dir;
+  std::string root_dir;
   std::string wal_path;
-  //  std::string wal_file;
+  std::string wal_file;
 
   std::chrono::system_clock::duration timeout_propose;
   std::chrono::system_clock::duration timeout_propose_delta;
@@ -52,11 +59,23 @@ struct consensus_config {
 
   int64_t double_sign_check_height;
 
-  static consensus_config default_consensus_config() {
-    return consensus_config{"cs.wal", std::chrono::milliseconds{3000}, std::chrono::milliseconds{500},
-      std::chrono::milliseconds{1000}, std::chrono::milliseconds{500}, std::chrono::milliseconds{1000},
-      std::chrono::milliseconds{500}, std::chrono::milliseconds{1000}, false, true, std::chrono::seconds{0},
-      std::chrono::milliseconds{100}, std::chrono::milliseconds{2000}, 0};
+  static consensus_config get_default() {
+    consensus_config cfg;
+    cfg.wal_file = "cs.wal";
+    cfg.timeout_propose = std::chrono::milliseconds{3000};
+    cfg.timeout_propose_delta = std::chrono::milliseconds{500};
+    cfg.timeout_prevote = std::chrono::milliseconds{1000};
+    cfg.timeout_prevote_delta = std::chrono::milliseconds{500};
+    cfg.timeout_precommit = std::chrono::milliseconds{1000};
+    cfg.timeout_precommit_delta = std::chrono::milliseconds{500};
+    cfg.timeout_commit = std::chrono::milliseconds{1000};
+    cfg.skip_timeout_commit = false;
+    cfg.create_empty_blocks = true;
+    cfg.create_empty_blocks_interval = std::chrono::seconds{0};
+    cfg.peer_gossip_sleep_duration = std::chrono::milliseconds{100};
+    cfg.peer_query_maj_23_sleep_duration = std::chrono::milliseconds{2000};
+    cfg.double_sign_check_height = 0;
+    return cfg;
   }
 
   std::chrono::system_clock::duration propose(int32_t round) const {
@@ -83,8 +102,8 @@ struct config {
   base_config base;
   consensus_config consensus;
 
-  static config default_config() {
-    return {base_config::default_consensus_config(), consensus_config::default_consensus_config()};
+  static config get_default() {
+    return {base_config::get_default(), consensus_config::get_default()};
   }
 };
 
