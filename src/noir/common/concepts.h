@@ -11,6 +11,9 @@ namespace noir {
 template<typename T>
 concept integral = std::is_integral_v<T>;
 
+template<typename E>
+concept enumeration = std::is_enum_v<E>;
+
 template<typename T, typename U = std::remove_cv_t<T>>
 concept Byte = std::is_same_v<U, char> || std::is_same_v<U, unsigned char> || std::is_same_v<U, std::byte>;
 

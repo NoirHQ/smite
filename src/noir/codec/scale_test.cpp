@@ -29,6 +29,49 @@ TEMPLATE_TEST_CASE("[scale] Fixed-width integers/Boolean", "[codec]", bool, int8
   CHECK(v == std::numeric_limits<TestType>::min());
 }
 
+TEMPLATE_TEST_CASE("[scale] Enum class with Fixed-width underlying type", "[codec]", bool, int8_t, uint8_t, int16_t,
+  uint16_t, int32_t, uint32_t, int64_t, uint64_t) {
+  enum class num_in_enum : TestType {
+    MIN = std::numeric_limits<TestType>::min(),
+    MID1,
+    MID2 = std::numeric_limits<TestType>::max() - 1,
+    MAX = std::numeric_limits<TestType>::max(),
+  };
+  auto tests = std::to_array<num_in_enum>({
+    num_in_enum::MIN,
+    num_in_enum::MID1,
+    num_in_enum::MID2,
+    num_in_enum::MAX,
+  });
+
+  std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
+    auto enc_ret = encode(t);
+    auto dec_ret = decode<num_in_enum>(enc_ret);
+    CHECK(dec_ret == t);
+  });
+}
+
+TEST_CASE("[scale] c-enum", "[codec]") {
+  enum num_in_enum {
+    ZERO = 0,
+    ONE = 1,
+    FORTY_TWO = 42,
+    SIXTY_NINE = 69,
+  };
+  auto tests = std::to_array<num_in_enum>({
+    num_in_enum::ZERO,
+    num_in_enum::ONE,
+    num_in_enum::FORTY_TWO,
+    num_in_enum::SIXTY_NINE,
+  });
+
+  std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
+    auto enc_ret = encode(t);
+    auto dec_ret = decode<num_in_enum>(enc_ret);
+    CHECK(dec_ret == t);
+  });
+}
+
 TEST_CASE("[scale] Compact/general integers", "[codec]") {
   auto tests = std::to_array<std::pair<unsigned_int, const char*>>({
     {0, "00"}, {1, "04"}, {42, "a8"}, {69, "1501"}, {65535, "feff0300"},

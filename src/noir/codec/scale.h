@@ -47,6 +47,20 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, uint256_t& v) {
   return ds;
 }
 
+template<typename Stream, enumeration E>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const E& v) {
+  ds << static_cast<const std::underlying_type_t<E>>(v);
+  return ds;
+}
+
+template<typename Stream, enumeration E>
+datastream<Stream>& operator>>(datastream<Stream>& ds, E& v) {
+  std::underlying_type_t<E> tmp;
+  ds >> tmp;
+  v = static_cast<E>(tmp);
+  return ds;
+}
+
 // Compact/general integers
 template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const unsigned_int& v) {
