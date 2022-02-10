@@ -6,7 +6,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <boost/filesystem.hpp>
-#include "chain_kv_tests.hpp"
+#include "chain_kv_tests.h"
 
 using noir::db::chain_kv::bytes;
 using noir::db::chain_kv::to_slice;

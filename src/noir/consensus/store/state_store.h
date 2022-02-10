@@ -11,8 +11,8 @@
 
 #include <noir/codec/scale.h>
 #include <noir/common/hex.h>
-#include <noir/db/rocks_session.hpp>
-#include <noir/db/session.hpp>
+#include <noir/db/rocks_session.h>
+#include <noir/db/session.h>
 
 namespace noir::consensus {
 

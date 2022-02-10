@@ -5,7 +5,7 @@
 //
 
 #include <catch2/catch_all.hpp>
-#include <noir/db/shared_bytes.hpp>
+#include <noir/db/shared_bytes.h>
 
 using namespace noir::db::session;
 

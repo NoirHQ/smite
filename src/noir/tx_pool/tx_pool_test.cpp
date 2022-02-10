@@ -8,7 +8,7 @@
 #include <noir/common/thread_pool.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/tx_pool.h>
-#include <noir/tx_pool/unapplied_tx_queue.hpp>
+#include <noir/tx_pool/unapplied_tx_queue.h>
 #include <algorithm>
 
 using namespace noir;

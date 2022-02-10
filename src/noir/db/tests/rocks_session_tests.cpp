@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: MIT
 //
 
-#include <noir/db/rocks_session.hpp>
-#include "data_store_tests.hpp"
+#include <noir/db/rocks_session.h>
+#include "data_store_tests.h"
 
 using namespace noir::db::session;
 using namespace noir::db::session_tests;

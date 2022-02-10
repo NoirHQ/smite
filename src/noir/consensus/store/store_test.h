@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <noir/db/rocks_session.hpp>
-#include <noir/db/session.hpp>
+#include <noir/db/rocks_session.h>
+#include <noir/db/session.h>
 
 inline std::shared_ptr<rocksdb::DB> make_rocks_db(const std::string& name = "/tmp/testdb") {
   rocksdb::DestroyDB(name.c_str(), rocksdb::Options{});

@@ -15,7 +15,7 @@
 #include <unordered_set>
 
 #include <noir/common/types.h>
-#include <noir/db/shared_bytes.hpp>
+#include <noir/db/shared_bytes.h>
 
 namespace noir::db::session {
 

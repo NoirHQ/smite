@@ -13,7 +13,7 @@
 #include <softfloat.hpp>
 #include <stdexcept>
 
-#include <noir/db/shared_bytes.hpp>
+#include <noir/db/shared_bytes.h>
 
 namespace noir::db::chain_kv {
 
