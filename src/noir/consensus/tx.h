@@ -13,11 +13,11 @@ using tx = bytes;
 
 using tx_ptr = std::shared_ptr<tx>;
 
-using sender_type = std::string;
+using address_type = bytes;
 using tx_id_type = bytes32;
 
 struct wrapped_tx {
-  sender_type sender;
+  address_type sender;
   std::optional<tx_id_type> _id;
 
   tx tx_data;
