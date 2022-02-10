@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: MIT
 //
 
-#include <noir/db/rocks_session.hpp>
-#include <noir/db/session.hpp>
-#include <noir/db/undo_stack.hpp>
-#include "data_store_tests.hpp"
+#include <noir/db/rocks_session.h>
+#include <noir/db/session.h>
+#include <noir/db/undo_stack.h>
+#include "data_store_tests.h"
 
 #include <random>
 

@@ -13,8 +13,8 @@
 #include <noir/common/hex.h>
 #include <noir/consensus/block_meta.h>
 #include <noir/consensus/types.h>
-#include <noir/db/rocks_session.hpp>
-#include <noir/db/session.hpp>
+#include <noir/db/rocks_session.h>
+#include <noir/db/session.h>
 
 namespace noir::consensus {
 

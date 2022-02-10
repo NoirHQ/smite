@@ -5,7 +5,7 @@
 //
 #pragma once
 
-#include <noir/db/chain_kv.hpp>
+#include <noir/db/chain_kv.h>
 
 struct kv_values {
   std::vector<std::pair<noir::db::chain_kv::bytes, noir::db::chain_kv::bytes>> values;

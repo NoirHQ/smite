@@ -5,7 +5,7 @@
 //
 #pragma once
 
-#include <noir/db/session.hpp>
+#include <noir/db/session.h>
 
 namespace noir::db::session {
 

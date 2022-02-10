@@ -9,7 +9,7 @@
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/LRU_cache.h>
-#include <noir/tx_pool/unapplied_tx_queue.hpp>
+#include <noir/tx_pool/unapplied_tx_queue.h>
 
 namespace noir::tx_pool {
 class tx_pool {

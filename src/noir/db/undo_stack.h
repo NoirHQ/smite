@@ -13,8 +13,8 @@
 #include <fc/io/fstream.hpp>
 #include <fc/io/raw.hpp>
 
-#include <noir/db/session.hpp>
-#include <noir/db/session_variant.hpp>
+#include <noir/db/session.h>
+#include <noir/db/session_variant.h>
 
 namespace noir::db::session {
 constexpr uint32_t undo_stack_magic_number = 0x30510ABC;

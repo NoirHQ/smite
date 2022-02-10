@@ -16,8 +16,8 @@
 #include <rocksdb/options.h>
 #include <rocksdb/slice_transform.h>
 
-#include <noir/db/rocks_session.hpp>
-#include <noir/db/session.hpp>
+#include <noir/db/rocks_session.h>
+#include <noir/db/session.h>
 
 namespace noir::db::session_tests {
 
