@@ -87,7 +87,7 @@ std::unique_ptr<node> node::make_node(priv_validator local_validator_, node_key 
   node_->local_validator = local_validator_;
   node_->local_node_key = node_key_;
 
-  node_->local_config = config::default_config();
+  node_->local_config = config::get_default();
   // Check config.Mode == cfg.ModeValidator
 
   // Determine whether we should attempt state sync.
