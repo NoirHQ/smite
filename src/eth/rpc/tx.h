@@ -4,20 +4,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/types.h>
+#include <eth/common/types.h>
 
 namespace eth::rpc {
 
 struct tx {
   uint64_t nonce;
-  noir::uint256_t gas_price;
+  uint256_t gas_price;
   uint64_t gas;
-  noir::bytes20 to;
-  noir::uint256_t value;
-  noir::bytes data;
+  bytes20 to;
+  uint256_t value;
+  bytes data;
   uint8_t v;
-  noir::bytes32 r;
-  noir::bytes32 s;
+  bytes32 r;
+  bytes32 s;
 };
 
 using tx_ptr = std::shared_ptr<tx>;
