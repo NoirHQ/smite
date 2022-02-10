@@ -134,8 +134,7 @@ struct height_vote_set {
 
     auto prevotes = vote_set::new_vote_set(chain_id, height, round_, p2p::Prevote, val_set);
     auto precommits = vote_set::new_vote_set(chain_id, height, round_, p2p::Precommit, val_set);
-    round_vote_sets[round_] =
-      round_vote_set{std::make_shared<vote_set>(prevotes), std::make_shared<vote_set>(precommits)};
+    round_vote_sets[round_] = round_vote_set{prevotes, precommits};
   }
 
   void set_round(int32_t round_) {
