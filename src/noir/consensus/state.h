@@ -110,21 +110,38 @@ struct state {
   }
 
   static state make_genesis_state(genesis_doc& gen_doc) {
-    // todo - read from genDoc
-    state state_{};
+    if (!gen_doc.validate_and_complete())
+      return state{};
 
-    std::vector<validator> validators;
-    validator_set val_set;
-    for (const auto& val : gen_doc.validators) {
-      validators.push_back(validator{val.address, val.pub_key_, val.power, 0});
+    std::vector<validator> empty_set;
+    validator_set val_set, next_val_set;
+    if (gen_doc.validators.empty()) {
+      val_set = validator_set::new_validator_set(empty_set);
+      next_val_set = validator_set::new_validator_set(empty_set);
+    } else {
+      std::vector<validator> validators;
+      for (const auto& val : gen_doc.validators) {
+        validators.push_back(validator{val.address, val.pub_key_, val.power, 0});
+      }
+      val_set = validator_set::new_validator_set(validators);
+      next_val_set = validator_set::new_validator_set(validators).copy_increment_proposer_priority(1);
     }
-    val_set = validator_set::new_validator_set(validators);
-    validator_set next_val_set = val_set.copy_increment_proposer_priority(1);
-    state_.validators = val_set;
-    state_.next_validators = next_val_set;
 
+    state state_{};
     state_.chain_id = gen_doc.chain_id;
     state_.initial_height = gen_doc.initial_height;
+
+    state_.last_block_height = 0;
+    state_.last_block_id = p2p::block_id{};
+    state_.last_block_time = gen_doc.genesis_time;
+
+    state_.validators = val_set;
+    state_.next_validators = next_val_set;
+    state_.last_validators = validator_set::new_validator_set(empty_set);
+    state_.last_height_validators_changed = gen_doc.initial_height;
+
+    state_.consensus_params_ = gen_doc.cs_params.value();
+    state_.last_height_consensus_params_changed = gen_doc.initial_height;
     return state_;
   }
 };
