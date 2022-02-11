@@ -37,12 +37,12 @@ jobs:
         with:
           submodules: recursive
       # restore rocksdb build cache
-      - id: rocksdb-cache
+      - id: rocksdb-portable-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/rocksdb/{ print $1 }')"
       - uses: actions/cache@v2
         with:
           path: build/libs/rocksdb/librocksdb.a
-          key: ${{ runner.os }}-rocksdb-${{ steps.rocksdb-cache.outputs.version }}
+          key: ${{ runner.os }}-rocksdb-portable-${{ steps.rocksdb-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
       - run: BOOST_ROOT=/opt/boost cmake .. && make -j2
