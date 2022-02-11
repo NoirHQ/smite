@@ -23,8 +23,8 @@ namespace noir::consensus {
 struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   consensus_state();
 
-  static std::shared_ptr<consensus_state> new_state(
-    const consensus_config& cs_config_, state& state_, const std::shared_ptr<block_executor>& block_exec_);
+  static std::shared_ptr<consensus_state> new_state(const consensus_config& cs_config_, state& state_,
+    const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store);
 
   state get_state();
   int64_t get_last_height();
@@ -86,6 +86,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   //  // store blocks and commits
   //  blockStore sm.BlockStore
+  std::shared_ptr<block_store> block_store_{nullptr};
 
   //  // create and execute blocks
   //  blockExec *sm.BlockExecutor
