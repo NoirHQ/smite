@@ -786,18 +786,21 @@ void consensus_state::finalize_commit(int64_t height) {
   auto block_parts_ = rs.proposal_block_parts;
 
   if (!block_id_.has_value())
-    throw std::runtime_error("cannot finalize commit; commit does not have 2/3 majority");
+    throw std::runtime_error("panic: cannot finalize commit; commit does not have 2/3 majority");
   if (!block_parts_->has_header(block_id_->parts))
-    throw std::runtime_error("expected ProposalBlockParts header to be commit header");
+    throw std::runtime_error("panic: expected ProposalBlockParts header to be commit header");
   if (!block_->hashes_to(block_id_->hash))
-    throw std::runtime_error("cannot finalize commit; proposal block does not hash to commit hash");
+    throw std::runtime_error("panic: cannot finalize commit; proposal block does not hash to commit hash");
 
-  // validate block // todo
+  // Validate block
+  if (!block_exec->validate_block(local_state, block_.value())) {
+    throw std::runtime_error("panic: +2/3 committed an invalid block");
+  }
 
   ilog(fmt::format("finalizing commit of block: hash={}", to_hex(block_id_->hash)));
   dlog(fmt::format("block: hash={}", to_hex(block_->get_hash())));
 
-  // save to blockstore // todo
+  // Save to block_store // todo
   if (true) { // todo
     auto precommits = rs.votes->precommits(rs.commit_round);
     auto seen_commit = precommits->make_commit();
@@ -806,11 +809,11 @@ void consensus_state::finalize_commit(int64_t height) {
     dlog("calling finalizeCommit on already stored block");
   }
 
-  // write to wal // todo
+  // Write to wal // todo
 
   auto state_copy = local_state;
 
-  // apply block // todo - make it work
+  // Apply block // todo - make it work; some operations are commented out now
   auto result =
     block_exec->apply_block(state_copy, p2p::block_id{block_->get_hash(), block_parts_->header()}, block_.value());
   if (!result.has_value()) {
