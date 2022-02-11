@@ -9,7 +9,26 @@ add_definitions(-DWEBSOCKETPP_STRICT_MASKING -DBOOST_ASIO_HAS_STD_CHRONO)
 add_library(websocketpp INTERFACE)
 target_include_directories(websocketpp INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/websocketpp)
 
+
 add_subdirectory(softfloat)
+
+get_target_property(softfloat_src softfloat SOURCES)
+list(TRANSFORM softfloat_src REPLACE "8086-SSE" "8086")
+message(${softfloat_src})
+
+get_target_property(softfloat_inc softfloat INCLUDE_DIRECTORIES)
+list(TRANSFORM softfloat_inc REPLACE "8086-SSE" "8086")
+message(${softfloat_inc})
+
+get_target_property(softfloat_if_inc softfloat INTERFACE_INCLUDE_DIRECTORIES)
+list(TRANSFORM softfloat_if_inc REPLACE "8086-SSE" "8086")
+message(${softfloat_if_inc})
+
+
+set_property(TARGET softfloat PROPERTY SOURCES ${softfloat_src})
+set_property(TARGET softfloat PROPERTY INCLUDE_DIRECTORIES ${softfloat_inc})
+set_property(TARGET softfloat PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${softfloat_if_inc})
+
 add_subdirectory(appbase)
 add_subdirectory(Catch2)
 add_subdirectory(expected)
