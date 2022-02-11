@@ -113,7 +113,7 @@ public:
 
   std::optional<consensus::wrapped_tx_ptr> get_tx(const consensus::address_type& sender, uint64_t nonce) const {
     auto itr = queue_.get<by_nonce>().find(std::make_tuple(sender, nonce));
-    if ( itr == queue_.get<by_nonce>().end()) {
+    if (itr == queue_.get<by_nonce>().end()) {
       return std::nullopt;
     }
     return itr->tx_ptr;
