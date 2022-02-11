@@ -12,6 +12,7 @@
 #include <utility>
 
 namespace noir::consensus {
+namespace fs = std::filesystem;
 
 struct message_handler {
   std::shared_ptr<consensus_state> cs;
@@ -45,7 +46,8 @@ struct message_handler {
 
 consensus_state::consensus_state()
   : timeout_ticker_channel(appbase::app().get_channel<plugin_interface::channels::timeout_ticker>()),
-    internal_mq_channel(appbase::app().get_channel<plugin_interface::channels::internal_message_queue>()) {
+    internal_mq_channel(appbase::app().get_channel<plugin_interface::channels::internal_message_queue>()),
+    wal_(std::make_unique<nil_wal>()) {
   timeout_ticker_subscription = appbase::app().get_channel<plugin_interface::channels::timeout_ticker>().subscribe(
     std::bind(&consensus_state::tock, this, std::placeholders::_1));
   internal_mq_subscription = appbase::app().get_channel<plugin_interface::channels::internal_message_queue>().subscribe(
@@ -93,6 +95,10 @@ std::unique_ptr<round_state> consensus_state::get_round_state() {
   auto rs_copy = std::make_unique<round_state>();
   *rs_copy = rs;
   return rs_copy;
+}
+
+round_state::event_data consensus_state::get_round_state_event() {
+  return rs.new_event_data();
 }
 
 void consensus_state::set_priv_validator(const priv_validator& priv) {
@@ -157,8 +163,43 @@ std::shared_ptr<commit> consensus_state::load_commit(int64_t height) {
   return std::move(ret);
 }
 
+inline fs::path get_wal_file_path(const consensus_config& cs_config) {
+  return fs::path(cs_config.root_dir) / fs::path(cs_config.wal_file);
+}
+
+bool consensus_state::load_wal_file() {
+  if (cs_config.wal_file.empty()) {
+    cs_config.wal_file = cs_config.wal_path;
+  }
+  auto wal_file_path = get_wal_file_path(cs_config);
+  try {
+    if (fs::exists(wal_file_path)) {
+      if (!fs::is_directory(wal_file_path)) {
+        elog(fmt::format("unable to create wal_file={}", wal_file_path.string()));
+        return false;
+      }
+    } else {
+      fs::create_directories(wal_file_path);
+    }
+    wal_ = std::make_unique<base_wal>(wal_file_path.string(), wal_head_name, wal_file_num, wal_file_size);
+  } catch (...) {
+    elog("failed to start wal");
+    return false;
+  }
+  return true;
+}
+
 void consensus_state::on_start() {
-  // todo
+  // We may set the WAL in testing before calling Start, so only OpenWAL if it's still the nilWAL.
+  if (dynamic_cast<nil_wal*>(wal_.get())) {
+    check(load_wal_file(), "failed to load wal");
+  }
+  check(wal_->on_start(), "failed to start wal"); // TODO: workaround: directly call on_start instead of start()
+
+  // TODO: repair
+  if (do_wal_catchup) {
+    bool repair_attempted = false;
+  }
 }
 
 void consensus_state::update_height(int64_t height) {
@@ -270,7 +311,9 @@ void consensus_state::update_to_state(state& state_) {
 }
 
 void consensus_state::new_step() {
-  // todo
+  if (!wal_->write({get_round_state_event()})) { // TODO: null check for rs or WAL?
+    elog("failed writing to WAL");
+  }
   n_steps++;
 
   // todo - notify consensus_reactor about rs
@@ -285,6 +328,9 @@ void consensus_state::new_step() {
  */
 void consensus_state::receive_routine(p2p::msg_info_ptr mi) {
   message_handler m(shared_from_this());
+  if (!wal_->write_sync({*mi})) { // TODO: sync is not needed for peer_message_queue
+    elog("failed writing to WAL");
+  }
   std::visit(m, mi->msg);
 }
 
@@ -333,6 +379,9 @@ void consensus_state::tick(timeout_info_ptr ti) {
 
 void consensus_state::tock(timeout_info_ptr ti) {
   ilog(fmt::format("Timed out: hrs={}/{}/{}, timeout={}", ti->height, ti->round, ti->step, ti->duration_.count()));
+  if (!wal_->write({*ti})) {
+    elog("failed writing to WAL");
+  }
   handle_timeout(ti);
 }
 
@@ -526,8 +575,11 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     }
   }
 
-  // Flush the WAL
-  // todo
+  // Flush the WAL. Otherwise, we may not recompute the same proposal to sign,
+  // and the privValidator will refuse to sign anything.
+  if (!wal_->flush_and_sync()) {
+    elog("failed flushing WAL to disk");
+  }
 
   // Make proposal
   auto prop_block_id = p2p::block_id{block_->get_hash(), block_parts_->header()};
@@ -836,7 +888,12 @@ void consensus_state::finalize_commit(int64_t height) {
     dlog("calling finalizeCommit on already stored block");
   }
 
-  // Write to wal // todo
+  // Write EndHeightMessage{} for this height, implying that the blockstore has saved the block.
+  if (!wal_->write_sync({end_height_message{height}})) {
+    throw std::runtime_error(fmt::format(
+      "failed to write end_height_message at height:{} to consensus WAL; check your file system and restart the node",
+      height));
+  }
 
   auto state_copy = local_state;
 
@@ -1129,7 +1186,10 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
 std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header) {
   // Flush the WAL. Otherwise, we may not recompute the same vote to sign,
   // and the privValidator will refuse to sign anything.
-  // if err := cs.wal.FlushAndSync(); err != nil { // todo
+  if (!wal_->flush_and_sync()) {
+    elog("failed to flush wal");
+    return {};
+  }
 
   if (local_priv_validator_pub_key.empty()) {
     elog("pubkey is not set. Look for \"Can't get private validator pubkey\" errors");

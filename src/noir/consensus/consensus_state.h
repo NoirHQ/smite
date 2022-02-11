@@ -13,6 +13,7 @@
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/wal.h>
 
 namespace noir::consensus {
 
@@ -153,11 +154,19 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //  // and to notify external subscribers, eg. through a websocket
   //  eventBus *types.EventBus
   //
-  //  // a Write-Ahead Log ensures we can recover from any kind of crash
-  //  // and helps us avoid signing conflicting votes
-  //  wal          WAL
+
+  // a Write-Ahead Log ensures we can recover from any kind of crash and helps us avoid signing conflicting votes
+  // TODO: configurable
+  static constexpr size_t wal_file_num = 1024;
+  static constexpr size_t wal_file_size = 1024 * 1024;
+  std::string wal_head_name = "wal";
+
+  std::unique_ptr<wal> wal_;
+  bool load_wal_file();
+
+  round_state::event_data get_round_state_event();
+  bool do_wal_catchup = false; // determines if we even try to do the catchup
   //    replayMode   bool // so we don't log signing errors during replay
-  //  doWALCatchup bool // determines if we even try to do the catchup
   //
   //  // for tests where we want to limit the number of transitions the state makes
   //  nSteps int
