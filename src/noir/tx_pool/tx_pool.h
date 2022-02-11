@@ -72,6 +72,9 @@ public:
   void flush_app_conn() {
     proxy_app_->flush_sync();
   }
+
+private:
+  void update_recheck_txs();
 };
 
 } // namespace noir::tx_pool
