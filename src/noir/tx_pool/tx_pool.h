@@ -28,6 +28,7 @@ public:
     bool keep_invalid_txs_in_cache = false;
     //    fc::time_point ttl_duration;
     uint64_t ttl_num_blocks = 0;
+    uint64_t gas_price_bump = 1000;
   };
 
   using precheck_func = bool(const consensus::wrapped_tx&);
