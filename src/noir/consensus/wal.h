@@ -290,6 +290,33 @@ private:
   };
 };
 
+class nil_wal : public wal {
+  bool write(const wal_message& msg) override {
+    return true;
+  }
+
+  bool write_sync(const wal_message& msg) override {
+    return true;
+  }
+
+  bool flush_and_sync() override {
+    return true;
+  }
+
+  bool on_start() override {
+    return true;
+  }
+
+  bool on_stop() override {
+    return true;
+  }
+
+  virtual std::shared_ptr<wal_decoder> search_for_end_height(
+    int64_t height, wal_search_options options, bool& found) override {
+    return {nullptr};
+  }
+};
+
 /// \}
 
 } // namespace noir::consensus
