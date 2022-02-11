@@ -23,7 +23,7 @@ public:
   std::string send_raw_tx(const std::string& rlp);
 
 private:
-  eth::uint256_t tx_fee_cap;
+  uint256_t tx_fee_cap;
   bool allow_unprotected_txs;
 };
 
