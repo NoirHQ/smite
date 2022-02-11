@@ -811,21 +811,13 @@ void consensus_state::finalize_commit(int64_t height) {
   auto state_copy = local_state;
 
   // apply block // todo - make it work
-  try {
-    auto result =
-      block_exec->apply_block(state_copy, p2p::block_id{block_->get_hash(), block_parts_->header()}, block_.value());
-  } catch (std::exception& e) {
-    elog(fmt::format("exception: {}", e.what()));
+  auto result =
+    block_exec->apply_block(state_copy, p2p::block_id{block_->get_hash(), block_parts_->header()}, block_.value());
+  if (!result.has_value()) {
+    elog("failed to apply block");
+    return;
   }
-  //  if (!result.has_value()) {
-  //    elog("failed to apply block");
-  //    return;
-  //  }
-  //  state_copy = result.value();
-
-  state_copy.last_block_height = block_->header.height; // todo - remove after implementing apply_block()
-  state_copy.last_result_hash = block_->get_hash(); // todo - remove
-  state_copy.app_hash = block_->get_hash(); // todo - remove
+  state_copy = result.value();
 
   // record metric
 

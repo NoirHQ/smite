@@ -148,12 +148,13 @@ struct block_executor {
       return {};
     }
 
+    // todo - uncomment prune below - right now it throws
     // Prune old height
-    if (retain_height > 0) {
-      auto pruned = prune_blocks(retain_height);
-      if (pruned > 0)
-        dlog(fmt::format("pruned blocks: pruned={} retain_height={}", pruned, retain_height));
-    }
+    // if (retain_height > 0) {
+    //  auto pruned = prune_blocks(retain_height);
+    //  if (pruned > 0)
+    //    dlog(fmt::format("pruned blocks: pruned={} retain_height={}", pruned, retain_height));
+    //}
 
     // Reset verficiation cache
     cache.clear();
@@ -183,7 +184,9 @@ struct block_executor {
     dtxs.resize(block_.data.txs.size());
     abci_responses_->deliver_txs = dtxs;
 
-    auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
+    // todo - use get_begin_block_validator_info() below, right now it throws a panic
+    // auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
+    last_commit_info commit_info; // todo - remove later
 
     // begin block
     abci_responses_->begin_block =
