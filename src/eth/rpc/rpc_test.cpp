@@ -12,7 +12,7 @@ using namespace eth::rpc;
 TEST_CASE("[rpc] check_send_raw_tx", "[params]") {
   fc::variant params;
 
-  SECTION("params") {
+  SECTION("params fail") {
     params = fc::variant(1);
     CHECK_THROWS_WITH(rpc::check_send_raw_tx(params), "invalid json request");
     vector<string> v;
@@ -23,7 +23,7 @@ TEST_CASE("[rpc] check_send_raw_tx", "[params]") {
     CHECK_THROWS_WITH(rpc::check_send_raw_tx(params), "too many arguments, want at most 1");
   }
 
-  SECTION("param") {
+  SECTION("param fail") {
     vector<uint32_t> v = {0};
     params = fc::variant(v);
     CHECK_THROWS_WITH(rpc::check_send_raw_tx(params), "invalid parameters: json: cannot unmarshal");
