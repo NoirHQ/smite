@@ -9,14 +9,13 @@
 namespace noir::tx_pool {
 
 tx_pool::tx_pool()
-  : config_(config{}), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size),
-    precheck_(nullptr), postcheck_(nullptr), block_height_(0) {
+  : config_(config{}), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size) {
   thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
 }
 
-tx_pool::tx_pool(const config& cfg, uint64_t block_height)
+tx_pool::tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxy_app, uint64_t block_height)
   : config_(cfg), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size),
-    precheck_(nullptr), postcheck_(nullptr), block_height_(block_height) {
+    proxy_app_(new_proxy_app), block_height_(block_height) {
   thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
 }
 
@@ -37,7 +36,7 @@ std::optional<std::future<bool>> tx_pool::check_tx(const consensus::wrapped_tx_p
     return std::nullopt;
   }
 
-  if (precheck_ && !precheck_(*tx_ptr)) {
+  if (precheck_ && !precheck_(tx_ptr->tx_data)) {
     return std::nullopt;
   }
 
@@ -49,9 +48,9 @@ std::optional<std::future<bool>> tx_pool::check_tx(const consensus::wrapped_tx_p
 
   tx_cache_.put(tx_ptr->id(), tx_ptr);
 
-  consensus::response_check_tx res; // FIXME : get from proxy_app_connector
+  consensus::response_check_tx res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx_ptr->tx_data});
   auto result = async_thread_pool(thread_->get_executor(), [&, tx_ptr]() {
-    if (postcheck_ && !postcheck_(*tx_ptr, res)) {
+    if (postcheck_ && !postcheck_(tx_ptr->tx_data, res)) {
       if (res.code != consensus::code_type_ok) {
         tx_cache_.del(tx_ptr->id());
         return false;

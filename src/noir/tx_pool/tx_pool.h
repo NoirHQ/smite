@@ -7,6 +7,7 @@
 
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/abci_types.h>
+#include <noir/consensus/app_connection.h>
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/unapplied_tx_queue.h>
@@ -31,8 +32,8 @@ public:
     uint64_t gas_price_bump = 1000;
   };
 
-  using precheck_func = bool(const consensus::wrapped_tx&);
-  using postcheck_func = bool(const consensus::wrapped_tx&, consensus::response_check_tx&);
+  using precheck_func = bool(const consensus::tx&);
+  using postcheck_func = bool(const consensus::tx&, consensus::response_check_tx&);
 
 private:
   std::mutex mutex_;
@@ -40,16 +41,18 @@ private:
   unapplied_tx_queue tx_queue_;
   LRU_cache<consensus::tx_id_type, consensus::wrapped_tx_ptr> tx_cache_;
 
-  std::unique_ptr<named_thread_pool> thread_;
+  std::shared_ptr<consensus::app_connection> proxy_app_;
 
-  uint64_t block_height_;
+  std::unique_ptr<named_thread_pool> thread_ = nullptr;
 
-  precheck_func* precheck_;
-  postcheck_func* postcheck_;
+  uint64_t block_height_ = 0;
+
+  precheck_func* precheck_ = nullptr;
+  postcheck_func* postcheck_ = nullptr;
 
 public:
   tx_pool();
-  tx_pool(const config& cfg, uint64_t block_height);
+  tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxyApp, uint64_t block_height);
 
   ~tx_pool();
 
@@ -66,6 +69,9 @@ public:
   size_t size() const;
   bool empty() const;
   void flush();
+  void flush_app_conn() {
+    proxy_app_->flush_sync();
+  }
 };
 
 } // namespace noir::tx_pool
