@@ -110,6 +110,7 @@ std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config
 }
 
 void start_test_round(std::shared_ptr<consensus_state>& cs, int64_t height, int32_t round) {
+  cs->on_start();
   cs->enter_new_round(height, round);
   //  cs.startRoutines(0) // not needed for noir
 }
