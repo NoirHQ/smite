@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/thread_pool.h>
+#include <noir/consensus/block_executor.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/crypto.h>
 #include <noir/consensus/priv_validator.h>
@@ -22,7 +23,8 @@ namespace noir::consensus {
 struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   consensus_state();
 
-  static std::shared_ptr<consensus_state> new_state(const consensus_config& cs_config_, state& state_);
+  static std::shared_ptr<consensus_state> new_state(
+    const consensus_config& cs_config_, state& state_, const std::shared_ptr<block_executor>& block_exec_);
 
   state get_state();
   int64_t get_last_height();
@@ -82,13 +84,13 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   std::optional<priv_validator> local_priv_validator;
   priv_validator_type local_priv_validator_type;
 
-  //
   //  // store blocks and commits
   //  blockStore sm.BlockStore
-  //
+
   //  // create and execute blocks
   //  blockExec *sm.BlockExecutor
-  //
+  std::shared_ptr<block_executor> block_exec;
+
   //  // notify us if txs are available
   //  txNotifier txNotifier
   //
@@ -173,3 +175,5 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 };
 
 } // namespace noir::consensus
+
+NOIR_FOR_EACH_FIELD(noir::consensus::consensus_state, local_state, n_steps)
