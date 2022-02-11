@@ -177,6 +177,8 @@ public:
   /// \brief indicates highest index of available WAL file
   int64_t max_index = -1;
 
+  static constexpr std::string_view corrupted_postfix = ".CORRUPTED";
+
 private:
   std::shared_ptr<wal_encoder> encoder_;
   std::filesystem::path dir_path_;
@@ -194,7 +196,11 @@ private:
     if (name.compare(0, len, wal_name) != 0) {
       return -1;
     }
-    if (name.substr(len).empty()) {
+    auto sub_name = name.substr(len);
+    if (sub_name.empty()) { // head file
+      return -1;
+    }
+    if (sub_name.compare(corrupted_postfix) == 0) {
       return -1;
     }
     return static_cast<int64_t>(std::stoull(name.substr(len)));

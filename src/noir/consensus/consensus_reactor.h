@@ -36,7 +36,9 @@ struct consensus_reactor {
     return consensus_reactor_;
   }
 
-  void on_start() {}
+  void on_start() {
+    cs_state->on_start();
+  }
 
   void on_stop() {}
 
