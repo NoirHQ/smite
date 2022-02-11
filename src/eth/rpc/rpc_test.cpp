@@ -28,4 +28,10 @@ TEST_CASE("[rpc] check_send_raw_tx", "[params]") {
     params = fc::variant(v);
     CHECK_THROWS_WITH(rpc::check_send_raw_tx(params), "invalid parameters: json: cannot unmarshal");
   }
+
+  SECTION("param success") {
+    vector<string> v = {"0xf86d018609184e72a000822710940000000000000000000000000000000000000000880de0b6b3a76400000025a0feec8647d75ca4d10ebb104e7fa7d5143f6fc9335119f04d630f49dcea495398a02f31173ee22872fe2446c32a2e296787c293d3409a2f9870b2a1e54a9d3f4d40"};
+    params = fc::variant(v);
+    CHECK_NOTHROW(rpc::check_send_raw_tx(params));
+  }
 }
