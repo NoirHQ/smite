@@ -6,6 +6,7 @@
 #pragma
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/state.h>
+#include <noir/consensus/store/store_test.h>
 #include <noir/consensus/types.h>
 
 namespace noir::consensus {
@@ -63,7 +64,13 @@ std::unique_ptr<consensus_reactor> consensus_reactor::new_consensus_reactor(
   const config& local_config, state& prev_state, priv_validator priv) {
   auto consensus_reactor_ = std::make_unique<consensus_reactor>();
 
-  auto cs = consensus_state::new_state(local_config.consensus, prev_state);
+  auto session = std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session());
+  auto dbs = std::make_shared<noir::consensus::db_store>(session);
+  auto proxyApp = std::make_shared<app_connection>();
+  auto bls = std::make_shared<noir::consensus::block_store>(session);
+  auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls);
+
+  auto cs = consensus_state::new_state(local_config.consensus, prev_state, block_exec, bls);
   if (local_config.base.mode == "validator")
     cs->set_priv_validator(priv);
 
