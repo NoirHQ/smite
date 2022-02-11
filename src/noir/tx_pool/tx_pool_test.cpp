@@ -451,7 +451,9 @@ TEST_CASE("Update", "[tx_pool]") {
 TEST_CASE("Nonce override", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   noir::tx_pool::tx_pool::config config;
-  class tx_pool tp{config, 0};
+  class tx_pool tp {
+    config, 0
+  };
 
   auto tx1 = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
   CHECK(tp.check_tx(tx1, true).value().get());
