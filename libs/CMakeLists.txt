@@ -28,6 +28,7 @@ endif()
 
 if(NOT rocksdb_FOUND)
   # override rocksdb cmake options
+  set(PORTABLE ON)
   set(ROCKSDB_BUILD_SHARED OFF)
   set(WITH_TESTS OFF)
   set(WITH_BENCHMARK_TOOLS OFF)
