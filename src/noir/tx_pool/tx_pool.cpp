@@ -64,6 +64,19 @@ std::optional<std::future<bool>> tx_pool::check_tx(const consensus::wrapped_tx_p
     }
 
     std::lock_guard<std::mutex> lock(mutex_);
+    auto old = tx_queue_.get_tx(tx_ptr->sender, tx_ptr->nonce);
+    if (old.has_value()) {
+      auto old_tx = old.value();
+      if (tx_ptr->gas < old_tx->gas + config_.gas_price_bump) {
+        if (!config_.keep_invalid_txs_in_cache) {
+          tx_cache_.del(tx_ptr->id());
+        }
+        return false;
+      }
+
+      tx_queue_.erase(old_tx);
+    }
+
     if (!tx_queue_.add_tx(tx_ptr)) {
       if (!config_.keep_invalid_txs_in_cache) {
         tx_cache_.del(tx_ptr->id());
