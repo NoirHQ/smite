@@ -13,8 +13,6 @@ public:
   void info();
   void query();
 
-  void check_tx();
-
   consensus::response_init_chain init_chain() {
     return consensus::response_init_chain{};
   }
@@ -29,7 +27,10 @@ public:
   consensus::response_deliver_tx deliver_tx() {
     ilog("!!! DeliverTx !!!");
     return consensus::response_deliver_tx{};
-  };
+  }
+  consensus::response_check_tx check_tx() {
+    return consensus::response_check_tx{};
+  }
   consensus::response_end_block end_block() {
     ilog("!!! EndBlock !!!");
     return consensus::response_end_block{};

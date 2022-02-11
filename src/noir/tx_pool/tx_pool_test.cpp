@@ -58,6 +58,15 @@ public:
     std::uniform_int_distribution<uint64_t> dist_gas{min, max};
     return dist_gas(generator);
   }
+
+  class tx_pool make_tx_pool() {
+    return make_tx_pool(noir::tx_pool::tx_pool::config{});
+  }
+
+  class tx_pool make_tx_pool(noir::tx_pool::tx_pool::config cfg) {
+    auto proxy_app = std::make_shared<app_connection>();
+    return noir::tx_pool::tx_pool{cfg, proxy_app, 0};
+  }
 };
 
 } // namespace test_detail
@@ -221,7 +230,7 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
 
 TEST_CASE("Push/Get tx", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  class tx_pool tp;
+  auto tp = test_helper->make_tx_pool();
 
   auto push_tx = [&](uint64_t count, bool sync = true) {
     std::vector<std::optional<std::future<bool>>> res_vec;
@@ -367,7 +376,7 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
 
 TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  class tx_pool tp;
+  auto tp = test_helper->make_tx_pool();
 
   const uint64_t tx_count = 10000;
   consensus::wrapped_tx_ptrs wrapped_txs;
@@ -414,9 +423,7 @@ TEST_CASE("Update", "[tx_pool]") {
   noir::tx_pool::tx_pool::config config{
     .ttl_num_blocks = 10,
   };
-  class tx_pool tp {
-    config, 0
-  };
+  auto tp = test_helper->make_tx_pool(config);
 
   const uint64_t tx_count = 10;
   consensus::wrapped_tx_ptrs wrapped_txs;
@@ -451,9 +458,7 @@ TEST_CASE("Update", "[tx_pool]") {
 TEST_CASE("Nonce override", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   noir::tx_pool::tx_pool::config config;
-  class tx_pool tp {
-    config, 0
-  };
+  auto tp = test_helper->make_tx_pool(config);
 
   auto tx1 = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
   CHECK(tp.check_tx(tx1, true).value().get());
