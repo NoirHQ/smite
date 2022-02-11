@@ -18,6 +18,10 @@ struct tx {
   uint256_t v;
   bytes32 r;
   bytes32 s;
+
+  uint256_t fee() const {
+    return gas_price * gas;
+  }
 };
 
 using tx_ptr = std::shared_ptr<tx>;
