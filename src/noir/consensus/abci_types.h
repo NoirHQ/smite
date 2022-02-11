@@ -76,7 +76,7 @@ struct request_extend_vote {
 };
 
 struct response_extend_vote {
-  vote_extension vote_extension_;
+  p2p::vote_extension vote_extension_;
 };
 
 struct request_verify_vote_extension {
