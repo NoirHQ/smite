@@ -89,7 +89,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   //  // create and execute blocks
   //  blockExec *sm.BlockExecutor
-  std::shared_ptr<block_executor> block_exec;
+  std::shared_ptr<block_executor> block_exec{nullptr};
 
   //  // notify us if txs are available
   //  txNotifier txNotifier
