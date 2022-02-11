@@ -217,7 +217,8 @@ struct block_executor {
     if (block_.header.height > initial_height) {
       validator_set last_val_set;
       if (!store_->load_validators(block_.header.height - 1, last_val_set)) {
-        throw std::runtime_error("panic");
+        throw std::runtime_error(
+          fmt::format("panic: unable to load validator for height={}", block_.header.height - 1));
       }
 
       // Check if commit_size matches validator_set size
