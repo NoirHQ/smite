@@ -23,12 +23,15 @@ public:
   }
 
   consensus::response_begin_block begin_block() {
+    ilog("!!! BeginBlock !!!");
     return consensus::response_begin_block{};
   }
   consensus::response_deliver_tx deliver_tx() {
+    ilog("!!! DeliverTx !!!");
     return consensus::response_deliver_tx{};
   };
   consensus::response_end_block end_block() {
+    ilog("!!! EndBlock !!!");
     return consensus::response_end_block{};
   }
   consensus::response_commit commit() {
