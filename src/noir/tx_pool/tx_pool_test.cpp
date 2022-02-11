@@ -87,7 +87,6 @@ TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
     CHECK(tx_queue.add_tx(std::make_shared<::wrapped_tx>(std::move(wrapped_tx))) == false);
     CHECK(tx_queue.size() == tx_count);
     CHECK(tx_queue.get_tx(wrapped_txs[0].id()));
-    CHECK(tx_queue.get_tx(str_to_addr("user")));
   }
 
   SECTION("Erase tx") {
@@ -150,14 +149,12 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
   CHECK(tx_queue->size() == tx_count);
 
   SECTION("by nonce") {
-    auto begin = tx_queue->begin<unapplied_tx_queue::by_nonce>();
-    auto end = tx_queue->end<unapplied_tx_queue::by_nonce>();
-
-    uint64_t count = 0;
-    for (auto itr = begin; itr != end; itr++) {
-      count++;
+    auto tx = test_helper->make_random_wrapped_tx("Alice");
+    tx_queue->add_tx(std::make_shared<::wrapped_tx>(tx));
+    auto tx_ptr = tx_queue->get_tx(tx.sender, tx.nonce);
+    CHECKED_IF(!tx_ptr.has_value()) {
+      CHECK(tx_ptr.value()->nonce == tx.nonce);
     }
-    CHECK(count == tx_count);
   }
 
   SECTION("a specific sender's txs") {
@@ -449,6 +446,23 @@ TEST_CASE("Update", "[tx_pool]") {
     }
     CHECK(tp.empty());
   }
+}
+
+TEST_CASE("Nonce override", "[tx_pool]") {
+  auto test_helper = std::make_unique<::test_helper>();
+  noir::tx_pool::tx_pool::config config;
+  class tx_pool tp{config, 0};
+
+  auto tx1 = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
+  CHECK(tp.check_tx(tx1, true).value().get());
+
+  auto tx2 = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
+  tx2->gas = tx1->gas;
+  tx2->nonce = tx1->nonce;
+  CHECK(!tp.check_tx(tx2, true).value().get());
+
+  tx2->gas = tx1->gas + config.gas_price_bump;
+  CHECK(tp.check_tx(tx2, true).value().get());
 }
 
 TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
