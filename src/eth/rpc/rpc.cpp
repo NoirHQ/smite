@@ -57,6 +57,8 @@ void rpc::check_send_raw_tx(const fc::variant& req) {
   check(!params.empty(), "invalid parameters: not enough params to decode");
   check(params.size() == 1, "too many arguments, want at most 1");
   check(params[0].is_string(), "invalid parameters: json: cannot unmarshal");
+  auto param = params[0].get_string();
+  check(param.starts_with("0x"), "transaction could not be decoded: input must start with 0x");
 }
 
 std::string rpc::send_raw_tx(const std::string& rlp) {
