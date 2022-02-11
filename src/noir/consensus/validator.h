@@ -438,3 +438,6 @@ struct validator_set {
 };
 
 } // namespace noir::consensus
+
+NOIR_FOR_EACH_FIELD(noir::consensus::validator, address, pub_key_, voting_power, proposer_priority)
+NOIR_FOR_EACH_FIELD(noir::consensus::validator_set, validators, proposer, total_voting_power)

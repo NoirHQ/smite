@@ -251,5 +251,11 @@ using block_ptr = std::shared_ptr<block>;
 } // namespace noir::consensus
 
 NOIR_FOR_EACH_FIELD(
-  noir::consensus::commit_sig, /* TODO: flag, */ validator_address, timestamp, signature, vote_extension);
-NOIR_FOR_EACH_FIELD(noir::consensus::commit, height, round, my_block_id, signatures);
+  noir::consensus::commit_sig, /* TODO: flag, */ validator_address, timestamp, signature, vote_extension)
+NOIR_FOR_EACH_FIELD(noir::consensus::commit, height, round, my_block_id, signatures, hash)
+NOIR_FOR_EACH_FIELD(noir::consensus::part, index, bytes_, proof)
+NOIR_FOR_EACH_FIELD(noir::consensus::part_set, total, hash, parts, count, byte_size)
+NOIR_FOR_EACH_FIELD(noir::consensus::block_data, txs, hash)
+NOIR_FOR_EACH_FIELD(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash,
+  consensus_hash, app_hash, last_results_hash, proposer_address, hash_)
+NOIR_FOR_EACH_FIELD(noir::consensus::block, header, data, last_commit)
