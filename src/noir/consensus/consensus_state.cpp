@@ -9,6 +9,7 @@
 #include <appbase/application.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <fmt/core.h>
+#include <utility>
 
 namespace noir::consensus {
 
@@ -61,9 +62,11 @@ consensus_state::consensus_state()
   old_ti = std::make_shared<timeout_info>(timeout_info{});
 }
 
-std::shared_ptr<consensus_state> consensus_state::new_state(const consensus_config& cs_config_, state& state_) {
+std::shared_ptr<consensus_state> consensus_state::new_state(
+  const consensus_config& cs_config_, state& state_, const std::shared_ptr<block_executor>& block_exec_) {
   auto consensus_state_ = std::make_shared<consensus_state>();
   consensus_state_->cs_config = cs_config_;
+  // consensus_state_->block_exec = block_exec_;
 
   if (state_.last_block_height > 0) {
     consensus_state_->reconstruct_last_commit(state_);

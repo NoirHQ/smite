@@ -17,7 +17,7 @@ namespace noir::consensus {
  * including the last validator set and the consensus params.
  */
 struct state {
-  std::string version;
+  std::string version{"0.0.0"};
 
   std::string chain_id;
   int64_t initial_height;
@@ -38,36 +38,6 @@ struct state {
   bytes last_result_hash;
 
   bytes app_hash;
-
-  state() {
-    // read from config file, or restore from last saved state
-    validator_set validatorSet, nextValidatorSet;
-    //  if genDoc.Validators == nil || len(genDoc.Validators) == 0
-    //  {
-    //    validatorSet = types.NewValidatorSet(nil)
-    //    nextValidatorSet = types.NewValidatorSet(nil)
-    //  } else {
-
-    // read from genesis.json
-    //    validatorSet = types.NewValidatorSet(validators)
-    //    nextValidatorSet = types.NewValidatorSet(validators).CopyIncrementProposerPriority(1)
-    //  }
-
-    version = "0.0.0";
-    //  initial_height = genDoc.inital_height;
-    last_block_height = 0;
-    //  last_block_time = genDoc.GenesisTime;
-
-    next_validators = nextValidatorSet;
-    validators = validatorSet;
-    //  last_validators = nil;
-    //  last_height_validators_changed = genDoc.initial_height;
-
-    //  consensus_params_ = genDoc.consensus_params;
-    //  last_height_consensus_params_changed = genDoc.initial_height;
-
-    //  app_hash = genDoc.app_hash;
-  }
 
   std::tuple<block, part_set> make_block(
     int64_t height, std::vector<bytes> txs, commit commit_, /* evidence, */ bytes proposal_address) {
@@ -149,5 +119,5 @@ struct state {
 } // namespace noir::consensus
 
 NOIR_FOR_EACH_FIELD(noir::consensus::state, version, chain_id, initial_height, last_block_height, last_block_id,
-  last_block_time, next_validators, validators, last_validators, last_height_validators_changed, consensus_params_,
-  last_height_consensus_params_changed, last_result_hash, app_hash);
+  last_block_time, validators, next_validators, last_validators, last_height_validators_changed, consensus_params_,
+  last_height_consensus_params_changed, last_result_hash, app_hash)

@@ -19,9 +19,9 @@ namespace noir::consensus {
  */
 struct block_executor {
 
-  db_store store_;
+  std::shared_ptr<db_store> store_;
 
-  block_store block_store_;
+  std::shared_ptr<block_store> block_store_;
 
   std::shared_ptr<app_connection> proxyApp_;
 
@@ -33,13 +33,14 @@ struct block_executor {
 
   std::map<std::string, bool> cache; // storing verification result for a single height
 
-  block_executor(
-    db_store& new_store, std::shared_ptr<app_connection> new_proxyApp, /* mempool */ block_store& new_block_store)
-    : store_(new_store), proxyApp_(std::move(new_proxyApp)), block_store_(new_block_store) {}
+  block_executor(std::shared_ptr<db_store> new_store, std::shared_ptr<app_connection> new_proxyApp,
+    /* mempool */ std::shared_ptr<block_store> new_block_store)
+    : store_(new_store), proxyApp_(new_proxyApp), block_store_(new_block_store) {}
 
-  static std::unique_ptr<block_executor> new_block_executor(db_store& new_store,
-    const std::shared_ptr<app_connection>& new_proxyApp, /* mempool */ block_store& new_block_store) {
-    auto res = std::make_unique<block_executor>(new_store, new_proxyApp, new_block_store);
+  static std::shared_ptr<block_executor> new_block_executor(std::shared_ptr<db_store> new_store,
+    std::shared_ptr<app_connection> new_proxyApp,
+    /* mempool */ std::shared_ptr<block_store> new_block_store) {
+    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_block_store);
     return res;
   }
 
@@ -102,7 +103,7 @@ struct block_executor {
       return {};
     }
 
-    if (!store_.save_abci_responses(block_.header.height /* todo abci_response */)) {
+    if (!store_->save_abci_responses(block_.header.height /* todo abci_response */)) {
       return {};
     }
 
@@ -142,7 +143,7 @@ struct block_executor {
 
     // Update app_hash and save the state
     new_state_->app_hash = app_hash;
-    if (!store_.save(new_state_.value())) {
+    if (!store_->save(new_state_.value())) {
       elog("apply block failed: save failed");
       return {};
     }
@@ -174,8 +175,8 @@ struct block_executor {
     return {};
   }
 
-  std::shared_ptr<abci_responses> exec_block_on_proxy_app(
-    std::shared_ptr<app_connection> proxyAppConn, block& block_, db_store& db_store, int64_t initial_height) {
+  std::shared_ptr<abci_responses> exec_block_on_proxy_app(std::shared_ptr<app_connection> proxyAppConn, block& block_,
+    std::shared_ptr<db_store> db_store, int64_t initial_height) {
     uint valid_txs = 0, invalid_txs = 0;
     auto abci_responses_ = std::make_shared<abci_responses>();
     std::vector<response_deliver_tx> dtxs;
@@ -209,12 +210,13 @@ struct block_executor {
     return abci_responses_;
   }
 
-  last_commit_info get_begin_block_validator_info(block& block_, db_store& store_, int64_t initial_height) {
+  last_commit_info get_begin_block_validator_info(
+    block& block_, std::shared_ptr<db_store> store_, int64_t initial_height) {
     std::vector<vote_info> vote_infos;
     vote_infos.resize(block_.last_commit.size());
     if (block_.header.height > initial_height) {
       validator_set last_val_set;
-      if (!store_.load_validators(block_.header.height - 1, last_val_set)) {
+      if (!store_->load_validators(block_.header.height - 1, last_val_set)) {
         throw std::runtime_error("panic");
       }
 
@@ -299,15 +301,15 @@ struct block_executor {
   }
 
   uint64_t prune_blocks(int64_t retain_height) {
-    auto base = block_store_.base();
+    auto base = block_store_->base();
     if (retain_height <= base)
       return 0;
     uint64_t pruned;
-    if (!block_store_.prune_blocks(retain_height, pruned)) {
+    if (!block_store_->prune_blocks(retain_height, pruned)) {
       elog("filed to prune block store");
       return 0;
     }
-    if (!store_.prune_states(retain_height)) {
+    if (!store_->prune_states(retain_height)) {
       elog("filed to prune state store");
       return 0;
     }
@@ -316,3 +318,5 @@ struct block_executor {
 };
 
 } // namespace noir::consensus
+
+NOIR_FOR_EACH_FIELD(noir::consensus::block_executor, store_, block_store_, proxyApp_, cache);

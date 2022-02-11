@@ -77,3 +77,9 @@ struct consensus_params {
 };
 
 } // namespace noir::consensus
+
+NOIR_FOR_EACH_FIELD(noir::consensus::block_params, max_bytes, max_gas)
+NOIR_FOR_EACH_FIELD(noir::consensus::evidence_params, max_age_num_blocks, max_age_duration, max_bytes)
+NOIR_FOR_EACH_FIELD(noir::consensus::validator_params, pub_key_types)
+NOIR_FOR_EACH_FIELD(noir::consensus::version_params, app_version)
+NOIR_FOR_EACH_FIELD(noir::consensus::consensus_params, block, evidence, validator, version)
