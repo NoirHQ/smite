@@ -41,6 +41,12 @@ struct app_connection {
     return res;
   }
 
+  response_check_tx check_tx_async(request_check_tx req) {
+    std::lock_guard<std::mutex> g(mtx);
+    auto res = application.check_tx();
+    return res;
+  }
+
   response_end_block end_block_sync(request_end_block req) {
     std::lock_guard<std::mutex> g(mtx);
     auto res = application.end_block();
@@ -61,6 +67,13 @@ struct app_connection {
     std::lock_guard<std::mutex> g(mtx);
     auto res = application.verify_vote_extension();
     return res;
+  }
+
+  void flush_async() {
+    std::lock_guard<std::mutex> g(mtx);
+  }
+  void flush_sync() {
+    std::lock_guard<std::mutex> g(mtx);
   }
 };
 
