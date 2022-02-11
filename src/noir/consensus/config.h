@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/for_each.h>
 #include <noir/p2p/types.h>
+#include <appbase/application.hpp>
 
 namespace noir::consensus {
 
@@ -60,7 +61,7 @@ struct base_config {
 struct consensus_config {
   std::string root_dir;
   std::string wal_path;
-  std::string wal_file;
+  std::string wal_file; ///< overrides WalPath if set
 
   std::chrono::system_clock::duration timeout_propose;
   std::chrono::system_clock::duration timeout_propose_delta;
@@ -82,7 +83,8 @@ struct consensus_config {
 
   static consensus_config get_default() {
     consensus_config cfg;
-    cfg.wal_file = "cs.wal";
+    cfg.root_dir = appbase::app().home_dir().string();
+    cfg.wal_path = "cs.wal";
     cfg.timeout_propose = std::chrono::milliseconds{3000};
     cfg.timeout_propose_delta = std::chrono::milliseconds{500};
     cfg.timeout_prevote = std::chrono::milliseconds{1000};

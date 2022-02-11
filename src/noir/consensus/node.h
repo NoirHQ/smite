@@ -145,6 +145,7 @@ struct node {
   void on_start() {
     // Check genesis time and sleep until time is ready // todo
 
+    cs_reactor->on_start(); // TODO: cs_reactor->start();
     auto height = cs_reactor->cs_state->rs.height;
     auto round = cs_reactor->cs_state->rs.round;
     cs_reactor->cs_state->enter_new_round(height, round);
