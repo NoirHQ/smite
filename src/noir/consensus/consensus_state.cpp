@@ -66,7 +66,7 @@ std::shared_ptr<consensus_state> consensus_state::new_state(
   const consensus_config& cs_config_, state& state_, const std::shared_ptr<block_executor>& block_exec_) {
   auto consensus_state_ = std::make_shared<consensus_state>();
   consensus_state_->cs_config = cs_config_;
-  // consensus_state_->block_exec = block_exec_;
+  consensus_state_->block_exec = block_exec_;
 
   if (state_.last_block_height > 0) {
     consensus_state_->reconstruct_last_commit(state_);
@@ -809,7 +809,20 @@ void consensus_state::finalize_commit(int64_t height) {
   // write to wal // todo
 
   auto state_copy = local_state;
-  // apply block // todo
+
+  // apply block // todo - make it work
+  try {
+    auto result =
+      block_exec->apply_block(state_copy, p2p::block_id{block_->get_hash(), block_parts_->header()}, block_.value());
+  } catch (std::exception& e) {
+    elog(fmt::format("exception: {}", e.what()));
+  }
+  //  if (!result.has_value()) {
+  //    elog("failed to apply block");
+  //    return;
+  //  }
+  //  state_copy = result.value();
+
   state_copy.last_block_height = block_->header.height; // todo - remove after implementing apply_block()
   state_copy.last_result_hash = block_->get_hash(); // todo - remove
   state_copy.app_hash = block_->get_hash(); // todo - remove
