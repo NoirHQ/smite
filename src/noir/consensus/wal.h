@@ -108,6 +108,7 @@ private:
 /// \brief WAL is an interface for any write-ahead logger.
 class wal {
 public:
+  virtual ~wal() {}
   /// \brief Write is called in newStep and for each receive on the peerMsgQueue and the timeoutTicker.
   /// \param[in] msg
   /// \return true on success, false otherwise
@@ -130,6 +131,16 @@ public:
   /// \return shared_ptr of wal_decoder, nullptr if not found
   virtual std::shared_ptr<wal_decoder> search_for_end_height(
     int64_t height, wal_search_options options, bool& found) = 0;
+
+  /// \brief base service method
+  /// \todo base service logic is not defined
+  /// \return true on success, false otherwise
+  virtual bool on_start() = 0;
+
+  /// \brief base service method
+  /// \todo base service logic is not defined
+  /// \return true on success, false otherwise
+  virtual bool on_stop() = 0;
 };
 
 /// \brief Write ahead logger writes msgs to disk before they are processed.
@@ -148,6 +159,8 @@ public:
       flush_ticker.reset(new boost::asio::steady_timer(thread_pool->get_executor()));
     }
   }
+  ~base_wal() override {}
+
   bool write(const wal_message& msg) override {
     size_t len;
     if (!codec_->encode(timed_wal_message{.time = get_time(), .msg = msg}, len) || len == 0) {
@@ -174,7 +187,7 @@ public:
     return codec_->flush_and_sync();
   }
 
-  bool on_start() {
+  bool on_start() override {
     if (codec_->size() == 0) {
       end_height_message msg{.height = 0};
       if (write_sync({msg}) == false) {
@@ -194,7 +207,7 @@ public:
     return true;
   }
 
-  bool on_stop() {
+  bool on_stop() override {
     flush_ticker->cancel();
     if (!flush_and_sync()) {
       elog("error on flush data to disk");
