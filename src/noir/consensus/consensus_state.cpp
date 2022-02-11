@@ -987,7 +987,11 @@ bool consensus_state::add_vote(vote& vote_, p2p::node_id peer_id) {
 
   // Verify VoteExtension if precommit
   if (vote_.type == p2p::Precommit) {
-    // verify // todo
+    auto err = block_exec->verify_vote_extension(vote_);
+    if (err.has_value()) {
+      elog(fmt::format("{}", err.value()));
+      return false;
+    }
   }
 
   auto height = rs.height;
@@ -1117,8 +1121,8 @@ std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, by
   case p2p::Precommit: {
     timeout = cs_config.timeout_precommit;
     // if the signedMessage type is for a precommit, add VoteExtension
-    // extend_vote // todo
-    // vote_.vote_extension_ = ext;
+    auto ext = block_exec->extend_vote(vote_);
+    vote_.vote_extension_ = ext;
     break;
   }
   case p2p::Prevote:

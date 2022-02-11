@@ -164,7 +164,7 @@ struct block_executor {
     return new_state_.value();
   }
 
-  vote_extension extend_vote(vote& vote_) {
+  p2p::vote_extension extend_vote(vote& vote_) {
     auto req = request_extend_vote{vote_};
     auto res = proxyApp_->extend_vote_sync(req);
     return res.vote_extension_;
