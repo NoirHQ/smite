@@ -133,9 +133,14 @@ struct abci_responses {
   response_begin_block begin_block;
 };
 
+enum class check_tx_type {
+  new_check = 0,
+  recheck = 1,
+};
+
 struct request_check_tx {
   bytes tx;
-  std::string type;
+  check_tx_type type;
 };
 
 struct response_check_tx {
