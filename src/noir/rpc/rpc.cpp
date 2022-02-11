@@ -377,7 +377,6 @@ public:
     if (bytes_in_flight_size > max_bytes_in_flight) {
       fc_dlog(logger, "429 - too many bytes in flight: ${bytes}", ("bytes", bytes_in_flight_size));
       string what = "Too many bytes in flight: " + std::to_string(bytes_in_flight_size) + ". Try again later.";
-      ;
       report_429_error(con, what);
       return false;
     }
