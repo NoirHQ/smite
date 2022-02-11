@@ -166,7 +166,22 @@ bool tx_pool::update(uint64_t block_height, consensus::wrapped_tx_ptrs& block_tx
 
   // TBD : clean expired tx by time
 
+  if (config_.recheck) {
+    update_recheck_txs();
+  }
+
   return true;
+}
+
+void tx_pool::update_recheck_txs() {
+  for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
+    auto tx_ptr = itr->tx_ptr;
+    proxy_app_->check_tx_async(consensus::request_check_tx{
+      .tx = tx_ptr->tx_data,
+      .type = consensus::check_tx_type::recheck,
+    });
+    proxy_app_->flush_async();
+  }
 }
 
 size_t tx_pool::size() const {
