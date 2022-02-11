@@ -7,7 +7,6 @@
 #include <noir/common/check.h>
 #include <noir/common/cli_helper.h>
 #include <noir/common/hex.h>
-#include <appbase/application.hpp>
 #include <eth/rpc/rpc.h>
 #include <eth/rpc/tx.h>
 
