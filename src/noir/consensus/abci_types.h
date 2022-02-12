@@ -103,7 +103,7 @@ struct response_init_chain {
 };
 
 struct request_prepare_proposal {
-  bytes block_data;
+  std::vector<bytes> block_data;
   int64_t block_data_size;
   std::vector<vote> votes;
 };
