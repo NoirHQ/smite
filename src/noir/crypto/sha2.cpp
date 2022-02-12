@@ -9,11 +9,7 @@
 namespace noir::crypto {
 
 void sha256(std::span<const char> input, std::span<char> output) {
-  EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-  EVP_DigestInit(ctx, EVP_sha256());
-  EVP_DigestUpdate(ctx, input.data(), input.size());
-  EVP_DigestFinal(ctx, (unsigned char*)output.data(), nullptr);
-  EVP_MD_CTX_free(ctx);
+  EVP_Digest(input.data(), input.size(), (unsigned char*)output.data(), nullptr, EVP_sha256(), nullptr);
 }
 
 std::vector<char> sha256(std::span<const char> input) {
