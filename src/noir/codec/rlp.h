@@ -28,7 +28,7 @@ namespace detail {
       return;
     }
     ds.put(trimmed + mod);
-    std::for_each(s.rend() - trimmed, s.rend(), [&](const auto& c) { ds.write(&c, 1); });
+    ds.reverse_write({s.data(), static_cast<size_t>(trimmed)});
   }
 
   template<typename Stream, typename T>
@@ -46,10 +46,10 @@ namespace detail {
     });
     auto trimmed = std::distance(nonzero, s.rend());
     // adjust the modifier to encode a length prefix greater than 55
-    // e.g. bytes (0x80 => 0xb7), lists (0xc0 => 0xf7)
+    // e.g. bytes [0x80, 0xb7], lists [0xc0, 0xf7]
     mod += 55;
     ds.put(trimmed + mod);
-    std::for_each(s.rend() - trimmed, s.rend(), [&](const auto& c) { ds.write(&c, 1); });
+    ds.reverse_write({s.data(), static_cast<size_t>(trimmed)});
   }
 
   template<typename Stream>
@@ -61,23 +61,20 @@ namespace detail {
       return;
     }
     auto size = prefix - mod;
-    std::fill(s.rbegin(), s.rend() - size, 0);
-    std::for_each(s.rend() - size, s.rend(), [&](auto& c) { ds.get(c); });
+    ds.reverse_read({s.data(), static_cast<size_t>(size)});
+    std::fill(s.begin() + size, s.end(), 0);
   }
 
   template<typename Stream>
   uint64_t decode_prefix(datastream<Stream>& ds, unsigned char prefix, unsigned char mod) {
     auto size = prefix - mod;
-    if (size <= 55) {
-      // decode a length prefix less than 55
+    // decode a length prefix less than 55
+    if (size <= 55)
       return size;
-    } else {
-      // decode a length prefix greater than 55 (need to subtract 55 from modifier)
-      size -= 55;
-    }
-    auto v = 0ull;
-    auto s = std::span((char*)&v, sizeof(v));
-    std::for_each(s.rend() - size, s.rend(), [&](auto& c) { ds.get(c); });
+    // decode a length prefix greater than 55 (need to subtract 55 from modifier)
+    size -= 55;
+    auto v = uint64_t(0);
+    ds.reverse_read({(char*)&v, static_cast<size_t>(size)});
     return v;
   }
 } // namespace detail
