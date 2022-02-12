@@ -9,14 +9,14 @@
 
 namespace noir::crypto {
 
-void blake2b_256(std::span<const char> input, std::span<char> output) {
-  blake2b((unsigned char*)output.data(), (unsigned char*)input.data(), nullptr, 32, input.size(), 0);
+void blake2b_256(std::span<const char> in, std::span<char> out) {
+  blake2b((unsigned char*)out.data(), (unsigned char*)in.data(), nullptr, 32, in.size(), 0);
 }
 
-std::vector<char> blake2b_256(std::span<const char> input) {
-  std::vector<char> output(32);
-  blake2b_256(input, output);
-  return output;
+std::vector<char> blake2b_256(std::span<const char> in) {
+  std::vector<char> out(32);
+  blake2b_256(in, out);
+  return out;
 }
 
 } // namespace noir::crypto
