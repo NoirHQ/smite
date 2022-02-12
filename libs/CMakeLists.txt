@@ -63,3 +63,12 @@ add_library(XKCP STATIC IMPORTED GLOBAL)
 set_target_properties(XKCP PROPERTIES IMPORTED_LOCATION ${XKCP_ARCH}/libXKCP.a)
 add_dependencies(XKCP XKCP_build)
 target_link_libraries(XKCP INTERFACE XKCP_include)
+
+find_library(B2_LIBRARY libb2.a)
+if(NOT B2_LIBRARY STREQUAL B2_LIBRARY-NOTFOUND)
+  find_path(B2_INCLUDE_DIR blake2.h)
+
+  add_library(b2 STATIC IMPORTED)
+  set_target_properties(b2 PROPERTIES IMPORTED_LOCATION ${B2_LIBRARY})
+  target_include_directories(b2 INTERFACE ${B2_INCLUDE_DIR})
+endif()

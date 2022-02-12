@@ -16,6 +16,15 @@ namespace noir::crypto {
 /// \addtogroup crypto
 /// \{
 
+/// \brief calculates and stores the blake2b_256 hash value of input data to output buffer
+/// \param input input data
+/// \param output output buffer
+void blake2b_256(std::span<const char> input, std::span<char> output);
+
+/// \brief calculates and returns the blake2b_256 hash value of input data
+/// \param input input data
+std::vector<char> blake2b_256(std::span<const char> input);
+
 /// \brief calculates and stores the keccak256 hash value of input data to output buffer
 /// \param input input data
 /// \param output output buffer

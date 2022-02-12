@@ -12,6 +12,7 @@ add_library(noir STATIC)
 target_include_directories(noir PUBLIC ${NOIR_SOURCE_DIR})
 target_link_libraries(noir
   appbase
+  b2
   expected
   fc
   fmt
