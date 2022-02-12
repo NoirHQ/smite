@@ -17,31 +17,31 @@ namespace noir::crypto {
 /// \{
 
 /// \brief calculates and stores the blake2b_256 hash value of input data to output buffer
-/// \param input input data
-/// \param output output buffer
-void blake2b_256(std::span<const char> input, std::span<char> output);
+/// \param in input data
+/// \param out output buffer
+void blake2b_256(std::span<const char> in, std::span<char> out);
 
 /// \brief calculates and returns the blake2b_256 hash value of input data
-/// \param input input data
-std::vector<char> blake2b_256(std::span<const char> input);
+/// \param in input data
+std::vector<char> blake2b_256(std::span<const char> in);
 
 /// \brief calculates and stores the keccak256 hash value of input data to output buffer
-/// \param input input data
-/// \param output output buffer
-void keccak256(std::span<const char> input, std::span<char> output);
+/// \param in input data
+/// \param out output buffer
+void keccak256(std::span<const char> in, std::span<char> out);
 
 /// \brief calculates and returns the keccak256 hash value of input data
-/// \param input input data
-std::vector<char> keccak256(std::span<const char> input);
+/// \param in input data
+std::vector<char> keccak256(std::span<const char> in);
 
 /// \brief calculates and stores the sha256 hash value of input data to output buffer
-/// \param input input data
-/// \param output output buffer
-void sha256(std::span<const char> input, std::span<char> output);
+/// \param in input data
+/// \param out output buffer
+void sha256(std::span<const char> in, std::span<char> out);
 
 /// \brief calculates and returns the sha256 hash value of input data
-/// \param input input data
-std::vector<char> sha256(std::span<const char> input);
+/// \param in input data
+std::vector<char> sha256(std::span<const char> in);
 
 /// \}
 

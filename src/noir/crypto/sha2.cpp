@@ -8,14 +8,14 @@
 
 namespace noir::crypto {
 
-void sha256(std::span<const char> input, std::span<char> output) {
-  EVP_Digest(input.data(), input.size(), (unsigned char*)output.data(), nullptr, EVP_sha256(), nullptr);
+void sha256(std::span<const char> in, std::span<char> out) {
+  EVP_Digest(in.data(), in.size(), (unsigned char*)out.data(), nullptr, EVP_sha256(), nullptr);
 }
 
-std::vector<char> sha256(std::span<const char> input) {
-  std::vector<char> output(32);
-  sha256(input, output);
-  return output;
+std::vector<char> sha256(std::span<const char> in) {
+  std::vector<char> out(32);
+  sha256(in, out);
+  return out;
 }
 
 } // namespace noir::crypto

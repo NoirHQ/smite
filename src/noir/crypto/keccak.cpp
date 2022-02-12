@@ -13,17 +13,17 @@ extern "C" {
 
 namespace noir::crypto {
 
-void keccak256(std::span<const char> input, std::span<char> output) {
+void keccak256(std::span<const char> in, std::span<char> out) {
   Keccak_HashInstance ctx;
   Keccak_HashInitialize_Keccak256(&ctx);
-  Keccak_HashUpdate(&ctx, (BitSequence*)input.data(), input.size() * 8);
-  Keccak_HashFinal(&ctx, (BitSequence*)output.data());
+  Keccak_HashUpdate(&ctx, (BitSequence*)in.data(), in.size() * 8);
+  Keccak_HashFinal(&ctx, (BitSequence*)out.data());
 }
 
-std::vector<char> keccak256(std::span<const char> input) {
-  std::vector<char> output(32);
-  keccak256(input, output);
-  return output;
+std::vector<char> keccak256(std::span<const char> in) {
+  std::vector<char> out(32);
+  keccak256(in, out);
+  return out;
 }
 
 } // namespace noir::crypto
