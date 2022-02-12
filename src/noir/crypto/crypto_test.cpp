@@ -5,7 +5,7 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
-#include <noir/crypto/keccak.h>
+#include <noir/crypto/hash.h>
 
 using namespace noir;
 using namespace noir::crypto;

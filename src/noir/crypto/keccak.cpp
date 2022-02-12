@@ -3,8 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <span>
-#include <vector>
+#include <noir/crypto/hash.h>
 
 extern "C" {
 #include <KeccakHash.h>
