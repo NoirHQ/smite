@@ -9,6 +9,7 @@
 #include <noir/consensus/store/block_store.h>
 #include <noir/consensus/store/state_store.h>
 #include <noir/consensus/types.h>
+#include <noir/tx_pool/tx_pool.h>
 
 #include <utility>
 
@@ -28,6 +29,7 @@ struct block_executor {
   // eventBus // todo - we may not need to handle events for tendermint but only for app?
 
   // mempool // todo
+  tx_pool::tx_pool mempool;
 
   // evidence tool // todo
 
@@ -58,10 +60,14 @@ struct block_executor {
       throw std::runtime_error(fmt::format(
         "negative max_data_bytes: max_bytes={} is too small to accommodate header and last_commit", max_bytes));
 
-    // auto txs = mempool.reap_max_bytes_max_gas(max_data_bytes, max_gas); // todo
+    auto wrapped_txs = mempool.reap_max_bytes_max_gas(max_data_bytes, max_gas);
+    // Convert to list of bytes
+    std::vector<bytes> txs;
+    for (auto w_tx : wrapped_txs) {
+      txs.push_back(bytes{}); // todo - convert to bytes
+    }
 
-    auto prepared_proposal =
-      proxyApp_->prepare_proposal_sync(request_prepare_proposal{bytes{} /* todo - tx */, max_data_bytes, votes});
+    auto prepared_proposal = proxyApp_->prepare_proposal_sync(request_prepare_proposal{txs, max_data_bytes, votes});
     auto new_txs = prepared_proposal.block_data;
     int tx_size{};
     for (auto tx : new_txs) {
@@ -128,7 +134,8 @@ struct block_executor {
     }
 
     /// directly implement commit()
-    // mempool lock - todo
+    // mempool: lock & auto unlock - todo - maybe not needed for noir?
+    // mempool: flush_app_conn() - todo - maybe not needed for noir?
 
     // Commit block and get hash
     auto commit_res = proxyApp_->commit_sync();
@@ -136,7 +143,10 @@ struct block_executor {
     ilog(
       fmt::format("committed state: height={}, num_txs... app_hash={}", block_.header.height, to_hex(commit_res.data)));
 
-    // mempool update - todo
+    // Update mempool
+    consensus::wrapped_tx_ptrs block_txs; // todo - convert from block_.data.txs to wrapped_tx
+    mempool.update(block_.header.height, block_txs, abci_responses_->deliver_txs);
+
     bytes app_hash = commit_res.data;
     int64_t retain_height = commit_res.retain_height;
     /// commit() ends
