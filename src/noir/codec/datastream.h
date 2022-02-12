@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/check.h>
 #include <span>
 #include <stdexcept>
 #include <vector>
@@ -46,8 +47,7 @@ public:
   /// \param reference to the range of characters to store the characters to
   /// \return `*this`
   inline auto& read(std::span<char> s) {
-    if (!(remaining() >= s.size())) [[unlikely]]
-      throw std::out_of_range("datastream attempted to read past the end");
+    check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to read past the end");
     std::copy(pos_, pos_ + s.size(), s.begin());
     pos_ += s.size();
     return *this;
@@ -61,11 +61,20 @@ public:
     return read({s, count});
   }
 
+  /// \brief extracts characters from stream in reverse order
+  /// \param reference to the range of characters to store the characters to
+  /// \return `*this`
+  inline auto& reverse_read(std::span<char> s) {
+    check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to read past the end");
+    std::reverse_copy(pos_, pos_ + s.size(), s.begin());
+    pos_ += s.size();
+    return *this;
+  }
+
   /// \brief reads the next character without extracting it
   /// \return the next character
   inline int peek() {
-    if (!(remaining() >= 1)) [[unlikely]]
-      throw std::out_of_range("datastream attempted to read past the end");
+    check<std::out_of_range>(remaining() >= 1, "datastream attempted to read past the end");
     return *pos_;
   }
 
@@ -88,8 +97,7 @@ public:
   /// \brief makes the most recently extracted character available again
   /// \return `*this`
   inline auto& unget() {
-    if (!(tellp() >= 1)) [[unlikely]]
-      throw std::out_of_range("datastream attempted to read past the end");
+    check<std::out_of_range>(tellp() >= 1, "datastream attempted to read past the beginning");
     --pos_;
     return *this;
   }
@@ -98,8 +106,7 @@ public:
   /// \param s contiguous sequence of characters
   /// \return `*this`
   inline auto& write(std::span<const char> s) {
-    if (!(remaining() >= s.size())) [[unlikely]]
-      throw std::out_of_range("datastream attempted to write past the end");
+    check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to write past the end");
     std::copy(s.begin(), s.end(), pos_);
     pos_ += s.size();
     return *this;
@@ -113,12 +120,21 @@ public:
     return write({(const char*)c, count});
   }
 
+  /// \brief inserts characters to stream in reverse order
+  /// \param s contiguous sequence of characters
+  /// \return `*this`
+  inline auto& reverse_write(std::span<const char> s) {
+    check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to write past the end");
+    std::reverse_copy(s.begin(), s.end(), pos_);
+    pos_ += s.size();
+    return *this;
+  }
+
   /// \brief inserts a character
   /// \param c character to write
   /// \return `*this`
   inline auto& put(char c) {
-    if (!(remaining() >= 1)) [[unlikely]]
-      throw std::out_of_range("datastream attempted to write past the end");
+    check<std::out_of_range>(remaining() >= 1, "datastream attempted to write past the end");
     *pos_++ = c;
     return *this;
   }
@@ -176,6 +192,13 @@ public:
   /// \param s value to be added to the calculated size
   constexpr auto& write(const void*, size_t s) {
     size += s;
+    return *this;
+  }
+
+  /// \brief increase the calculated size by the size of the given range
+  /// \param s contiguous sequence of characters
+  constexpr auto& reverse_write(std::span<const char> s) {
+    size += s.size();
     return *this;
   }
 
