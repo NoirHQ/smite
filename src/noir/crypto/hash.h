@@ -13,6 +13,12 @@
 /// \ingroup crypto
 namespace noir::crypto {
 
+namespace unsafe {
+  void blake2b_256(std::span<const char> in, std::span<char> out);
+  void keccak256(std::span<const char> in, std::span<char> out);
+  void sha256(std::span<const char> in, std::span<char> out);
+} // namespace unsafe
+
 /// \addtogroup crypto
 /// \{
 
