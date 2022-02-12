@@ -27,3 +27,12 @@ TEST_CASE("[hash] sha256", "[crypto]") {
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(sha256(t.first)) == t.second); });
 }
+
+TEST_CASE("[hash] blake2b_256", "[crypto]") {
+  auto tests = std::to_array<std::pair<std::string, std::string>>({
+    {"", "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8"},
+    {"The quick brown fox jumps over the lazy dog", "01718cec35cd3d796dd00020e0bfecb473ad23457d063b75eff29c0ffa2e58a9"},
+  });
+
+  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(blake2b_256(t.first)) == t.second); });
+}
