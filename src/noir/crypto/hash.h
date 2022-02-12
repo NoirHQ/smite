@@ -25,6 +25,15 @@ void keccak256(std::span<const char> input, std::span<char> output);
 /// \param input input data
 std::vector<char> keccak256(std::span<const char> input);
 
+/// \brief calculates and stores the sha256 hash value of input data to output buffer
+/// \param input input data
+/// \param output output buffer
+void sha256(std::span<const char> input, std::span<char> output);
+
+/// \brief calculates and returns the sha256 hash value of input data
+/// \param input input data
+std::vector<char> sha256(std::span<const char> input);
+
 /// \}
 
 } // namespace noir::crypto
