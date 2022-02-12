@@ -28,10 +28,8 @@ jobs:
           boost_version: 1.77.0
           platform_version: 20.04
           boost_install_dir: /opt
-      # gflags (for rocksdb)
-      - run: sudo apt install -y libgflags-dev
-      # xsltproc (for XKCP)
-      - run: sudo apt install -y xsltproc
+      # setup build dependencies
+      - run: sudo apt install -y libb2-dev libgflags-dev xsltproc
       # checkout
       - uses: actions/checkout@v2
         with:
@@ -53,7 +51,7 @@ jobs:
     runs-on: macos-latest
     steps:
       # setup build dependencies
-      - run: brew install boost gflags rocksdb
+      - run: brew install boost gflags libb2 rocksdb
       # checkout
       - uses: actions/checkout@v2
         with:
