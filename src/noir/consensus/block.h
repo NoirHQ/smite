@@ -57,8 +57,7 @@ struct commit {
   std::vector<commit_sig> signatures;
 
   bytes hash;
-  // todo - do we need these?
-  //  bitArray
+  std::shared_ptr<p2p::bit_array> bit_array_{};
 
   static commit new_commit(
     int64_t height_, int32_t round_, p2p::block_id block_id_, std::vector<commit_sig>& commit_sigs) {
@@ -77,6 +76,15 @@ struct commit {
     }
     return hash;
   }
+
+  std::shared_ptr<p2p::bit_array> get_bit_array() {
+    if (bit_array_ == nullptr) {
+      bit_array_ = p2p::bit_array::new_bit_array(signatures.size());
+      for (auto i = 0; i < signatures.size(); i++)
+        bit_array_->set_index(i, !signatures[i].absent());
+    }
+    return bit_array_;
+  }
 };
 
 struct part {
@@ -91,14 +99,14 @@ struct part_set {
 
   //  std::mutex mtx;
   std::vector<part> parts;
-  // bit_array parts_bit_array;
+  std::shared_ptr<p2p::bit_array> parts_bit_array;
   uint32_t count;
   int64_t byte_size;
 
-  static part_set new_part_set_from_header(p2p::part_set_header header) {
+  static part_set new_part_set_from_header(const p2p::part_set_header& header) {
     std::vector<part> parts_;
     parts_.resize(header.total);
-    return part_set{header.total, header.hash, parts_, 0, 0};
+    return part_set{header.total, header.hash, parts_, p2p::bit_array::new_bit_array(header.total), 0, 0};
   }
 
   bool is_complete() {
@@ -134,7 +142,7 @@ struct part_set {
 
     // Add part
     parts[part_.index] = part_;
-    // parts_bit_array =
+    parts_bit_array->set_index(part_.index, true);
     count++;
     byte_size += part_.bytes_.size();
     return true;
@@ -143,6 +151,11 @@ struct part_set {
   part get_part(int index) {
     // todo - lock mtx
     return parts[index]; // todo - check range?
+  }
+
+  std::shared_ptr<p2p::bit_array> get_bit_array() {
+    // todo - lock mtx
+    return parts_bit_array;
   }
 };
 
