@@ -33,12 +33,13 @@ struct vote : p2p::vote_message {
 
 struct block_votes {
   bool peer_maj23{};
-  // bitarray
+  std::shared_ptr<p2p::bit_array> bit_array_;
   std::vector<vote> votes;
   int64_t sum{};
 
   static block_votes new_block_votes(bool peer_maj23_, int num_validators) {
     block_votes ret{peer_maj23_};
+    ret.bit_array_ = p2p::bit_array::new_bit_array(num_validators);
     ret.votes.resize(num_validators);
     return ret;
   }
@@ -47,7 +48,7 @@ struct block_votes {
     auto val_index = vote_.validator_index;
     if (!votes.empty() && votes.size() >= val_index) {
       auto existing = votes[val_index];
-      // vs.bitArray.SetIndex(int(valIndex), true) // todo - bit_array
+      bit_array_->set_index(val_index, true);
       votes[val_index] = vote_;
       sum += voting_power;
     }
@@ -102,7 +103,7 @@ struct vote_set {
   validator_set val_set;
 
   std::mutex mtx;
-  // bit_array
+  std::shared_ptr<p2p::bit_array> votes_bit_array{};
   std::vector<vote> votes;
   int64_t sum;
   std::optional<p2p::block_id> maj23;
@@ -119,8 +120,14 @@ struct vote_set {
     ret->round = round_;
     ret->signed_msg_type_ = signed_msg_type;
     ret->val_set = val_set_;
+    ret->votes_bit_array = p2p::bit_array::new_bit_array(val_set_.size());
     ret->sum = 0;
     return ret;
+  }
+
+  std::shared_ptr<p2p::bit_array> get_bit_array() {
+    std::lock_guard<std::mutex> g(mtx);
+    return votes_bit_array->copy();
   }
 
   bool add_vote(std::optional<vote> vote_) {
@@ -191,13 +198,13 @@ struct vote_set {
       // Replace vote if block_key matches vote_set.maj23
       if (maj23.has_value() && maj23.value().key() == block_key) {
         votes[val_index] = vote_.value();
-        // voteSet.votesBitArray.SetIndex(int(valIndex), true) // todo - bit_array
+        votes_bit_array->set_index(val_index, true);
       }
       // Otherwise, don't add to vote_set.votes
     } else {
       // Add to vote_set.votes and increase sum
       votes.push_back(vote_.value());
-      // voteSet.votesBitArray.SetIndex(int(valIndex), true) // todo - bit_array
+      votes_bit_array->set_index(val_index, true);
       sum += voting_power;
     }
 
