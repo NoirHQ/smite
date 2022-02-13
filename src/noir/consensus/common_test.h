@@ -129,10 +129,10 @@ inline std::shared_ptr<noir::consensus::part_set> make_part_set(const noir::cons
   };
   auto p_set = noir::consensus::part_set::new_part_set_from_header(header_);
 
-  p_set->add_part(noir::consensus::part{
+  p_set->add_part(std::make_shared<noir::consensus::part>(noir::consensus::part{
     .index = 0,
     .bytes_ = noir::codec::scale::encode(bl.header), // .proof
-  });
+  }));
   // TODO: part_size & bl.data
   // bl.mtx.unlock();
   return p_set;

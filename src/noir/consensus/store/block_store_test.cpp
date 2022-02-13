@@ -57,9 +57,9 @@ TEST_CASE("save/load_block", "[block_store]") {
       noir::consensus::part ret{};
       auto exp = p_set_->get_part(0);
       CHECK(bls.load_block_part(height, 0, ret) == true);
-      CHECK(ret.index == exp.index);
-      CHECK(ret.bytes_ == exp.bytes_);
-      CHECK(ret.proof == exp.proof);
+      CHECK(ret.index == exp->index);
+      CHECK(ret.bytes_ == exp->bytes_);
+      CHECK(ret.proof == exp->proof);
     }
     {
       noir::consensus::block_meta ret{};
