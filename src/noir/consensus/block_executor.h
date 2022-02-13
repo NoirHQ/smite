@@ -81,8 +81,8 @@ struct block_executor {
     return state_.make_block(height, modified_txs, commit_, proposer_addr);
   }
 
-  bool validate_block(state& state_, block& block_) {
-    auto hash = block_.get_hash();
+  bool validate_block(state& state_, std::shared_ptr<block> block_) {
+    auto hash = block_->get_hash();
     if (cache.find(to_hex(hash)) != cache.end())
       return true;
 
@@ -95,7 +95,7 @@ struct block_executor {
     return true;
   }
 
-  std::optional<state> apply_block(state& state_, p2p::block_id block_id_, block& block_) {
+  std::optional<state> apply_block(state& state_, p2p::block_id block_id_, std::shared_ptr<block> block_) {
     if (!validate_block(state_, block_)) {
       elog("apply block failed: invalid block");
       return {};
@@ -109,7 +109,7 @@ struct block_executor {
       return {};
     }
 
-    if (!store_->save_abci_responses(block_.header.height /* todo abci_response */)) {
+    if (!store_->save_abci_responses(block_->header.height /* todo abci_response */)) {
       return {};
     }
 
@@ -127,7 +127,7 @@ struct block_executor {
     if (validator_updates->size() > 0)
       dlog(fmt::format("updates to validators: size={}", validator_updates->size()));
 
-    auto new_state_ = update_state(state_, block_id_, block_.header, abci_responses_, validator_updates.value());
+    auto new_state_ = update_state(state_, block_id_, block_->header, abci_responses_, validator_updates.value());
     if (!new_state_.has_value()) {
       elog("apply block failed: commit failed for application");
       return {};
@@ -140,12 +140,12 @@ struct block_executor {
     // Commit block and get hash
     auto commit_res = proxyApp_->commit_sync();
 
-    ilog(
-      fmt::format("committed state: height={}, num_txs... app_hash={}", block_.header.height, to_hex(commit_res.data)));
+    ilog(fmt::format(
+      "committed state: height={}, num_txs... app_hash={}", block_->header.height, to_hex(commit_res.data)));
 
     // Update mempool
     consensus::wrapped_tx_ptrs block_txs; // todo - convert from block_.data.txs to wrapped_tx
-    mempool.update(block_.header.height, block_txs, abci_responses_->deliver_txs);
+    mempool.update(block_->header.height, block_txs, abci_responses_->deliver_txs);
 
     bytes app_hash = commit_res.data;
     int64_t retain_height = commit_res.retain_height;
@@ -186,12 +186,12 @@ struct block_executor {
     return {};
   }
 
-  std::shared_ptr<abci_responses> exec_block_on_proxy_app(std::shared_ptr<app_connection> proxyAppConn, block& block_,
-    std::shared_ptr<db_store> db_store, int64_t initial_height) {
+  std::shared_ptr<abci_responses> exec_block_on_proxy_app(std::shared_ptr<app_connection> proxyAppConn,
+    std::shared_ptr<block> block_, std::shared_ptr<db_store> db_store, int64_t initial_height) {
     uint valid_txs = 0, invalid_txs = 0;
     auto abci_responses_ = std::make_shared<abci_responses>();
     std::vector<response_deliver_tx> dtxs;
-    dtxs.resize(block_.data.txs.size());
+    dtxs.resize(block_->data.txs.size());
     abci_responses_->deliver_txs = dtxs;
 
     // todo - use get_begin_block_validator_info() below, right now it throws a panic
@@ -200,10 +200,10 @@ struct block_executor {
 
     // begin block
     abci_responses_->begin_block =
-      proxyAppConn->begin_block_sync(requst_begin_block{block_.get_hash(), block_.header, commit_info});
+      proxyAppConn->begin_block_sync(requst_begin_block{block_->get_hash(), block_->header, commit_info});
 
     // run txs of block
-    for (const auto& tx : block_.data.txs) {
+    for (const auto& tx : block_->data.txs) {
       auto deliver_res = proxyAppConn->deliver_tx_async(request_deliver_tx{tx});
       /* todo - verify if implementation is correct;
        *        basically removed the original callback func and directly applied it here */
@@ -216,10 +216,10 @@ struct block_executor {
       abci_responses_->deliver_txs.push_back(deliver_res);
     }
 
-    abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_.header.height});
+    abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_->header.height});
 
     ilog(fmt::format(
-      "executed block: height={} num_valid_txs={} num_invalid_txs={}", block_.header.height, valid_txs, invalid_txs));
+      "executed block: height={} num_valid_txs={} num_invalid_txs={}", block_->header.height, valid_txs, invalid_txs));
     return abci_responses_;
   }
 

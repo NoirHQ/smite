@@ -103,10 +103,22 @@ struct part_set {
   uint32_t count;
   int64_t byte_size;
 
-  static part_set new_part_set_from_header(const p2p::part_set_header& header) {
+  static std::shared_ptr<part_set> new_part_set_from_header(const p2p::part_set_header& header) {
     std::vector<part> parts_;
     parts_.resize(header.total);
-    return part_set{header.total, header.hash, parts_, p2p::bit_array::new_bit_array(header.total), 0, 0};
+    auto ret = std::make_shared<part_set>();
+    ret->total = header.total;
+    ret->hash = header.hash;
+    ret->parts = parts_;
+    ret->parts_bit_array = p2p::bit_array::new_bit_array(header.total);
+    ret->count = 0;
+    ret->byte_size = 0;
+    return ret;
+  }
+
+  static std::shared_ptr<part_set> new_part_set_from_data(bytes data, uint32_t part_size) {
+    auto ret = std::make_shared<part_set>();
+    return ret;
   }
 
   bool is_complete() {

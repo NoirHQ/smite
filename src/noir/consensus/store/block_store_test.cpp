@@ -41,21 +41,21 @@ TEST_CASE("save/load_block", "[block_store]") {
   noir::consensus::commit commit_{};
   for (auto height = 1; height < 100; ++height) {
     auto bl_ = make_block(height, genesis_state, commit_);
-    auto hash_ = bl_.get_hash(); // TODO: temporary workaround (block get_hash() not implemented)
-    auto p_set_ = make_part_set(bl_, 2);
+    auto hash_ = bl_->get_hash(); // TODO: temporary workaround (block get_hash() not implemented)
+    auto p_set_ = make_part_set(*bl_, 2);
     auto seen_commit_ = noir::consensus::make_commit(10, noir::p2p::tstamp{});
 
-    CHECK(bls.save_block(bl_, p_set_, seen_commit_) == true);
+    CHECK(bls.save_block(*bl_, *p_set_, seen_commit_) == true);
     CHECK(bls.base() == 1ll);
-    CHECK(bls.height() == bl_.header.height);
+    CHECK(bls.height() == bl_->header.height);
     {
       noir::consensus::block ret{};
       CHECK(bls.load_block(height, ret) == true);
-      CHECK(ret.get_hash() == bl_.get_hash());
+      CHECK(ret.get_hash() == bl_->get_hash());
     }
     {
       noir::consensus::part ret{};
-      auto exp = p_set_.get_part(0);
+      auto exp = p_set_->get_part(0);
       CHECK(bls.load_block_part(height, 0, ret) == true);
       CHECK(ret.index == exp.index);
       CHECK(ret.bytes_ == exp.bytes_);
@@ -82,7 +82,7 @@ TEST_CASE("save/load_block", "[block_store]") {
       // TODO: bl.get_hash()
       noir::consensus::block ret{};
       CHECK(bls.load_block_by_hash(hash_, ret) == true);
-      CHECK(ret.get_hash() == bl_.get_hash());
+      CHECK(ret.get_hash() == bl_->get_hash());
     }
 
     {
@@ -121,12 +121,12 @@ TEST_CASE("prune_block", "[block_store]") {
   noir::consensus::commit commit_{};
   for (auto height = 1; height <= 1500; ++height) {
     auto bl_ = make_block(height, genesis_state, commit_);
-    auto p_set_ = make_part_set(bl_, 2);
+    auto p_set_ = make_part_set(*bl_, 2);
     auto seen_commit_ = noir::consensus::make_commit(10, noir::p2p::tstamp{});
 
-    CHECK(bls.save_block(bl_, p_set_, seen_commit_) == true);
+    CHECK(bls.save_block(*bl_, *p_set_, seen_commit_) == true);
     CHECK(bls.base() == 1ll);
-    CHECK(bls.height() == bl_.header.height);
+    CHECK(bls.height() == bl_->header.height);
   }
 
   noir::consensus::block pruned_block{};
