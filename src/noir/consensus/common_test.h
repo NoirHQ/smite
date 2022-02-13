@@ -113,23 +113,23 @@ inline std::vector<noir::consensus::tx> make_txs(int64_t height, int num) {
   return txs;
 }
 
-inline noir::consensus::block make_block(
+inline std::shared_ptr<noir::consensus::block> make_block(
   int64_t height, const noir::consensus::state& st, const noir::consensus::commit& commit_) {
   auto txs = make_txs(st.last_block_height, 10);
   auto [block_, part_set_] = const_cast<noir::consensus::state&>(st).make_block(height, txs, commit_, /* {}, */ {});
   // TODO: temparary workaround to set block
   block_.header.height = height;
-  return block_;
+  return std::make_shared<block>(block_);
 }
 
-inline noir::consensus::part_set make_part_set(const noir::consensus::block& bl, uint32_t part_size) {
+inline std::shared_ptr<noir::consensus::part_set> make_part_set(const noir::consensus::block& bl, uint32_t part_size) {
   // bl.mtx.lock();
   noir::p2p::part_set_header header_{
     .total = 1, // 4, // header, last_commit, data, evidence
   };
   auto p_set = noir::consensus::part_set::new_part_set_from_header(header_);
 
-  p_set.add_part(noir::consensus::part{
+  p_set->add_part(noir::consensus::part{
     .index = 0,
     .bytes_ = noir::codec::scale::encode(bl.header), // .proof
   });

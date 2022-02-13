@@ -47,7 +47,7 @@ TEST_CASE("Apply block", "[block_executor]") {
   auto block_exec = block_executor::new_block_executor(state_db, proxyApp, bls);
 
   auto block_ = make_block(1, state_, commit{});
-  auto block_id_ = p2p::block_id{block_.get_hash(), block_.make_part_set(65536).header()};
+  auto block_id_ = p2p::block_id{block_->get_hash(), block_->make_part_set(65536).header()};
 
   block_exec->apply_block(state_, block_id_, block_);
 }

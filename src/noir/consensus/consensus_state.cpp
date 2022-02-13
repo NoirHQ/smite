@@ -18,7 +18,7 @@ struct message_handler : public fc::visitor<void> {
 
   explicit message_handler(const std::shared_ptr<consensus_state>& cs_): cs(cs_) {}
 
-  void operator()(p2p::proposal_message& msg) {
+  void operator()(std::shared_ptr<p2p::proposal_message> msg) {
     std::lock_guard<std::mutex> g(cs->mtx);
     // will not cause transition.
     // once proposal is set, we can receive block parts
@@ -440,7 +440,7 @@ void consensus_state::enter_propose(int64_t height, int32_t round) {
  * returns true if the proposal block is complete, if POL_round was proposed, and we have 2/3+ prevotes
  */
 bool consensus_state::is_proposal_complete() {
-  if (!rs.proposal.has_value() || !rs.proposal_block.has_value())
+  if (!rs.proposal || !rs.proposal_block)
     return false;
   // We have the proposal. If there is a POL_round, make sure we have prevotes from it.
   if (rs.proposal->pol_round < 0)
@@ -454,11 +454,11 @@ bool consensus_state::is_proposal(bytes address) {
 }
 
 void consensus_state::decide_proposal(int64_t height, int32_t round) {
-  std::optional<block> block_;
-  std::optional<part_set> block_parts_;
+  std::shared_ptr<block> block_;
+  std::shared_ptr<part_set> block_parts_;
 
   // Decide on a block
-  if (rs.valid_block.has_value()) {
+  if (rs.valid_block) {
     // If there is valid block, choose that
     block_ = rs.valid_block;
     block_parts_ = rs.valid_block_parts;
@@ -485,13 +485,13 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     auto proposer_addr = local_priv_validator_pub_key.address();
 
     // block_exec.create_proposal_block // todo - requires interface to mempool?
-    block_ = block{}; // todo - remove after connected to mempool
-    block_parts_ = part_set{}; // todo - remove after connected to mempool
+    block_ = std::make_shared<block>(); // todo - remove after connected to mempool
+    block_parts_ = std::make_shared<part_set>(); // todo - remove after connected to mempool
     block_->get_hash(); // todo - remove later; initializes some random hash
     block_parts_->total = 1; // todo - remove later
     block_parts_->parts.push_back(part{0, bytes{'1'}, bytes{'2'}}); // todo - remove later
 
-    if (!block_.has_value()) {
+    if (!block_) {
       wlog("MUST CONNECT TO MEMPOOL IN ORDER TO RETRIEVE SOME BLOCKS"); // todo - remove once mempool is ready
       return;
     }
@@ -550,14 +550,14 @@ void consensus_state::enter_prevote(int64_t height, int32_t round) {
 
 void consensus_state::do_prevote(int64_t height, int32_t round) {
   // If a block is locked, prevote that
-  if (rs.locked_block.has_value()) {
+  if (rs.locked_block) {
     dlog("prevote step; already locked on a block; prevoting on a locked block");
     sign_add_vote(p2p::signed_msg_type::Prevote, rs.locked_block->get_hash(), rs.locked_block_parts->header());
     return;
   }
 
   // If proposal_block is nil, prevote nil
-  if (!rs.proposal_block.has_value()) {
+  if (!rs.proposal_block) {
     dlog("prevote step; proposal_block is nil");
     sign_add_vote(p2p::Prevote, bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
@@ -614,7 +614,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
   auto block_id_ = rs.votes->prevotes(round)->two_thirds_majority();
   if (!block_id_.has_value()) {
     // don't have a polka, so precommit nil
-    if (rs.locked_block.has_value())
+    if (rs.locked_block)
       dlog("precommit step; no +2/3 prevotes during enterPrecommit while we are locked; precommitting nil");
     else
       dlog("precommit step; no +2/3 prevotes during enterPrecommit; precommitting nil");
@@ -632,7 +632,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
 
   // 2/3+ prevoted nil, so unlock and precommit nil
   if (block_id_->hash.empty()) {
-    if (!rs.locked_block.has_value()) {
+    if (!rs.locked_block) {
       dlog("precommit step; +2/3 prevoted for nil");
     } else {
       dlog("precommit step; +2/3 prevoted for nil; unlocking");
@@ -647,7 +647,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
 
   // At this point, 2/3+ prevoted for a block
   // If we are already locked on the block, precommit it, and update the locked_round
-  if (rs.locked_block->hashes_to(block_id_->hash)) {
+  if (rs.locked_block && rs.locked_block->hashes_to(block_id_->hash)) {
     dlog("precommit step; +2/3 prevoted locked block; relocking");
     rs.locked_round = round;
     // publish event relock // todo
@@ -794,7 +794,7 @@ void consensus_state::finalize_commit(int64_t height) {
     throw std::runtime_error("panic: cannot finalize commit; proposal block does not hash to commit hash");
 
   // Validate block
-  if (!block_exec->validate_block(local_state, block_.value())) {
+  if (!block_exec->validate_block(local_state, block_)) {
     throw std::runtime_error("panic: +2/3 committed an invalid block");
   }
 
@@ -815,8 +815,7 @@ void consensus_state::finalize_commit(int64_t height) {
   auto state_copy = local_state;
 
   // Apply block // todo - make it work; some operations are commented out now
-  auto result =
-    block_exec->apply_block(state_copy, p2p::block_id{block_->get_hash(), block_parts_->header()}, block_.value());
+  auto result = block_exec->apply_block(state_copy, p2p::block_id{block_->get_hash(), block_parts_->header()}, block_);
   if (!result.has_value()) {
     elog("failed to apply block");
     return;
@@ -841,20 +840,20 @@ void consensus_state::finalize_commit(int64_t height) {
   // * cs.StartTime is set to when we will start round0.
 }
 
-void consensus_state::set_proposal(p2p::proposal_message& msg) {
-  if (rs.proposal.has_value()) {
+void consensus_state::set_proposal(std::shared_ptr<p2p::proposal_message> msg) {
+  if (rs.proposal) {
     dlog("set_proposal; already have one");
     return; // Already have one
   }
 
   // Does not apply
-  if (msg.height != rs.height || msg.round != rs.round) {
+  if (msg->height != rs.height || msg->round != rs.round) {
     dlog("set_proposal; does not apply");
     return;
   }
 
   // Verify POLRound, which must be -1 or in range [0, proposal.Round).
-  if (msg.pol_round < -1 || (msg.pol_round >= 0 && msg.pol_round >= msg.round)) {
+  if (msg->pol_round < -1 || (msg->pol_round >= 0 && msg->pol_round >= msg->round)) {
     dlog("set_proposal; error invalid proposal POL round");
     return;
   }
@@ -866,11 +865,11 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
   rs.proposal = msg;
   // We don't update cs.ProposalBlockParts if it is already set.
   // This happens if we're already in cstypes.RoundStepCommit or if there is a valid block in the current round.
-  if (!rs.proposal_block_parts.has_value()) {
-    rs.proposal_block_parts = part_set::new_part_set_from_header(msg.block_id_.parts);
+  if (!rs.proposal_block_parts) {
+    rs.proposal_block_parts = part_set::new_part_set_from_header(msg->block_id_.parts);
   }
 
-  ilog(fmt::format("received proposal; {}", msg.type));
+  ilog(fmt::format("received proposal; {}", msg->type));
 }
 
 /**
@@ -889,7 +888,7 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p:
   }
 
   // We are not expecting a block part
-  if (!rs.proposal_block_parts.has_value()) {
+  if (!rs.proposal_block_parts) {
     // NOTE: this can happen when we've gone to a higher round and
     // then receive parts from the previous round - not necessarily a bad peer.
     dlog(fmt::format("received block_part when we are not expecting any: height={} round={}", height_, round_));
@@ -906,7 +905,7 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p:
   if (added && rs.proposal_block_parts->is_complete()) {
     // derive block from proto // todo
     // rs.proposal_block = block; // todo - requires converting block from proto
-    rs.proposal_block = block{block_header{"", "", height_}}; // todo - remove later
+    rs.proposal_block = std::make_shared<block>(block{block_header{"", "", height_}}); // todo - remove later
 
     // NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
     ilog(fmt::format("received complete proposal block: height={}", rs.proposal_block->header.height));
@@ -1018,7 +1017,7 @@ bool consensus_state::add_vote(vote& vote_, p2p::node_id peer_id) {
 
       // Unlock if `cs.LockedRound < vote.Round <= cs.Round`
       // NOTE: If vote.Round > cs.Round, we'll deal with it when we get to vote.Round
-      if (rs.locked_block.has_value() && rs.locked_round < vote_.round && vote_.round <= rs.round &&
+      if (rs.locked_block && rs.locked_round < vote_.round && vote_.round <= rs.round &&
         !rs.locked_block->hashes_to(block_id_->hash)) {
         dlog(fmt::format("unlocking because of POL: locked_round={} pol_round={}", rs.locked_round, vote_.round));
         rs.locked_round = -1;
@@ -1059,7 +1058,7 @@ bool consensus_state::add_vote(vote& vote_, p2p::node_id peer_id) {
         enter_precommit(height, vote_.round);
       else if (prevotes->has_two_thirds_any())
         enter_prevote_wait(height, vote_.round);
-    } else if (rs.proposal.has_value() && 0 <= rs.proposal->pol_round && rs.proposal->pol_round == vote_.round) {
+    } else if (rs.proposal && 0 <= rs.proposal->pol_round && rs.proposal->pol_round == vote_.round) {
       // If the proposal is now complete, enter prevote of cs.Round.
       if (is_proposal_complete())
         enter_prevote(height, rs.round);
@@ -1149,9 +1148,9 @@ p2p::tstamp consensus_state::vote_time() {
   auto now = get_time();
   auto min_vote_time = now;
   // Minimum time increment between blocks
-  if (rs.locked_block.has_value()) {
+  if (rs.locked_block) {
     min_vote_time = rs.locked_block->header.time + std::chrono::milliseconds(1).count();
-  } else if (rs.proposal_block.has_value()) {
+  } else if (rs.proposal_block) {
     min_vote_time = rs.proposal_block->header.time + std::chrono::milliseconds(1).count();
   }
 

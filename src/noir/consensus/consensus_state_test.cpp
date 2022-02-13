@@ -51,5 +51,5 @@ TEST_CASE("No Priv Validator", "[consensus_state]") {
 
   force_tick(cs1); // ensureNewRound
 
-  CHECK(!cs1->get_round_state()->proposal.has_value());
+  CHECK(!cs1->get_round_state()->proposal);
 }
