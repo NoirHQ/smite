@@ -230,23 +230,23 @@ struct round_state {
 
   // Subjective time when +2/3 precommits for Block at Round were found
   p2p::tstamp commit_time;
-  std::shared_ptr<validator_set> validators;
-  std::optional<p2p::proposal_message> proposal;
-  std::optional<block> proposal_block;
-  std::optional<part_set> proposal_block_parts;
+  std::shared_ptr<validator_set> validators{};
+  std::shared_ptr<p2p::proposal_message> proposal{};
+  std::shared_ptr<block> proposal_block{};
+  std::shared_ptr<part_set> proposal_block_parts{};
   int32_t locked_round;
-  std::optional<block> locked_block;
-  std::optional<part_set> locked_block_parts;
+  std::shared_ptr<block> locked_block{};
+  std::shared_ptr<part_set> locked_block_parts{};
 
   // Last known round with POL for non-nil valid block.
   int32_t valid_round;
-  std::optional<block> valid_block; // Last known block of POL mentioned above.
+  std::shared_ptr<block> valid_block{}; // Last known block of POL mentioned above.
 
-  std::optional<part_set> valid_block_parts;
-  std::shared_ptr<height_vote_set> votes;
+  std::shared_ptr<part_set> valid_block_parts{};
+  std::shared_ptr<height_vote_set> votes{};
   int32_t commit_round;
-  std::shared_ptr<vote_set> last_commit;
-  std::shared_ptr<validator_set> last_validators;
+  std::shared_ptr<vote_set> last_commit{};
+  std::shared_ptr<validator_set> last_validators{};
   bool triggered_timeout_precommit;
 };
 
@@ -257,7 +257,8 @@ struct timeout_info {
   round_step_type step;
 };
 
-using consensus_message = std::variant<p2p::proposal_message, p2p::block_part_message, p2p::vote_message>;
+using consensus_message =
+  std::variant<std::shared_ptr<p2p::proposal_message>, p2p::block_part_message, p2p::vote_message>;
 
 struct msg_info {
   consensus_message msg;
@@ -287,8 +288,9 @@ inline p2p::tstamp get_time() {
  */
 struct proposal : p2p::proposal_message {
 
-  static proposal new_proposal(int64_t height_, int32_t round_, int32_t pol_round_, p2p::block_id b_id_) {
-    return proposal{p2p::Proposal, height_, round_, pol_round_, b_id_, get_time()};
+  static std::shared_ptr<proposal> new_proposal(
+    int64_t height_, int32_t round_, int32_t pol_round_, p2p::block_id b_id_) {
+    return std::make_shared<proposal>(proposal{p2p::Proposal, height_, round_, pol_round_, b_id_, get_time()});
   }
 };
 
