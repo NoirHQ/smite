@@ -98,13 +98,13 @@ struct part_set {
   bytes hash;
 
   //  std::mutex mtx;
-  std::vector<part> parts;
+  std::vector<std::shared_ptr<part>> parts;
   std::shared_ptr<p2p::bit_array> parts_bit_array;
   uint32_t count;
   int64_t byte_size;
 
   static std::shared_ptr<part_set> new_part_set_from_header(const p2p::part_set_header& header) {
-    std::vector<part> parts_;
+    std::vector<std::shared_ptr<part>> parts_;
     parts_.resize(header.total);
     auto ret = std::make_shared<part_set>();
     ret->total = header.total;
@@ -116,8 +116,32 @@ struct part_set {
     return ret;
   }
 
-  static std::shared_ptr<part_set> new_part_set_from_data(bytes data, uint32_t part_size) {
+  static std::shared_ptr<part_set> new_part_set_from_data(const bytes& data, uint32_t part_size) {
+    // Divide data into 4KB parts
+    uint32_t total = (data.size() + part_size - 1) / part_size;
+    std::vector<std::shared_ptr<part>> parts(total);
+    std::vector<bytes> parts_bytes(total);
+    auto parts_bit_array = p2p::bit_array::new_bit_array(total);
+    for (auto i = 0; i < total; i++) {
+      auto first = data.begin() + (i * part_size);
+      auto last = data.begin() + (std::min((uint32_t)data.size(), (i + 1) * part_size)) - 1;
+      auto part_ = std::make_shared<part>();
+      part_->index = i;
+      std::copy(first, last, part_->bytes_.begin());
+      parts[i] = part_;
+      parts_bytes[i] = part_->bytes_;
+      parts_bit_array->set_index(i, true);
+    }
+
+    // Compute merkle proof - todo
+
     auto ret = std::make_shared<part_set>();
+    ret->total = total;
+    // ret->hash = root; // todo
+    ret->parts = parts;
+    ret->parts_bit_array = parts_bit_array;
+    ret->count = total;
+    ret->byte_size = data.size();
     return ret;
   }
 
@@ -133,34 +157,31 @@ struct part_set {
     return header() == header_;
   }
 
-  bool add_part(part part_) {
+  bool add_part(std::shared_ptr<part> part_) {
     // todo - lock mtx
 
-    if (part_.index >= total) {
+    if (part_->index >= total) {
       dlog("error part set unexpected index");
       return false;
     }
 
     // If part already exists, return false.
-    try {
-      auto p = parts.at(part_.index);
-      if (!p.bytes_.empty() || !p.proof.empty()) {
+    if (parts.size() > 0 && parts.size() >= part_->index) {
+      if (parts[part_->index])
         return false;
-      }
-    } catch (std::out_of_range&) {
     }
 
     // Check hash proof // todo
 
     // Add part
-    parts[part_.index] = part_;
-    parts_bit_array->set_index(part_.index, true);
+    parts[part_->index] = part_;
+    parts_bit_array->set_index(part_->index, true);
     count++;
-    byte_size += part_.bytes_.size();
+    byte_size += part_->bytes_.size();
     return true;
   }
 
-  part get_part(int index) {
+  std::shared_ptr<part> get_part(int index) {
     // todo - lock mtx
     return parts[index]; // todo - check range?
   }
