@@ -212,7 +212,7 @@ public:
     // complete as soon as the block meta is written.
     for (auto i = 0; i < parts_.total; i++) {
       const auto part = parts_.get_part(i);
-      save_block_part(height_, i, part);
+      save_block_part(height_, i, *part);
     }
 
     {
