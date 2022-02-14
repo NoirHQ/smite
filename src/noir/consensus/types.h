@@ -249,6 +249,16 @@ struct round_state {
   std::shared_ptr<vote_set> last_commit{};
   std::shared_ptr<validator_set> last_validators{};
   bool triggered_timeout_precommit;
+
+  struct event_data {
+    int64_t height;
+    int32_t round;
+    int32_t step;
+  };
+
+  event_data new_event_data() {
+    return {.height = height, .round = round, .step = static_cast<int32_t>(step)};
+  }
 };
 
 struct timeout_info {
@@ -323,3 +333,5 @@ inline p2p::tstamp weighted_median(std::vector<weighted_time>& weight_times, int
 FC_REFLECT(noir::consensus::timeout_info, (duration_)(height)(round)(step))
 FC_REFLECT(std::chrono::system_clock::duration, )
 FC_REFLECT(noir::consensus::round_step_type, )
+
+NOIR_FOR_EACH_FIELD(std::chrono::system_clock::duration, )

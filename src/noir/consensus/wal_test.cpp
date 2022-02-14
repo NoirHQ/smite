@@ -147,7 +147,7 @@ TEST_CASE("WAL write", "[basic_wal]") {
     .proof = gen_random_bytes(32),
   };
 
-  CHECK(wal_->write({bp_msg}) == true);
+  CHECK(wal_->write({msg_info{.msg = bp_msg}}) == true);
   CHECK(wal_->flush_and_sync() == true);
 }
 
@@ -184,7 +184,7 @@ TEST_CASE("WAL search_for_end_height", "[basic_wal]") {
         .bytes_ = gen_random_bytes(32),
         .proof = gen_random_bytes(32),
       };
-      CHECK(wal_->write({bp_msg}) == true);
+      CHECK(wal_->write({msg_info{.msg = bp_msg}}) == true);
     }
     CHECK(wal_->write({noir::consensus::end_height_message{height}}) == true);
   }
@@ -217,9 +217,11 @@ TEST_CASE("WAL search_for_end_height", "[basic_wal]") {
       REQUIRE(dec != nullptr);
       timed_wal_message msg{};
       CHECK(dec->decode(msg) == wal_decoder::result::success);
-      auto* body = get_if<noir::p2p::block_part_message>(&msg.msg.msg);
-      REQUIRE(body != nullptr);
-      CHECK(body->height == height + 1);
+      auto* msg_body = get_if<msg_info>(&msg.msg.msg);
+      REQUIRE(msg_body != nullptr);
+      auto* bp_msg = get_if<noir::p2p::block_part_message>(&msg_body->msg);
+      REQUIRE(bp_msg != nullptr);
+      CHECK(bp_msg->height == height + 1);
     }
   }
   CHECK(wal_->flush_and_sync() == true);

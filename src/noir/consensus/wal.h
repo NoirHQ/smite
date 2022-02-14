@@ -21,12 +21,10 @@ struct end_height_message {
   int64_t height;
 };
 
-using wal_message_body_t =
-  std::variant<end_height_message, /* p2p::proposal_message, */ p2p::block_part_message /*, p2p::vote_message */>;
+using wal_message_body_t = std::variant<end_height_message, msg_info, timeout_info, round_state::event_data>;
 
 /// \brief default WALMessage type
 struct wal_message {
-  // p2p::net_message msg; // TODO: replace after scale codec support
   wal_message_body_t msg;
 };
 
