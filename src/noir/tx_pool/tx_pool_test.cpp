@@ -420,38 +420,62 @@ TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
 
 TEST_CASE("Update", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  noir::tx_pool::tx_pool::config config{
-    .ttl_num_blocks = 10,
-  };
-  auto tp = test_helper->make_tx_pool(config);
 
   const uint64_t tx_count = 10;
-  consensus::wrapped_tx_ptrs wrapped_txs;
-  for (auto i = 0; i < tx_count; i++) {
-    wrapped_txs.push_back(std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user")));
-  }
 
-  for (auto& wrapped_tx : wrapped_txs) {
-    auto res = tp.check_tx(wrapped_tx, true);
-    CHECKED_IF(res.has_value()) {
-      CHECK(res.value().get());
+  auto put_tx = [&](class tx_pool& tp) {
+    consensus::wrapped_tx_ptrs wrapped_txs;
+    auto now = consensus::get_time();
+    for (auto i = 0; i < tx_count; i++) {
+      auto tx = test_helper->make_random_wrapped_tx("user");
+      tx.time_stamp = i % 2 ? now : now - std::chrono::microseconds(10000000LL).count();
+      wrapped_txs.push_back(std::make_shared<::wrapped_tx>(tx));
     }
-  }
+    for (auto& wrapped_tx : wrapped_txs) {
+      auto res = tp.check_tx(wrapped_tx, true);
+      CHECKED_IF(res.has_value()) {
+        CHECK(res.value().get());
+      }
+    }
+    return wrapped_txs;
+  };
 
   SECTION("Erase committed tx") {
+    auto tp = test_helper->make_tx_pool();
+    auto wrapped_txs = put_tx(tp);
     std::vector<consensus::response_deliver_tx> res;
+    res.resize(tx_count);
     CHECK(tp.update(0, wrapped_txs, res));
     CHECK(tp.empty());
   }
 
-  SECTION("Erase expired tx") {
+  SECTION("Erase block height expired tx") {
+    noir::tx_pool::tx_pool::config config{
+      .ttl_num_blocks = 10,
+    };
+    auto tp = test_helper->make_tx_pool(config);
+    put_tx(tp);
     std::vector<consensus::response_deliver_tx> res;
+    res.resize(tx_count);
     consensus::wrapped_tx_ptrs empty_wrapped_txs;
     for (uint64_t i = 0; i < tx_count; i++) {
       CHECK(tp.update(config.ttl_num_blocks + i, empty_wrapped_txs, res));
       CHECK(tp.size() == tx_count - i - 1);
     }
     CHECK(tp.empty());
+  }
+
+  SECTION("Erase time expired tx") {
+    noir::tx_pool::tx_pool::config config{
+      .ttl_duration = std::chrono::microseconds(1000000LL).count(),
+    };
+    auto tp = test_helper->make_tx_pool(config);
+    put_tx(tp);
+    std::vector<consensus::response_deliver_tx> res;
+    res.resize(tx_count);
+    consensus::wrapped_tx_ptrs empty_wrapped_txs;
+    CHECK(tp.update(0, empty_wrapped_txs, res));
+    CHECK(tp.size() == tx_count / 2);
   }
 }
 

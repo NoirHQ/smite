@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/types.h>
 #include <noir/consensus/tx.h>
+#include <noir/p2p/types.h>
 #include <boost/multi_index/composite_key.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
@@ -32,6 +33,9 @@ struct unapplied_tx {
   const uint64_t height() const {
     return tx_ptr->height;
   }
+  const p2p::tstamp time_stamp() const {
+    return tx_ptr->time_stamp;
+  }
 
   //  unapplied_tx(const unapplied_tx&) = delete;
   //  unapplied_tx() = delete;
@@ -47,23 +51,43 @@ public:
   struct by_sender;
   struct by_nonce;
   struct by_height;
+  struct by_time;
 
 private:
-  typedef boost::multi_index::multi_index_container<unapplied_tx,
+  // clang-format off
+  typedef boost::multi_index::multi_index_container<
+    unapplied_tx,
     boost::multi_index::indexed_by<
-      boost::multi_index::ordered_unique<boost::multi_index::tag<by_tx_id>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::tx_id_type, &unapplied_tx::id>>,
-      boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_gas>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::gas>>,
-      boost::multi_index::hashed_non_unique<boost::multi_index::tag<by_sender>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::address_type, &unapplied_tx::sender>>,
-      boost::multi_index::ordered_unique<boost::multi_index::tag<by_nonce>,
+      boost::multi_index::ordered_unique<
+        boost::multi_index::tag<by_tx_id>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::tx_id_type, &unapplied_tx::id>
+      >,
+      boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag<by_gas>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::gas>
+      >,
+      boost::multi_index::hashed_non_unique<
+        boost::multi_index::tag<by_sender>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::address_type, &unapplied_tx::sender>
+      >,
+      boost::multi_index::ordered_unique<
+        boost::multi_index::tag<by_nonce>,
         boost::multi_index::composite_key<unapplied_tx,
           boost::multi_index::const_mem_fun<unapplied_tx, const consensus::address_type, &unapplied_tx::sender>,
-          boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::nonce>>>,
-      boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_height>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::height>>>>
-    unapplied_tx_queue_type;
+          boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::nonce>
+        >
+      >,
+      boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag<by_height>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const uint64_t, &unapplied_tx::height>
+      >,
+      boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag<by_time>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const p2p::tstamp, &unapplied_tx::time_stamp>
+      >
+    >
+  > unapplied_tx_queue_type;
+  // clang-format on
 
   unapplied_tx_queue_type queue_;
   uint64_t max_tx_queue_bytes_size_ = 1024 * 1024 * 1024;
@@ -145,12 +169,12 @@ public:
   template<typename Tag>
   using reverse_iterator = typename unapplied_tx_queue_type::index<Tag>::type::reverse_iterator;
 
-  iterator<by_tx_id> begin() {
-    return begin<by_tx_id>();
+  iterator<by_time> begin() {
+    return begin<by_time>();
   }
 
-  iterator<by_tx_id> end() {
-    return end<by_tx_id>();
+  iterator<by_time> end() {
+    return end<by_time>();
   }
 
   template<typename Tag>

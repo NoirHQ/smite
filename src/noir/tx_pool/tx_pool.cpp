@@ -158,13 +158,17 @@ bool tx_pool::update(uint64_t block_height, consensus::wrapped_tx_ptrs& block_tx
   }
 
   if (config_.ttl_num_blocks > 0) {
-    uint64_t expired_block_height = block_height_ - config_.ttl_num_blocks;
+    uint64_t expired_block_height = block_height_ > config_.ttl_num_blocks ? block_height_ - config_.ttl_num_blocks : 0;
     std::for_each(tx_queue_.begin<unapplied_tx_queue::by_height>(0),
       tx_queue_.end<unapplied_tx_queue::by_height>(expired_block_height),
       [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->id()); });
   }
 
-  // TBD : clean expired tx by time
+  if (config_.ttl_duration > 0) {
+    auto expired_time = consensus::get_time() - config_.ttl_duration;
+    std::for_each(tx_queue_.begin<unapplied_tx_queue::by_time>(0),
+      tx_queue_.end<unapplied_tx_queue::by_time>(expired_time), [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->id()); });
+  }
 
   if (config_.recheck) {
     update_recheck_txs();
