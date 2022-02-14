@@ -9,6 +9,7 @@
 #include <fc/crypto/sha256.hpp>
 #include <chrono>
 #include <cinttypes>
+#include <mutex>
 #include <vector>
 
 namespace noir::p2p {
