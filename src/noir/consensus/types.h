@@ -257,8 +257,7 @@ struct timeout_info {
   round_step_type step;
 };
 
-using consensus_message =
-  std::variant<std::shared_ptr<p2p::proposal_message>, p2p::block_part_message, p2p::vote_message>;
+using consensus_message = std::variant<p2p::proposal_message, p2p::block_part_message, p2p::vote_message>;
 
 struct msg_info {
   consensus_message msg;
@@ -288,9 +287,8 @@ inline p2p::tstamp get_time() {
  */
 struct proposal : p2p::proposal_message {
 
-  static std::shared_ptr<proposal> new_proposal(
-    int64_t height_, int32_t round_, int32_t pol_round_, p2p::block_id b_id_) {
-    return std::make_shared<proposal>(proposal{p2p::Proposal, height_, round_, pol_round_, b_id_, get_time()});
+  static proposal new_proposal(int64_t height_, int32_t round_, int32_t pol_round_, p2p::block_id b_id_) {
+    return proposal{p2p::Proposal, height_, round_, pol_round_, b_id_, get_time()};
   }
 };
 
