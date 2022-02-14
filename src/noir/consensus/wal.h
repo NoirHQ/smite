@@ -280,7 +280,7 @@ private:
   std::optional<named_thread_pool> thread_pool;
 
   std::function<void(boost::system::error_code)> process_flush_ticks = [this](boost::system::error_code ec) {
-    if (ec) {
+    if (ec.failed()) {
       wlog("wal flush ticker error: ${m}", ("m", ec.message()));
       // return;
     }
