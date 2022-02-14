@@ -27,7 +27,7 @@ public:
     uint32_t pool_size = 10000;
     uint64_t cache_size = 10000;
     bool keep_invalid_txs_in_cache = false;
-    //    fc::time_point ttl_duration;
+    p2p::tstamp ttl_duration{0};
     uint64_t ttl_num_blocks = 0;
     uint64_t gas_price_bump = 1000;
   };

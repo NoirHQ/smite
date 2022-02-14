@@ -24,6 +24,7 @@ struct wrapped_tx {
   uint64_t gas;
   uint64_t nonce;
   uint64_t height;
+  p2p::tstamp time_stamp;
 
   tx_id_type id() {
     if (!_id.has_value()) {
