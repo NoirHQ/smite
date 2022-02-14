@@ -18,7 +18,7 @@ struct message_handler : public fc::visitor<void> {
 
   explicit message_handler(const std::shared_ptr<consensus_state>& cs_): cs(cs_) {}
 
-  void operator()(std::shared_ptr<p2p::proposal_message> msg) {
+  void operator()(p2p::proposal_message& msg) {
     std::lock_guard<std::mutex> g(cs->mtx);
     // will not cause transition.
     // once proposal is set, we can receive block parts
@@ -840,20 +840,20 @@ void consensus_state::finalize_commit(int64_t height) {
   // * cs.StartTime is set to when we will start round0.
 }
 
-void consensus_state::set_proposal(std::shared_ptr<p2p::proposal_message> msg) {
+void consensus_state::set_proposal(p2p::proposal_message& msg) {
   if (rs.proposal) {
     dlog("set_proposal; already have one");
     return; // Already have one
   }
 
   // Does not apply
-  if (msg->height != rs.height || msg->round != rs.round) {
+  if (msg.height != rs.height || msg.round != rs.round) {
     dlog("set_proposal; does not apply");
     return;
   }
 
   // Verify POLRound, which must be -1 or in range [0, proposal.Round).
-  if (msg->pol_round < -1 || (msg->pol_round >= 0 && msg->pol_round >= msg->round)) {
+  if (msg.pol_round < -1 || (msg.pol_round >= 0 && msg.pol_round >= msg.round)) {
     dlog("set_proposal; error invalid proposal POL round");
     return;
   }
@@ -862,14 +862,14 @@ void consensus_state::set_proposal(std::shared_ptr<p2p::proposal_message> msg) {
   // if !cs.Validators.GetProposer().PubKey.VerifySignature(
 
   // msg.sig = ;
-  rs.proposal = msg;
+  rs.proposal = std::make_shared<p2p::proposal_message>(p2p::proposal_message{msg});
   // We don't update cs.ProposalBlockParts if it is already set.
   // This happens if we're already in cstypes.RoundStepCommit or if there is a valid block in the current round.
   if (!rs.proposal_block_parts) {
-    rs.proposal_block_parts = part_set::new_part_set_from_header(msg->block_id_.parts);
+    rs.proposal_block_parts = part_set::new_part_set_from_header(msg.block_id_.parts);
   }
 
-  ilog(fmt::format("received proposal; {}", msg->type));
+  ilog(fmt::format("received proposal; {}", msg.type));
 }
 
 /**

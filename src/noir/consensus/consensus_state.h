@@ -67,7 +67,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   void try_finalize_commit(int64_t height);
   void finalize_commit(int64_t height);
-  void set_proposal(std::shared_ptr<p2p::proposal_message> msg);
+  void set_proposal(p2p::proposal_message& msg);
   bool add_proposal_block_part(p2p::block_part_message& msg, p2p::node_id peer_id);
   bool try_add_vote(p2p::vote_message& msg, p2p::node_id peer_id);
   bool add_vote(vote& vote_, p2p::node_id peer_id);
