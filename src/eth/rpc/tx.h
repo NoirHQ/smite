@@ -15,7 +15,7 @@ struct tx {
   bytes20 to;
   uint256_t value;
   bytes data;
-  uint256_t v;
+  uint64_t v;
   bytes32 r;
   bytes32 s;
 
