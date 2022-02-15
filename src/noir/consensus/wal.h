@@ -151,8 +151,8 @@ class base_wal : public wal {
 public:
   base_wal(const base_wal&) = delete; // do not allow copy
   base_wal(const std::string& path, size_t rotate_size, size_t num_file)
-    : codec_(std::make_unique<wal_codec>(path, rotate_size, num_file)) {
-
+    : codec_(std::make_unique<wal_codec>(path, rotate_size, num_file)),
+      flush_interval(std::chrono::system_clock::duration(2000000)) { // 2seconds = 2000000 microseconds
     thread_pool.emplace("consensus", thread_pool_size);
     {
       // std::lock_guard<std::mutex> g(flush_ticker_mtx);
