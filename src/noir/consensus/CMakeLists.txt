@@ -5,6 +5,7 @@ target_sources(noir
   merkle/proof.cpp
   merkle/tree.cpp
   priv_validator.cpp
+  replay.cpp
   validator.cpp
   vote.cpp
   wal.cpp)
