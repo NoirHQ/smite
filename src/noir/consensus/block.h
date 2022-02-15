@@ -13,6 +13,7 @@
 #include <noir/p2p/types.h>
 
 #include <fc/crypto/rand.hpp>
+#include <utility>
 
 namespace noir::consensus {
 
@@ -57,8 +58,8 @@ struct commit {
   p2p::block_id my_block_id;
   std::vector<commit_sig> signatures;
 
-  bytes hash;
-  std::shared_ptr<bit_array> bit_array_{};
+  bytes hash; // NOTE: not to be serialized
+  std::shared_ptr<bit_array> bit_array_{}; // NOTE: not to be serialized
 
   static commit new_commit(
     int64_t height_, int32_t round_, p2p::block_id block_id_, std::vector<commit_sig>& commit_sigs) {
@@ -85,6 +86,24 @@ struct commit {
         bit_array_->set_index(i, !signatures[i].absent());
     }
     return bit_array_;
+  }
+
+  template<typename T>
+  inline friend T& operator<<(T& ds, const commit& v) {
+    ds << v.height;
+    ds << v.round;
+    ds << v.my_block_id;
+    ds << v.signatures;
+    return ds;
+  }
+
+  template<typename T>
+  inline friend T& operator>>(T& ds, commit& v) {
+    ds >> v.height;
+    ds >> v.round;
+    ds >> v.my_block_id;
+    ds >> v.signatures;
+    return ds;
   }
 };
 
@@ -247,11 +266,17 @@ struct block_header {
 };
 
 struct block {
-  // mutex mtx;
   block_header header;
   block_data data;
   // evidence evidence;
   commit last_commit;
+
+  std::mutex mtx;
+
+  block() = default;
+  block(block_header header_, block_data data_, commit last_commit_)
+    : header(std::move(header_)), data(std::move(data_)), last_commit(std::move(last_commit_)) {}
+  block(const block& b): header(b.header), data(b.data), last_commit(b.last_commit) {}
 
   void fill_header() {
     if (header.last_commit_hash.empty())
@@ -273,7 +298,7 @@ struct block {
    * This is the form in which a block is gossipped to peers.
    */
   part_set make_part_set(uint32_t part_size) {
-    // todo - lock mtx
+    std::lock_guard<std::mutex> g(mtx);
     /// implement new_part_set_from_data()
     // todo implement
     /// new_part_set_from_data() ends
@@ -281,7 +306,7 @@ struct block {
   }
 
   bytes get_hash() {
-    // todo - lock mtx
+    std::lock_guard<std::mutex> g(mtx);
     // todo - implement
     return header.get_hash();
   }
@@ -291,6 +316,22 @@ struct block {
       return false;
     return get_hash() == hash;
   }
+
+  template<typename T>
+  inline friend T& operator<<(T& ds, const block& v) {
+    ds << v.header;
+    ds << v.data;
+    ds << v.last_commit;
+    return ds;
+  }
+
+  template<typename T>
+  inline friend T& operator>>(T& ds, block& v) {
+    ds >> v.header;
+    ds >> v.data;
+    ds >> v.last_commit;
+    return ds;
+  }
 };
 
 using block_ptr = std::shared_ptr<block>;
@@ -299,10 +340,18 @@ using block_ptr = std::shared_ptr<block>;
 
 NOIR_FOR_EACH_FIELD(
   noir::consensus::commit_sig, /* TODO: flag, */ validator_address, timestamp, signature, vote_extension)
-NOIR_FOR_EACH_FIELD(noir::consensus::commit, height, round, my_block_id, signatures, hash)
 NOIR_FOR_EACH_FIELD(noir::consensus::part, index, bytes_, proof)
 NOIR_FOR_EACH_FIELD(noir::consensus::part_set, total, hash, parts, count, byte_size)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_data, txs, hash)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash,
   consensus_hash, app_hash, last_results_hash, proposer_address, hash_)
-NOIR_FOR_EACH_FIELD(noir::consensus::block, header, data, last_commit)
+
+// todo - remove these as they are not foreachable
+// NOIR_FOR_EACH_FIELD(noir::consensus::commit, height, round, my_block_id, signatures, hash)
+// NOIR_FOR_EACH_FIELD(noir::consensus::block, header, data, last_commit)
+
+template<>
+struct noir::is_foreachable<noir::consensus::commit> : std::false_type {};
+
+template<>
+struct noir::is_foreachable<noir::consensus::block> : std::false_type {};
