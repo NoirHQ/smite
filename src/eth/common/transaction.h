@@ -6,9 +6,9 @@
 #pragma once
 #include <eth/common/types.h>
 
-namespace eth::rpc {
+namespace eth {
 
-struct tx {
+struct transaction {
   uint64_t nonce;
   uint256_t gas_price;
   uint64_t gas;
@@ -20,10 +20,11 @@ struct tx {
   bytes32 s;
 
   uint256_t fee() const {
-    return gas_price * gas;
+    // FIXME: wrap check_uint256_t instead of using it directly
+    return boost::multiprecision::checked_uint256_t(gas_price) * gas;
   }
 };
 
-using tx_ptr = std::shared_ptr<tx>;
+using transaction_p = std::shared_ptr<transaction>;
 
-} // namespace eth::rpc
+} // namespace eth
