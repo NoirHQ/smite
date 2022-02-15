@@ -11,8 +11,19 @@ namespace eth::api {
 
 class api {
 public:
-  static void check_send_raw_tx(const fc::variant& req);
-  std::string send_raw_tx(const std::string& rlp, const uint256_t& tx_fee_cap, const bool allow_unprotected_txs);
+  fc::variant send_raw_tx(const fc::variant& req);
+
+  void set_tx_fee_cap(const uint256_t& tx_fee_cap) {
+    this->tx_fee_cap = tx_fee_cap;
+  }
+
+  void set_allow_unprotected_txs(const bool& allow_unprotected_txs) {
+    this->allow_unprotected_txs = allow_unprotected_txs;
+  }
+
+private:
+  uint256_t tx_fee_cap;
+  bool allow_unprotected_txs;
 };
 
 } // namespace eth::api

@@ -24,9 +24,6 @@ public:
 
 private:
   std::unique_ptr<api::api> api;
-
-  uint256_t tx_fee_cap;
-  bool allow_unprotected_txs;
 };
 
 } // namespace eth::rpc
