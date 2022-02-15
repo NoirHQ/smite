@@ -70,6 +70,7 @@ std::shared_ptr<consensus_state> consensus_state::new_state(const consensus_conf
   consensus_state_->cs_config = cs_config_;
   consensus_state_->block_exec = block_exec_;
   consensus_state_->block_store_ = new_block_store;
+  consensus_state_->do_wal_catchup = true;
 
   if (state_.last_block_height > 0) {
     consensus_state_->reconstruct_last_commit(state_);
@@ -167,6 +168,22 @@ inline fs::path get_wal_file_path(const consensus_config& cs_config) {
   return fs::path(cs_config.root_dir) / fs::path(cs_config.wal_file);
 }
 
+bool repair_wal_file(const std::string& src, const std::string& dst) {
+  // truncate dst file
+  wal_decoder dec{src};
+  wal_encoder enc{dst};
+  timed_wal_message tmsg{};
+
+  // best-case repair (until first error is encountered)
+  auto ret = dec.decode(tmsg);
+  while (ret == wal_decoder::result::success) {
+    size_t len;
+    check(enc.encode(tmsg, len), "failed to encode msg");
+    ret = dec.decode(tmsg);
+  }
+  return true;
+}
+
 bool consensus_state::load_wal_file() {
   if (cs_config.wal_file.empty()) {
     cs_config.wal_file = cs_config.wal_path;
@@ -196,9 +213,52 @@ void consensus_state::on_start() {
   }
   check(wal_->on_start(), "failed to start wal"); // TODO: workaround: directly call on_start instead of start()
 
-  // TODO: repair
   if (do_wal_catchup) {
     bool repair_attempted = false;
+    while (true) {
+      if (catchup_replay(rs.height)) {
+        break;
+      }
+      // TODO: check this branch, for now cannot be reached
+      // if (!data_corruption_error) {
+      //   elog("error on catchup replay; proceeding to start state anyway");
+      //   break;
+      // }
+      if (repair_attempted) {
+        elog("previous repair attempt failed");
+        return; // TODO: return error
+      }
+      elog("the WAL file is corrupted; attempting repair");
+
+      // 1) prep work
+      if (!wal_->on_stop()) { // TODO: change to stop() when WAL supports service method
+        return; // TODO: return error
+      }
+      repair_attempted = true;
+
+      // 2) backup original WAL file
+      auto prev_path = get_wal_file_path(cs_config) / wal_head_name;
+      auto corrupted_path = prev_path;
+      corrupted_path += wal_file_manager::corrupted_postfix;
+      try {
+        check(!fs::exists(corrupted_path) || fs::is_regular_file(corrupted_path),
+          fmt::format("unable to remove previous corrupted wal file={}", corrupted_path.string()));
+        fs::rename(prev_path, corrupted_path);
+      } catch (...) {
+        elog("unable to repair wal file due to unexpected error");
+        return; // TODO: return error
+      }
+      dlog(fmt::format("backed up WAL file src={} dst={}", prev_path.string(), corrupted_path.string()));
+
+      // 3) try to repair (WAL file will be overwritten!)
+      if (!repair_wal_file(corrupted_path, prev_path)) {
+        elog("the WAL repair failed");
+      }
+
+      ilog("successful WAL repair");
+      // reload WAL file
+      check(load_wal_file(), "failed to load wal");
+    }
   }
 }
 
