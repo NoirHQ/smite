@@ -61,17 +61,14 @@ struct bit_array {
     return ret;
   }
 
-  template<typename T>
-  inline friend T& operator<<(T& ds, const bit_array& v) {
-    ds << v.bits;
-
-    auto num_bytes = (v.bits + 7) / 8;
+  bytes get_bytes() const {
+    auto num_bytes = (bits + 7) / 8;
     bytes bs;
     bs.reserve(num_bytes);
-    for (auto i = 0; i < v.bits; i += 8) {
+    for (auto i = 0; i < bits; i += 8) {
       uint8_t byte_{};
-      for (auto j = 0; j < 8 && (j + i) < v.bits; j++) {
-        if (v.elem[j + i]) {
+      for (auto j = 0; j < 8 && (j + i) < bits; j++) {
+        if (elem[j + i]) {
           byte_ |= 1 << (7 - j);
         } else {
           byte_ &= ~(1 << (7 - j));
@@ -79,8 +76,14 @@ struct bit_array {
       }
       bs.push_back(static_cast<char>(byte_));
     }
-    ds << bs;
+    return bs;
+  }
 
+  template<typename T>
+  inline friend T& operator<<(T& ds, const bit_array& v) {
+    ds << v.bits;
+    bytes bs = v.get_bytes();
+    ds << bs;
     return ds;
   }
 
