@@ -9,11 +9,11 @@
 using namespace std;
 using namespace eth::api;
 
-TEST_CASE("[api] parse_send_raw_tx", "[params]") {
+TEST_CASE("[api] send_raw_tx", "[params]") {
   fc::variant params;
   api a;
 
-  SECTION("params fail") {
+  SECTION("check params fail") {
     params = fc::variant(1);
     CHECK_THROWS_WITH(a.send_raw_tx(params), "invalid json request");
     vector<string> v;
@@ -24,7 +24,7 @@ TEST_CASE("[api] parse_send_raw_tx", "[params]") {
     CHECK_THROWS_WITH(a.send_raw_tx(params), "too many arguments, want at most 1");
   }
 
-  SECTION("param fail") {
+  SECTION("check param fail") {
     vector<uint32_t> v = {0};
     params = fc::variant(v);
     CHECK_THROWS_WITH(a.send_raw_tx(params), "invalid parameters: json: cannot unmarshal");
