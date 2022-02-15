@@ -33,13 +33,13 @@ struct vote : p2p::vote_message {
 
 struct block_votes {
   bool peer_maj23{};
-  std::shared_ptr<p2p::bit_array> bit_array_;
+  std::shared_ptr<bit_array> bit_array_;
   std::vector<vote> votes;
   int64_t sum{};
 
   static block_votes new_block_votes(bool peer_maj23_, int num_validators) {
     block_votes ret{peer_maj23_};
-    ret.bit_array_ = p2p::bit_array::new_bit_array(num_validators);
+    ret.bit_array_ = bit_array::new_bit_array(num_validators);
     ret.votes.resize(num_validators);
     return ret;
   }
@@ -103,7 +103,7 @@ struct vote_set {
   validator_set val_set;
 
   std::mutex mtx;
-  std::shared_ptr<p2p::bit_array> votes_bit_array{};
+  std::shared_ptr<bit_array> votes_bit_array{};
   std::vector<vote> votes;
   int64_t sum;
   std::optional<p2p::block_id> maj23;
@@ -120,12 +120,12 @@ struct vote_set {
     ret->round = round_;
     ret->signed_msg_type_ = signed_msg_type;
     ret->val_set = val_set_;
-    ret->votes_bit_array = p2p::bit_array::new_bit_array(val_set_.size());
+    ret->votes_bit_array = bit_array::new_bit_array(val_set_.size());
     ret->sum = 0;
     return ret;
   }
 
-  std::shared_ptr<p2p::bit_array> get_bit_array() {
+  std::shared_ptr<bit_array> get_bit_array() {
     std::lock_guard<std::mutex> g(mtx);
     return votes_bit_array->copy();
   }
