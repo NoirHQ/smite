@@ -163,7 +163,6 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   std::unique_ptr<wal> wal_;
   bool load_wal_file();
-
   bool do_wal_catchup = false; // determines if we even try to do the catchup
   bool replay_mode = false; // so we don't log signing errors during replay
   bool catchup_replay(int64_t cs_height);
