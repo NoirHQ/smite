@@ -12,8 +12,10 @@ using namespace noir;
 using namespace noir::consensus;
 
 TEST_CASE("Encode block", "[block]") {
-  //  block blk{};
-  //  auto data = codec::scale::encode(blk);
+  block org{};
+  auto data = codec::scale::encode(org);
+  auto decoded = codec::scale::decode<block>(data);
+  CHECK(org.data.hash == decoded.data.hash);
 }
 
 TEST_CASE("Make part_set", "[block]") {}
