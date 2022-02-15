@@ -24,45 +24,6 @@ using public_key_type = fc::crypto::public_key;
 using private_key_type = fc::crypto::private_key;
 using signature_type = fc::crypto::signature;
 
-struct bit_array {
-  std::mutex mtx;
-  int bits;
-  std::vector<bool> elem;
-
-  static std::shared_ptr<bit_array> new_bit_array(int bits_) {
-    auto ret = std::make_shared<bit_array>();
-    ret->bits = bits_;
-    ret->elem.resize(bits_);
-    return ret;
-  }
-
-  int size() const {
-    return bits;
-  }
-
-  bool get_index(int i) {
-    std::lock_guard<std::mutex> g(mtx);
-    if (i >= bits)
-      return false;
-    return elem[i];
-  }
-
-  bool set_index(int i, bool v) {
-    std::lock_guard<std::mutex> g(mtx);
-    if (i >= bits)
-      return false;
-    elem[i] = v;
-    return true;
-  }
-
-  std::shared_ptr<p2p::bit_array> copy() {
-    auto copy = std::make_shared<p2p::bit_array>();
-    copy->bits = bits;
-    copy->elem = elem;
-    return copy;
-  }
-};
-
 /**
  * default value initializers
  */

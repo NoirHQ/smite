@@ -7,6 +7,7 @@
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
 #include <noir/common/types.h>
+#include <noir/consensus/bit_array.h>
 #include <noir/consensus/tx.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
@@ -57,7 +58,7 @@ struct commit {
   std::vector<commit_sig> signatures;
 
   bytes hash;
-  std::shared_ptr<p2p::bit_array> bit_array_{};
+  std::shared_ptr<bit_array> bit_array_{};
 
   static commit new_commit(
     int64_t height_, int32_t round_, p2p::block_id block_id_, std::vector<commit_sig>& commit_sigs) {
@@ -77,9 +78,9 @@ struct commit {
     return hash;
   }
 
-  std::shared_ptr<p2p::bit_array> get_bit_array() {
+  std::shared_ptr<bit_array> get_bit_array() {
     if (bit_array_ == nullptr) {
-      bit_array_ = p2p::bit_array::new_bit_array(signatures.size());
+      bit_array_ = bit_array::new_bit_array(signatures.size());
       for (auto i = 0; i < signatures.size(); i++)
         bit_array_->set_index(i, !signatures[i].absent());
     }
@@ -99,7 +100,7 @@ struct part_set {
 
   //  std::mutex mtx;
   std::vector<std::shared_ptr<part>> parts;
-  std::shared_ptr<p2p::bit_array> parts_bit_array;
+  std::shared_ptr<bit_array> parts_bit_array;
   uint32_t count;
   int64_t byte_size;
 
@@ -110,7 +111,7 @@ struct part_set {
     ret->total = header.total;
     ret->hash = header.hash;
     ret->parts = parts_;
-    ret->parts_bit_array = p2p::bit_array::new_bit_array(header.total);
+    ret->parts_bit_array = bit_array::new_bit_array(header.total);
     ret->count = 0;
     ret->byte_size = 0;
     return ret;
@@ -121,7 +122,7 @@ struct part_set {
     uint32_t total = (data.size() + part_size - 1) / part_size;
     std::vector<std::shared_ptr<part>> parts(total);
     std::vector<bytes> parts_bytes(total);
-    auto parts_bit_array = p2p::bit_array::new_bit_array(total);
+    auto parts_bit_array = bit_array::new_bit_array(total);
     for (auto i = 0; i < total; i++) {
       auto first = data.begin() + (i * part_size);
       auto last = data.begin() + (std::min((uint32_t)data.size(), (i + 1) * part_size)) - 1;
@@ -186,7 +187,7 @@ struct part_set {
     return parts[index]; // todo - check range?
   }
 
-  std::shared_ptr<p2p::bit_array> get_bit_array() {
+  std::shared_ptr<bit_array> get_bit_array() {
     // todo - lock mtx
     return parts_bit_array;
   }
