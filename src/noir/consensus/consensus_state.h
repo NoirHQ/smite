@@ -164,10 +164,13 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   std::unique_ptr<wal> wal_;
   bool load_wal_file();
 
-  round_state::event_data get_round_state_event();
   bool do_wal_catchup = false; // determines if we even try to do the catchup
-  //    replayMode   bool // so we don't log signing errors during replay
-  //
+  bool replay_mode = false; // so we don't log signing errors during replay
+  bool catchup_replay(int64_t cs_height);
+  bool read_replay_message(const timed_wal_message& msg);
+
+  round_state::event_data get_round_state_event();
+
   //  // for tests where we want to limit the number of transitions the state makes
   //  nSteps int
   int n_steps;
