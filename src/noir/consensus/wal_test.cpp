@@ -34,12 +34,14 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
       std::move(temp_dir), std::make_shared<wal_file_manager>(tmp_path, rotation_file_num, enc_size));
   }(enc_size);
   auto tmp_path = temp_dir->path().string();
-  auto wal_encoder_ = wal_manager_->get_wal_encoder();
-  auto write_msg_to_wal_file = [&wal_manager_ = wal_manager_, &wal_encoder_](
-                                 const timed_wal_message& msg, size_t& len) {
+  auto write_msg_to_wal_file = [&wal_manager_ = wal_manager_](const timed_wal_message& msg, size_t& len) {
     wal_manager_->update();
-    wal_encoder_ = wal_manager_->get_wal_encoder();
+    auto wal_encoder_ = wal_manager_->get_wal_encoder();
     return wal_encoder_->encode(msg, len);
+  };
+  auto flush_to_wal_file = [&wal_manager_ = wal_manager_]() {
+    auto wal_encoder_ = wal_manager_->get_wal_encoder();
+    return wal_encoder_->flush_and_sync();
   };
 
   SECTION("simple encode/decode") {
@@ -52,7 +54,7 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
       CHECK(ret == true);
       ++msg.time;
     }
-    CHECK(wal_encoder_->flush_and_sync() == true);
+    CHECK(flush_to_wal_file() == true);
 
     int count = 0;
     timed_wal_message ret{.msg = {end_height_message{}}};
@@ -83,7 +85,7 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
         exp++;
       }
     }
-    CHECK(wal_encoder_->flush_and_sync() == true);
+    CHECK(flush_to_wal_file() == true);
     CHECK(count_dir(tmp_path) == 5);
 
     int count = 0;
@@ -111,10 +113,106 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
         size_ += tmp;
       }
     }
-    CHECK(wal_encoder_->flush_and_sync() == true);
+    CHECK(flush_to_wal_file() == true);
     CHECK(count_dir(tmp_path) == 5);
 
     fc::remove_all(tmp_path);
+  }
+
+  SECTION("async test") {
+    uint64_t max_thread_num = 10;
+    auto thread = std::make_unique<noir::named_thread_pool>("test_thread", max_thread_num);
+
+    uint64_t thread_num = std::min<uint64_t>(5, max_thread_num);
+    uint64_t total_msg_num = 1000;
+    std::atomic<uint64_t> token = thread_num;
+    std::future<std::vector<std::optional<std::future<bool>>>> res[thread_num];
+    SECTION("write in multi thread") {
+      std::future<size_t> write_wal[thread_num];
+      for (auto& res : write_wal) {
+        res = noir::async_thread_pool(thread->get_executor(), [&]() {
+          token.fetch_sub(1, std::memory_order_seq_cst);
+          while (token.load(std::memory_order_seq_cst)) {
+          } // wait other thread
+
+          timed_wal_message msg{};
+          size_t count = 0;
+          for (auto i = 0; i < total_msg_num; ++i) {
+            size_t tmp;
+            write_msg_to_wal_file(msg, tmp);
+            ++count;
+          }
+          return count;
+        });
+      }
+      size_t sum = 0;
+      for (auto& res : write_wal) {
+        res.wait();
+        CHECK(res.valid() == true);
+        sum += res.get();
+      }
+      CHECK(sum == total_msg_num * thread_num);
+    }
+
+    SECTION("write and flush in multi thread") {
+      std::future<size_t> write_wal[thread_num];
+      for (auto& res : write_wal) {
+        res = noir::async_thread_pool(thread->get_executor(), [&]() {
+          token.fetch_sub(1, std::memory_order_seq_cst);
+          while (token.load(std::memory_order_seq_cst)) {
+          } // wait other thread
+
+          timed_wal_message msg{};
+          size_t count = 0;
+          for (auto i = 0; i < total_msg_num; ++i) {
+            size_t tmp;
+            write_msg_to_wal_file(msg, tmp);
+            flush_to_wal_file();
+            ++count;
+          }
+          return count;
+        });
+      }
+      size_t sum = 0;
+      for (auto& res : write_wal) {
+        res.wait();
+        CHECK(res.valid() == true);
+        sum += res.get();
+      }
+      CHECK(sum == total_msg_num * thread_num);
+    }
+
+    SECTION("mixed write and flush in multi thread") {
+      std::future<size_t> write_wal[thread_num];
+      for (auto& res : write_wal) {
+        res = noir::async_thread_pool(thread->get_executor(), [&]() {
+          token.fetch_sub(1, std::memory_order_seq_cst);
+          while (token.load(std::memory_order_seq_cst)) {
+          } // wait other thread
+
+          timed_wal_message msg{};
+          size_t count = 0;
+          for (auto i = 0; i < total_msg_num; ++i) {
+            size_t tmp;
+            if (i & 1) {
+              write_msg_to_wal_file(msg, tmp);
+            } else {
+              write_msg_to_wal_file(msg, tmp);
+              flush_to_wal_file();
+            }
+            ++count;
+          }
+          return count;
+        });
+      }
+      size_t sum = 0;
+      for (auto& res : write_wal) {
+        res.wait();
+        CHECK(res.valid() == true);
+        sum += res.get();
+      }
+      CHECK(sum == total_msg_num * thread_num);
+    }
   }
 }
 
