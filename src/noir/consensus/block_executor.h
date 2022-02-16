@@ -46,7 +46,7 @@ struct block_executor {
     return res;
   }
 
-  std::tuple<block, part_set> create_proposal_block(
+  std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> create_proposal_block(
     int64_t height, state& state_, commit& commit_, bytes proposer_addr, std::vector<vote>& votes) {
     auto max_bytes = state_.consensus_params_.block.max_bytes;
     auto max_gas = state_.consensus_params_.block.max_gas;
@@ -78,7 +78,8 @@ struct block_executor {
 
     auto modified_txs = prepared_proposal.block_data;
 
-    return state_.make_block(height, modified_txs, commit_, proposer_addr);
+    auto [block_tmp, block_parts_tmp] = state_.make_block(height, modified_txs, commit_, proposer_addr); // todo - fix
+    return {std::make_shared<block>(block_tmp), std::make_shared<part_set>(block_parts_tmp)}; // todo - fix
   }
 
   bool validate_block(state& state_, std::shared_ptr<block> block_) {
