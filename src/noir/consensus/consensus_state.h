@@ -87,11 +87,11 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   //  // store blocks and commits
   //  blockStore sm.BlockStore
-  std::shared_ptr<block_store> block_store_{nullptr};
+  std::shared_ptr<block_store> block_store_{};
 
   //  // create and execute blocks
   //  blockExec *sm.BlockExecutor
-  std::shared_ptr<block_executor> block_exec{nullptr};
+  std::shared_ptr<block_executor> block_exec{};
 
   //  // notify us if txs are available
   //  txNotifier txNotifier
