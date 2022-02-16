@@ -28,7 +28,7 @@ struct message_handler : public fc::visitor<void> {
   void operator()(p2p::block_part_message& msg) {
     std::lock_guard<std::mutex> g(cs->mtx);
     // if the proposal is complete, we'll enter_prevote or try_finalize_commit
-    auto added = cs->add_proposal_block_part(msg, "");
+    auto added = cs->add_proposal_block_part(msg, node_id{});
     if (msg.round != cs->rs.round) {
       dlog(fmt::format("received block part from wrong round: height={} cs_round={} block_round={}", cs->rs.height,
         cs->rs.round, msg.round));
@@ -39,7 +39,7 @@ struct message_handler : public fc::visitor<void> {
     std::lock_guard<std::mutex> g(cs->mtx);
     // attempt to add the vote and dupeout the validator if its a duplicate signature
     // if the vote gives us a 2/3-any or 2/3-one, we transition
-    cs->try_add_vote(msg, "");
+    cs->try_add_vote(msg, node_id{});
   }
 };
 
@@ -876,7 +876,7 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
  * Asynchronously triggers either enterPrevote (before we timeout of propose) or tryFinalizeCommit, once we have full
  * block NOTE: block may be invalid
  */
-bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p::node_id peer_id) {
+bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node_id peer_id) {
   auto height_ = msg.height;
   auto round_ = msg.round;
   auto part_ = std::make_shared<part>(part{msg.index, msg.bytes_});
@@ -940,7 +940,7 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, p2p:
 /**
  * Attempt to add vote. If it's a duplicate signature, dupeout? the validator
  */
-bool consensus_state::try_add_vote(p2p::vote_message& msg, p2p::node_id peer_id) {
+bool consensus_state::try_add_vote(p2p::vote_message& msg, node_id peer_id) {
   auto vote_ = vote{msg};
   auto added = add_vote(vote_, peer_id);
 
@@ -950,7 +950,7 @@ bool consensus_state::try_add_vote(p2p::vote_message& msg, p2p::node_id peer_id)
   return added;
 }
 
-bool consensus_state::add_vote(vote& vote_, p2p::node_id peer_id) {
+bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
   dlog(fmt::format("adding vote: height={} type={} index={} cs_height={}", vote_.height, vote_.type,
     vote_.validator_index, rs.height));
 

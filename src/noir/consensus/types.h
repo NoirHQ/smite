@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/consensus/block.h>
 #include <noir/consensus/crypto.h>
+#include <noir/consensus/node_id.h>
 #include <noir/consensus/params.h>
 #include <noir/consensus/validator.h>
 #include <noir/consensus/vote.h>
@@ -110,7 +111,7 @@ struct height_vote_set {
   std::mutex mtx;
   int32_t round;
   std::map<int32_t, round_vote_set> round_vote_sets;
-  std::map<p2p::node_id, std::vector<int32_t>> peer_catchup_rounds;
+  std::map<node_id, std::vector<int32_t>> peer_catchup_rounds;
 
   static std::shared_ptr<height_vote_set> new_height_vote_set(
     std::string chain_id_, int64_t height_, const validator_set& val_set_) {
@@ -177,7 +178,7 @@ struct height_vote_set {
     return -1;
   }
 
-  bool add_vote(vote vote_, p2p::node_id peer_id) {
+  bool add_vote(vote vote_, node_id peer_id) {
     std::lock_guard<std::mutex> g(mtx);
     if (!p2p::is_vote_type_valid(vote_.type))
       return false;
