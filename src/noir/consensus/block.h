@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/codec/scale.h>
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
 #include <noir/common/types.h>
@@ -303,11 +302,7 @@ struct block {
    * returns a part_set containing parts of a serialized block.
    * This is the form in which a block is gossipped to peers.
    */
-  part_set make_part_set(uint32_t part_size) {
-    std::lock_guard<std::mutex> g(mtx);
-    auto bz = codec::scale::encode(*this);
-    return *part_set::new_part_set_from_data(bz, part_size);
-  }
+  part_set make_part_set(uint32_t part_size);
 
   bytes get_hash() {
     std::lock_guard<std::mutex> g(mtx);
