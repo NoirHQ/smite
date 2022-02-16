@@ -484,12 +484,10 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     }
     auto proposer_addr = local_priv_validator_pub_key.address();
 
-    // block_exec.create_proposal_block // todo - requires interface to mempool?
-    block_ = std::make_shared<block>(); // todo - remove after connected to mempool
-    block_parts_ = std::make_shared<part_set>(); // todo - remove after connected to mempool
-    block_->get_hash(); // todo - remove later; initializes some random hash
-    block_parts_->total = 1; // todo - remove later
-    block_parts_->parts.push_back(std::make_shared<part>(part{0, bytes{'1'}, bytes{'2'}})); // todo - remove later
+    auto [block_tmp, block_parts_tmp] =
+      block_exec->create_proposal_block(rs.height, local_state, commit_, proposer_addr, votes_);
+    block_ = block_tmp; // todo - fix
+    block_parts_ = block_parts_tmp; // todo -fix
 
     if (!block_) {
       wlog("MUST CONNECT TO MEMPOOL IN ORDER TO RETRIEVE SOME BLOCKS"); // todo - remove once mempool is ready

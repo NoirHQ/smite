@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/codec/scale.h>
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
 #include <noir/common/types.h>
@@ -114,14 +115,19 @@ struct part {
 };
 
 struct part_set {
-  uint32_t total;
-  bytes hash;
+  uint32_t total{};
+  bytes hash{};
 
   //  std::mutex mtx;
-  std::vector<std::shared_ptr<part>> parts;
-  std::shared_ptr<bit_array> parts_bit_array;
-  uint32_t count;
-  int64_t byte_size;
+  std::vector<std::shared_ptr<part>> parts{};
+  std::shared_ptr<bit_array> parts_bit_array{};
+  uint32_t count{};
+  int64_t byte_size{};
+
+  part_set() = default;
+  part_set(const part_set& p)
+    : total(p.total), hash(p.hash), parts(p.parts), parts_bit_array(p.parts_bit_array), count(p.count),
+      byte_size(p.byte_size) {}
 
   static std::shared_ptr<part_set> new_part_set_from_header(const p2p::part_set_header& header) {
     std::vector<std::shared_ptr<part>> parts_;
@@ -147,7 +153,7 @@ struct part_set {
       auto last = data.begin() + (std::min((uint32_t)data.size(), (i + 1) * part_size)) - 1;
       auto part_ = std::make_shared<part>();
       part_->index = i;
-      std::copy(first, last, part_->bytes_.begin());
+      std::copy(first, last, std::back_inserter(part_->bytes_));
       parts[i] = part_;
       parts_bytes[i] = part_->bytes_;
       parts_bit_array->set_index(i, true);
@@ -299,10 +305,8 @@ struct block {
    */
   part_set make_part_set(uint32_t part_size) {
     std::lock_guard<std::mutex> g(mtx);
-    /// implement new_part_set_from_data()
-    // todo implement
-    /// new_part_set_from_data() ends
-    return part_set{};
+    auto bz = codec::scale::encode(*this);
+    return *part_set::new_part_set_from_data(bz, part_size);
   }
 
   bytes get_hash() {
@@ -311,7 +315,7 @@ struct block {
     return header.get_hash();
   }
 
-  bool hashes_to(bytes hash) {
+  bool hashes_to(bytes& hash) {
     if (hash.empty())
       return false;
     return get_hash() == hash;
@@ -338,17 +342,12 @@ using block_ptr = std::shared_ptr<block>;
 
 } // namespace noir::consensus
 
-NOIR_FOR_EACH_FIELD(
-  noir::consensus::commit_sig, /* TODO: flag, */ validator_address, timestamp, signature, vote_extension)
+NOIR_FOR_EACH_FIELD(noir::consensus::commit_sig, flag, validator_address, timestamp, signature, vote_extension)
 NOIR_FOR_EACH_FIELD(noir::consensus::part, index, bytes_, proof)
-NOIR_FOR_EACH_FIELD(noir::consensus::part_set, total, hash, parts, count, byte_size)
+// NOIR_FOR_EACH_FIELD(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_data, txs, hash)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash,
   consensus_hash, app_hash, last_results_hash, proposer_address, hash_)
-
-// todo - remove these as they are not foreachable
-// NOIR_FOR_EACH_FIELD(noir::consensus::commit, height, round, my_block_id, signatures, hash)
-// NOIR_FOR_EACH_FIELD(noir::consensus::block, header, data, last_commit)
 
 template<>
 struct noir::is_foreachable<noir::consensus::commit> : std::false_type {};
