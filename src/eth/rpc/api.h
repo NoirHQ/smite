@@ -12,6 +12,9 @@ namespace eth::api {
 class api {
 public:
   fc::variant send_raw_tx(const fc::variant& req);
+  fc::variant chain_id(const fc::variant& req);
+  fc::variant net_version(const fc::variant& req);
+  fc::variant net_listening(const fc::variant& req);
 
   void set_tx_fee_cap(const uint256_t& tx_fee_cap) {
     this->tx_fee_cap = tx_fee_cap;

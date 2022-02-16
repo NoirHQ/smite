@@ -34,4 +34,21 @@ fc::variant api::send_raw_tx(const fc::variant& req) {
   return fc::variant(tx_hash);
 }
 
+fc::variant api::chain_id(const fc::variant& req) {
+  check(req.is_array() || req.is_null(), "invalid json request");
+  // TODO: chain id
+  return fc::variant("0xdeadbeef");
+}
+
+fc::variant api::net_version(const fc::variant& req) {
+  check(req.is_array() || req.is_null(), "invalid json request");
+  // TODO: net version
+  return fc::variant("3735928559");
+}
+
+fc::variant api::net_listening(const fc::variant& req) {
+  check(req.is_array() || req.is_null(), "invalid json request");
+  return fc::variant(true);
+}
+
 } // namespace eth::api
