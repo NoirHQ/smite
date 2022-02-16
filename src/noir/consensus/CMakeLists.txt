@@ -1,5 +1,6 @@
 target_sources(noir
   PRIVATE
+  block.cpp
   consensus_state.cpp
   wal.cpp)
 
