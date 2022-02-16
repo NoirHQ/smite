@@ -100,7 +100,8 @@ private:
 class wal_file_manager {
 public:
   wal_file_manager(const std::string& dir, size_t num_file, size_t rotate_size)
-    : dir_path_(dir), num_file_(num_file), rotate_size_(rotate_size), mtx_map_() {
+    : dir_path_(dir), num_file_(num_file), rotate_size_(rotate_size), mtx_map_(),
+      rotate_mtx_(std::make_unique<std::mutex>()) {
     auto ret = load_min_max_index();
     if (!ret) { // no previous wal file found
       min_index = 0;
@@ -124,6 +125,7 @@ public:
   /// \return shared_ptr of wal_encoder
   std::shared_ptr<wal_encoder> get_wal_encoder(int64_t index = -1) {
     if (index < 0 || index == current_index) {
+      std::lock_guard<std::mutex> rg(*rotate_mtx_);
       return encoder_;
     }
     if (mtx_map_[index] == nullptr) {
@@ -156,6 +158,7 @@ private:
   size_t num_file_; // TODO: configurable
   size_t rotate_size_;
   std::map<int64_t, std::shared_ptr<std::mutex>> mtx_map_;
+  std::unique_ptr<std::mutex> rotate_mtx_;
 
   static inline fc::path full_path(std::string dir_path, int index) {
     return {dir_path + "/" + std::string(file_name_prefix_) + std::to_string(index)};
@@ -171,11 +174,13 @@ private:
   }
 
   bool need_rotate() {
+    std::lock_guard<std::mutex> rg(*rotate_mtx_);
     std::lock_guard<std::mutex> g(*encoder_->mtx_);
     return encoder_->file_->tellp() >= rotate_size_; // TODO: handle exception
   }
 
   bool rotate() {
+    std::lock_guard<std::mutex> rg(*rotate_mtx_);
     std::lock_guard<std::mutex> g(*encoder_->mtx_);
     auto& file_ = encoder_->file_;
     auto new_index = max_index = max_index + 1;
@@ -183,7 +188,6 @@ private:
     try {
       file_->flush();
       file_->sync();
-      file_->close();
 
       if (new_index - min_index >= num_file_) {
         fc::remove(full_path(dir_path_, min_index));
@@ -204,6 +208,7 @@ private:
   }
 
   bool load_min_max_index() {
+    std::lock_guard<std::mutex> rg(*rotate_mtx_);
     for (auto it = fc::directory_iterator(dir_path_); it != fc::directory_iterator(); ++it) {
       if (fc::is_regular_file(*it)) {
         auto index_ = index_from_file_name(it->filename());

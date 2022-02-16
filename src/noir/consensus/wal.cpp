@@ -64,8 +64,13 @@ bool wal_encoder::encode(const timed_wal_message& msg, size_t& size) {
   std::lock_guard<std::mutex> g(*mtx_);
   auto is_closed = !file_->is_open();
   if (is_closed) {
-    dlog("wal file not opened");
-    file_->open(cfile::update_rw_mode);
+    wlog("wal file not opened");
+    try {
+      file_->open(cfile::update_rw_mode);
+    } catch (...) {
+      elog("wal file does not exist: ${path}", ("path", file_->get_file_path().string()));
+      return false; // TODO: handle error
+    }
   }
   auto defer = make_scoped_exit([&file_ = file_, is_closed]() {
     if (is_closed) {
