@@ -41,6 +41,9 @@ void rpc::plugin_startup() {
 
   auto& endpoint = app().get_plugin<noir::rpc::jsonrpc>().get_or_create_endpoint("/eth");
   endpoint.add_handler("eth_sendRawTransaction", [&](auto& req) { return api->send_raw_tx(req); });
+  endpoint.add_handler("eth_chainId", [&](auto& req) { return api->chain_id(req); });
+  endpoint.add_handler("net_version", [&](auto& req) { return api->net_version(req); });
+  endpoint.add_handler("net_listening", [&](auto& req) { return api->net_listening(req); });
 }
 
 void rpc::plugin_shutdown() {}
