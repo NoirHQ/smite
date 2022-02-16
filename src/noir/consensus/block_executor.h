@@ -20,29 +20,28 @@ namespace noir::consensus {
  */
 struct block_executor {
 
-  std::shared_ptr<db_store> store_;
+  std::shared_ptr<db_store> store_{};
 
-  std::shared_ptr<block_store> block_store_;
+  std::shared_ptr<block_store> block_store_{};
 
-  std::shared_ptr<app_connection> proxyApp_;
+  std::shared_ptr<app_connection> proxyApp_{};
 
-  // eventBus // todo - we may not need to handle events for tendermint but only for app?
-
-  // mempool // todo
-  tx_pool::tx_pool mempool;
+  std::shared_ptr<tx_pool::tx_pool> mempool{};
 
   // evidence tool // todo
+  // eventBus // todo - we may not need to handle events for tendermint but only for app?
 
   std::map<std::string, bool> cache; // storing verification result for a single height
 
   block_executor(std::shared_ptr<db_store> new_store, std::shared_ptr<app_connection> new_proxyApp,
-    /* mempool */ std::shared_ptr<block_store> new_block_store)
-    : store_(new_store), proxyApp_(new_proxyApp), block_store_(new_block_store) {}
+    std::shared_ptr<tx_pool::tx_pool> new_mempool, std::shared_ptr<block_store> new_block_store)
+    : store_(std::move(new_store)), proxyApp_(std::move(new_proxyApp)), mempool(std::move(new_mempool)),
+      block_store_(std::move(new_block_store)) {}
 
-  static std::shared_ptr<block_executor> new_block_executor(std::shared_ptr<db_store> new_store,
-    std::shared_ptr<app_connection> new_proxyApp,
-    /* mempool */ std::shared_ptr<block_store> new_block_store) {
-    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_block_store);
+  static std::shared_ptr<block_executor> new_block_executor(const std::shared_ptr<db_store>& new_store,
+    const std::shared_ptr<app_connection>& new_proxyApp, const std::shared_ptr<tx_pool::tx_pool>& new_mempool,
+    const std::shared_ptr<block_store>& new_block_store) {
+    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_mempool, new_block_store);
     return res;
   }
 
@@ -60,7 +59,7 @@ struct block_executor {
       throw std::runtime_error(fmt::format(
         "negative max_data_bytes: max_bytes={} is too small to accommodate header and last_commit", max_bytes));
 
-    auto wrapped_txs = mempool.reap_max_bytes_max_gas(max_data_bytes, max_gas);
+    auto wrapped_txs = mempool->reap_max_bytes_max_gas(max_data_bytes, max_gas);
     // Convert to list of bytes
     std::vector<bytes> txs;
     for (auto w_tx : wrapped_txs) {
@@ -146,7 +145,7 @@ struct block_executor {
 
     // Update mempool
     consensus::wrapped_tx_ptrs block_txs; // todo - convert from block_.data.txs to wrapped_tx
-    mempool.update(block_->header.height, block_txs, abci_responses_->deliver_txs);
+    mempool->update(block_->header.height, block_txs, abci_responses_->deliver_txs);
 
     bytes app_hash = commit_res.data;
     int64_t retain_height = commit_res.retain_height;
