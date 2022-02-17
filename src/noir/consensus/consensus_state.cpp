@@ -127,7 +127,34 @@ void consensus_state::update_priv_validator_pub_key() {
 }
 
 void consensus_state::reconstruct_last_commit(state& state_) {
-  // todo
+  commit commit_;
+  auto ret = block_store_->load_seen_commit(commit_);
+  if (!ret || commit_.height != state_.last_block_height) {
+    check(block_store_->load_block_commit(state_.last_block_height, commit_),
+      fmt::format("failed to reconstruct last commit; commit for height {} not found", state_.last_block_height));
+  }
+
+  auto last_precommit = commit_to_vote_set(state_.chain_id, commit_, state_.last_validators);
+  check(last_precommit->has_two_thirds_majority(), "failed to reconstruct last commit; does not have +2/3 maj");
+  rs.last_commit = std::move(last_precommit);
+}
+
+std::shared_ptr<commit> consensus_state::load_commit(int64_t height) {
+  std::lock_guard<std::mutex> g(mtx);
+  auto ret = std::make_shared<commit>();
+  if (height == block_store_->height()) {
+    if (block_store_->load_seen_commit(*ret)) {
+      // NOTE: Retrieving the height of the most recent block and retrieving
+      // the most recent commit does not currently occur as an atomic
+      // operation. We check the height and commit here in case a more recent
+      // commit has arrived since retrieving the latest height.
+      if (ret->height == height) {
+        return std::move(ret);
+      }
+    }
+  }
+  check(block_store_->load_block_commit(height, *ret), "failed to load commit");
+  return std::move(ret);
 }
 
 void consensus_state::on_start() {
@@ -386,6 +413,16 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
 
   // wait for tx? // todo?
   enter_propose(height, round);
+}
+
+bool consensus_state::need_proof_block(int64_t height) {
+  if (height == local_state.initial_height) {
+    return true;
+  }
+  block_meta bm;
+  check(block_store_->load_block_meta(height - 1, bm),
+    fmt::format("needProofBlock: last block meta for height {} not found", height - 1));
+  return local_state.app_hash == bm.header.app_hash;
 }
 
 void consensus_state::enter_propose(int64_t height, int32_t round) {
@@ -796,11 +833,11 @@ void consensus_state::finalize_commit(int64_t height) {
   ilog(fmt::format("finalizing commit of block: hash={}", to_hex(block_id_->hash)));
   dlog(fmt::format("block: hash={}", to_hex(block_->get_hash())));
 
-  // Save to block_store // todo
-  if (true) { // todo
+  // Save to block_store
+  if (block_store_->height() < block_->header.height) {
     auto precommits = rs.votes->precommits(rs.commit_round);
     auto seen_commit = precommits->make_commit();
-    // cs.blockStore.SaveBlock(block, blockParts, seenCommit) // todo
+    block_store_->save_block(*block_, *block_parts_, seen_commit);
   } else {
     dlog("calling finalizeCommit on already stored block");
   }

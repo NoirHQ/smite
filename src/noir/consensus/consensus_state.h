@@ -34,6 +34,10 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void update_priv_validator_pub_key();
   void reconstruct_last_commit(state& state_);
 
+  /// \brief LoadCommit loads the commit for a given height.
+  /// \param[in] height
+  /// \return shared_ptr of commit
+  std::shared_ptr<commit> load_commit(int64_t height);
   void on_start();
 
   void update_height(int64_t height);
@@ -52,6 +56,12 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void handle_timeout(timeout_info_ptr ti);
 
   void enter_new_round(int64_t height, int32_t round);
+
+  /// \brief needProofBlock returns true on the first height (so the genesis app hash is signed right away) and where
+  /// the last block (height-1) caused the app hash to change
+  /// \param[in] height
+  /// \return true if proof block is needed, false otherwise
+  bool need_proof_block(int64_t height);
 
   void enter_propose(int64_t height, int32_t round);
   bool is_proposal_complete();
