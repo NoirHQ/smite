@@ -219,13 +219,12 @@ struct block_executor {
       return {};
     }
 
-    // todo - uncomment prune below - right now it throws
     // Prune old height
-    // if (retain_height > 0) {
-    //  auto pruned = prune_blocks(retain_height);
-    //  if (pruned > 0)
-    //    dlog(fmt::format("pruned blocks: pruned={} retain_height={}", pruned, retain_height));
-    //}
+    if (retain_height > 0) {
+      auto pruned = prune_blocks(retain_height);
+      if (pruned > 0)
+        dlog(fmt::format("pruned blocks: pruned={} retain_height={}", pruned, retain_height));
+    }
 
     // Reset verficiation cache
     cache.clear();
