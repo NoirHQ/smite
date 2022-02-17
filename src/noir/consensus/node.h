@@ -13,9 +13,20 @@
 
 namespace noir::consensus {
 
-class node : boost::noncopyable {
-public:
-  node();
+struct node {
+
+  std::shared_ptr<config> config_{};
+  std::shared_ptr<genesis_doc> genesis_doc_{};
+  priv_validator priv_validator_{};
+
+  node_key node_key_{};
+  bool is_listening{};
+
+  std::shared_ptr<db_store> store_{};
+  std::shared_ptr<block_store> block_store_{};
+  bool state_sync_on{};
+
+  std::shared_ptr<consensus_reactor> cs_reactor{};
 
   static std::unique_ptr<node> new_default_node() {
     // Load or generate priv - todo
@@ -25,32 +36,37 @@ public:
     // Load or generate node_key - todo
     auto node_key_ = node_key::gen_node_key();
 
-    make_node(local_validator_, node_key_);
+    //    make_node(local_validator_, node_key_);
   }
 
-  static std::unique_ptr<node> make_node(priv_validator local_validator_, node_key node_key_) {
-    auto node_ = std::make_unique<node>();
+  static std::unique_ptr<node> make_node(const std::shared_ptr<config>& new_config,
+    const priv_validator& new_priv_validator, const node_key& new_node_key,
+    const std::shared_ptr<genesis_doc>& new_genesis_doc) {
 
-    node_->local_validator = local_validator_;
-    node_->local_node_key = node_key_;
+    auto session = std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false));
+    auto dbs = std::make_shared<noir::consensus::db_store>(session);
+    auto proxyApp = std::make_shared<app_connection>();
+    auto mempool = std::make_shared<tx_pool::tx_pool>();
+    auto bls = std::make_shared<noir::consensus::block_store>(session);
+    auto block_exec = block_executor::new_block_executor(dbs, proxyApp, mempool, bls);
 
-    node_->local_config = config::get_default();
-    // Check config.Mode == cfg.ModeValidator
-
-    // Determine whether we should attempt state sync.
-
-    // Reload the state. It will have the Version.Consensus.App set by the
-    // Handshake, and may have other modifications as well (ie. depending on
-    // what happened during block replay).
     state state_ = load_state_from_db_or_genesis(); // todo - properly load state
 
-    node_->log_node_startup_info(node_->local_node_key.get_pub_key(), "ModeValidator");
+    auto cs = consensus_state::new_state(new_config->consensus, state_, block_exec, bls);
 
-    // Create mempool // todo - here? or somewhere?
+    auto new_cs_reactor = consensus_reactor::new_consensus_reactor(cs, false);
 
-    // Create consensus_reactor
-    // node_->cs_reactor = consensus_reactor::new_consensus_reactor(node_->local_config, state_);
+    // node_->local_config = config::get_default();
+    // Check config.Mode == cfg.ModeValidator
 
+    auto node_ = std::make_unique<node>();
+    node_->config_ = new_config;
+    node_->genesis_doc_ = new_genesis_doc;
+    node_->priv_validator_ = new_priv_validator;
+    node_->node_key_ = new_node_key;
+    node_->store_ = dbs;
+    node_->block_store_ = bls;
+    node_->cs_reactor = new_cs_reactor;
     return node_;
   }
 
@@ -84,48 +100,6 @@ public:
     }
     return state_;
   }
-
-private:
-  // config
-  //  config        *cfg.Config
-  config local_config;
-
-  //  genesisDoc    *types.GenesisDoc   // initial validator set
-
-  //  privValidator types.PrivValidator // local node's validator key
-  priv_validator local_validator;
-
-  // network
-  //  transport   *p2p.MConnTransport
-  //  sw          *p2p.Switch // p2p connections
-  //  peerManager *p2p.PeerManager
-  //  router      *p2p.Router
-  //  addrBook    pex.AddrBook // known peers
-  //  nodeInfo    types.NodeInfo
-
-  //  nodeKey     types.NodeKey // our node privkey
-  node_key local_node_key;
-
-  //  isListening bool
-
-  // services
-  //  eventBus         *types.EventBus // pub/sub for services
-  //  stateStore       sm.Store
-  //  blockStore       *store.BlockStore // store the blockchain to disk
-  //  bcReactor        service.Service   // for block-syncing
-  //  mempoolReactor   service.Service   // for gossipping transactions
-  //  mempool          mempool.Mempool
-  //  stateSync        bool               // whether the node should state sync on startup
-  //  stateSyncReactor *statesync.Reactor // for hosting and restoring state sync snapshots
-
-  //  consensusReactor *cs.Reactor        // for participating in the consensus
-  std::unique_ptr<consensus_reactor> cs_reactor;
-
-  //  pexReactor       service.Service    // for exchanging peer addresses
-  //  evidenceReactor  service.Service
-  //  rpcListeners     []net.Listener // rpc servers
-  //  indexerService   service.Service
-  //  rpcEnv           *rpccore.Environment
 };
 
 } // namespace noir::consensus
