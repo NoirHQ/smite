@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/check.h>
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
 #include <noir/common/types.h>
@@ -11,6 +12,7 @@
 #include <noir/consensus/tx.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
+#include <fmt/format.h>
 
 #include <fc/crypto/rand.hpp>
 #include <utility>
@@ -50,6 +52,21 @@ struct commit_sig {
   bool absent() {
     return flag == FlagAbsent;
   }
+
+  p2p::block_id get_block_id(p2p::block_id commit_block_id) {
+    switch (flag) {
+    case block_id_flag::FlagCommit: {
+      return p2p::block_id{};
+    }
+    case block_id_flag::FlagAbsent:
+    case block_id_flag::FlagNil: {
+      return commit_block_id;
+    }
+    default: {
+      check(false, fmt::format("Unknown BlockIDFlag: {}", flag));
+    }
+    }
+  }
 };
 
 struct commit {
@@ -78,6 +95,12 @@ struct commit {
     }
     return hash;
   }
+
+  /// \brief GetVote converts the CommitSig for the given valIdx to a Vote. Returns nil if the precommit at valIdx is
+  /// nil. Panics if valIdx >= commit.Size().
+  /// \param[in] val_idx
+  /// \return shared_ptr of vote
+  std::shared_ptr<struct vote> get_vote(int32_t val_idx);
 
   std::shared_ptr<bit_array> get_bit_array() {
     if (bit_array_ == nullptr) {
@@ -363,6 +386,15 @@ struct block {
     return ds;
   }
 };
+
+/// \brief  CommitToVoteSet constructs a VoteSet from the Commit and validator set. Panics if signatures from the commit
+/// can't be added to the voteset. Inverse of VoteSet.MakeCommit().
+/// \param[in] chain_id
+/// \param[in] commit_
+/// \param[in] val_set
+/// \return shared_ptr of vote_set
+std::shared_ptr<struct vote_set> commit_to_vote_set(
+  std::string& chain_id, commit& commit_, struct validator_set& val_set); // FIXME: add const keyword
 
 using block_ptr = std::shared_ptr<block>;
 
