@@ -53,10 +53,10 @@ struct commit_sig {
 };
 
 struct commit {
-  int64_t height;
-  int32_t round;
-  p2p::block_id my_block_id;
-  std::vector<commit_sig> signatures;
+  int64_t height{};
+  int32_t round{};
+  p2p::block_id my_block_id{};
+  std::vector<commit_sig> signatures{};
 
   bytes hash; // NOTE: not to be serialized
   std::shared_ptr<bit_array> bit_array_{}; // NOTE: not to be serialized
@@ -268,6 +268,21 @@ struct block_header {
     last_results_hash = last_results_hash_;
     proposer_address = proposer_address_;
   }
+
+  std::optional<std::string> validate_basic() {
+    if (chain_id.length() > 50)
+      return "chain_id is too long";
+    if (height < 0)
+      return "negative height";
+    else if (height == 0)
+      return "zero height";
+    // last_block_id->validate_basic();
+    // validate_hash(last_commit_hash);
+    // validate_hash(data_hash);
+    // validate_hash(evidence_hash);
+    // todo - add more
+    return {};
+  }
 };
 
 struct block {
@@ -282,6 +297,22 @@ struct block {
   block(block_header header_, block_data data_, commit last_commit_)
     : header(std::move(header_)), data(std::move(data_)), last_commit(std::move(last_commit_)) {}
   block(const block& b): header(b.header), data(b.data), last_commit(b.last_commit) {}
+
+  std::optional<std::string> validate_basic() {
+    std::lock_guard<std::mutex> g(mtx);
+
+    if (auto err = header.validate_basic(); err.has_value())
+      return "invalid header: " + err.value();
+
+    // Validate last commit
+    // if (last_commit.height == 0)
+    //   return "unknown last_commit";
+
+    // if (last_commit.get_hash() != header.last_commit_hash)
+    //  return "wrong last_commit_hash";
+
+    return {};
+  }
 
   void fill_header() {
     if (header.last_commit_hash.empty())
