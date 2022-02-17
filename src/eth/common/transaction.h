@@ -27,4 +27,10 @@ struct transaction {
 
 using transaction_p = std::shared_ptr<transaction>;
 
+struct rpc_transaction : public transaction {
+  bytes32 block_hash;
+  uint256_t block_number;
+  uint64_t transaction_index;
+};
+
 } // namespace eth
