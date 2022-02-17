@@ -242,7 +242,7 @@ TEST_CASE("basic_wal test", "[basic_wal]") {
       std::move(temp_dir), std::move(wal_));
   }(enc_size);
   auto tmp_path = temp_dir->path().string();
-  auto defer = noir::make_scoped_exit([&wal_ = wal_]() { wal_->on_stop(); });
+  auto defer = noir::make_scope_exit([&wal_ = wal_]() { wal_->on_stop(); });
 
   SECTION("WAL write") {
     noir::p2p::block_part_message bp_msg{

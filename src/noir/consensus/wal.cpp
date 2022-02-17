@@ -67,7 +67,7 @@ bool wal_encoder::encode(const timed_wal_message& msg, size_t& size) {
       return false; // TODO: handle error
     }
   }
-  auto defer = make_scoped_exit([&file_ = file_, is_closed]() {
+  auto defer = make_scope_exit([&file_ = file_, is_closed]() {
     if (is_closed) {
       file_->close();
     }

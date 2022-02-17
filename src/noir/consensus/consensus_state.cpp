@@ -547,7 +547,7 @@ void consensus_state::enter_propose(int64_t height, int32_t round) {
   }
   dlog(fmt::format("entering propose step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
-  auto defer = make_scoped_exit([this, height, round]() {
+  auto defer = make_scope_exit([this, height, round]() {
     update_round_step(round, round_step_type::Propose);
     new_step();
     if (is_proposal_complete())
@@ -684,7 +684,7 @@ void consensus_state::enter_prevote(int64_t height, int32_t round) {
   }
   dlog(fmt::format("entering prevote step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
-  auto defer = make_scoped_exit([this, height, round]() {
+  auto defer = make_scope_exit([this, height, round]() {
     update_round_step(round, round_step_type::Prevote);
     new_step();
   });
@@ -732,7 +732,7 @@ void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
 
   dlog(fmt::format("entering prevote_wait step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
-  auto defer = make_scoped_exit([this, height, round]() {
+  auto defer = make_scope_exit([this, height, round]() {
     update_round_step(round, round_step_type::PrevoteWait);
     new_step();
   });
@@ -755,7 +755,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
   }
   dlog(fmt::format("entering precommit step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
-  auto defer = make_scoped_exit([this, height, round]() {
+  auto defer = make_scope_exit([this, height, round]() {
     update_round_step(round, round_step_type::Precommit);
     new_step();
   });
@@ -855,7 +855,7 @@ void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {
 
   dlog(fmt::format("entering precommit_wait step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
-  auto defer = make_scoped_exit([this, height, round]() {
+  auto defer = make_scope_exit([this, height, round]() {
     rs.triggered_timeout_precommit = true;
     new_step();
   });
@@ -872,7 +872,7 @@ void consensus_state::enter_commit(int64_t height, int32_t round) {
   }
   dlog(fmt::format("entering commit step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
-  auto defer = make_scoped_exit([this, height, round]() {
+  auto defer = make_scope_exit([this, height, round]() {
     update_round_step(round, round_step_type::Commit);
     rs.commit_round = round;
     rs.commit_time = get_time();
