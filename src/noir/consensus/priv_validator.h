@@ -18,15 +18,15 @@ enum priv_validator_type {
 };
 
 struct priv_validator {
-  pub_key pub_key_;
-  priv_validator_type type;
+  pub_key pub_key_{};
+  priv_validator_type type{};
 
-  pub_key get_pub_key() {
+  pub_key get_pub_key() const {
     return pub_key_;
   }
 
-  void sign_vote();
-  void sign_proposal();
+  void sign_vote() {}
+  void sign_proposal() {}
 };
 
 } // namespace noir::consensus
