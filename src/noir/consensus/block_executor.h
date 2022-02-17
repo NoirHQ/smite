@@ -46,7 +46,7 @@ struct block_executor {
   }
 
   std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> create_proposal_block(
-    int64_t height, state& state_, commit& commit_, bytes proposer_addr, std::vector<vote>& votes) {
+    int64_t height, state& state_, commit& commit_, bytes& proposer_addr, std::vector<vote>& votes) {
     auto max_bytes = state_.consensus_params_.block.max_bytes;
     auto max_gas = state_.consensus_params_.block.max_gas;
 
@@ -77,8 +77,7 @@ struct block_executor {
 
     auto modified_txs = prepared_proposal.block_data;
 
-    auto [block_tmp, block_parts_tmp] = state_.make_block(height, modified_txs, commit_, proposer_addr); // todo - fix
-    return {std::make_shared<block>(block_tmp), std::make_shared<part_set>(block_parts_tmp)}; // todo - fix
+    return state_.make_block(height, modified_txs, commit_, proposer_addr);
   }
 
   bool validate_block(state& state_, std::shared_ptr<block> block_) {
@@ -332,5 +331,3 @@ struct block_executor {
 };
 
 } // namespace noir::consensus
-
-NOIR_FOR_EACH_FIELD(noir::consensus::block_executor, store_, block_store_, proxyApp_, cache);

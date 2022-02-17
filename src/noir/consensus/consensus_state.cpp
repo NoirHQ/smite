@@ -297,11 +297,10 @@ void consensus_state::tick(timeout_info_ptr ti) {
   timeout_ticker_timer->expires_from_now(ti->duration_);
   timeout_ticker_timer->async_wait([this, ti](boost::system::error_code ec) {
     if (ec) {
-      wlog("consensus_state timeout error: ${m}", ("m", ec.message()));
-      // return; // by commenting this line out, we'll process the last tock
+      // wlog("consensus_state timeout error: ${m}", ("m", ec.message()));
     }
-    // timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock
-    tock(ti); // directly call (temporary workaround) // todo - use channel instead
+    timeout_ticker_channel.publish(appbase::priority::medium, ti); // -> tock : option1 - use channel
+    // tock(ti); // -> tock : option2 - directly call
   });
 }
 
@@ -484,10 +483,8 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     }
     auto proposer_addr = local_priv_validator_pub_key.address();
 
-    auto [block_tmp, block_parts_tmp] =
+    std::tie(block_, block_parts_) =
       block_exec->create_proposal_block(rs.height, local_state, commit_, proposer_addr, votes_);
-    block_ = block_tmp; // todo - fix
-    block_parts_ = block_parts_tmp; // todo -fix
 
     if (!block_) {
       wlog("MUST CONNECT TO MEMPOOL IN ORDER TO RETRIEVE SOME BLOCKS"); // todo - remove once mempool is ready

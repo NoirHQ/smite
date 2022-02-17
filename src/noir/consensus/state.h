@@ -39,7 +39,7 @@ struct state {
 
   bytes app_hash;
 
-  std::tuple<block, part_set> make_block(
+  std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> make_block(
     int64_t height, std::vector<bytes> txs, commit commit_, /* evidence, */ bytes proposal_address) {
     // Build base block
     auto block_ = block::make_block(height, txs, commit_);
@@ -53,11 +53,11 @@ struct state {
     }
 
     // Fill rest of header
-    block_.header.populate(version, chain_id, timestamp, last_block_id, validators.get_hash(),
+    block_->header.populate(version, chain_id, timestamp, last_block_id, validators.get_hash(),
       next_validators.get_hash(), consensus_params_.hash_consensus_params(), app_hash, last_result_hash,
       proposal_address);
 
-    return {block_, block_.make_part_set(block_part_size_bytes)};
+    return {block_, block_->make_part_set(block_part_size_bytes)};
   }
 
   p2p::tstamp get_median_time(commit& commit_, validator_set& validators) {
