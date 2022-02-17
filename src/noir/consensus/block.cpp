@@ -10,10 +10,10 @@
 
 namespace noir::consensus {
 
-part_set block::make_part_set(uint32_t part_size) {
+std::shared_ptr<part_set> block::make_part_set(uint32_t part_size) {
   std::lock_guard<std::mutex> g(mtx);
   auto bz = codec::scale::encode(*this);
-  return *part_set::new_part_set_from_data(bz, part_size);
+  return part_set::new_part_set_from_data(bz, part_size);
 }
 
 } // namespace noir::consensus

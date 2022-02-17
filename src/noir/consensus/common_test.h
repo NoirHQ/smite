@@ -119,8 +119,8 @@ inline std::shared_ptr<noir::consensus::block> make_block(
   auto txs = make_txs(st.last_block_height, 10);
   auto [block_, part_set_] = const_cast<noir::consensus::state&>(st).make_block(height, txs, commit_, /* {}, */ {});
   // TODO: temparary workaround to set block
-  block_.header.height = height;
-  return std::make_shared<block>(block_);
+  block_->header.height = height;
+  return block_;
 }
 
 inline std::shared_ptr<noir::consensus::part_set> make_part_set(const noir::consensus::block& bl, uint32_t part_size) {

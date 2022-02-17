@@ -292,9 +292,9 @@ struct block {
     //   header.evidence_hash =
   }
 
-  static block make_block(int64_t height, std::vector<tx>& txs, commit& last_commit /*, evidence */) {
-    auto block_ = block{block_header{"", "", height}, block_data{txs}, last_commit};
-    block_.fill_header();
+  static std::shared_ptr<block> make_block(int64_t height, std::vector<tx>& txs, commit& last_commit /*, evidence */) {
+    auto block_ = std::make_shared<block>(block{block_header{"", "", height}, block_data{txs}, last_commit});
+    block_->fill_header();
     return block_;
   }
 
@@ -302,7 +302,7 @@ struct block {
    * returns a part_set containing parts of a serialized block.
    * This is the form in which a block is gossipped to peers.
    */
-  part_set make_part_set(uint32_t part_size);
+  std::shared_ptr<part_set> make_part_set(uint32_t part_size);
 
   bytes get_hash() {
     std::lock_guard<std::mutex> g(mtx);
