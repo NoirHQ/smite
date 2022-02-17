@@ -9,8 +9,10 @@
 #include <noir/db/rocks_session.h>
 #include <noir/db/session.h>
 
-inline std::shared_ptr<rocksdb::DB> make_rocks_db(const std::string& name = "/tmp/testdb") {
-  rocksdb::DestroyDB(name.c_str(), rocksdb::Options{});
+inline std::shared_ptr<rocksdb::DB> make_rocks_db(bool destroy = true, const std::string& name = "/tmp/testdb") {
+  if (destroy) {
+    rocksdb::DestroyDB(name.c_str(), rocksdb::Options{});
+  }
 
   rocksdb::DB* cache_ptr{nullptr};
   auto cache = std::shared_ptr<rocksdb::DB>{};
@@ -27,8 +29,9 @@ inline std::shared_ptr<rocksdb::DB> make_rocks_db(const std::string& name = "/tm
   return cache;
 }
 
-inline noir::db::session::session<noir::db::session::rocksdb_t> make_session(const std::string& name = "/tmp/testdb") {
-  auto rocksdb = make_rocks_db(name);
+inline noir::db::session::session<noir::db::session::rocksdb_t> make_session(
+  bool destroy = true, const std::string& name = "/tmp/testdb") {
+  auto rocksdb = make_rocks_db(destroy, name);
   return noir::db::session::make_session(std::move(rocksdb), 16);
 }
 
