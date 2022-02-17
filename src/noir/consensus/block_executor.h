@@ -85,8 +85,70 @@ struct block_executor {
     if (cache.find(to_hex(hash)) != cache.end())
       return true;
 
-    // validate block
-    // todo - implement; it's very big (state/validation.go)
+    /// Validate block
+    if (auto err = block_->validate_basic(); err.has_value()) {
+      elog(fmt::format("invalid header: {}", err.value()));
+      return false;
+    }
+
+    /// todo - activate all of the following validations
+    // Check basic info
+    // if (block_->version != state_.version) {
+    //  elog("wrong block_header_version");
+    //  return false;
+    // }
+    if (state_.last_block_height == 0 && block_->header.height != state_.initial_height) {
+      elog("wrong block_header_height");
+      return false;
+    }
+    if (state_.last_block_height > 0 && block_->header.height != state_.last_block_height + 1) {
+      elog("wrong block_header_height");
+      return false;
+    }
+
+    // if (block_->header.last_block_id != state_.last_block_id) {
+    //   elog("wrong block_header_last_block_id");
+    //   return false;
+    // }
+
+    // Check app info
+    if (block_->header.app_hash != state_.app_hash) {
+      elog("wrong block_header_app_hash");
+      return false;
+    }
+    auto hash_cp = state_.consensus_params_.hash_consensus_params();
+    if (block_->header.consensus_hash != hash_cp) {
+      elog("wrong block_header_consensus_hash");
+      return false;
+    }
+    if (block_->header.last_results_hash != state_.last_result_hash) {
+      elog("wrong block_header_last_results_hash");
+      return false;
+    }
+    // todo - more
+
+    // Check block time
+    if (block_->header.height > state_.initial_height) {
+      if (block_->header.time > state_.last_block_time) {
+        elog("block time is not greater than last block time");
+        return false;
+      }
+      // auto median_time = get_median_time(block_->last_commit, state_.last_validators);
+      // if (block_->header.time != median_time) {
+      //   elog("invalid block time");
+      //   return false;
+      // }
+    } else if (block_->header.height == state_.initial_height) {
+      auto genesis_time = state_.last_block_time;
+      // if (block_->header.time != genesis_time) {
+      //   elog("block time is not equal to genesis time");
+      //   return false;
+      // }
+    } else {
+      elog("block height is lower than initial height");
+      return false;
+    }
+    /// End of validate block
 
     // check evidence // todo
 
