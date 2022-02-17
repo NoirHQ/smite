@@ -46,6 +46,14 @@ void rpc::plugin_startup() {
   endpoint.add_handler("net_listening", [&](auto& req) { return api->net_listening(req); });
   endpoint.add_handler("eth_getBalance", [&](auto& req) { return api->get_balance(req); });
   endpoint.add_handler("eth_getTransactionCount", [&](auto& req) { return api->get_tx_count(req); });
+  endpoint.add_handler("eth_blockNumber", [&](auto& req) { return api->block_number(req); });
+  endpoint.add_handler("eth_gasPrice", [&](auto& req) { return api->gas_price(req); });
+  endpoint.add_handler("eth_estimateGas", [&](auto& req) { return api->estimate_gas(req); });
+  endpoint.add_handler("eth_getTransactionByHash", [&](auto& req) { return api->get_tx_by_hash(req); });
+  endpoint.add_handler("eth_getBlockByNumber", [&](auto& req) { return api->get_block_by_number(req); });
+  endpoint.add_handler("eth_getBlockByHash", [&](auto& req) { return api->get_block_by_hash(req); });
+  endpoint.add_handler("eth_getTransactionReceipt", [&](auto& req) { return api->get_tx_receipt(req); });
+  endpoint.add_handler("eth_call", [&](auto& req) { return api->call(req); });
 }
 
 void rpc::plugin_shutdown() {}

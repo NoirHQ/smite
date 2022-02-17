@@ -6,7 +6,8 @@
 #include <noir/codec/rlp.h>
 #include <noir/common/check.h>
 #include <noir/common/hex.h>
-#include <eth/common/transaction.h>
+#include <eth/common/block.h>
+#include <eth/common/receipt.h>
 #include <eth/rpc/api.h>
 
 namespace eth::api {
@@ -60,6 +61,58 @@ fc::variant api::get_balance(const fc::variant& req) {
 fc::variant api::get_tx_count(const fc::variant& req) {
   check(req.is_array(), "invalid json request");
   // TODO: get tx count
+  return fc::variant("0x0");
+}
+
+fc::variant api::block_number(const fc::variant& req) {
+  check(req.is_array() || req.is_null(), "invalid json request");
+  // TODO: block number
+  return fc::variant("0x0");
+}
+
+fc::variant api::gas_price(const fc::variant& req) {
+  check(req.is_array() || req.is_null(), "invalid json request");
+  // TODO: gas price
+  return fc::variant("0x0");
+}
+
+fc::variant api::estimate_gas(const fc::variant& req) {
+  check(req.is_array(), "invalid json request");
+  // TODO: estimate gas
+  return fc::variant("0x5208");
+}
+
+fc::variant api::get_tx_by_hash(const fc::variant& req) {
+  check(req.is_array(), "invalid json request");
+  // TODO: get tx by hash
+  rpc_transaction t;
+  return fc::variant("");
+}
+
+fc::variant api::get_block_by_number(const fc::variant& req) {
+  check(req.is_array(), "invalid json request");
+  // TODO: get block by number
+  block b;
+  return fc::variant("");
+}
+
+fc::variant api::get_block_by_hash(const fc::variant& req) {
+  check(req.is_array(), "invalid json request");
+  // TODO: get block by hash
+  block b;
+  return fc::variant("");
+}
+
+fc::variant api::get_tx_receipt(const fc::variant& req) {
+  check(req.is_array(), "invalid json request");
+  // TODO: get tx receipt
+  receipt r;
+  return fc::variant("");
+}
+
+fc::variant api::call(const fc::variant& req) {
+  check(req.is_array(), "invalid json request");
+  // TODO: call
   return fc::variant("0x0");
 }
 

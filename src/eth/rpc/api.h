@@ -17,6 +17,14 @@ public:
   fc::variant net_listening(const fc::variant& req);
   fc::variant get_balance(const fc::variant& req);
   fc::variant get_tx_count(const fc::variant& req);
+  fc::variant block_number(const fc::variant& req);
+  fc::variant gas_price(const fc::variant& req);
+  fc::variant estimate_gas(const fc::variant& req);
+  fc::variant get_tx_by_hash(const fc::variant& req);
+  fc::variant get_block_by_number(const fc::variant& req);
+  fc::variant get_block_by_hash(const fc::variant& req);
+  fc::variant get_tx_receipt(const fc::variant& req);
+  fc::variant call(const fc::variant& req);
 
   void set_tx_fee_cap(const uint256_t& tx_fee_cap) {
     this->tx_fee_cap = tx_fee_cap;
