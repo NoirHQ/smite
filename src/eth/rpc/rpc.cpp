@@ -44,6 +44,8 @@ void rpc::plugin_startup() {
   endpoint.add_handler("eth_chainId", [&](auto& req) { return api->chain_id(req); });
   endpoint.add_handler("net_version", [&](auto& req) { return api->net_version(req); });
   endpoint.add_handler("net_listening", [&](auto& req) { return api->net_listening(req); });
+  endpoint.add_handler("eth_getBalance", [&](auto& req) { return api->get_balance(req); });
+  endpoint.add_handler("eth_getTransactionCount", [&](auto& req) { return api->get_tx_count(req); });
 }
 
 void rpc::plugin_shutdown() {}

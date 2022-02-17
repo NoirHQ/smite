@@ -51,4 +51,16 @@ fc::variant api::net_listening(const fc::variant& req) {
   return fc::variant(true);
 }
 
+fc::variant api::get_balance(const fc::variant& req) {
+  check(req.is_array(), "invalid json request");
+  // TODO: get balance
+  return fc::variant("0x0");
+}
+
+fc::variant api::get_tx_count(const fc::variant& req) {
+  check(req.is_array(), "invalid json request");
+  // TODO: get tx count
+  return fc::variant("0x0");
+}
+
 } // namespace eth::api
