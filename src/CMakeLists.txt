@@ -18,6 +18,7 @@ target_link_libraries(noir
   fixed_string
   fmt
   rocksdb
+  scope-lite
   softfloat
   websocketpp
   XKCP

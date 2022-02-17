@@ -87,7 +87,7 @@ TEST_CASE("catchup_replay", "[consensus_state_wal]") {
   });
 
   auto [temp_dir, cs] = prepare_consensus(1);
-  auto defer = noir::make_scoped_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
+  auto defer = noir::make_scope_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
   auto& wal_ = cs->wal_;
 
   std::for_each(tests.begin(), tests.end(), [&, &cs = cs](const test_case& t) {
@@ -127,7 +127,7 @@ TEST_CASE("repair_wal_file", "[consensus_state_wal]") {
 
   auto [temp_dir, cs] = prepare_consensus(1);
   auto wal_path = fs::path{(temp_dir->path() / cs->cs_config.wal_path / cs->wal_head_name).string()};
-  auto defer = noir::make_scoped_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
+  auto defer = noir::make_scope_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
 
   std::for_each(tests.begin(), tests.end(), [&, &cs = cs](const test_case& t) {
     SECTION(t.name) {

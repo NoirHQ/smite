@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <fc/scoped_exit.hpp>
+#include <nonstd/scope.hpp>
 
 namespace noir {
 
-using ::fc::make_scoped_exit;
-using ::fc::scoped_exit;
+using ::nonstd::make_scope_exit;
+using ::nonstd::scope_exit;
 
 } // namespace noir
