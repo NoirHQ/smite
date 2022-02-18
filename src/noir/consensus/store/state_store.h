@@ -7,12 +7,13 @@
 
 #include <fmt/core.h>
 
-#include <noir/consensus/state.h>
-
-#include <noir/codec/scale.h>
 #include <noir/common/hex.h>
+#include <noir/consensus/abci_types.h>
+#include <noir/consensus/state.h>
 #include <noir/db/rocks_session.h>
 #include <noir/db/session.h>
+
+#include <noir/codec/scale.h>
 
 namespace noir::consensus {
 
@@ -34,8 +35,9 @@ public:
   virtual bool load_validators(int64_t height, validator_set& v_set) const = 0;
   /// \brief LoadABCIResponses loads the abciResponse for a given height
   /// \param[in] height
+  /// \param[out] abci_rsp
   /// \return true on success, false otherwise
-  virtual bool load_abci_responses(int64_t height /* , abci_response& abci_rsp */) const = 0;
+  virtual bool load_abci_responses(int64_t height, abci_responses& abci_rsp) const = 0;
   /// \brief LoadConsensusParams loads the consensus params for a given height
   /// \param[in] height
   /// \param[out] cs_param
@@ -47,8 +49,9 @@ public:
   virtual bool save(const state& st) = 0;
   /// \brief SaveABCIResponses saves ABCIResponses for a given height
   /// \param[in] height
+  /// \param[in] abci_rsp
   /// \return true on success, false otherwise
-  virtual bool save_abci_responses(int64_t height /* , const abci_response& abci_rsp */) = 0;
+  virtual bool save_abci_responses(int64_t height, const abci_responses& abci_rsp) = 0;
   /// \brief SaveValidatorSet saves the validator set at a given height
   /// \param[in] lower_height
   /// \param[in] upper_height
@@ -119,8 +122,8 @@ public:
     return true;
   }
 
-  bool load_abci_responses(int64_t height /* , abci_response& rsp */) const override {
-    return load_abci_response_internal(height /*, rsp */);
+  bool load_abci_responses(int64_t height, abci_responses& rsp) const override {
+    return load_abci_response_internal(height, rsp);
   }
 
   bool load_consensus_params(int64_t height, consensus_params& cs_param) const override {
@@ -145,8 +148,8 @@ public:
     return save_internal(st);
   }
 
-  bool save_abci_responses(int64_t height /* , const abci_response& rsp */) override {
-    return save_abci_responses_internal(height /* , rsp */);
+  bool save_abci_responses(int64_t height, const abci_responses& rsp) override {
+    return save_abci_responses_internal(height, rsp);
   }
 
   bool save_validator_sets(int64_t lower_height, int64_t upper_height, const validator_set& v_set) override {
@@ -298,25 +301,18 @@ private:
     return true;
   }
 
-  bool save_abci_responses_internal(int64_t height /* , abci_response& rsp */) {
-    std::vector<response_deliver_tx> txs{};
-    //    std::for_each(rsp.deliver_txs.begin(), rsp.deliver_txs.end(), [&](const auto& t){
-    //      if (t.size() !=0) {
-    //        txs.push_back(t);
-    //      }
-    //    });
-    auto buf = noir::codec::scale::encode(txs);
+  bool save_abci_responses_internal(int64_t height, const abci_responses& rsp) {
+    auto buf = noir::codec::scale::encode(rsp);
     db_session_->write_from_bytes(encode_key<prefix::abci_response>(height), buf);
     return true;
   }
 
-  bool load_abci_response_internal(int64_t height /* , abci_response& rsp */) const {
+  bool load_abci_response_internal(int64_t height, abci_responses& rsp) const {
     auto ret = db_session_->read_from_bytes(encode_key<prefix::abci_response>(height));
     if (ret == std::nullopt || ret->empty()) {
       return false;
     }
-    auto txs = noir::codec::scale::decode<std::vector<response_deliver_tx>>(ret.value());
-    //    rsp.deliver_txs = txs;
+    rsp = noir::codec::scale::decode<abci_responses>(ret.value());
     return true;
   }
 
