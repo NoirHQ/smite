@@ -170,7 +170,7 @@ struct block_executor {
       return {};
     }
 
-    if (!store_->save_abci_responses(block_->header.height /* todo abci_response */)) {
+    if (!store_->save_abci_responses(block_->header.height, *abci_responses_)) {
       return {};
     }
 
