@@ -52,7 +52,7 @@ std::tuple<validator, priv_validator> rand_validator(bool rand_power, int64_t mi
 }
 
 std::tuple<genesis_doc, std::vector<priv_validator>> rand_genesis_doc(
-  config config_, int num_validators, bool rand_power, int64_t min_power) {
+  const config& config_, int num_validators, bool rand_power, int64_t min_power) {
   std::vector<genesis_validator> validators;
   std::vector<priv_validator> priv_validators;
   for (auto i = 0; i < num_validators; i++) {
