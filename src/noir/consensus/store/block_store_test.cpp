@@ -11,12 +11,29 @@
 
 namespace {
 
-inline noir::consensus::state make_genesis_state() {
+static noir::consensus::state make_genesis_state() {
   auto config_ = noir::consensus::config::get_default();
   config_.base.chain_id = "test_block_store";
   auto [gen_doc, priv_vals] = noir::consensus::rand_genesis_doc(config_, 1, false, 10);
   return noir::consensus::state::make_genesis_state(gen_doc);
 }
+
+static inline void comp_hdr(noir::consensus::block_header& ret_hdr, noir::consensus::block_header& exp_hdr) {
+  CHECK(ret_hdr.version == exp_hdr.version);
+  CHECK(ret_hdr.chain_id == exp_hdr.chain_id);
+  CHECK(ret_hdr.height == exp_hdr.height);
+  CHECK(ret_hdr.time == exp_hdr.time);
+  CHECK(ret_hdr.last_block_id == exp_hdr.last_block_id);
+  CHECK(ret_hdr.last_commit_hash == exp_hdr.last_commit_hash);
+  CHECK(ret_hdr.data_hash == exp_hdr.data_hash);
+  CHECK(ret_hdr.validators_hash == exp_hdr.validators_hash);
+  CHECK(ret_hdr.next_validators_hash == exp_hdr.next_validators_hash);
+  CHECK(ret_hdr.consensus_hash == exp_hdr.consensus_hash);
+  CHECK(ret_hdr.app_hash == exp_hdr.app_hash);
+  CHECK(ret_hdr.last_results_hash == exp_hdr.last_results_hash);
+  CHECK(ret_hdr.proposer_address == exp_hdr.proposer_address);
+  CHECK(ret_hdr.get_hash() == exp_hdr.get_hash());
+};
 
 TEST_CASE("base/height", "[block_store]") {
   noir::consensus::block_store bls(
@@ -38,15 +55,21 @@ TEST_CASE("save/load_block", "[block_store]") {
     CHECK(bls.load_block(i, bl_) == false);
   }
 
+  noir::consensus::block_meta base_meta{};
   noir::consensus::commit commit_{};
   for (auto height = 1; height < 100; ++height) {
     auto bl_ = make_block(height, genesis_state, commit_);
     auto hash_ = bl_->get_hash(); // TODO: temporary workaround (block get_hash() not implemented)
     auto p_set_ = bl_->make_part_set(64); // make parts more than one
     auto seen_commit_ = noir::consensus::make_commit(10, noir::p2p::tstamp{});
+    REQUIRE(bl_ != nullptr);
+    REQUIRE(p_set_ != nullptr);
 
     CHECK(bls.save_block(*bl_, *p_set_, seen_commit_) == true);
     CHECK(bls.base() == 1ll);
+    if (height == bls.base()) {
+      base_meta = noir::consensus::block_meta::new_block_meta(*bl_, *p_set_);
+    }
     CHECK(bls.height() == bl_->header.height);
     {
       noir::consensus::block ret{};
@@ -63,13 +86,13 @@ TEST_CASE("save/load_block", "[block_store]") {
     }
     {
       noir::consensus::block_meta ret{};
-      noir::consensus::block_meta exp{};
+      auto exp = noir::consensus::block_meta::new_block_meta(*bl_, *p_set_);
+
       CHECK(bls.load_block_meta(height, ret) == true);
-      // TODO: enable below checks
-      // CHECK(ret.bl_id == exp.bl_id);
-      // CHECK(ret.bl_size == exp.bl_size);
-      // CHECK(ret.header == exp.header);
-      // CHECK(ret.num_txs == exp.num_txs);
+      CHECK(ret.bl_id == exp.bl_id);
+      CHECK(ret.bl_size == exp.bl_size);
+      comp_hdr(ret.header, exp.header);
+      CHECK(ret.num_txs == exp.num_txs);
     }
     {
       // TODO: bl.last_commit
@@ -87,13 +110,12 @@ TEST_CASE("save/load_block", "[block_store]") {
 
     {
       noir::consensus::block_meta ret{};
-      noir::consensus::block_meta exp{};
+      auto& exp = base_meta;
       CHECK(bls.load_base_meta(ret) == true);
-      // TODO: enable below checks
-      // CHECK(ret.bl_id == exp.bl_id);
-      // CHECK(ret.bl_size == exp.bl_size);
-      // CHECK(ret.header == exp.header);
-      // CHECK(ret.num_txs == exp.num_txs);
+      CHECK(ret.bl_id == exp.bl_id);
+      CHECK(ret.bl_size == exp.bl_size);
+      comp_hdr(ret.header, exp.header);
+      CHECK(ret.num_txs == exp.num_txs);
     }
     {
       noir::consensus::commit ret{};
