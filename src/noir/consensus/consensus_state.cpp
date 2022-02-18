@@ -935,10 +935,12 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node
     return added;
   }
   if (added && rs.proposal_block_parts->is_complete()) {
-    // derive block from proto // todo
-    // rs.proposal_block = block; // todo - requires converting block from proto
-    rs.proposal_block =
-      std::make_shared<block>(block{block_header{"", "", height_}, block_data{}, commit{}}); // todo - remove later
+    auto new_block_ = block::new_block_from_part_set(rs.proposal_block_parts); // todo - check if this is correct
+    if (!new_block_) {
+      elog("unable to convert from part_set");
+      return added;
+    }
+    rs.proposal_block = new_block_;
 
     // NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
     ilog(fmt::format("received complete proposal block: height={}", rs.proposal_block->header.height));

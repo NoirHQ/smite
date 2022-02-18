@@ -12,6 +12,18 @@
 
 namespace noir::consensus {
 
+std::shared_ptr<block> block::new_block_from_part_set(const std::shared_ptr<part_set>& ps) {
+  if (!ps->is_complete())
+    return {};
+
+  bytes data;
+  data.reserve(ps->byte_size);
+  for (const auto& p : ps->parts)
+    std::copy(p->bytes_.begin(), p->bytes_.end(), std::back_inserter(data));
+  auto block_ = codec::scale::decode<block>(data);
+  return std::make_shared<block>(block_);
+}
+
 std::shared_ptr<part_set> block::make_part_set(uint32_t part_size) {
   std::lock_guard<std::mutex> g(mtx);
   auto bz = codec::scale::encode(*this);
