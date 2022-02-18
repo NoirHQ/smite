@@ -129,10 +129,10 @@ struct block_executor {
 
     // Check block time
     if (block_->header.height > state_.initial_height) {
-      if (block_->header.time > state_.last_block_time) {
-        elog("block time is not greater than last block time");
-        return false;
-      }
+      // if (block_->header.time > state_.last_block_time) {
+      //   elog("block time is not greater than last block time");
+      //   return false;
+      // }
       // auto median_time = get_median_time(block_->last_commit, state_.last_validators);
       // if (block_->header.time != median_time) {
       //   elog("invalid block time");
