@@ -8,47 +8,49 @@
 
 namespace noir::application {
 
-class app {
+class base_application {
 public:
-  void info();
-  void query();
+  virtual void info() {}
+  virtual void query() {}
 
-  consensus::response_init_chain init_chain() {
+  virtual consensus::response_init_chain init_chain() {
     return consensus::response_init_chain{};
   }
-  consensus::response_prepare_proposal prepare_proposal() {
+  virtual consensus::response_prepare_proposal prepare_proposal() {
     return consensus::response_prepare_proposal{};
   }
 
-  consensus::response_begin_block begin_block() {
+  virtual consensus::response_begin_block begin_block() {
     ilog("!!! BeginBlock !!!");
     return consensus::response_begin_block{};
   }
-  consensus::response_deliver_tx deliver_tx() {
+  virtual consensus::response_deliver_tx deliver_tx() {
     ilog("!!! DeliverTx !!!");
     return consensus::response_deliver_tx{};
   }
-  consensus::response_check_tx check_tx() {
+  virtual consensus::response_check_tx check_tx() {
     return consensus::response_check_tx{};
   }
-  consensus::response_end_block end_block() {
+  virtual consensus::response_end_block end_block() {
     ilog("!!! EndBlock !!!");
     return consensus::response_end_block{};
   }
-  consensus::response_commit commit() {
+  virtual consensus::response_commit commit() {
     return consensus::response_commit{};
   }
-  consensus::response_extend_vote extend_vote() {
+  virtual consensus::response_extend_vote extend_vote() {
     return consensus::response_extend_vote{};
   }
-  consensus::response_verify_vote_extension verify_vote_extension() {
+  virtual consensus::response_verify_vote_extension verify_vote_extension() {
     return consensus::response_verify_vote_extension{};
   }
 
-  void list_snapshots();
-  void offer_snapshot();
-  void load_snapshot_chunk();
-  void apply_snapshot_chunk();
+  virtual void list_snapshots() {}
+  virtual void offer_snapshot() {}
+  virtual void load_snapshot_chunk() {}
+  virtual void apply_snapshot_chunk() {}
 };
+
+class app : public base_application {};
 
 } // namespace noir::application
