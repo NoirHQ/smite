@@ -320,6 +320,14 @@ struct block {
   block(block_header header_, block_data data_, commit last_commit_)
     : header(std::move(header_)), data(std::move(data_)), last_commit(std::move(last_commit_)) {}
   block(const block& b): header(b.header), data(b.data), last_commit(b.last_commit) {}
+  block& operator=(const block& b) {
+    std::lock_guard<std::mutex> g(mtx);
+    header = b.header;
+    data = b.data;
+    // evidence = b.evidence;
+    last_commit = b.last_commit;
+    return *this;
+  }
 
   std::optional<std::string> validate_basic() {
     std::lock_guard<std::mutex> g(mtx);
