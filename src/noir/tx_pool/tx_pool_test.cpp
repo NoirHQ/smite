@@ -31,6 +31,8 @@ private:
   std::random_device random_device;
   std::mt19937 generator{random_device()};
 
+  std::shared_ptr<class tx_pool> tp = nullptr;
+
 public:
   auto make_random_wrapped_tx(const std::string& sender) {
     wrapped_tx new_wrapped_tx;
@@ -59,13 +61,15 @@ public:
     return dist_gas(generator);
   }
 
-  class tx_pool make_tx_pool() {
-    return make_tx_pool(noir::tx_pool::tx_pool::config{});
+  class tx_pool& make_tx_pool() {
+    return make_tx_pool(config{});
   }
 
-  class tx_pool make_tx_pool(noir::tx_pool::tx_pool::config cfg) {
+  class tx_pool& make_tx_pool(config cfg) {
     auto proxy_app = std::make_shared<app_connection>();
-    return noir::tx_pool::tx_pool{cfg, proxy_app, 0};
+    tp = std::make_shared<noir::tx_pool::tx_pool>(cfg, proxy_app, 0);
+    tp->start();
+    return *tp;
   }
 };
 
@@ -148,7 +152,7 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
   auto test_helper = std::make_unique<::test_helper>();
   uint64_t tx_count = 10000;
   uint64_t user_count = tx_count / 100;
-  uint64_t queue_size = noir::tx_pool::tx_pool::config{}.max_tx_bytes * tx_count;
+  uint64_t queue_size = config{}.max_tx_bytes * tx_count;
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
 
   for (uint64_t i = 0; i < tx_count; i++) {
@@ -230,7 +234,7 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
 
 TEST_CASE("Push/Get tx", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  auto tp = test_helper->make_tx_pool();
+  auto& tp = test_helper->make_tx_pool();
 
   auto push_tx = [&](uint64_t count, bool sync = true) {
     std::vector<std::optional<std::future<bool>>> res_vec;
@@ -376,7 +380,7 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
 
 TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  auto tp = test_helper->make_tx_pool();
+  auto& tp = test_helper->make_tx_pool();
 
   const uint64_t tx_count = 10000;
   consensus::wrapped_tx_ptrs wrapped_txs;
@@ -441,7 +445,7 @@ TEST_CASE("Update", "[tx_pool]") {
   };
 
   SECTION("Erase committed tx") {
-    auto tp = test_helper->make_tx_pool();
+    auto& tp = test_helper->make_tx_pool();
     auto wrapped_txs = put_tx(tp);
     std::vector<consensus::response_deliver_tx> res;
     res.resize(tx_count);
@@ -450,10 +454,10 @@ TEST_CASE("Update", "[tx_pool]") {
   }
 
   SECTION("Erase block height expired tx") {
-    noir::tx_pool::tx_pool::config config{
+    config config{
       .ttl_num_blocks = 10,
     };
-    auto tp = test_helper->make_tx_pool(config);
+    auto& tp = test_helper->make_tx_pool(config);
     put_tx(tp);
     std::vector<consensus::response_deliver_tx> res;
     res.resize(tx_count);
@@ -466,10 +470,10 @@ TEST_CASE("Update", "[tx_pool]") {
   }
 
   SECTION("Erase time expired tx") {
-    noir::tx_pool::tx_pool::config config{
+    config config{
       .ttl_duration = std::chrono::microseconds(1000000LL).count(),
     };
-    auto tp = test_helper->make_tx_pool(config);
+    auto& tp = test_helper->make_tx_pool(config);
     put_tx(tp);
     std::vector<consensus::response_deliver_tx> res;
     res.resize(tx_count);
@@ -481,8 +485,8 @@ TEST_CASE("Update", "[tx_pool]") {
 
 TEST_CASE("Nonce override", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  noir::tx_pool::tx_pool::config config;
-  auto tp = test_helper->make_tx_pool(config);
+  config config;
+  auto& tp = test_helper->make_tx_pool(config);
 
   auto tx1 = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
   CHECK(tp.check_tx(tx1, true).value().get());
