@@ -329,6 +329,8 @@ struct block {
     return *this;
   }
 
+  static std::shared_ptr<block> new_block_from_part_set(const std::shared_ptr<part_set>& ps);
+
   std::optional<std::string> validate_basic() {
     std::lock_guard<std::mutex> g(mtx);
 
