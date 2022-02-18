@@ -172,7 +172,7 @@ struct part_set {
     auto parts_bit_array = bit_array::new_bit_array(total);
     for (auto i = 0; i < total; i++) {
       auto first = data.begin() + (i * part_size);
-      auto last = data.begin() + (std::min((uint32_t)data.size(), (i + 1) * part_size)) - 1;
+      auto last = data.begin() + (std::min((uint32_t)data.size(), (i + 1) * part_size));
       auto part_ = std::make_shared<part>();
       part_->index = i;
       std::copy(first, last, std::back_inserter(part_->bytes_));
