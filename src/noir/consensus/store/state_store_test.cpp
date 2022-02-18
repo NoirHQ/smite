@@ -60,11 +60,11 @@ TEST_CASE("save/load consensus_param", "[db_store]") {
 TEST_CASE("save/load abci_response", "[db_store]") {
   noir::consensus::db_store dbs(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
-  //  noir::consensus::abci_response rsp{};
+  noir::consensus::abci_responses rsp{};
 
   bool ret;
-  CHECK_NOTHROW(ret = dbs.save_abci_responses(0 /* , rsp */));
-  CHECK_NOTHROW(ret = dbs.load_abci_responses(0 /* , rsp */));
+  CHECK_NOTHROW(ret = dbs.save_abci_responses(0, rsp));
+  CHECK_NOTHROW(ret = dbs.load_abci_responses(0, rsp));
 }
 
 TEST_CASE("save/load state", "[db_store]") {
@@ -153,8 +153,9 @@ TEST_CASE("prune_state", "[db_store]") {
           st.last_validators = st.validators;
         }
 
+        noir::consensus::abci_responses abci_rsp{};
         CHECK(dbs.save(st) == true);
-        CHECK(dbs.save_abci_responses(height /*, abci_rsp */) == true);
+        CHECK(dbs.save_abci_responses(height, abci_rsp) == true);
       }
 
       // start test
@@ -176,8 +177,8 @@ TEST_CASE("prune_state", "[db_store]") {
         CHECK(dbs.load_consensus_params(height, cs_param) == true);
         // CHECK(cs_param != noir::consensus::consensus_params{}); // nil check
 
-        CHECK(dbs.load_abci_responses(height /* , abci_rsp */) == true);
-        // CHECK(abci_rsp != std::nullopt) // nil check
+        noir::consensus::abci_responses abci_ret{};
+        CHECK(dbs.load_abci_responses(height, abci_ret) == true);
       }
 
       noir::consensus::consensus_params empty_cs_param{};
@@ -206,8 +207,8 @@ TEST_CASE("prune_state", "[db_store]") {
           }
         }
 
-        CHECK_NOTHROW(dbs.load_abci_responses(height /* , abci_rsp */));
-        // CHECK(abci_rsp == std::nullopt) // nil check
+        noir::consensus::abci_responses abci_ret{};
+        CHECK_NOTHROW(dbs.load_abci_responses(height, abci_ret));
       }
     }
   });
