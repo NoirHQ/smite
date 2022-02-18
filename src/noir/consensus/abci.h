@@ -4,10 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/log.h>
-#include <noir/consensus/common_test.h>
-#include <noir/consensus/consensus_state.h>
-
+#include <noir/consensus/node.h>
 #include <appbase/application.hpp>
 
 namespace noir::consensus {
@@ -19,23 +16,21 @@ public:
   abci() {}
   virtual ~abci() {}
 
-  void set_program_options(CLI::App& config) {}
+  void set_program_options(CLI::App& app_config) {}
 
-  void plugin_initialize(const CLI::App& config) {
+  void plugin_initialize(const CLI::App& app_config) {
     ilog("Initialize abci");
+    auto config_ = config_setup();
+    config_.base.mode = Validator; // todo - read from config or cli
+    node_ = node::new_default_node(std::make_shared<config>(config_));
   }
-  void plugin_startup() {
-    auto local_config = config_setup();
-    auto [cs1, vss] = rand_cs(local_config, 1);
-    auto height = cs1->rs.height;
-    auto round = cs1->rs.round;
-    start_test_round(cs1, height, round);
 
-    my_cs = cs1;
+  void plugin_startup() {
+    node_->on_start();
   }
   void plugin_shutdown() {}
 
-  std::shared_ptr<consensus_state> my_cs;
+  std::unique_ptr<node> node_;
 };
 
 } // namespace noir::consensus
