@@ -5,7 +5,6 @@
 //
 #pragma once
 #include <noir/common/types.h>
-#include <noir/consensus/tx.h>
 #include <shared_mutex>
 
 namespace noir::tx_pool {
