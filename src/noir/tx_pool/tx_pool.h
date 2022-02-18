@@ -11,27 +11,28 @@
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/unapplied_tx_queue.h>
+#include <appbase/application.hpp>
 
 namespace noir::tx_pool {
-class tx_pool {
-public:
-  struct config {
-    std::string version = "v0.0.1";
-    std::string root_dir = "/";
-    bool recheck = true;
-    bool broadcast = true;
-    uint32_t thread_num = 5;
-    uint64_t max_tx_bytes = 1024 * 1024;
-    uint64_t max_txs_bytes = 1024 * 1024 * 1024;
-    uint64_t max_batch_bytes;
-    uint32_t pool_size = 10000;
-    uint64_t cache_size = 10000;
-    bool keep_invalid_txs_in_cache = false;
-    p2p::tstamp ttl_duration{0};
-    uint64_t ttl_num_blocks = 0;
-    uint64_t gas_price_bump = 1000;
-  };
 
+struct config {
+  std::string version = "v0.0.1";
+  std::string root_dir = "/";
+  bool recheck = true;
+  bool broadcast = true;
+  uint32_t thread_num = 5;
+  uint64_t max_tx_bytes = 1024 * 1024;
+  uint64_t max_txs_bytes = 1024 * 1024 * 1024;
+  uint64_t max_batch_bytes;
+  uint32_t max_tx_num = 10000;
+  bool keep_invalid_txs_in_cache = false;
+  p2p::tstamp ttl_duration{0};
+  uint64_t ttl_num_blocks = 0;
+  uint64_t gas_price_bump = 1000;
+};
+
+class tx_pool : public appbase::plugin<tx_pool> {
+public:
   using precheck_func = bool(const consensus::tx&);
   using postcheck_func = bool(const consensus::tx&, consensus::response_check_tx&);
 
@@ -50,11 +51,23 @@ private:
   precheck_func* precheck_ = nullptr;
   postcheck_func* postcheck_ = nullptr;
 
+  bool is_running_ = false;
+
 public:
   tx_pool();
   tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxyApp, uint64_t block_height);
 
-  ~tx_pool();
+  virtual ~tx_pool();
+
+  APPBASE_PLUGIN_REQUIRES()
+  void set_program_options(CLI::App& config) override;
+
+  void plugin_initialize(const CLI::App& config);
+  void plugin_startup();
+  void plugin_shutdown();
+
+  void start();
+  void stop();
 
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
@@ -69,9 +82,7 @@ public:
   size_t size() const;
   bool empty() const;
   void flush();
-  void flush_app_conn() {
-    proxy_app_->flush_sync();
-  }
+  void flush_app_conn();
 
 private:
   void update_recheck_txs();
