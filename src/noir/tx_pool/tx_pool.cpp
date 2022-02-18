@@ -9,18 +9,71 @@
 namespace noir::tx_pool {
 
 tx_pool::tx_pool()
-  : config_(config{}), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size) {
-  thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
-}
+  : config_(config{}), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num) {}
 
 tx_pool::tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxy_app, uint64_t block_height)
-  : config_(cfg), tx_queue_(config_.pool_size * config_.max_tx_bytes), tx_cache_(config_.cache_size),
-    proxy_app_(new_proxy_app), block_height_(block_height) {
-  thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
-}
+  : config_(cfg), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
+    proxy_app_(new_proxy_app), block_height_(block_height) {}
 
 tx_pool::~tx_pool() {
+  stop();
   thread_.reset();
+}
+
+void tx_pool::set_program_options(CLI::App& cfg) {
+  auto tx_pool_options = cfg.add_section("tx_pool",
+    "###############################################\n"
+    "###      TX_POOL Configuration Options      ###\n"
+    "###############################################");
+
+  tx_pool_options->add_option("--thread_num", "A number of thread.")->default_val(5);
+  tx_pool_options->add_option("--max_tx_num", "The maximum number of tx that the pool can store.")->default_val(10000);
+  tx_pool_options->add_option("--max_tx_bytes", "The maximum bytes a single tx can hold.")->default_val(1024 * 1024);
+  tx_pool_options->add_option("--ttl_duration", "Time(us) until tx expires in the pool. If it is '0', tx never expires")
+    ->default_val(0);
+  tx_pool_options
+    ->add_option("--ttl_num_blocks", "Block height until tx expires in the pool. If it is '0', tx never expires")
+    ->default_val(0);
+  tx_pool_options->add_option("--gas_price_bump", "The minimum gas price for nonce override.")->default_val(1000);
+}
+
+void tx_pool::plugin_initialize(const CLI::App& config) {
+  ilog("Initialize tx_pool");
+  try {
+    auto tx_pool_options = config.get_subcommand("tx_pool");
+
+    config_.thread_num = tx_pool_options->get_option("--thread_num")->as<uint32_t>();
+    config_.max_tx_num = tx_pool_options->get_option("--max_tx_num")->as<uint64_t>();
+    config_.max_tx_bytes = tx_pool_options->get_option("--max_tx_bytes")->as<uint64_t>();
+    config_.ttl_duration = tx_pool_options->get_option("--ttl_duration")->as<p2p::tstamp>();
+    config_.ttl_num_blocks = tx_pool_options->get_option("--ttl_num_blocks")->as<uint64_t>();
+    config_.gas_price_bump = tx_pool_options->get_option("--gas_price_bump")->as<uint64_t>();
+  }
+  FC_LOG_AND_RETHROW()
+}
+
+void tx_pool::plugin_startup() {
+  ilog("Start tx_pool");
+  start();
+}
+
+void tx_pool::plugin_shutdown() {
+  ilog("Shutdown tx_pool");
+  stop();
+}
+
+void tx_pool::start() {
+  if (!is_running_) {
+    thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
+    is_running_ = true;
+  }
+}
+
+void tx_pool::stop() {
+  if (is_running_) {
+    thread_->stop();
+    is_running_ = false;
+  }
 }
 
 void tx_pool::set_precheck(precheck_func* precheck) {
@@ -200,6 +253,10 @@ void tx_pool::flush() {
   std::lock_guard<std::mutex> lock_guard(mutex_);
   tx_queue_.clear();
   tx_cache_.reset();
+}
+
+void tx_pool::flush_app_conn() {
+  proxy_app_->flush_sync();
 }
 
 } // namespace noir::tx_pool
