@@ -9,6 +9,7 @@
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/consensus_reactor.h>
 #include <noir/consensus/node_key.h>
+#include <noir/consensus/node_setup.h>
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 
@@ -38,7 +39,7 @@ struct node {
 
     auto session = std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false));
 
-    make_node(new_config, priv_vals[0], node_key_, std::make_shared<genesis_doc>(gen_doc), session);
+    return make_node(new_config, priv_vals[0], node_key_, std::make_shared<genesis_doc>(gen_doc), session);
   }
 
   static std::unique_ptr<node> make_node(const std::shared_ptr<config>& new_config,
@@ -54,12 +55,23 @@ struct node {
 
     state state_ = load_state_from_db_or_genesis(dbs, new_genesis_doc);
 
-    auto cs = consensus_state::new_state(new_config->consensus, state_, block_exec, bls);
+    // Setup pub_key_
+    pub_key pub_key_;
+    if (new_config->base.mode == Validator) {
+      pub_key_ = new_priv_validator.pub_key_;
+      // todo - check error
+    }
 
-    auto new_cs_reactor = consensus_reactor::new_consensus_reactor(cs, false);
+    // Setup state sync
+    bool new_state_sync_on = false; // todo
 
-    // node_->local_config = config::get_default();
-    // Check config.Mode == cfg.ModeValidator
+    // Setup block sync
+    bool block_sync = false; // todo
+
+    log_node_startup_info(state_, pub_key_, new_config->base.mode);
+
+    auto [new_cs_reactor, new_cs_state] = create_consensus_reactor(
+      new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, new_state_sync_on);
 
     auto node_ = std::make_unique<node>();
     node_->config_ = new_config;
@@ -68,22 +80,18 @@ struct node {
     node_->node_key_ = new_node_key;
     node_->store_ = dbs;
     node_->block_store_ = bls;
+    node_->state_sync_on = new_state_sync_on;
     node_->cs_reactor = new_cs_reactor;
     return node_;
   }
 
-  void log_node_startup_info(bytes pub_key, std::string mode) {
-    ilog("Version info tmVersion=0.0.0, block=, p2p=, mode=${mode}", ("mode", mode));
+  void on_start() {
+    // Check genesis time and sleep until time is ready // todo
 
-    if (mode == "ModeFull")
-      ilog("This node is a fullnode");
-    if (mode == "ModeValidator") {
-      auto addr = pub_key; // todo - convert pub_key to addr
-      ilog("This node is a validator addr=${addr} pubKey=${pubKey}", ("addr", addr)("pubKey", pub_key));
-    }
+    auto height = cs_reactor->cs_state->rs.height;
+    auto round = cs_reactor->cs_state->rs.round;
+    cs_reactor->cs_state->enter_new_round(height, round);
   }
-
-  void on_start() {}
 
   void on_stop() {}
 
