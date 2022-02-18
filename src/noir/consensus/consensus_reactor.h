@@ -3,7 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#pragma
+#pragma once
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/peer_state.h>
 #include <noir/consensus/state.h>
