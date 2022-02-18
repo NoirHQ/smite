@@ -9,12 +9,32 @@
 
 namespace noir::consensus {
 
+enum node_mode {
+  Full = 1,
+  Validator = 2,
+  Seed = 3,
+  Unknown = 4
+};
+
+constexpr auto mode_str(node_mode mode) {
+  switch (mode) {
+  case Full:
+    return "full_node";
+  case Validator:
+    return "validator_node";
+  case Seed:
+    return "seed_node";
+  default:
+    return "unknown_mode_node";
+  }
+}
+
 struct base_config {
   std::string chain_id;
   std::string root_dir;
   std::string proxy_app;
   std::string moniker;
-  std::string mode;
+  node_mode mode;
   bool fast_sync_mode;
   std::string db_backend;
   std::string db_path;
@@ -29,7 +49,7 @@ struct base_config {
     base_config cfg;
     cfg.genesis = "genesis.json";
     cfg.node_key = "node_key.json";
-    cfg.mode = "full";
+    cfg.mode = Full;
     cfg.abci = "local";
     cfg.log_level = "info";
     cfg.db_path = "data";
