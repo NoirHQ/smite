@@ -107,17 +107,17 @@ public:
       return false;
     }
     auto parts_total = bl_meta.bl_id.parts.total;
+    part part_{};
+    bytes data{};
     for (auto i = 0; i < parts_total; ++i) {
-      part part_{};
       // If the part is missing (e.g. since it has been deleted after we
       // loaded the block meta) we consider the whole block to be missing.
       if (!load_block_part(height_, i, part_)) {
         return false;
       }
-      if (!parse_part_to_block(part_, bl)) {
-        return false;
-      }
+      data.insert(data.end(), part_.bytes_.begin(), part_.bytes_.end());
     }
+    bl = noir::codec::scale::decode<block>(data);
     return true;
   }
 
@@ -145,7 +145,6 @@ public:
       return false;
     }
     part_ = noir::codec::scale::decode<part>(tmp.value());
-    part_.proof = bytes{}; // TODO: codec merkle proof
     return true;
   }
 
@@ -387,41 +386,6 @@ private:
 
     height_ = decode_val(bytes{key.begin() + 1, key.end()});
     return true;
-  }
-
-  // TODO: need to decide encoding of block
-  // currently using protobuf style encoding/decoding
-  static bool parse_part_to_block(const part& part_, block& bl) {
-    auto bytes_ = part_.bytes_;
-    switch (part_.index) {
-    case 0: {
-      // Header
-      bl.header = noir::codec::scale::decode<block_header>(bytes_);
-      return true;
-      break;
-    }
-    case 1: {
-      // Data
-      // bl.data = noir::codec::scale::decode<data>(bytes_);
-      return true;
-      break;
-    }
-    case 2: {
-      // Evidence
-      // bl.evidence = noir::codec::scale::decode<evidence>(bytes_);
-      return true;
-      break;
-    }
-    case 3: {
-      // Last Commit
-      // bl.last_commit = noir::codec::scale::decode<commit>(bytes_);
-      return true;
-    }
-    default: {
-      // Cannot reach
-      return false;
-    }
-    }
   }
 
   bool save_block_part(int64_t height_, int index_, const part& part_) {
