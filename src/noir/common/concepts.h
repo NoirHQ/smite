@@ -11,6 +11,9 @@ namespace noir {
 template<typename T>
 concept integral = std::is_integral_v<T>;
 
+template<typename T>
+concept unsigned_integral = std::is_integral_v<T> && !std::is_signed_v<T>;
+
 template<typename E>
 concept enumeration = std::is_enum_v<E>;
 
