@@ -1,0 +1,15 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+#pragma once
+
+namespace noir {
+template<class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+template<class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+} // namespace noir
