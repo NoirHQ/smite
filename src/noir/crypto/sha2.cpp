@@ -4,8 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/common/check.h>
-#include <noir/crypto/hash.h>
-#include <openssl/evp.h>
+#include <noir/crypto/openssl.h>
 
 namespace noir::crypto {
 
@@ -15,15 +14,12 @@ namespace unsafe {
   }
 } // namespace unsafe
 
-void sha256(std::span<const char> in, std::span<char> out) {
-  check(out.size() >= 32, "insufficient output buffer");
-  unsafe::sha256(in, out);
-}
-
-std::vector<char> sha256(std::span<const char> in) {
-  std::vector<char> out(32);
-  unsafe::sha256(in, out);
-  return out;
-}
+struct sha256::sha256_impl : public openssl::hash {
+  const EVP_MD* type() override {
+    return EVP_sha256();
+  }
+};
 
 } // namespace noir::crypto
+
+NOIR_CRYPTO_HASH(sha256);

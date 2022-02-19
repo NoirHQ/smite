@@ -23,15 +23,29 @@ namespace unsafe {
   }
 } // namespace unsafe
 
-void keccak256(std::span<const char> in, std::span<char> out) {
-  check(out.size() >= 32, "insufficient output buffer");
-  unsafe::keccak256(in, out);
-}
+struct keccak256::keccak256_impl : public hash {
+  hash& init() override {
+    Keccak_HashInitialize_Keccak256(&ctx);
+    return *this;
+  };
 
-std::vector<char> keccak256(std::span<const char> in) {
-  std::vector<char> out(32);
-  unsafe::keccak256(in, out);
-  return out;
-}
+  hash& update(std::span<const char> in) override {
+    Keccak_HashUpdate(&ctx, (BitSequence*)in.data(), in.size() * 8);
+    return *this;
+  }
+
+  void final(std::span<char> out) override {
+    Keccak_HashFinal(&ctx, (BitSequence*)out.data());
+  }
+
+  size_t digest_size() override {
+    return 32;
+  }
+
+private:
+  Keccak_HashInstance ctx;
+};
 
 } // namespace noir::crypto
+
+NOIR_CRYPTO_HASH(keccak256);
