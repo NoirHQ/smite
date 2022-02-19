@@ -11,6 +11,8 @@ namespace noir::crypto {
 /// \brief generates keccak256 hash
 /// \ingroup crypto
 struct keccak256 : public hash {
+  using hash::final;
+
   keccak256();
   ~keccak256();
   hash& init() override;
@@ -26,6 +28,8 @@ private:
 /// \brief generates sha3_256 hash
 /// \ingroup crypto
 struct sha3_256 : public hash {
+  using hash::final;
+
   sha3_256();
   ~sha3_256();
   hash& init() override;

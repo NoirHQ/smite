@@ -11,6 +11,8 @@ namespace noir::crypto {
 /// \brief generates sha256 hash
 /// \ingroup crypto
 struct sha256 : public hash {
+  using hash::final;
+
   sha256();
   ~sha256();
   hash& init() override;
