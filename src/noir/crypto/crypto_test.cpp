@@ -16,7 +16,7 @@ TEST_CASE("[hash] keccak256", "[crypto]") {
     {"The quick brown fox jumps over the lazy dog", "4d741b6f1eb29cb2a9b9911c82f56fa8d73b04959d3d9d222895df6c0b28aa15"},
   });
 
-  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(keccak256(t.first)) == t.second); });
+  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(keccak256()(t.first)) == t.second); });
 }
 
 TEST_CASE("[hash] sha256", "[crypto]") {
@@ -25,7 +25,7 @@ TEST_CASE("[hash] sha256", "[crypto]") {
     {"The quick brown fox jumps over the lazy dog", "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592"},
   });
 
-  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(sha256(t.first)) == t.second); });
+  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(sha256()(t.first)) == t.second); });
 }
 
 TEST_CASE("[hash] blake2b_256", "[crypto]") {
@@ -34,7 +34,7 @@ TEST_CASE("[hash] blake2b_256", "[crypto]") {
     {"The quick brown fox jumps over the lazy dog", "01718cec35cd3d796dd00020e0bfecb473ad23457d063b75eff29c0ffa2e58a9"},
   });
 
-  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(blake2b_256(t.first)) == t.second); });
+  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(blake2b_256()(t.first)) == t.second); });
 }
 
 TEST_CASE("[hash] ripemd160", "[crypto]") {
@@ -43,5 +43,5 @@ TEST_CASE("[hash] ripemd160", "[crypto]") {
     {"The quick brown fox jumps over the lazy dog", "37f332f68db77bd9d7edd4969571ad671cf9dd3b"},
   });
 
-  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(ripemd160(t.first)) == t.second); });
+  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(ripemd160()(t.first)) == t.second); });
 }

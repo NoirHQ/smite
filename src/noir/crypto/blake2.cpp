@@ -16,15 +16,29 @@ namespace unsafe {
   }
 } // namespace unsafe
 
-void blake2b_256(std::span<const char> in, std::span<char> out) {
-  check(out.size() >= 32, "insufficient output buffer");
-  unsafe::blake2b_256(in, out);
-}
+struct blake2b_256::blake2b_256_impl : public hash {
+  hash& init() override {
+    blake2b_init(&state, digest_size());
+    return *this;
+  };
 
-std::vector<char> blake2b_256(std::span<const char> in) {
-  std::vector<char> out(32);
-  unsafe::blake2b_256(in, out);
-  return out;
-}
+  hash& update(std::span<const char> in) override {
+    blake2b_update(&state, (const uint8_t*)in.data(), in.size());
+    return *this;
+  }
+
+  void final(std::span<char> out) override {
+    blake2b_final(&state, (uint8_t*)out.data(), digest_size());
+  }
+
+  size_t digest_size() override {
+    return 32;
+  }
+
+private:
+  blake2b_state state;
+};
 
 } // namespace noir::crypto
+
+NOIR_CRYPTO_HASH(blake2b_256)
