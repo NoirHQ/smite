@@ -45,3 +45,12 @@ TEST_CASE("[hash] ripemd160", "[crypto]") {
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(ripemd160()(t.first)) == t.second); });
 }
+
+TEST_CASE("[hash] sha3_256", "[crypto]") {
+  auto tests = std::to_array<std::pair<std::string, std::string>>({
+    {"", "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"},
+    {"The quick brown fox jumps over the lazy dog", "69070dda01975c8c120c3aada1b282394e7f032fa9cf32f4cb2259a0897dfc04"},
+  });
+
+  std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(sha3_256()(t.first)) == t.second); });
+}

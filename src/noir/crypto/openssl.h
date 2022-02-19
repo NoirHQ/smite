@@ -8,6 +8,7 @@
 
 namespace noir::openssl {
 
+/// \cond PRIVATE
 struct hash : public crypto::hash {
   hash& init() override {
     if (!ctx)
@@ -34,5 +35,6 @@ struct hash : public crypto::hash {
 protected:
   EVP_MD_CTX* ctx = nullptr;
 };
+/// \endcond
 
 } // namespace noir::openssl

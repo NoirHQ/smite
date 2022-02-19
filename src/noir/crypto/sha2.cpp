@@ -14,11 +14,13 @@ namespace unsafe {
   }
 } // namespace unsafe
 
+/// \cond PRIVATE
 struct sha256::sha256_impl : public openssl::hash {
   const EVP_MD* type() override {
     return EVP_sha256();
   }
 };
+/// \endcond
 
 } // namespace noir::crypto
 
