@@ -7,11 +7,4 @@
 #include <noir/common/types/bytes.h>
 #include <noir/common/types/inttypes.h>
 #include <noir/common/types/string.h>
-#include <fc/io/varint.hpp>
-
-namespace noir {
-
-using ::fc::signed_int;
-using ::fc::unsigned_int;
-
-} // namespace noir
+#include <noir/common/types/varint.h>
