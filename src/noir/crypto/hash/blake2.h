@@ -11,6 +11,8 @@ namespace noir::crypto {
 /// \brief generates blake2b_256 hash
 /// \ingroup crypto
 struct blake2b_256 : public hash {
+  using hash::final;
+
   blake2b_256();
   ~blake2b_256();
   hash& init() override;

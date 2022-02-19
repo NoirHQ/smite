@@ -11,6 +11,8 @@ namespace noir::crypto {
 /// \brief generates ripemd160 hash
 /// \ingroup crypto
 struct ripemd160 : public hash {
+  using hash::final;
+
   ripemd160();
   ~ripemd160();
   hash& init() override;
