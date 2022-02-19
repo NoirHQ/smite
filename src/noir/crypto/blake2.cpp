@@ -16,6 +16,7 @@ namespace unsafe {
   }
 } // namespace unsafe
 
+/// \cond PRIVATE
 struct blake2b_256::blake2b_256_impl : public hash {
   hash& init() override {
     blake2b_init(&state, digest_size());
@@ -38,6 +39,7 @@ struct blake2b_256::blake2b_256_impl : public hash {
 private:
   blake2b_state state;
 };
+/// \endcond
 
 } // namespace noir::crypto
 

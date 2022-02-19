@@ -19,6 +19,7 @@ namespace unsafe {
   }
 } // namespace unsafe
 
+/// \cond PRIVATE
 struct ripemd160::ripemd160_impl : public openssl::hash {
   hash& init() override {
     openssl::init();
@@ -30,6 +31,8 @@ struct ripemd160::ripemd160_impl : public openssl::hash {
     return EVP_ripemd160();
   }
 };
+
+/// \endcond
 
 } // namespace noir::crypto
 

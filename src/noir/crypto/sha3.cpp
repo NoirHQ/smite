@@ -15,18 +15,18 @@ extern "C" {
 namespace noir::crypto {
 
 namespace unsafe {
-  void keccak256(std::span<const char> in, std::span<char> out) {
+  void sha3_256(std::span<const char> in, std::span<char> out) {
     Keccak_HashInstance ctx;
-    Keccak_HashInitialize_Keccak256(&ctx);
+    Keccak_HashInitialize_SHA3_256(&ctx);
     Keccak_HashUpdate(&ctx, (BitSequence*)in.data(), in.size() * 8);
     Keccak_HashFinal(&ctx, (BitSequence*)out.data());
   }
 } // namespace unsafe
 
 /// \cond PRIVATE
-struct keccak256::keccak256_impl : public hash {
+struct sha3_256::sha3_256_impl : public hash {
   hash& init() override {
-    Keccak_HashInitialize_Keccak256(&ctx);
+    Keccak_HashInitialize_SHA3_256(&ctx);
     return *this;
   };
 
@@ -46,8 +46,9 @@ struct keccak256::keccak256_impl : public hash {
 private:
   Keccak_HashInstance ctx;
 };
+
 /// \endcond
 
 } // namespace noir::crypto
 
-NOIR_CRYPTO_HASH(keccak256);
+NOIR_CRYPTO_HASH(sha3_256);

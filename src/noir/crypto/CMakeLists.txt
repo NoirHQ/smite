@@ -4,6 +4,7 @@ target_sources(noir
     keccak.cpp
     openssl.cpp
     ripemd.cpp
-    sha2.cpp)
+    sha2.cpp
+    sha3.cpp)
 
 add_noir_test(crypto_test crypto_test.cpp)
