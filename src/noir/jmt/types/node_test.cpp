@@ -29,9 +29,9 @@ std::tuple<node_key, bytes32> gen_leaf_key(version ver, const nibble_path& path,
 TEST_CASE("[node] encode/decode", "[jmt]") {
   auto internal_node_key = random_63nibbles_node_key();
 
-  auto leaf1_keys = gen_leaf_key(0, internal_node_key.path, 1);
+  auto leaf1_keys = gen_leaf_key(0, internal_node_key.nibble_path, 1);
   auto leaf1_node = node<bytes>::leaf(std::get<1>(leaf1_keys), bytes{0x00});
-  auto leaf2_keys = gen_leaf_key(0, internal_node_key.path, 2);
+  auto leaf2_keys = gen_leaf_key(0, internal_node_key.nibble_path, 2);
   auto leaf2_node = node<bytes>::leaf(std::get<1>(leaf2_keys), bytes{0x01});
 
   auto children = jmt::children();
