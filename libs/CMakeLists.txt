@@ -1,3 +1,10 @@
+function(add_cached_library TARGET LIBRARY)
+  if(EXISTS ${LIBRARY})
+    add_library(${TARGET} STATIC IMPORTED GLOBAL)
+    set_target_properties(${TARGET} PROPERTIES IMPORTED_LOCATION ${LIBRARY})
+  endif()
+endfunction()
+
 # Don't add the duplicated cmake target "Catch2" by expected
 set(EXPECTED_BUILD_TESTS OFF)
 set(EXPECTED_BUILD_PACKAGE_DEB OFF)
@@ -9,13 +16,44 @@ add_definitions(-DWEBSOCKETPP_STRICT_MASKING -DBOOST_ASIO_HAS_STD_CHRONO)
 add_library(websocketpp INTERFACE)
 target_include_directories(websocketpp INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/websocketpp)
 
-add_subdirectory(softfloat)
-add_subdirectory(appbase)
-add_subdirectory(Catch2)
+add_cached_library(softfloat ${CMAKE_CURRENT_BINARY_DIR}/softfloat/libsoftfloat.a)
+add_cached_library(appbase ${CMAKE_CURRENT_BINARY_DIR}/appbase/libappbase.a)
+add_cached_library(Catch2 ${CMAKE_CURRENT_BINARY_DIR}/Catch2/src/libCatch2d.a)
+add_cached_library(Catch2WithMain ${CMAKE_CURRENT_BINARY_DIR}/Catch2/src/libCatch2Maind.a)
+
+if(TARGET softfloat)
+  target_include_directories(softfloat
+    INTERFACE
+      ${CMAKE_CURRENT_SOURCE_DIR}/softfloat/source/include
+      ${CMAKE_CURRENT_SOURCE_DIR}/softfloat/source/8086-SSE
+      ${CMAKE_CURRENT_SOURCE_DIR}/softfloat/build/Linux-x86_64-GCC)
+else()
+  add_subdirectory(softfloat)
+endif()
+
+if(TARGET appbase)
+  target_include_directories(appbase
+    INTERFACE
+      ${CMAKE_CURRENT_SOURCE_DIR}/appbase/include
+      ${Boost_INCLUDE_DIR})
+else()
+  add_subdirectory(appbase)
+endif()
+
+if(TARGET Catch2)
+  target_include_directories(Catch2
+    INTERFACE
+     ${CMAKE_CURRENT_SOURCE_DIR}/Catch2/src)
+  if(TARGET Catch2WithMain)
+    target_link_libraries(Catch2WithMain INTERFACE Catch2)
+  endif()
+else()
+  add_subdirectory(Catch2)
+endif()
+
 add_subdirectory(expected)
 add_subdirectory(fc)
 add_subdirectory(fmt)
-add_subdirectory(websocketpp)
 
 # use cached rocksdb in github build workflow
 set(ROCKSDB_CACHED ${CMAKE_CURRENT_BINARY_DIR}/rocksdb/librocksdb.a)
@@ -68,7 +106,7 @@ find_library(B2_LIBRARY libb2.a)
 if(NOT B2_LIBRARY STREQUAL B2_LIBRARY-NOTFOUND)
   find_path(B2_INCLUDE_DIR blake2.h)
 
-  add_library(b2 STATIC IMPORTED)
+  add_library(b2 STATIC IMPORTED GLOBAL)
   set_target_properties(b2 PROPERTIES IMPORTED_LOCATION ${B2_LIBRARY})
   # B2_INCLUDE_DIR is /usr/local/include for libb2 installed by brew,
   # and including it causes system include conflicts.
