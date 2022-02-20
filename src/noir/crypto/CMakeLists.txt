@@ -5,6 +5,7 @@ target_sources(noir
     openssl.cpp
     ripemd.cpp
     sha2.cpp
-    sha3.cpp)
+    sha3.cpp
+    xxhash.cpp)
 
 add_noir_test(crypto_test crypto_test.cpp)
