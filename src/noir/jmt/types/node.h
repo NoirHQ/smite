@@ -7,9 +7,11 @@
 #include <noir/codec/bcs.h>
 #include <noir/common/overloaded.h>
 #include <noir/common/types/bytes.h>
+#include <noir/common/types/hash.h>
+#include <noir/crypto/hash/xxhash.h>
+#include <noir/jmt/types/common.h>
 #include <noir/jmt/types/nibble.h>
 #include <noir/jmt/types/proof.h>
-#include <noir/jmt/types/version.h>
 #include <fmt/format.h>
 #include <bit>
 #include <unordered_map>
@@ -55,6 +57,7 @@ struct node_key {
     return out;
   }
 
+  // TODO: return type result
   static node_key decode(std::span<uint8_t> val) {
     node_key out;
     std::reverse_copy(val.begin(), val.begin() + sizeof(version), (char*)&out.version);
@@ -70,6 +73,16 @@ struct node_key {
   jmt::version version;
   jmt::nibble_path nibble_path;
 };
+
+inline bool operator==(const node_key& a, const node_key& b) {
+  return a.version == b.version
+    && std::equal(a.nibble_path.bytes.begin(), a.nibble_path.bytes.end(), b.nibble_path.bytes.begin(), b.nibble_path.bytes.end());
+}
+
+inline bool operator<(const node_key& a, const node_key& b) {
+  return a.version < b.version || (a.nibble_path.bytes.size() <= b.nibble_path.bytes.size() &&
+    std::memcmp(a.nibble_path.bytes.data(), b.nibble_path.bytes.data(), std::min(a.nibble_path.bytes.size(), b.nibble_path.bytes.size())) < 0);
+}
 
 struct leaf {};
 struct internal {
@@ -181,6 +194,7 @@ struct internal_node {
     }
   }
 
+  // TODO: return type result
   static internal_node deserialize(std::span<const char> data) {
     codec::bcs::datastream<const char> ds(data);
     uint16_t existence_bitmap = 0;
@@ -359,7 +373,7 @@ struct node {
     return n;
   }
 
-  bool is_leaf() {
+  bool is_leaf() const {
     return std::holds_alternative<leaf_node<T>>(data);
   }
 
@@ -441,4 +455,43 @@ struct node {
   }
 };
 
+template<typename T>
+using node_batch = std::map<node_key, node<T>>;
+
+struct stale_node_index {
+  version stale_since_version;
+  jmt::node_key node_key;
+};
+
+using stale_node_index_batch = std::set<stale_node_index>;
+
+struct node_stats {
+  size_t new_nodes;
+  size_t new_leaves;
+  size_t stale_nodes;
+  size_t stale_leaves;
+};
+
+template<typename T>
+struct tree_update_batch {
+  jmt::node_batch<T> node_batch;
+  jmt::stale_node_index_batch stale_node_index_batch;
+  std::vector<jmt::node_stats> node_stats;
+};
+
 } // namespace noir::jmt
+
+namespace noir {
+
+template<>
+struct hash<jmt::node_key> {
+  std::size_t operator()(const jmt::node_key& key) const {
+    crypto::xxh64 hash;
+    hash.init()
+      .update({(char*)&key.version, 8})
+      .update({(const char*)key.nibble_path.bytes.data(), key.nibble_path.bytes.size()});
+    return hash.final();
+  }
+};
+
+}
