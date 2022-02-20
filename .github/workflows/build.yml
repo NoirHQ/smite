@@ -34,13 +34,34 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      # restore rocksdb build cache
-      - id: rocksdb-portable-cache
+      # restore cache (rocksdb)
+      - id: rocksdb-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/rocksdb/{ print $1 }')"
       - uses: actions/cache@v2
         with:
           path: build/libs/rocksdb/librocksdb.a
-          key: ${{ runner.os }}-rocksdb-portable-${{ steps.rocksdb-cache.outputs.version }}
+          key: ${{ runner.os }}-rocksdb-${{ steps.rocksdb-cache.outputs.version }}
+      # restore cache (appbase)
+      - id: appbase-cache
+        run: echo "::set-output name=version::$(git submodule status | awk '/appbase/{ print $1 }')"
+      - uses: actions/cache@v2
+        with:
+          path: build/libs/appbase/libappbase.a
+          key: ${{ runner.os }}-appbase-${{ steps.appbase-cache.outputs.version }}
+      # restore cache (Catch2)
+      - id: Catch2-cache
+        run: echo "::set-output name=version::$(git submodule status | awk '/Catch2/{ print $1 }')"
+      - uses: actions/cache@v2
+        with:
+          path: build/libs/Catch2/libCatch2d.a
+          key: ${{ runner.os }}-Catch2-${{ steps.Catch2-cache.outputs.version }}
+      # restore cache (softfloat)
+      - id: softfloat-cache
+        run: echo "::set-output name=version::$(git submodule status | awk '/softfloat/{ print $1 }')"
+      - uses: actions/cache@v2
+        with:
+          path: build/libs/softfloat/libsoftfloat.a
+          key: ${{ runner.os }}-softfloat-${{ steps.softfloat-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
       - run: BOOST_ROOT=/opt/boost cmake .. && make -j2
@@ -56,6 +77,27 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      # restore cache (appbase)
+      - id: appbase-cache
+        run: echo "::set-output name=version::$(git submodule status | awk '/appbase/{ print $1 }')"
+      - uses: actions/cache@v2
+        with:
+          path: build/libs/appbase/libappbase.a
+          key: ${{ runner.os }}-appbase-${{ steps.appbase-cache.outputs.version }}
+      # restore cache (Catch2)
+      - id: Catch2-cache
+        run: echo "::set-output name=version::$(git submodule status | awk '/Catch2/{ print $1 }')"
+      - uses: actions/cache@v2
+        with:
+          path: build/libs/Catch2/libCatch2d.a
+          key: ${{ runner.os }}-Catch2-${{ steps.Catch2-cache.outputs.version }}
+      # restore cache (softfloat)
+      - id: softfloat-cache
+        run: echo "::set-output name=version::$(git submodule status | awk '/softfloat/{ print $1 }')"
+      - uses: actions/cache@v2
+        with:
+          path: build/libs/softfloat/libsoftfloat.a
+          key: ${{ runner.os }}-softfloat-${{ steps.softfloat-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
       - run: cmake .. && make -j2
