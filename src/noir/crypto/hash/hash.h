@@ -54,9 +54,6 @@ struct hash {
 
 #define NOIR_CRYPTO_HASH(name) \
   namespace noir::crypto { \
-    namespace unsafe { \
-      void name(std::span<const char> in, std::span<char> out); \
-    } \
     name::name(): impl(new name##_impl) {} \
     name::~name() = default; \
     hash& name::init() { \

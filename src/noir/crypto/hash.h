@@ -12,3 +12,4 @@
 #include <noir/crypto/hash/ripemd.h>
 #include <noir/crypto/hash/sha2.h>
 #include <noir/crypto/hash/sha3.h>
+#include <noir/crypto/hash/xxhash.h>

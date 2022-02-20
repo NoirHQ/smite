@@ -20,6 +20,7 @@ target_link_libraries(noir
   softfloat
   websocketpp
   XKCP
+  xxhash
 )
 if(APPLE)
   target_link_libraries(noir "-framework CoreFoundation" "-framework Security")
