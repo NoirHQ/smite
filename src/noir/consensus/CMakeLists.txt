@@ -2,6 +2,8 @@ target_sources(noir
   PRIVATE
   block.cpp
   consensus_state.cpp
+  priv_validator.cpp
+  vote.cpp
   wal.cpp)
 
 add_noir_test(bit_array_test bit_array_test.cpp)

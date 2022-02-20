@@ -536,12 +536,8 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
   auto prop_block_id = p2p::block_id{block_->get_hash(), block_parts_->header()};
   auto proposal_ = proposal::new_proposal(height, round, rs.valid_round, prop_block_id);
 
-  // todo - sign and send internal msg queue
-  // proposal sign - todo requires filePV, which requires querying for last saved file state
-  //               - for now assume it is signed right away
-  // if (local_priv_validator->sign_proposal()) {
-  if (true) {
-    // proposal_.signature = p.signature;
+  if (auto err = local_priv_validator->sign_proposal(proposal_); !err.has_value()) {
+    // proposal_.signature = p.signature; // TODO: no need; already updated proposal_.signature
 
     // Send proposal and block_parts
     internal_mq_channel.publish(appbase::priority::medium, std::make_shared<msg_info>(msg_info{proposal_, ""}));
@@ -890,10 +886,13 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
     return;
   }
 
-  // Verify signature // todo
-  // if !cs.Validators.GetProposer().PubKey.VerifySignature(
+  // Verify signature
+  auto data_proposal = codec::scale::encode(msg);
+  if (!rs.validators->get_proposer()->pub_key_.verify_signature(data_proposal, msg.signature)) {
+    dlog("set_proposal; error invalid proposal signature");
+    return;
+  }
 
-  // msg.sig = ;
   rs.proposal = std::make_shared<p2p::proposal_message>(p2p::proposal_message{msg});
   // We don't update cs.ProposalBlockParts if it is already set.
   // This happens if we're already in cstypes.RoundStepCommit or if there is a valid block in the current round.
@@ -1166,10 +1165,9 @@ std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, by
     timeout = std::chrono::seconds(1);
   }
 
-  // auto v = vote_.to_proto(); // todo
-  // local_priv_validator->sign_vote(); // todo
-  // vote_.signature = v.signature; // todo
-  // vote_.timestamp = v.timestamp; // todo
+  local_priv_validator->sign_vote(vote_);
+  // vote_.signature = v.signature; // TODO: remove; no need as vote_.signature is already updated
+  // vote_.timestamp = v.timestamp; // TODO: need to implement inside sign_vote
   return vote_;
 }
 
