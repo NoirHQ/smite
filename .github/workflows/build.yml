@@ -53,7 +53,9 @@ jobs:
         run: echo "::set-output name=version::$(git submodule status | awk '/Catch2/{ print $1 }')"
       - uses: actions/cache@v2
         with:
-          path: build/libs/Catch2/libCatch2d.a
+          path: |
+            build/libs/Catch2/libCatch2.a
+            build/libs/Catch2/libCatch2Main.a
           key: ${{ runner.os }}-Catch2-${{ steps.Catch2-cache.outputs.version }}
       # restore cache (softfloat)
       - id: softfloat-cache
@@ -64,7 +66,7 @@ jobs:
           key: ${{ runner.os }}-softfloat-${{ steps.softfloat-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
-      - run: BOOST_ROOT=/opt/boost cmake .. && make -j2
+      - run: BOOST_ROOT=/opt/boost cmake .. -DUSE_CACHED_LIBS=ON && make -j2
         working-directory: ./build
 
   darwin_build:
@@ -89,7 +91,9 @@ jobs:
         run: echo "::set-output name=version::$(git submodule status | awk '/Catch2/{ print $1 }')"
       - uses: actions/cache@v2
         with:
-          path: build/libs/Catch2/libCatch2d.a
+          path: |
+            build/libs/Catch2/libCatch2.a
+            build/libs/Catch2/libCatch2Main.a
           key: ${{ runner.os }}-Catch2-${{ steps.Catch2-cache.outputs.version }}
       # restore cache (softfloat)
       - id: softfloat-cache
@@ -100,5 +104,5 @@ jobs:
           key: ${{ runner.os }}-softfloat-${{ steps.softfloat-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
-      - run: cmake .. && make -j2
+      - run: cmake .. -DUSE_CACHED_LIBS=ON && make -j2
         working-directory: ./build
