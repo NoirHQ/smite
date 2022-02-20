@@ -36,39 +36,39 @@ struct node_key {
   node_key gen_child_node_key(version v, nibble n) const {
     node_key child = *this;
     child.version = v;
-    child.path.push(n);
+    child.nibble_path.push(n);
     return child;
   }
 
   node_key gen_parent_node_key() const {
     node_key parent = *this;
-    auto popped = parent.path.pop();
+    auto popped = parent.nibble_path.pop();
     check(popped.has_value(), "current node key is root");
     return parent;
   }
 
   std::vector<uint8_t> encode() const {
-    std::vector<uint8_t> out(sizeof(version) + 1 + path.bytes.size());
+    std::vector<uint8_t> out(sizeof(version) + 1 + nibble_path.bytes.size());
     std::reverse_copy((char*)&version, (char*)&version + sizeof(version), out.begin());
-    out[sizeof(version)] = path.num_nibbles;
-    std::copy(path.bytes.begin(), path.bytes.end(), out.begin() + sizeof(version) + 1);
+    out[sizeof(version)] = nibble_path.num_nibbles;
+    std::copy(nibble_path.bytes.begin(), nibble_path.bytes.end(), out.begin() + sizeof(version) + 1);
     return out;
   }
 
   static node_key decode(std::span<uint8_t> val) {
     node_key out;
     std::reverse_copy(val.begin(), val.begin() + sizeof(version), (char*)&out.version);
-    out.path.num_nibbles = val[sizeof(version)];
-    out.path.bytes = {val.begin() + sizeof(version) + 1, val.end()};
-    if (out.path.num_nibbles % 2) {
-      auto padding = out.path.bytes.back() & 0x0f;
+    out.nibble_path.num_nibbles = val[sizeof(version)];
+    out.nibble_path.bytes = {val.begin() + sizeof(version) + 1, val.end()};
+    if (out.nibble_path.num_nibbles % 2) {
+      auto padding = out.nibble_path.bytes.back() & 0x0f;
       check(!padding, fmt::format("padding nibble expected to be 0, got: {}", padding));
     }
     return out;
   }
 
-  version version;
-  nibble_path path;
+  jmt::version version;
+  jmt::nibble_path nibble_path;
 };
 
 struct leaf {};
@@ -88,7 +88,7 @@ inline bool operator==(const node_type& a, const node_type& b) {
 
 struct child {
   bool is_leaf() const {
-    return std::holds_alternative<leaf>(type);
+    return std::holds_alternative<leaf>(node_type);
   }
 
   size_t leaf_count() const {
@@ -96,15 +96,15 @@ struct child {
                         [&](const leaf&) -> size_t { return 1; },
                         [&](const internal& n) { return n.leaf_count; },
                       },
-      type);
+      node_type);
   }
 
   bytes32 hash;
-  version version;
-  node_type type;
+  jmt::version version;
+  jmt::node_type node_type;
 
   friend bool operator==(const child& a, const child& b) {
-    return a.hash == b.hash && a.version == b.version && a.type == b.type;
+    return a.hash == b.hash && a.version == b.version && a.node_type == b.node_type;
     // return std::tie(a.hash, a.version, a.type) != std::tie(b.hash, b.version, b.type);
   }
 };
@@ -135,7 +135,7 @@ struct internal_node {
     return leaf_count;
   }
 
-  node_type node_type() {
+  jmt::node_type node_type() {
     return internal{leaf_count};
   }
 
@@ -174,7 +174,7 @@ struct internal_node {
       auto child = children.at(next_child);
       detail::serialize_u64_varint(child.version, binary);
       binary.insert(binary.end(), child.hash.begin(), child.hash.end());
-      if (std::holds_alternative<internal>(child.type)) {
+      if (std::holds_alternative<internal>(child.node_type)) {
         detail::serialize_u64_varint(leaf_count, binary);
       }
       existence_bitmap &= ~(1 << next_child);
@@ -219,7 +219,7 @@ struct internal_node {
     return {children};
   }
 
-  std::optional<std::reference_wrapper<const child>> child(nibble n) const {
+  std::optional<std::reference_wrapper<const jmt::child>> child(nibble n) const {
     auto ch = children.find(n);
     if (ch != children.end()) {
       return ch->second;
@@ -281,7 +281,7 @@ struct internal_node {
     return {};
   }
 
-  children children;
+  jmt::children children;
   size_t leaf_count;
 
   friend bool operator==(const internal_node& a, const internal_node& b) {
@@ -363,7 +363,7 @@ struct node {
     return std::holds_alternative<leaf_node<T>>(data);
   }
 
-  node_type node_type() {
+  jmt::node_type node_type() {
     if (std::holds_alternative<leaf_node<T>>(data)) {
       return leaf();
     } else if (std::holds_alternative<internal_node>(data)) {
@@ -423,6 +423,7 @@ struct node {
     }
     }
     check(false, fmt::format("lead tag byte is unknown: {}", tag));
+    return {}; // must not reach here
   }
 
   std::variant<null, internal_node, leaf_node<T>> data;
