@@ -16,10 +16,12 @@ add_definitions(-DWEBSOCKETPP_STRICT_MASKING -DBOOST_ASIO_HAS_STD_CHRONO)
 add_library(websocketpp INTERFACE)
 target_include_directories(websocketpp INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/websocketpp)
 
-add_cached_library(softfloat ${CMAKE_CURRENT_BINARY_DIR}/softfloat/libsoftfloat.a)
-add_cached_library(appbase ${CMAKE_CURRENT_BINARY_DIR}/appbase/libappbase.a)
-add_cached_library(Catch2 ${CMAKE_CURRENT_BINARY_DIR}/Catch2/src/libCatch2d.a)
-add_cached_library(Catch2WithMain ${CMAKE_CURRENT_BINARY_DIR}/Catch2/src/libCatch2Maind.a)
+if(USE_CACHED_LIBS)
+  add_cached_library(softfloat ${CMAKE_CURRENT_BINARY_DIR}/softfloat/libsoftfloat.a)
+  add_cached_library(appbase ${CMAKE_CURRENT_BINARY_DIR}/appbase/libappbase.a)
+  add_cached_library(Catch2 ${CMAKE_CURRENT_BINARY_DIR}/Catch2/src/libCatch2d.a)
+  add_cached_library(Catch2WithMain ${CMAKE_CURRENT_BINARY_DIR}/Catch2/src/libCatch2Maind.a)
+endif()
 
 if(TARGET softfloat)
   target_include_directories(softfloat
