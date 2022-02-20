@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/check.h>
 #include <noir/common/for_each.h>
+#include <noir/common/types/hash.h>
 #include <fmt/format.h>
 #include <compare>
 #include <iterator>
@@ -49,14 +50,9 @@ struct nibble_path {
   nibble_path() = default;
   nibble_path(nibble_path&&) = default;
   nibble_path(const nibble_path&) = default;
+  nibble_path& operator=(const nibble_path& path) = default;
 
-  nibble_path& operator=(const nibble_path& path) {
-    num_nibbles = path.num_nibbles;
-    bytes = path.bytes;
-    return *this;
-  }
-
-  nibble_path(const std::vector<uint8_t>& bytes, bool odd = false): bytes(bytes) {
+  nibble_path(std::span<uint8_t> bytes, bool odd = false): bytes({bytes.begin(), bytes.end()}) {
     if (!odd) {
       num_nibbles = bytes.size() * 2;
     } else {
@@ -200,7 +196,7 @@ struct nibble_path {
     return {*this, -1};
   }
 
-  bool is_empty() {
+  bool is_empty() const {
     return num_nibbles == 0;
   }
 
@@ -212,7 +208,8 @@ struct nibble_path {
 
 namespace noir {
 
-struct hash {
+template<>
+struct hash<jmt::nibble> {
   std::size_t operator()(jmt::nibble n) const {
     return std::hash<decltype(n.value)>{}(n.value);
   }
