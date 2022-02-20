@@ -21,12 +21,14 @@ struct priv_validator {
   pub_key pub_key_{};
   priv_validator_type type{};
 
+  priv_key priv_key_{}; // TODO: temp fix; need to implement FilePV, which reads private key from a file
+
   pub_key get_pub_key() const {
     return pub_key_;
   }
 
-  void sign_vote() {}
-  void sign_proposal() {}
+  std::optional<std::string> sign_vote(vote& vote_);
+  std::optional<std::string> sign_proposal(proposal& proposal_);
 };
 
 } // namespace noir::consensus

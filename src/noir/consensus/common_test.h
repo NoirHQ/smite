@@ -9,6 +9,12 @@
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/store/store_test.h>
 #include <noir/consensus/types.h>
+
+#include <fc/crypto/base58.hpp>
+#include <fc/crypto/private_key.hpp>
+#include <fc/crypto/public_key.hpp>
+#include <fc/crypto/signature.hpp>
+
 #include <stdlib.h>
 
 namespace noir::consensus {
@@ -43,8 +49,16 @@ config config_setup() {
 
 std::tuple<validator, priv_validator> rand_validator(bool rand_power, int64_t min_power) {
   static int i = 0;
-  auto pub_key_ = pub_key{noir::from_hex("AAAA" + std::to_string(i++))}; // todo - generate a complete key
-  auto priv_val = priv_validator{pub_key_, MockSignerClient};
+
+  auto priv_val = priv_validator{};
+  priv_val.type = MockSignerClient;
+
+  // Randomly generate a private key // TODO: use a different PKI algorithm
+  // auto new_key = fc::crypto::private_key::generate<fc::ecc::private_key_shim>(); // randomly generate a private key
+  fc::crypto::private_key new_key("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"); // TODO: read from a file
+  priv_val.priv_key_.key = fc::from_base58(new_key.to_string());
+  priv_val.pub_key_ = priv_val.priv_key_.get_pub_key();
+
   auto vote_power = min_power;
   if (rand_power)
     vote_power += std::rand();
