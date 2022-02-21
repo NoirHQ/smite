@@ -5,3 +5,5 @@ target_sources(noir
     thread_pool.cpp
     log.cpp
 )
+
+add_noir_test(common_types_test types_test.cpp)

@@ -5,6 +5,7 @@
 //
 #include <noir/common/check.h>
 #include <noir/common/hex.h>
+#include <fmt/format.h>
 
 namespace noir {
 
@@ -26,28 +27,40 @@ uint8_t from_hex(char c) {
     return c - 'a' + 10;
   if (c >= 'A' && c <= 'F')
     return c - 'A' + 10;
-  check(false, "invalid hex character `" + std::string(1, c) + "`");
+  check(false, fmt::format("invalid hex character: {}", c));
   return 0;
 }
 
-std::vector<char> from_hex(const std::string& s) {
+size_t from_hex(std::string_view s, std::span<char> out) {
   auto has_prefix = s.starts_with("0x");
   auto require_pad = s.size() % 2;
   auto size = (s.size() / 2) + require_pad - has_prefix;
-  std::vector<char> result(size);
+  check(size <= out.size(), "unsufficient output buffer");
   auto c = s.begin() + has_prefix * 2;
-  auto r = result.begin();
-  for (; c != s.end() && r != result.end(); ++c, ++r) {
+  auto r = out.begin();
+  for (; c != s.end() && r != out.end(); ++c, ++r) {
     if (!require_pad)
       *r = from_hex(*c++) << 4;
     *r |= from_hex(*c);
     require_pad = false;
   }
-  return result;
+  return size;
 }
 
-std::vector<char> from_hex(std::string&& s) {
-  return from_hex(s);
+std::vector<char> from_hex(std::string_view s) {
+  auto has_prefix = s.starts_with("0x");
+  auto require_pad = s.size() % 2;
+  auto size = (s.size() / 2) + require_pad - has_prefix;
+  std::vector<char> out(size);
+  auto c = s.begin() + has_prefix * 2;
+  auto r = out.begin();
+  for (; c != s.end() && r != out.end(); ++c, ++r) {
+    if (!require_pad)
+      *r = from_hex(*c++) << 4;
+    *r |= from_hex(*c);
+    require_pad = false;
+  }
+  return out;
 }
 
 } // namespace noir

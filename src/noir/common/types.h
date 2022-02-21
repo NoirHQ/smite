@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/types/bytes.h>
 #include <noir/common/types/inttypes.h>
+#include <noir/common/types/string.h>
 #include <fc/io/varint.hpp>
 
 namespace noir {

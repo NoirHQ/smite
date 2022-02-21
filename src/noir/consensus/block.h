@@ -250,8 +250,8 @@ struct block_header {
   bytes get_hash() {
     // todo - properly compute hash
     if (hash_ == bytes32())
-      fc::rand_pseudo_bytes(hash_.data(), hash_.data_size());
-    return from_hex(hash_.str());
+      fc::rand_pseudo_bytes(hash_.data(), hash_.size());
+    return from_hex(to_string(hash_));
   }
 
   void populate(std::string& version_, std::string& chain_id_, p2p::tstamp timestamp_, p2p::block_id& last_block_id_,
