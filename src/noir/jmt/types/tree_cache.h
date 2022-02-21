@@ -85,7 +85,7 @@ struct tree_cache {
     check(root_node, fmt::format("root node with key must exist"));
     auto root_hash = (*root_node).hash();
     frozen_cache.root_hashes.push_back(root_hash);
-    jmt::node_stats node_stats {
+    jmt::node_stats node_stats{
       node_cache.size(),
       num_new_leaves,
       stale_node_index_cache.size(),
@@ -95,11 +95,10 @@ struct tree_cache {
     frozen_cache.node_cache.insert(frozen_cache.node_cache.end(), node_cache.begin(), node_cache.end());
     node_cache.clear();
     auto stale_since_version = next_version;
-    std::transform(
-      frozen_cache.stale_node_index_cache.begin(),
-      frozen_cache.stale_node_index_cache.end(),
-      frozen_cache.stale_node_index_cache.begin(),
-      [=](const auto& s) { return stale_node_index{stale_since_version, s.node_key}; });
+    std::transform(frozen_cache.stale_node_index_cache.begin(), frozen_cache.stale_node_index_cache.end(),
+      frozen_cache.stale_node_index_cache.begin(), [=](const auto& s) {
+        return stale_node_index{stale_since_version, s.node_key};
+      });
     num_stale_leaves = 0;
     num_new_leaves = 0;
     next_version += 1;
