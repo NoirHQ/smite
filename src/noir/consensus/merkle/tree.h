@@ -66,4 +66,32 @@ bytes hash_from_bytes_list(const bytes_list& list) {
   return inner_hash_opt(left, right);
 }
 
+bytes compute_hash_from_aunts(int64_t index, int64_t total, bytes leaf_hash, bytes_list inner_hashes) {
+  if (index >= total || index < 0 || total <= 0)
+    return {};
+  switch (total) {
+  case 0:
+    check(false, "cannot call compute_hash_from_aunts with 0 total");
+  case 1:
+    if (!inner_hashes.empty())
+      return {};
+    return leaf_hash;
+  }
+  if (inner_hashes.empty())
+    return {};
+  auto num_left = get_split_point(total);
+  if (index < num_left) {
+    auto left_hash =
+      compute_hash_from_aunts(index, num_left, leaf_hash, {inner_hashes.begin(), inner_hashes.end() - 1});
+    if (left_hash.empty())
+      return {};
+    return inner_hash_opt(left_hash, inner_hashes[inner_hashes.size() - 1]);
+  }
+  auto right_hash = compute_hash_from_aunts(
+    index - num_left, total - num_left, leaf_hash, {inner_hashes.begin(), inner_hashes.end() - 1});
+  if (right_hash.empty())
+    return {};
+  return inner_hash_opt(inner_hashes[inner_hashes.size() - 1], right_hash);
+}
+
 } // namespace noir::consensus::merkle
