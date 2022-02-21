@@ -335,3 +335,4 @@ FC_REFLECT(std::chrono::system_clock::duration, )
 FC_REFLECT(noir::consensus::round_step_type, )
 
 NOIR_FOR_EACH_FIELD(std::chrono::system_clock::duration, )
+NOIR_FOR_EACH_FIELD_DERIVED(noir::consensus::proposal, p2p::proposal_message)

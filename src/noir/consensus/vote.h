@@ -183,3 +183,5 @@ struct vote_set {
 };
 
 } // namespace noir::consensus
+
+NOIR_FOR_EACH_FIELD_DERIVED(noir::consensus::vote, noir::p2p::vote_message)
