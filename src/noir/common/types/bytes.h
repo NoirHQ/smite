@@ -11,11 +11,6 @@
 #include <fmt/format.h>
 #include <span>
 
-namespace noir::codec {
-template<typename T>
-struct basic_datastream;
-}
-
 namespace noir {
 
 using byte_type = char;
