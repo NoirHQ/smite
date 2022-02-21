@@ -26,6 +26,10 @@ public:
   fc::variant get_tx_receipt(const fc::variant& req);
   fc::variant call(const fc::variant& req);
 
+  void check_params_size(const fc::variants& params, const uint32_t size);
+  void check_address(const std::string& address, const uint32_t index);
+  void check_hash(const std::string& hash, const uint32_t index);
+
   void set_tx_fee_cap(const uint256_t& tx_fee_cap) {
     this->tx_fee_cap = tx_fee_cap;
   }
