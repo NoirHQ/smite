@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/consensus/merkle/tree.h>
+#include <noir/consensus/merkle/proof.h>
 
 using namespace noir;
 using namespace noir::consensus::merkle;
@@ -38,7 +38,34 @@ TEST_CASE("[tree] Verify hash inputs", "[tree]") {
     {{{1, 2}, {3, 4}, {5, 6}, {7, 8}, {9, 10}}, "f326493eceab4f2d9ffbc78c59432a0a005d6ea98392045c74df5d14a113be18"},
   });
   std::for_each(tests.begin(), tests.end(), [&](auto& t) {
-    std::cout << to_hex(hash_from_bytes_list(t.first)) << std::endl;
+    // std::cout << to_hex(hash_from_bytes_list(t.first)) << std::endl;
     CHECK(hash_from_bytes_list(t.first) == from_hex(t.second));
   });
+}
+
+TEST_CASE("[tree] Verify proof", "[tree]") {
+  // Empty proof
+  auto [root_hash, proofs] = proofs_from_bytes_list({});
+  // std::cout << to_hex(root_hash) << std::endl;
+  CHECK(root_hash == from_hex("6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"));
+
+  bytes_list items;
+  int total{100};
+  for (auto i = 0; i < total; i++)
+    items.push_back({static_cast<char>(i % 256)});
+
+  std::tie(root_hash, proofs) = proofs_from_bytes_list(items);
+  auto root_hash2 = hash_from_bytes_list(items);
+  // std::cout << "root_hash=" << to_hex(root_hash) << std::endl;
+  // std::cout << "root_hash2=" << to_hex(root_hash2) << std::endl;
+  CHECK(root_hash == root_hash2);
+
+  for (auto i = 0; i < items.size(); i++) {
+    auto proof = proofs[i];
+    CHECK(proof->index == i);
+    CHECK(proof->total == total);
+
+    auto err = proof->verify(root_hash, items[i]);
+    std::cout << err.value() << std::endl;
+  }
 }
