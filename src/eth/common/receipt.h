@@ -4,12 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <eth/common/bloom.h>
 #include <eth/common/log.h>
 #include <eth/common/types.h>
 
 namespace eth {
-
-typedef char bloom[256];
 
 struct receipt {
   uint8_t type;
