@@ -3,9 +3,10 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/codec/scale.h>
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/vote.h>
+
+#include <noir/codec/scale.h>
 
 namespace noir::consensus {
 
@@ -84,10 +85,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     elog("add_vote() failed: invalid validator address");
     return false;
   }
-  p2p::vote_message temp(vote_.value());
-  temp.signature = {}; // TODO: debug why manual reset is required for serialization
-  // auto data_vote = codec::scale::encode(static_cast<p2p::vote_message>(vote_.value()));
-  auto data_vote = codec::scale::encode(temp);
+  auto data_vote = codec::scale::encode(vote_.value());
   if (!val->pub_key_.verify_signature(data_vote, vote_->signature)) {
     elog("add_vote() failed: invalid signature");
     return false;

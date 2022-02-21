@@ -4,6 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/types/bytes.h>
+
 #include <mutex>
 #include <vector>
 
