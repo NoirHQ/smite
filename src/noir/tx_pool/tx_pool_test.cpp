@@ -547,7 +547,7 @@ TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
   SECTION("get") {
     auto res = c.get(wrapped_txs[0]->id());
     CHECKED_IF(res.has_value()) {
-      CHECK(!wrapped_txs[0]->id().str().compare(res.value()->id().str()));
+      CHECK(!to_string(wrapped_txs[0]->id()).compare(to_string(res.value()->id())));
     }
   }
 }

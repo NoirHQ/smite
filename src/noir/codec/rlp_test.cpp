@@ -223,12 +223,12 @@ TEST_CASE("[rlp] structs", "[codec]") {
     CHECK(v.nonce == 0);
     CHECK(v.gas_price == 50000000000);
     CHECK(v.gas == 21000);
-    CHECK(v.to.str() == "7917bc33eea648809c285607579c9919fb864f8f");
+    CHECK(to_string(v.to) == "7917bc33eea648809c285607579c9919fb864f8f");
     CHECK(v.value == 1050000000000000);
     CHECK(to_hex(v.data) == "");
     CHECK(v.w == 37);
-    CHECK(v.r.str() == "067940651530790861714b2e8fd8b080361d1ada048189000c07a66848afde46");
-    CHECK(v.s.str() == "69b041db7c29dbcc6becf42017ca7ac086b12bd53ec8ee494596f790fb6a0a69");
+    CHECK(to_string(v.r) == "067940651530790861714b2e8fd8b080361d1ada048189000c07a66848afde46");
+    CHECK(to_string(v.s) == "69b041db7c29dbcc6becf42017ca7ac086b12bd53ec8ee494596f790fb6a0a69");
 
     CHECK(to_hex(encode(v)) == s);
   }
