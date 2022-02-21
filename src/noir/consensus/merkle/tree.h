@@ -1,0 +1,69 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+#pragma once
+#include <noir/common/check.h>
+#include <noir/common/hex.h>
+#include <noir/common/types/bytes.h>
+#include <noir/crypto/hash.h>
+
+#include <bit>
+
+namespace noir::consensus::merkle {
+
+using namespace noir;
+
+using bytes_list = std::vector<bytes>;
+
+using hash_func = bytes (*)(std::span<const char>);
+hash_func hash = crypto::sha256; ///< use sha256 for now; may use a different algorithm in the future
+
+const char leaf_prefix = '\x00';
+const char inner_prefix = '\x01';
+
+bytes get_empty_hash() {
+  return hash("");
+}
+
+bytes leaf_hash_opt(const bytes& leaf) {
+  bytes buff;
+  buff.reserve(leaf.size() + 1);
+  buff.push_back(leaf_prefix);
+  buff.insert(buff.end(), leaf.begin(), leaf.end());
+  return hash(buff);
+}
+
+bytes inner_hash_opt(const bytes& left, const bytes& right) {
+  bytes buff;
+  buff.reserve(left.size() + right.size() + 1);
+  buff.push_back(inner_prefix);
+  buff.insert(buff.end(), left.begin(), left.end());
+  buff.insert(buff.end(), right.begin(), right.end());
+  return hash(buff);
+}
+
+size_t get_split_point(size_t length) {
+  check(length > 0, "try to split a merkle tree with size < 1");
+  auto bit_len = std::bit_width(length);
+  size_t k = 1 << (bit_len - 1);
+  if (k == length)
+    k >>= 1;
+  return k;
+}
+
+bytes hash_from_bytes_list(const bytes_list& list) {
+  switch (list.size()) {
+  case 0:
+    return get_empty_hash();
+  case 1:
+    return leaf_hash_opt(list[0]);
+  }
+  auto k = get_split_point(list.size());
+  auto left = hash_from_bytes_list({list.begin(), list.begin() + k});
+  auto right = hash_from_bytes_list({list.begin() + k, list.end()});
+  return inner_hash_opt(left, right);
+}
+
+} // namespace noir::consensus::merkle
