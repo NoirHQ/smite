@@ -75,13 +75,16 @@ struct node_key {
 };
 
 inline bool operator==(const node_key& a, const node_key& b) {
-  return a.version == b.version
-    && std::equal(a.nibble_path.bytes.begin(), a.nibble_path.bytes.end(), b.nibble_path.bytes.begin(), b.nibble_path.bytes.end());
+  return a.version == b.version &&
+    std::equal(
+      a.nibble_path.bytes.begin(), a.nibble_path.bytes.end(), b.nibble_path.bytes.begin(), b.nibble_path.bytes.end());
 }
 
 inline bool operator<(const node_key& a, const node_key& b) {
-  return a.version < b.version || (a.nibble_path.bytes.size() <= b.nibble_path.bytes.size() &&
-    std::memcmp(a.nibble_path.bytes.data(), b.nibble_path.bytes.data(), std::min(a.nibble_path.bytes.size(), b.nibble_path.bytes.size())) < 0);
+  return a.version < b.version ||
+    (a.nibble_path.bytes.size() <= b.nibble_path.bytes.size() &&
+      std::memcmp(a.nibble_path.bytes.data(), b.nibble_path.bytes.data(),
+        std::min(a.nibble_path.bytes.size(), b.nibble_path.bytes.size())) < 0);
 }
 
 struct leaf {};
@@ -494,4 +497,4 @@ struct hash<jmt::node_key> {
   }
 };
 
-}
+} // namespace noir
