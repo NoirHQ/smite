@@ -9,6 +9,7 @@
 #include <eth/common/block.h>
 #include <eth/common/receipt.h>
 #include <eth/rpc/api.h>
+#include <fmt/format.h>
 
 namespace eth::api {
 
@@ -54,12 +55,42 @@ fc::variant api::net_listening(const fc::variant& req) {
 
 fc::variant api::get_balance(const fc::variant& req) {
   check(req.is_array(), "invalid json request");
+  auto params = req.get_array();
+  if (params.size() < 2)
+    throw std::runtime_error(fmt::format("missing value for required argument {}", params.size()));
+  if (params.size() > 2)
+    throw std::runtime_error("too many arguments, want at most 2");
+  check(params[0].is_string(), "invalid argument 0: json: cannot unmarshal non-string");
+  auto address = params[0].get_string();
+  check(address.starts_with("0x"), "invalid argument 0: json: cannot unmarshal hex string without 0x prefix");
+  check(!(address.size() & 1), "invalid argument 0: json: cannot unmarshal hex string of odd length");
+  check(address.size() == 42,
+    fmt::format("invalid argument 0: hex string has length {}, want 40 for address", (address.size() - 2)));
+  check(params[1].is_string(), "invalid argument 1: json: cannot unmarshal non-string");
+  auto block_number = params[1].get_string();
+  check(block_number == "latest", "invalid argument 1: not supported block_number: only support latest");
+
   // TODO: get balance
   return fc::variant("0x0");
 }
 
 fc::variant api::get_tx_count(const fc::variant& req) {
   check(req.is_array(), "invalid json request");
+  auto params = req.get_array();
+  if (params.size() < 2)
+    throw std::runtime_error(fmt::format("missing value for required argument {}", params.size()));
+  if (params.size() > 2)
+    throw std::runtime_error("too many arguments, want at most 2");
+  check(params[0].is_string(), "invalid argument 0: json: cannot unmarshal non-string");
+  auto address = params[0].get_string();
+  check(address.starts_with("0x"), "invalid argument 0: json: cannot unmarshal hex string without 0x prefix");
+  check(!(address.size() & 1), "invalid argument 0: json: cannot unmarshal hex string of odd length");
+  check(address.size() == 42,
+    fmt::format("invalid argument 0: hex string has length {}, want 40 for address", (address.size() - 2)));
+  check(params[1].is_string(), "invalid argument 1: json: cannot unmarshal non-string");
+  auto block_number = params[1].get_string();
+  check(block_number == "latest", "invalid argument 1: not supported block_number: only support latest");
+
   // TODO: get tx count
   return fc::variant("0x0");
 }
@@ -84,30 +115,70 @@ fc::variant api::estimate_gas(const fc::variant& req) {
 
 fc::variant api::get_tx_by_hash(const fc::variant& req) {
   check(req.is_array(), "invalid json request");
+  auto& params = req.get_array();
+  check(!params.empty(), "missing value for required argument 0");
+  check(params.size() == 1, "too many arguments, want at most 1");
+  check(params[0].is_string(), "invalid argument 0: json: cannot unmarshal non-string");
+  auto hash = params[0].get_string();
+  check(hash.starts_with("0x"), "invalid argument 0: json: cannot unmarshal hex string without 0x prefix");
+  check(hash.size() == 66,
+    fmt::format("invalid argument 0: hex string has length {}, want 64 for hash", (hash.size() - 2)));
   // TODO: get tx by hash
   rpc_transaction t;
-  return fc::variant("");
+  return fc::variant(nullptr);
 }
 
 fc::variant api::get_block_by_number(const fc::variant& req) {
   check(req.is_array(), "invalid json request");
+  auto params = req.get_array();
+  if (params.size() < 2)
+    throw std::runtime_error(fmt::format("missing value for required argument {}", params.size()));
+  if (params.size() > 2)
+    throw std::runtime_error("too many arguments, want at most 2");
+  check(params[0].is_string(), "invalid argument 0: json: cannot unmarshal non-string");
+  auto block_number = params[0].get_string();
+  check(block_number == "earliest" || block_number == "pending" || block_number == "latest" || block_number.starts_with("0x"), "invalid argument 0: json: cannot unmarshal hex string without 0x prefix");
+  check(params[1].is_bool(), "invalid argument 1: json: cannot unmarshal into bool");
+  auto full_tx = params[1].as_bool();
+
   // TODO: get block by number
   block b;
-  return fc::variant("");
+  return fc::variant(nullptr);
 }
 
 fc::variant api::get_block_by_hash(const fc::variant& req) {
   check(req.is_array(), "invalid json request");
+  auto params = req.get_array();
+  if (params.size() < 2)
+    throw std::runtime_error(fmt::format("missing value for required argument {}", params.size()));
+  if (params.size() > 2)
+    throw std::runtime_error("too many arguments, want at most 2");
+  check(params[0].is_string(), "invalid argument 0: json: cannot unmarshal non-string");
+  auto hash = params[0].get_string();
+  check(hash.starts_with("0x"), "invalid argument 0: json: cannot unmarshal hex string without 0x prefix");
+  check(hash.size() == 66,
+    fmt::format("invalid argument 0: hex string has length {}, want 64 for hash", (hash.size() - 2)));
+  check(params[1].is_bool(), "invalid argument 1: json: cannot unmarshal into bool");
+  auto full_tx = params[1].as_bool();
+
   // TODO: get block by hash
   block b;
-  return fc::variant("");
+  return fc::variant(nullptr);
 }
 
 fc::variant api::get_tx_receipt(const fc::variant& req) {
   check(req.is_array(), "invalid json request");
+  auto& params = req.get_array();
+  check(!params.empty(), "missing value for required argument 0");
+  check(params.size() == 1, "too many arguments, want at most 1");
+  check(params[0].is_string(), "invalid argument 0: json: cannot unmarshal non-string");
+  auto hash = params[0].get_string();
+  check(hash.starts_with("0x"), "invalid argument 0: json: cannot unmarshal hex string without 0x prefix");
+  check(hash.size() == 66,
+    fmt::format("invalid argument 0: hex string has length {}, want 64 for hash", (hash.size() - 2)));
   // TODO: get tx receipt
   receipt r;
-  return fc::variant("");
+  return fc::variant(nullptr);
 }
 
 fc::variant api::call(const fc::variant& req) {
