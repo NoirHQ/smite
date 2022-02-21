@@ -58,10 +58,12 @@ TEST_CASE("[bytes] comparison", "[common]") {
   auto copied = hash;
   CHECK(copied == hash);
 
-  bytes20 hash20{"9c1185a5c5e9fc54612808977ee8f548b2258d31"};
-  CHECK(hash20 < hash);
+  bytes20 hash20{"ffffffffffffffffffffffffffffffffffffffff"};
+  CHECK(hash20 > hash);
   CHECK(!(hash20 == hash));
+  CHECK(hash20 != hash);
 
   hash20 = {"e3b0c44298fc1c149afbf4c8996fb92427ae41e4"};
-  CHECK((hash > hash20));
+  CHECK(hash20 < hash);
+  CHECK(hash20 != hash);
 }
