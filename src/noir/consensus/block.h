@@ -9,6 +9,7 @@
 #include <noir/common/hex.h>
 #include <noir/common/types.h>
 #include <noir/consensus/bit_array.h>
+#include <noir/consensus/merkle/proof.h>
 #include <noir/consensus/tx.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
@@ -126,7 +127,7 @@ struct commit {
 struct part {
   uint32_t index;
   bytes bytes_;
-  bytes proof;
+  merkle::proof proof_;
 };
 
 struct part_set {
@@ -144,47 +145,11 @@ struct part_set {
     : total(p.total), hash(p.hash), parts(p.parts), parts_bit_array(p.parts_bit_array), count(p.count),
       byte_size(p.byte_size) {}
 
-  static std::shared_ptr<part_set> new_part_set_from_header(const p2p::part_set_header& header) {
-    std::vector<std::shared_ptr<part>> parts_;
-    parts_.resize(header.total);
-    auto ret = std::make_shared<part_set>();
-    ret->total = header.total;
-    ret->hash = header.hash;
-    ret->parts = parts_;
-    ret->parts_bit_array = bit_array::new_bit_array(header.total);
-    ret->count = 0;
-    ret->byte_size = 0;
-    return ret;
-  }
+  static std::shared_ptr<part_set> new_part_set_from_header(const p2p::part_set_header& header);
 
-  static std::shared_ptr<part_set> new_part_set_from_data(const bytes& data, uint32_t part_size) {
-    // Divide data into 4KB parts
-    uint32_t total = (data.size() + part_size - 1) / part_size;
-    std::vector<std::shared_ptr<part>> parts(total);
-    std::vector<bytes> parts_bytes(total);
-    auto parts_bit_array = bit_array::new_bit_array(total);
-    for (auto i = 0; i < total; i++) {
-      auto first = data.begin() + (i * part_size);
-      auto last = data.begin() + (std::min((uint32_t)data.size(), (i + 1) * part_size));
-      auto part_ = std::make_shared<part>();
-      part_->index = i;
-      std::copy(first, last, std::back_inserter(part_->bytes_));
-      parts[i] = part_;
-      parts_bytes[i] = part_->bytes_;
-      parts_bit_array->set_index(i, true);
-    }
+  static std::shared_ptr<part_set> new_part_set_from_data(const bytes& data, uint32_t part_size);
 
-    // Compute merkle proof - todo
-
-    auto ret = std::make_shared<part_set>();
-    ret->total = total;
-    // ret->hash = root; // todo
-    ret->parts = parts;
-    ret->parts_bit_array = parts_bit_array;
-    ret->count = total;
-    ret->byte_size = data.size();
-    return ret;
-  }
+  bool add_part(std::shared_ptr<part> part_);
 
   bool is_complete() {
     return count == total;
@@ -196,30 +161,6 @@ struct part_set {
 
   bool has_header(p2p::part_set_header header_) {
     return header() == header_;
-  }
-
-  bool add_part(std::shared_ptr<part> part_) {
-    // todo - lock mtx
-
-    if (part_->index >= total) {
-      dlog("error part set unexpected index");
-      return false;
-    }
-
-    // If part already exists, return false.
-    if (parts.size() > 0 && parts.size() >= part_->index) {
-      if (parts[part_->index])
-        return false;
-    }
-
-    // Check hash proof // todo
-
-    // Add part
-    parts[part_->index] = part_;
-    parts_bit_array->set_index(part_->index, true);
-    count++;
-    byte_size += part_->bytes_.size();
-    return true;
   }
 
   std::shared_ptr<part> get_part(int index) {
@@ -401,7 +342,7 @@ using block_ptr = std::shared_ptr<block>;
 } // namespace noir::consensus
 
 NOIR_FOR_EACH_FIELD(noir::consensus::commit_sig, flag, validator_address, timestamp, signature, vote_extension)
-NOIR_FOR_EACH_FIELD(noir::consensus::part, index, bytes_, proof)
+NOIR_FOR_EACH_FIELD(noir::consensus::part, index, bytes_, proof_)
 // NOIR_FOR_EACH_FIELD(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_data, txs, hash)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash,
