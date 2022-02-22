@@ -17,10 +17,8 @@ using namespace noir;
 using namespace noir::codec;
 
 void api::check_params_size(const fc::variants& params, const uint32_t size) {
-  if (params.size() < size)
-    throw std::runtime_error(fmt::format("missing value for required argument {}", params.size()));
-  if (params.size() > size)
-    throw std::runtime_error(fmt::format("too many arguments, want at most {}", size));
+  check(!(params.size() < size), fmt::format("missing value for required argument {}", params.size()));
+  check(!(params.size() > size), fmt::format("too many arguments, want at most {}", size));
 }
 
 void api::check_address(const std::string& address, const uint32_t index) {
