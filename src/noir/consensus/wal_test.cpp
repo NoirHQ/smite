@@ -246,7 +246,7 @@ TEST_CASE("basic_wal test", "[basic_wal]") {
       .round = 1,
       .index = 1,
       .bytes_ = gen_random_bytes(32),
-      .proof.leaf_hash = gen_random_bytes(32),
+      .proof{.leaf_hash = gen_random_bytes(32)},
     };
 
     wal_->on_start();
@@ -281,7 +281,7 @@ TEST_CASE("basic_wal test", "[basic_wal]") {
           .round = 1,
           .index = index,
           .bytes_ = gen_random_bytes(32),
-          .proof.leaf_hash = gen_random_bytes(32),
+          .proof{.leaf_hash = gen_random_bytes(32)},
         };
         CHECK(wal_->write({msg_info{.msg = bp_msg}}) == true);
       }
