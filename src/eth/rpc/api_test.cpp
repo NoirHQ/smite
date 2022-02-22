@@ -9,6 +9,17 @@
 using namespace std;
 using namespace eth::api;
 
+TEST_CASE("[api] check_params_size", "[params]") {
+  fc::variants vs;
+  CHECK_THROWS_WITH(api::check_params_size(vs, 1), "missing value for required argument 0");
+  vs = fc::variants({"0x1", "test"});
+  CHECK_THROWS_WITH(api::check_params_size(vs, 1), "too many arguments, want at most 1");
+  vs = fc::variants({"0xf86d018609184e72a000822710940000000000000000000000000000000000000000880de0b6b3a76400000025a0"
+                     "feec8647d75ca4d10ebb104e7fa7d5143f6fc9335119f04d630f49dcea495398a02f31173ee22872fe2446c32a2e29"
+                     "6787c293d3409a2f9870b2a1e54a9d3f4d40"});
+  CHECK_NOTHROW(api::check_params_size(vs, 1));
+}
+
 TEST_CASE("[api] send_raw_tx", "[params]") {
   fc::variant params;
   api a;
