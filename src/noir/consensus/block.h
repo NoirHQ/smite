@@ -87,14 +87,7 @@ struct commit {
     return signatures.size();
   }
 
-  bytes get_hash() {
-    if (hash.empty()) {
-      for (auto sig : signatures) {
-        // todo
-      }
-    }
-    return hash;
-  }
+  bytes get_hash();
 
   /// \brief GetVote converts the CommitSig for the given valIdx to a Vote. Returns nil if the precommit at valIdx is
   /// nil. Panics if valIdx >= commit.Size().
@@ -238,11 +231,15 @@ struct part_set {
     // todo - lock mtx
     return parts_bit_array;
   }
+
+  bytes get_hash();
 };
 
 struct block_data {
   std::vector<tx> txs;
   bytes hash;
+
+  bytes get_hash();
 };
 
 struct block_header {
@@ -268,14 +265,7 @@ struct block_header {
   // bytes evidence_hash;
   bytes proposer_address; // todo - use address type?
 
-  bytes32 hash_; // todo - remove later after properly compute hash
-
-  bytes get_hash() {
-    // todo - properly compute hash
-    if (hash_ == bytes32())
-      fc::rand_pseudo_bytes(hash_.data(), hash_.size());
-    return from_hex(to_string(hash_));
-  }
+  bytes get_hash();
 
   void populate(std::string& version_, std::string& chain_id_, p2p::tstamp timestamp_, p2p::block_id& last_block_id_,
     bytes val_hash, bytes next_val_hash, bytes consensus_hash_, bytes& app_hash_, bytes& last_results_hash_,
@@ -415,7 +405,7 @@ NOIR_FOR_EACH_FIELD(noir::consensus::part, index, bytes_, proof)
 // NOIR_FOR_EACH_FIELD(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_data, txs, hash)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash,
-  consensus_hash, app_hash, last_results_hash, proposer_address, hash_)
+  consensus_hash, app_hash, last_results_hash, proposer_address)
 
 template<>
 struct noir::is_foreachable<noir::consensus::commit> : std::false_type {};
