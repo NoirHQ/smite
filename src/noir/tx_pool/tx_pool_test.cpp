@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
+#include <noir/codec/scale.h>
 #include <noir/common/hex.h>
 #include <noir/common/thread_pool.h>
 #include <noir/tx_pool/LRU_cache.h>
@@ -25,6 +26,8 @@ static address_type str_to_addr(const std::string& str) {
 class test_helper {
 private:
   uint64_t tx_id = 0;
+  uint64_t nonce = 0;
+  uint64_t height = 0;
 
   std::mutex mutex;
 
@@ -40,15 +43,10 @@ public:
     new_wrapped_tx.gas = rand_gas();
 
     std::lock_guard<std::mutex> lock(mutex);
-    new_wrapped_tx._id = tx_id_type{to_hex(std::to_string(tx_id))};
-    new_wrapped_tx.nonce = tx_id;
-    new_wrapped_tx.height = tx_id;
-    tx_id++;
+    new_wrapped_tx.tx_data = codec::scale::encode(tx_id++);
+    new_wrapped_tx.nonce = nonce++;
+    new_wrapped_tx.height = height++;
     return new_wrapped_tx;
-  }
-
-  uint64_t get_tx_id() const {
-    return tx_id;
   }
 
   void reset_tx_id() {
@@ -82,45 +80,52 @@ TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
   unapplied_tx_queue tx_queue;
 
   const uint64_t tx_count = 10;
-  std::vector<wrapped_tx> wrapped_txs;
-
+  wrapped_tx_ptrs wtxs;
   for (auto i = 0; i < tx_count; i++) {
-    wrapped_txs.push_back(test_helper->make_random_wrapped_tx("user"));
+    wtxs.push_back(std::make_shared<::wrapped_tx>(std::move(test_helper->make_random_wrapped_tx("user"))));
   }
 
   // Add tx
-  for (auto i = 0; i < tx_count; i++) {
-    CHECK(tx_queue.add_tx(std::make_shared<::wrapped_tx>(std::move(wrapped_txs[i]))));
+  for (auto& wtx : wtxs) {
+    CHECK(tx_queue.add_tx(wtx));
   }
   CHECK(tx_queue.size() == tx_count);
 
   SECTION("Add same tx id") { // fail case
-    auto wrapped_tx = wrapped_txs[0];
-    wrapped_tx.nonce = test_helper->get_tx_id() + 1;
-    CHECK(tx_queue.add_tx(std::make_shared<::wrapped_tx>(std::move(wrapped_tx))) == false);
+    auto wtx = wtxs[0];
+    wtx->nonce = wtxs[tx_count - 1]->nonce + 1;
+    CHECK(tx_queue.add_tx(wtx) == false);
     CHECK(tx_queue.size() == tx_count);
-    CHECK(tx_queue.get_tx(wrapped_txs[0].id()));
+    CHECK(tx_queue.get_tx(wtxs[0]->id()));
+  }
+
+  SECTION("Has") {
+    for (auto& wtx : wtxs) {
+      CHECK(tx_queue.has(wtx->id()));
+    }
+  }
+
+  SECTION("Get") {
+    for (auto& wtx : wtxs) {
+      CHECK(tx_queue.get_tx(wtx->id()).has_value());
+    }
   }
 
   SECTION("Erase tx") {
-    for (auto& wrapped_tx : wrapped_txs) {
-      CHECK(tx_queue.erase(wrapped_tx.id()));
+    for (auto& wtx : wtxs) {
+      CHECK(tx_queue.erase(wtx->id()));
     }
     CHECK(tx_queue.empty());
 
     // fail case
-    for (auto& wrapped_tx : wrapped_txs) {
-      CHECK(tx_queue.erase(wrapped_tx.id()) == false);
+    for (auto& wtx : wtxs) {
+      CHECK(tx_queue.erase(wtx->id()) == false);
     }
     CHECK(tx_queue.empty());
   }
 
   SECTION("Erase tx by iterator") {
-    auto itr = tx_queue.begin();
-    while (itr != tx_queue.end()) {
-      CHECK(tx_queue.erase(itr->id()));
-      itr++;
-    }
+    std::for_each(tx_queue.begin(), tx_queue.end(), [&](auto& itr) { CHECK(tx_queue.erase(itr.id())); });
     CHECK(tx_queue.empty());
   }
 
@@ -134,16 +139,24 @@ TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
 TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
   auto test_helper = std::make_unique<::test_helper>();
   uint64_t tx_count = 10000;
-  uint64_t queue_size = (sizeof(unapplied_tx) + sizeof(wrapped_tx)) * tx_count;
-  auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
-
+  uint64_t queue_size = 0;
+  wrapped_tx_ptrs wtxs;
   for (uint64_t i = 0; i < tx_count; i++) {
-    CHECK(tx_queue->add_tx(std::make_shared<::wrapped_tx>(std::move(test_helper->make_random_wrapped_tx("user")))));
+    wtxs.push_back(std::make_shared<::wrapped_tx>(std::move(test_helper->make_random_wrapped_tx("user"))));
+  }
+
+  for (auto& wtx : wtxs) {
+    queue_size += unapplied_tx_queue::bytes_size(wtx);
+  }
+
+  auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
+  for (auto& wtx : wtxs) {
+    CHECK(tx_queue->add_tx(wtx));
   }
   CHECK(tx_queue->size() == tx_count);
 
-  for (uint64_t i = 0; i < tx_count; i++) {
-    CHECK(tx_queue->erase(tx_id_type{to_hex(std::to_string(i))}));
+  for (auto& wtx : wtxs) {
+    CHECK(tx_queue->erase(wtx->id()));
   }
   CHECK(tx_queue->empty());
 }

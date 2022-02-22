@@ -28,7 +28,7 @@ struct wrapped_tx {
 
   tx_id_type id() {
     if (!_id.has_value()) {
-      _id = tx_id_type{}; // FIXME
+      _id = tx_id_type{to_hex(tx_data)}; // FIXME
     }
     return _id.value();
   }
