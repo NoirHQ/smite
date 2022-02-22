@@ -49,13 +49,13 @@ struct proof_node {
     if (!parent && !left && !right)
       return {};
     bytes_list inner_hashes{};
-    proof_node* next = this;
-    while (next != nullptr) {
-      if (left != nullptr)
-        inner_hashes.push_back(left->hash);
-      if (right != nullptr)
-        inner_hashes.push_back(right->hash);
-      next = next->parent.get();
+    proof_node* cur = this;
+    while (cur != nullptr) {
+      if (cur->left != nullptr)
+        inner_hashes.push_back(cur->left->hash);
+      if (cur->right != nullptr)
+        inner_hashes.push_back(cur->right->hash);
+      cur = cur->parent.get();
     }
     return inner_hashes;
   }

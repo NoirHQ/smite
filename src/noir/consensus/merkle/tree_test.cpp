@@ -5,6 +5,7 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/merkle/proof.h>
+#include <fc/crypto/private_key.hpp>
 
 using namespace noir;
 using namespace noir::consensus::merkle;
@@ -48,11 +49,14 @@ TEST_CASE("[tree] Verify proof", "[tree]") {
   auto [root_hash, proofs] = proofs_from_bytes_list({});
   // std::cout << to_hex(root_hash) << std::endl;
   CHECK(root_hash == from_hex("6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"));
+  CHECK(proofs.empty());
 
   bytes_list items;
   int total{100};
-  for (auto i = 0; i < total; i++)
-    items.push_back({static_cast<char>(i % 256)});
+  for (auto i = 0; i < total; i++) {
+    auto new_key = fc::crypto::private_key::generate<fc::ecc::private_key_shim>();
+    items.push_back(fc::from_base58(new_key.to_string()));
+  }
 
   std::tie(root_hash, proofs) = proofs_from_bytes_list(items);
   auto root_hash2 = hash_from_bytes_list(items);
@@ -66,6 +70,19 @@ TEST_CASE("[tree] Verify proof", "[tree]") {
     CHECK(proof->total == total);
 
     auto err = proof->verify(root_hash, items[i]);
-    std::cout << err.value() << std::endl;
+    CHECK(!err.has_value());
+
+    // Trail too long should fail
+    auto orig_aunts = proof->aunts;
+    proof->aunts.push_back({static_cast<char>(i % 256)});
+    err = proof->verify(root_hash, items[i]);
+    CHECK(err.value() == "invalid root hash");
+    proof->aunts = orig_aunts;
+
+    // Trail too short should fail
+    proof->aunts.pop_back();
+    err = proof->verify(root_hash, items[i]);
+    CHECK(err.value() == "invalid root hash");
+    proof->aunts = orig_aunts;
   }
 }
