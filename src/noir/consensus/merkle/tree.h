@@ -13,8 +13,6 @@
 
 namespace noir::consensus::merkle {
 
-using namespace noir;
-
 using bytes_list = std::vector<bytes>;
 
 bytes get_empty_hash();
