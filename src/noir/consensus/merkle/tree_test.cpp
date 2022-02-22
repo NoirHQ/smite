@@ -28,11 +28,12 @@ TEST_CASE("[tree] Find split point", "[tree]") {
 }
 
 TEST_CASE("[tree] Compute empty hash", "[tree]") {
-  CHECK(get_empty_hash() == from_hex("6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"));
+  CHECK(get_empty_hash() == from_hex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
 }
 
 TEST_CASE("[tree] Verify hash inputs", "[tree]") {
   auto tests = std::to_array<std::pair<bytes_list, std::string>>({
+    {{}, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
     {{{}}, "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"},
     {{{1, 2, 3}}, "054edec1d0211f624fed0cbca9d4f9400b0e491c43742af2c5b0abebf0c990d8"},
     {{{1, 2, 3}, {4, 5, 6}}, "82e6cfce00453804379b53962939eaa7906b39904be0813fcadd31b100773c4b"},
@@ -48,7 +49,7 @@ TEST_CASE("[tree] Verify proof", "[tree]") {
   // Empty proof
   auto [root_hash, proofs] = proofs_from_bytes_list({});
   // std::cout << to_hex(root_hash) << std::endl;
-  CHECK(root_hash == from_hex("6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"));
+  CHECK(root_hash == from_hex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
   CHECK(proofs.empty());
 
   bytes_list items;
