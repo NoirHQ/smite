@@ -2,7 +2,9 @@ target_sources(noir
   PRIVATE
   block.cpp
   consensus_state.cpp
+  merkle/tree.cpp
   priv_validator.cpp
+  validator.cpp
   vote.cpp
   wal.cpp)
 
