@@ -544,7 +544,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
 
     for (auto i = 0; i < block_parts_->total; i++) {
       auto part_ = block_parts_->get_part(i);
-      auto msg = p2p::block_part_message{rs.height, rs.round, part_->index, part_->bytes_, part_->proof};
+      auto msg = p2p::block_part_message{rs.height, rs.round, part_->index, part_->bytes_, part_->proof_};
       internal_mq_channel.publish(appbase::priority::medium, std::make_shared<msg_info>(msg_info{msg, ""}));
     }
     dlog(fmt::format("signed proposal: height={} round={}", height, round));
