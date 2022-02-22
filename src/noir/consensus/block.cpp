@@ -100,7 +100,7 @@ std::shared_ptr<part_set> part_set::new_part_set_from_data(const bytes& data, ui
 
   auto ret = std::make_shared<part_set>();
   ret->total = total;
-  // ret->hash = root; // todo
+  ret->hash = root;
   ret->parts = parts;
   ret->parts_bit_array = parts_bit_array;
   ret->count = total;
@@ -112,7 +112,7 @@ bool part_set::add_part(std::shared_ptr<part> part_) {
   // todo - lock mtx
 
   if (part_->index >= total) {
-    dlog("error part set unexpected index");
+    elog("error part set unexpected index");
     return false;
   }
 
@@ -122,7 +122,11 @@ bool part_set::add_part(std::shared_ptr<part> part_) {
       return false;
   }
 
-  // Check hash proof // todo
+  // Check hash proof
+  if (auto err = part_->proof_.verify(get_hash(), part_->bytes_); err.has_value()) {
+    elog("error part set invalid proof");
+    return false;
+  }
 
   // Add part
   parts[part_->index] = part_;

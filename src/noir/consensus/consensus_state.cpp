@@ -910,7 +910,7 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
 bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node_id peer_id) {
   auto height_ = msg.height;
   auto round_ = msg.round;
-  auto part_ = std::make_shared<part>(part{msg.index, msg.bytes_});
+  auto part_ = std::make_shared<part>(part{msg.index, msg.bytes_, msg.proof});
 
   // Blocks might be reused, so round mismatch is OK
   if (rs.height != height_) {
