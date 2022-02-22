@@ -346,7 +346,7 @@ NOIR_FOR_EACH_FIELD(noir::consensus::part, index, bytes_, proof_)
 // NOIR_FOR_EACH_FIELD(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_data, txs, hash)
 NOIR_FOR_EACH_FIELD(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash,
-  consensus_hash, app_hash, last_results_hash, proposer_address)
+  data_hash, validators_hash, next_validators_hash, consensus_hash, app_hash, last_results_hash, proposer_address)
 
 template<>
 struct noir::is_foreachable<noir::consensus::commit> : std::false_type {};
