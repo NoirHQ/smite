@@ -93,8 +93,16 @@ struct bytesN {
   constexpr const size_type size() const noexcept {
     return data_.size();
   }
-  [[nodiscard]] constexpr bool empty() const noexcept {
-    return data_.empty();
+  [[nodiscard]] bool empty() const noexcept {
+    if constexpr (!N) {
+      return true;
+    }
+    for (auto i = 0; i < size(); ++i) {
+      if (data_[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   constexpr iterator begin() noexcept {

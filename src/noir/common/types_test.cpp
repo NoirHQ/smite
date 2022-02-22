@@ -54,9 +54,11 @@ TEST_CASE("[bytes] base type", "[common]") {
 TEST_CASE("[bytes] comparison", "[common]") {
   bytes32 empty{};
   CHECK(empty < hash);
+  CHECK(empty.empty());
 
   auto copied = hash;
   CHECK(copied == hash);
+  CHECK(!hash.empty());
 
   bytes20 hash20{"ffffffffffffffffffffffffffffffffffffffff"};
   CHECK(hash20 > hash);
