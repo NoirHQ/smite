@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/types.h>
+#include <noir/consensus/merkle/proof.h>
 #include <noir/p2p/types.h>
 
 namespace noir::p2p {
@@ -114,7 +115,7 @@ struct block_part_message {
   int32_t round;
   uint32_t index;
   bytes bytes_;
-  bytes proof;
+  consensus::merkle::proof proof;
 };
 
 struct vote_message {
@@ -191,7 +192,7 @@ FC_REFLECT(noir::p2p::handshake_message,
   (network_version)(node_id)(time)(token)(p2p_address)(last_irreversible_block_num)(last_irreversible_block_id)(head_num)(head_id)(generation))
 FC_REFLECT(noir::p2p::go_away_message, (reason)(node_id))
 FC_REFLECT(noir::p2p::time_message, (org)(rec)(xmt)(dst))
-FC_REFLECT(noir::p2p::block_part_message, (height)(round)(index)(bytes_)(proof))
+FC_REFLECT(noir::p2p::block_part_message, (height)(round)(index)(bytes_) /* TODO: (proof) */)
 FC_REFLECT(noir::p2p::block_id, (hash)(parts))
 FC_REFLECT(noir::p2p::part_set_header, (total)(hash))
 FC_REFLECT(noir::p2p::vote_extension, (app_data_to_sign)(app_data_self_authenticating))
