@@ -16,7 +16,7 @@ const char leaf_prefix = '\x00';
 const char inner_prefix = '\x01';
 
 bytes get_empty_hash() {
-  return hash("");
+  return hash({});
 }
 
 bytes leaf_hash_opt(const bytes& leaf) {
