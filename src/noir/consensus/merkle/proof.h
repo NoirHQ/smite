@@ -8,8 +8,6 @@
 
 namespace noir::consensus::merkle {
 
-using namespace noir;
-
 struct proof {
   int64_t total{};
   int64_t index{};
