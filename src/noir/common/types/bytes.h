@@ -250,6 +250,7 @@ std::istream& operator>>(std::istream& ds, bytesN<N, U>& v) {
 
 using bytes20 = bytesN<20>;
 using bytes32 = bytesN<32>;
+using bytes256 = bytesN<256>;
 
 template<>
 struct is_foreachable<bytes20> : std::false_type {};

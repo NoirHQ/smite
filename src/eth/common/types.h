@@ -12,6 +12,7 @@ namespace eth {
 using ::noir::bytes;
 using ::noir::bytes20;
 using ::noir::bytes32;
+using ::noir::bytes256;
 using ::noir::uint256_t;
 
 } // namespace eth
