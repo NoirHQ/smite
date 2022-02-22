@@ -56,6 +56,9 @@ struct bytesN {
     }
   }
 
+  constexpr bytesN(noir::bytes& bytes, bool canonical = false)
+    : bytesN(std::span{bytes.data(), bytes.size()}, canonical) {}
+
   constexpr reference at(size_type pos) {
     return data_.at(pos);
   }
