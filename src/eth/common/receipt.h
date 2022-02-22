@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <eth/common/bloom.h>
 #include <eth/common/log.h>
 #include <eth/common/types.h>
 
@@ -14,7 +13,7 @@ struct receipt {
   uint8_t type;
   uint64_t status;
   uint64_t cumulative_gas_used;
-  bloom bloom;
+  bytes256 bloom;
   std::vector<log> logs;
   bytes32 tx_hash;
   bytes20 transaction_hash;
