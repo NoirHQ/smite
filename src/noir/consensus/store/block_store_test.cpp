@@ -59,7 +59,6 @@ TEST_CASE("save/load_block", "[block_store]") {
   noir::consensus::commit commit_{};
   for (auto height = 1; height < 100; ++height) {
     auto bl_ = make_block(height, genesis_state, commit_);
-    auto hash_ = bl_->get_hash(); // TODO: temporary workaround (block get_hash() not implemented)
     auto p_set_ = bl_->make_part_set(64); // make parts more than one
     auto seen_commit_ = noir::consensus::make_commit(10, noir::p2p::tstamp{});
     REQUIRE(bl_ != nullptr);
@@ -102,9 +101,8 @@ TEST_CASE("save/load_block", "[block_store]") {
     }
 
     {
-      // TODO: bl.get_hash()
       noir::consensus::block ret{};
-      CHECK(bls.load_block_by_hash(hash_, ret) == true);
+      CHECK(bls.load_block_by_hash(bl_->get_hash(), ret) == true);
       CHECK(ret.get_hash() == bl_->get_hash());
     }
 
