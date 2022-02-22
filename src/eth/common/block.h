@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <eth/common/bloom.h>
 #include <eth/common/transaction.h>
 #include <eth/common/types.h>
 
@@ -17,7 +16,7 @@ struct header {
   bytes32 root;
   bytes32 tx_hash;
   bytes32 receipt_hash;
-  bloom bloom;
+  bytes256 bloom;
   uint256_t difficulty;
   uint256_t number;
   uint64_t gas_limit;
@@ -30,8 +29,8 @@ struct header {
 };
 
 struct block {
-  header header;
-  std::vector<class header> uncles;
+  eth::header header;
+  std::vector<eth::header> uncles;
   std::vector<transaction> transactions;
   bytes32 hash;
   uint64_t size;
