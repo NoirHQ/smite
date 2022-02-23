@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/types/bytes.h>
 #include <fc/crypto/private_key.hpp>
 #include <fc/crypto/public_key.hpp>
 #include <fc/crypto/sha256.hpp>
@@ -18,7 +19,7 @@ using node_id = std::string; // a hex-encoded crypto.Address. It must be lower-c
 
 using tstamp = std::chrono::system_clock::duration::rep;
 
-using block_id_type = fc::sha256;
+using block_id_type = bytes32;
 
 using public_key_type = fc::crypto::public_key;
 using private_key_type = fc::crypto::private_key;
