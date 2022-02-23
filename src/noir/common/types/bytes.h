@@ -38,7 +38,7 @@ struct bytesN {
 
   constexpr bytesN() = default;
 
-  constexpr bytesN(std::string_view s, bool canonical = false) {
+  constexpr bytesN(std::string_view s, bool canonical = true) {
     auto size = from_hex(s, data_);
     check(!canonical || size == N, fmt::format("invalid bytes length: expected({}), actual({})", N, size));
     if (size < N) {
@@ -46,8 +46,8 @@ struct bytesN {
     }
   }
 
-  template<Byte U>
-  constexpr bytesN(std::span<U> bytes, bool canonical = false) {
+  template<Byte U, size_t S = std::dynamic_extent>
+  constexpr bytesN(std::span<U, S> bytes, bool canonical = true) {
     auto size = bytes.size();
     check(!canonical || size == N, fmt::format("invalid bytes length: expected({}), actual({})", N, size));
     std::copy(bytes.begin(), bytes.end(), data_.begin());
@@ -56,8 +56,14 @@ struct bytesN {
     }
   }
 
-  constexpr bytesN(noir::bytes& bytes, bool canonical = false)
-    : bytesN(std::span{bytes.data(), bytes.size()}, canonical) {}
+  // XXX: trailing "//" in the next line forbids clang-format from erasing line break.
+  [[deprecated("ambiguous, consider using bytesN(std::string_view) or bytesN(std::span)")]] //
+  constexpr bytesN(const char* data, size_t size, bool canonical = true)
+    : bytesN(std::span{data, size}, canonical) {}
+
+  template<Byte U>
+  constexpr bytesN(const std::vector<U>& bytes, bool canonical = true)
+    : bytesN(std::span{(T*)bytes.data(), bytes.size()}, canonical) {}
 
   constexpr reference at(size_type pos) {
     return data_.at(pos);
