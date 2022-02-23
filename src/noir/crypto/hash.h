@@ -61,7 +61,7 @@ namespace unsafe {
 /// \addtogroup crypto
 /// \{
 
-/// \breif generates blake2b_256 hash
+/// \brief generates blake2b_256 hash
 struct blake2b_256 : public hash {
   blake2b_256();
   ~blake2b_256();
@@ -76,7 +76,7 @@ private:
   std::unique_ptr<blake2b_256_impl> impl;
 };
 
-/// \breif generates keccak256 hash
+/// \brief generates keccak256 hash
 struct keccak256 : public hash {
   keccak256();
   ~keccak256();
@@ -91,7 +91,7 @@ private:
   std::unique_ptr<keccak256_impl> impl;
 };
 
-/// \breif generates ripemd160 hash
+/// \brief generates ripemd160 hash
 struct ripemd160 : public hash {
   ripemd160();
   ~ripemd160();
@@ -106,7 +106,7 @@ private:
   std::unique_ptr<ripemd160_impl> impl;
 };
 
-/// \breif generates sha256 hash
+/// \brief generates sha256 hash
 struct sha256 : public hash {
   sha256();
   ~sha256();

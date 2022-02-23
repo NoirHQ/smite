@@ -13,11 +13,15 @@
 
 namespace noir {
 
+/// \brief an alias name for one byte
+/// \ingroup common
 using byte_type = char;
 
+/// \brief an alias name for variable-length byte sequence
+/// \ingroup common
 using bytes = std::vector<byte_type>;
 
-/// \brief thin wrapper for fixed-length byte array
+/// \brief thin wrapper for fixed-length byte sequence
 /// \ingroup common
 template<size_t N, Byte T = byte_type>
 struct bytesN {
@@ -38,6 +42,7 @@ struct bytesN {
 
   constexpr bytesN() = default;
 
+  /// \brief constructs bytesN from a hex string
   constexpr bytesN(std::string_view s, bool canonical = true) {
     auto size = from_hex(s, data_);
     check(!canonical || size == N, fmt::format("invalid bytes length: expected({}), actual({})", N, size));
@@ -46,6 +51,7 @@ struct bytesN {
     }
   }
 
+  /// \brief constructs bytesN from a byte sequence
   template<Byte U, size_t S = std::dynamic_extent>
   constexpr bytesN(std::span<U, S> bytes, bool canonical = true) {
     auto size = bytes.size();
@@ -56,11 +62,13 @@ struct bytesN {
     }
   }
 
+  /// \brief constructs bytesN from a pointer to byte sequence and its size
   // XXX: trailing "//" in the next line forbids clang-format from erasing line break.
   [[deprecated("ambiguous, consider using bytesN(std::string_view) or bytesN(std::span)")]] //
   constexpr bytesN(const char* data, size_t size, bool canonical = true)
     : bytesN(std::span{data, size}, canonical) {}
 
+  /// \brief constructs bytesN from a byte vector
   template<Byte U>
   constexpr bytesN(const std::vector<U>& bytes, bool canonical = true)
     : bytesN(std::span{(T*)bytes.data(), bytes.size()}, canonical) {}
