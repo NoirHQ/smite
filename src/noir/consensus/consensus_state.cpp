@@ -13,7 +13,7 @@
 
 namespace noir::consensus {
 
-struct message_handler : public fc::visitor<void> {
+struct message_handler {
   std::shared_ptr<consensus_state> cs;
 
   explicit message_handler(const std::shared_ptr<consensus_state>& cs_): cs(cs_) {}
