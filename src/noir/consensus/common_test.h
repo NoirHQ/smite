@@ -89,7 +89,9 @@ std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config
 
   validator_stub_list vss;
 
-  auto session = std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false));
+  auto db_dir = appbase::app().home_dir() / "db";
+  auto session =
+    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   auto proxyApp = std::make_shared<app_connection>();
   auto mempool = std::make_shared<tx_pool::tx_pool>();
