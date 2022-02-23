@@ -546,7 +546,7 @@ TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
   LRU_cache<tx_id_type, consensus::tx> c{cache_size};
 
   struct test_tx {
-    tx tx;
+    consensus::tx tx;
     tx_id_type id;
   };
   std::vector<test_tx> txs;
