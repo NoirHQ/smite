@@ -27,10 +27,10 @@ public:
   }
 
   std::optional<T> get(const K& key) {
+    std::shared_lock lock(mutex_);
     if (!has(key)) {
       return std::nullopt;
     }
-    std::shared_lock lock(mutex_);
     return key_item_map_[key];
   }
 

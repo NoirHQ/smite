@@ -40,7 +40,7 @@ private:
   std::mutex mutex_;
   config config_;
   unapplied_tx_queue tx_queue_;
-  LRU_cache<consensus::tx_id_type, consensus::wrapped_tx_ptr> tx_cache_;
+  LRU_cache<consensus::tx_id_type, consensus::tx> tx_cache_;
 
   std::shared_ptr<consensus::app_connection> proxy_app_;
 
@@ -72,10 +72,10 @@ public:
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
 
-  std::optional<std::future<bool>> check_tx(const consensus::wrapped_tx_ptr& tx_ptr, bool sync);
-  consensus::wrapped_tx_ptrs reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
-  consensus::wrapped_tx_ptrs reap_max_txs(uint64_t tx_count);
-  bool update(uint64_t block_height, consensus::wrapped_tx_ptrs& tx_ptrs,
+  std::optional<std::future<bool>> check_tx(const consensus::tx& tx, bool sync);
+  std::vector<consensus::tx> reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
+  std::vector<consensus::tx> reap_max_txs(uint64_t tx_count);
+  bool update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
     std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck = nullptr,
     postcheck_func* new_postcheck = nullptr);
 
