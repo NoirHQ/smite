@@ -38,7 +38,7 @@ public:
     new_wrapped_tx.gas = rand_gas();
 
     std::lock_guard<std::mutex> lock(mutex);
-    new_wrapped_tx._id = tx_id_type{to_hex(std::to_string(tx_id))};
+    new_wrapped_tx._id = tx_id_type{to_hex(std::to_string(tx_id)), false};
     new_wrapped_tx.nonce = tx_id;
     new_wrapped_tx.height = tx_id;
     tx_id++;
@@ -139,7 +139,7 @@ TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
   CHECK(tx_queue->size() == tx_count);
 
   for (uint64_t i = 0; i < tx_count; i++) {
-    CHECK(tx_queue->erase(tx_id_type{to_hex(std::to_string(i))}));
+    CHECK(tx_queue->erase(tx_id_type{to_hex(std::to_string(i)), false}));
   }
   CHECK(tx_queue->empty());
 }
