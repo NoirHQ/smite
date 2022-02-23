@@ -89,7 +89,7 @@ public:
     new_wrapped_tx.tx_data = codec::scale::encode(tx_id++);
     new_wrapped_tx.nonce = nonce++;
     new_wrapped_tx.height = height++;
-    return new_wrapped_tx;
+    return std::make_shared<wrapped_tx>(new_wrapped_tx);
   }
 
   void reset_tx_id() {
@@ -134,7 +134,7 @@ TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
   const uint64_t tx_count = 10;
   wrapped_tx_ptrs wtxs;
   for (auto i = 0; i < tx_count; i++) {
-    wtxs.push_back(std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user")));
+    wtxs.push_back(test_helper->make_random_wrapped_tx("user"));
   }
 
   // Add tx
@@ -194,7 +194,7 @@ TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
   uint64_t queue_size = 0;
   wrapped_tx_ptrs wtxs;
   for (uint64_t i = 0; i < tx_count; i++) {
-    wtxs.push_back(std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user")));
+    wtxs.push_back(test_helper->make_random_wrapped_tx("user"));
   }
 
   for (auto& wtx : wtxs) {
@@ -221,17 +221,16 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
 
   for (uint64_t i = 0; i < tx_count; i++) {
-    CHECK(tx_queue->add_tx(
-      std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user" + std::to_string(i / user_count)))));
+    CHECK(tx_queue->add_tx(test_helper->make_random_wrapped_tx("user" + std::to_string(i / user_count))));
   }
   CHECK(tx_queue->size() == tx_count);
 
   SECTION("by nonce") {
     auto tx = test_helper->make_random_wrapped_tx("Alice");
-    tx_queue->add_tx(std::make_shared<::wrapped_tx>(tx));
-    auto tx_ptr = tx_queue->get_tx(tx.sender, tx.nonce);
+    tx_queue->add_tx(tx);
+    auto tx_ptr = tx_queue->get_tx(tx->sender, tx->nonce);
     CHECKED_IF(!tx_ptr.has_value()) {
-      CHECK(tx_ptr.value()->nonce == tx.nonce);
+      CHECK(tx_ptr.value()->nonce == tx->nonce);
     }
   }
 
@@ -582,7 +581,7 @@ TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
   }
 
   SECTION("invalid") {
-    auto wrapped_tx = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
+    auto wrapped_tx = test_helper->make_random_wrapped_tx("user");
     auto item = c.get(wrapped_tx->id());
     CHECK(!item.has_value());
   }
