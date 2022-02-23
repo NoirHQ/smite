@@ -10,9 +10,11 @@ namespace noir::commands {
 
 CLI::App* consensus_test(CLI::App& root) {
   auto& app = appbase::app();
+  app.register_plugin<tx_pool::tx_pool>();
   app.register_plugin<consensus::abci>();
   auto cmd = root.add_subcommand("consensus_test", "Sample to test consensus")->final_callback([&app]() {
     fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
+    app.initialize<tx_pool::tx_pool>();
     app.initialize<consensus::abci>();
     app.startup();
     app.exec();

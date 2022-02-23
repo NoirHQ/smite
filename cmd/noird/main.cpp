@@ -7,6 +7,7 @@
 #include <noir/common/log.h>
 #include <noir/rpc/jsonrpc.h>
 #include <noir/rpc/rpc.h>
+#include <noir/tx_pool/tx_pool.h>
 #include <appbase/application.hpp>
 #include <eth/rpc/rpc.h>
 
@@ -38,6 +39,7 @@ int main(int argc, char** argv) {
   commands::add_command(app.config(), &commands::version);
 
   // register plugins
+  app.register_plugin<noir::tx_pool::tx_pool>();
   app.register_plugin<noir::rpc::rpc>();
   app.register_plugin<noir::rpc::jsonrpc>();
   app.register_plugin<eth::rpc::rpc>();

@@ -26,22 +26,18 @@ struct block_executor {
 
   std::shared_ptr<app_connection> proxyApp_{};
 
-  std::shared_ptr<tx_pool::tx_pool> mempool{};
-
   // evidence tool // todo
   // eventBus // todo - we may not need to handle events for tendermint but only for app?
 
   std::map<std::string, bool> cache; // storing verification result for a single height
 
   block_executor(std::shared_ptr<db_store> new_store, std::shared_ptr<app_connection> new_proxyApp,
-    std::shared_ptr<tx_pool::tx_pool> new_mempool, std::shared_ptr<block_store> new_block_store)
-    : store_(std::move(new_store)), proxyApp_(std::move(new_proxyApp)), mempool(std::move(new_mempool)),
-      block_store_(std::move(new_block_store)) {}
+    std::shared_ptr<block_store> new_block_store)
+    : store_(std::move(new_store)), proxyApp_(std::move(new_proxyApp)), block_store_(std::move(new_block_store)) {}
 
   static std::shared_ptr<block_executor> new_block_executor(const std::shared_ptr<db_store>& new_store,
-    const std::shared_ptr<app_connection>& new_proxyApp, const std::shared_ptr<tx_pool::tx_pool>& new_mempool,
-    const std::shared_ptr<block_store>& new_block_store) {
-    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_mempool, new_block_store);
+    const std::shared_ptr<app_connection>& new_proxyApp, const std::shared_ptr<block_store>& new_block_store) {
+    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_block_store);
     return res;
   }
 
@@ -59,7 +55,7 @@ struct block_executor {
       throw std::runtime_error(fmt::format(
         "negative max_data_bytes: max_bytes={} is too small to accommodate header and last_commit", max_bytes));
 
-    auto txs = mempool->reap_max_bytes_max_gas(max_data_bytes, max_gas);
+    auto txs = appbase::app().get_plugin<tx_pool::tx_pool>().reap_max_bytes_max_gas(max_data_bytes, max_gas);
 
     auto prepared_proposal = proxyApp_->prepare_proposal_sync(request_prepare_proposal{txs, max_data_bytes, votes});
     auto new_txs = prepared_proposal.block_data;
@@ -201,7 +197,8 @@ struct block_executor {
 
     // Update mempool
     std::vector<consensus::tx> block_txs;
-    mempool->update(block_->header.height, block_txs, abci_responses_->deliver_txs);
+    appbase::app().get_plugin<tx_pool::tx_pool>().update(
+      block_->header.height, block_txs, abci_responses_->deliver_txs);
 
     bytes app_hash = commit_res.data;
     int64_t retain_height = commit_res.retain_height;
