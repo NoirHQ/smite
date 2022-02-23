@@ -332,19 +332,17 @@ void consensus_state::tick(timeout_info_ptr ti) {
 }
 
 void consensus_state::tock(timeout_info_ptr ti) {
-  ilog("Timed out: ti=${ti}", ("ti", ti));
+  ilog(fmt::format("Timed out: hrs={}/{}/{}, timeout={}", ti->height, ti->round, ti->step, ti->duration_.count()));
   handle_timeout(ti);
 }
 
 void consensus_state::handle_timeout(timeout_info_ptr ti) {
   std::lock_guard<std::mutex> g(mtx);
-  dlog("Received tock: timeout=${timeout} height=${height} round=${round} step=${step}",
-    ("timeout", ti->duration_.count())("height", ti->height)("round", ti->round)("step", ti->step));
+  dlog(fmt::format("Received tock: hrs={}/{}/{}, timeout={}", ti->height, ti->round, ti->step, ti->duration_.count()));
 
   // timeouts must be for current height, round, step
   if ((ti->height != rs.height) || (ti->round < rs.round) || (ti->round == rs.round && ti->step < rs.step)) {
-    dlog("Ignoring tock because we are ahead: height=${height} round={round} step=${step}",
-      ("height", ti->height)("round", ti->round)("step", ti->step));
+    dlog(fmt::format("Ignoring tock because we are ahead: hrs={}/{}/{}", ti->height, ti->round, ti->step));
     return;
   }
 
@@ -372,8 +370,7 @@ void consensus_state::handle_timeout(timeout_info_ptr ti) {
 
 void consensus_state::enter_new_round(int64_t height, int32_t round) {
   if ((rs.height != height) || (round < rs.round) || (rs.round == round && rs.step != NewHeight)) {
-    dlog("entering new round with invalid args: height=${height} round={round} step=${step}",
-      ("height", rs.height)("round", rs.round)("step", rs.step));
+    dlog(fmt::format("entering new round with invalid args: hrs={}/{}/{}", rs.height, rs.round, rs.step));
     return;
   }
 
