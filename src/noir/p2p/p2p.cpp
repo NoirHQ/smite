@@ -116,7 +116,7 @@ public:
   block_id_type fork_head;
   uint32_t fork_head_num{0};
   fc::time_point last_close;
-  fc::sha256 conn_node_id;
+  bytes32 conn_node_id;
   string remote_endpoint_ip;
   string remote_endpoint_port;
   string local_endpoint_ip;
@@ -341,7 +341,7 @@ public:
   const std::chrono::system_clock::duration peer_authentication_interval{std::chrono::seconds{1}};
 
   //  chain_id_type chain_id;
-  fc::sha256 node_id;
+  bytes32 node_id;
   string user_agent_name;
 
   //  chain_plugin *chain_plug = nullptr;
@@ -426,7 +426,7 @@ public:
    *
    * If there are no configured private keys, returns an empty signature.
    */
-  signature_type sign_compact(const public_key_type& signer, const fc::sha256& digest) const;
+  signature_type sign_compact(const public_key_type& signer, const bytes32& digest) const;
 
   constexpr static uint16_t to_protocol_version(uint16_t v);
 
@@ -701,7 +701,7 @@ void p2p::plugin_initialize(const CLI::App& config) {
 
     //    my->chain_plug = app().find_plugin<chain_plugin>();
     //    my->chain_id = my->chain_plug->get_chain_id();
-    fc::rand_pseudo_bytes(my->node_id.data(), my->node_id.data_size());
+    fc::rand_pseudo_bytes(my->node_id.data(), my->node_id.size());
     //    const controller &cc = my->chain_plug->chain();
 
     //    if (my->p2p_accept_transactions) {
@@ -714,7 +714,7 @@ void p2p::plugin_initialize(const CLI::App& config) {
 void p2p::plugin_startup() {
   ilog("Start p2p");
   try {
-    ilog("my node_id is ${id}", ("id", my->node_id));
+    ilog("my node_id is ${id}", ("id", my->node_id.to_string()));
 
     //    my->producer_plug = app().find_plugin<producer_plugin>();
 
@@ -1027,7 +1027,7 @@ void connection::send_handshake(bool force) {
       ilog("Sending handshake generation ${g} to ${ep}, lib ${lib}, head ${head}, id ${id}",
         ("g", last_handshake_sent.generation)("ep", c->peer_name())(
           "lib", last_handshake_sent.last_irreversible_block_num)("head", last_handshake_sent.head_num)(
-          "id", last_handshake_sent.head_id.str().substr(8, 16)));
+          "id", last_handshake_sent.head_id.to_string().substr(8, 16)));
       c->enqueue(last_handshake_sent);
     }
   });
@@ -1058,7 +1058,7 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
     self->last_handshake_recv = handshake_message();
     self->last_handshake_sent = handshake_message();
     self->last_close = fc::time_point::now();
-    self->conn_node_id = fc::sha256();
+    self->conn_node_id = bytes32();
   }
   if (has_last_req && !shutdown) {
     //    my_impl->dispatcher->retry_fetch( self->shared_from_this() );
@@ -1120,7 +1120,7 @@ bool connection::populate_handshake(handshake_message& hello, bool force) {
   hello.node_id = my_impl->node_id;
   //  hello.key = my_impl->get_authentication_key();
   hello.time = sc::duration_cast<sc::nanoseconds>(sc::system_clock::now().time_since_epoch()).count();
-  hello.token = fc::sha256::hash(hello.time);
+  hello.token = bytes32(fc::sha256::hash(hello.time).str());
   //  hello.sig = my_impl->sign_compact(hello.key, hello.token);
   // If we couldn't sign, don't send a token.
   //  if(hello.sig == chain::signature_type())
@@ -1130,7 +1130,7 @@ bool connection::populate_handshake(handshake_message& hello, bool force) {
     hello.p2p_address += ":trx";
   if (is_blocks_only_connection())
     hello.p2p_address += ":blk";
-  hello.p2p_address += " - " + hello.node_id.str().substr(0, 7);
+  hello.p2p_address += " - " + hello.node_id.to_string().substr(0, 7);
   //#if defined( __APPLE__ )
   //  hello.os = "osx";
   //#elif defined( __linux__ )
@@ -1501,7 +1501,7 @@ void connection::handle_message(const handshake_message& msg) {
   connecting = false;
   if (msg.generation == 1) {
     if (msg.node_id == my_impl->node_id) {
-      elog("Self connection detected node_id ${id}. Closing connection", ("id", msg.node_id));
+      elog("Self connection detected node_id ${id}. Closing connection", ("id", msg.node_id.to_string()));
       enqueue(go_away_message(self));
       return;
     }
@@ -1511,7 +1511,7 @@ void connection::handle_message(const handshake_message& msg) {
     }
 
     std::unique_lock<std::mutex> g_conn(conn_mtx);
-    if (peer_address().empty() || last_handshake_recv.node_id == fc::sha256()) {
+    if (peer_address().empty() || last_handshake_recv.node_id == bytes32()) {
       g_conn.unlock();
       dlog("checking for duplicate");
       std::shared_lock<std::shared_mutex> g_cnts(my_impl->connections_mtx);
@@ -1538,7 +1538,7 @@ void connection::handle_message(const handshake_message& msg) {
       }
     } else {
       dlog("skipping duplicate check, addr == ${pa}, id = ${ni}",
-        ("pa", peer_address())("ni", last_handshake_recv.node_id));
+        ("pa", peer_address())("ni", last_handshake_recv.node_id.to_string()));
       g_conn.unlock();
     }
 

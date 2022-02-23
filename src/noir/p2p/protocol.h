@@ -14,12 +14,12 @@ using namespace fc;
 
 struct handshake_message {
   uint16_t network_version = 0; ///< incremental value above a computed base
-  //  chain_id_type chain_id; ///< used to identify chain fc::sha256 node_id; ///< used to identify peers and prevent
+  //  chain_id_type chain_id; ///< used to identify chain bytes32 node_id; ///< used to identify peers and prevent
   //  self-connect
-  fc::sha256 node_id; ///< used to identify peers and prevent self-connect
+  bytes32 node_id; ///< used to identify peers and prevent self-connect
   //  chain::public_key_type key; ///< authentication key; may be a producer or peer key, or empty
   tstamp time{0};
-  fc::sha256 token; ///< digest of time to prove we own the private key of the key above
+  bytes32 token; ///< digest of time to prove we own the private key of the key above
   //  chain::signature_type sig; ///< signature for the digest
   string p2p_address;
   uint32_t last_irreversible_block_num = 0;
@@ -180,7 +180,7 @@ struct go_away_message {
   go_away_message(go_away_reason r = no_reason): reason(r), node_id() {}
 
   go_away_reason reason{no_reason};
-  fc::sha256 node_id; ///< for duplicate notification
+  bytes32 node_id; ///< for duplicate notification
 };
 
 using net_message =
@@ -188,9 +188,9 @@ using net_message =
 
 } // namespace noir::p2p
 
-NOIR_FOR_EACH_FIELD(noir::p2p::handshake_message, network_version, /*node_id,*/ time, /*token,*/ p2p_address,
-  last_irreversible_block_num, /*last_irreversible_block_id,*/ head_num, /*head_id,*/ generation)
-NOIR_FOR_EACH_FIELD(noir::p2p::go_away_message, reason /*, node_id*/)
+NOIR_FOR_EACH_FIELD(noir::p2p::handshake_message, network_version, node_id, time, token, p2p_address,
+  last_irreversible_block_num, last_irreversible_block_id, head_num, head_id, generation)
+NOIR_FOR_EACH_FIELD(noir::p2p::go_away_message, reason, node_id)
 NOIR_FOR_EACH_FIELD(noir::p2p::time_message, org, rec, xmt, dst)
 NOIR_FOR_EACH_FIELD(noir::p2p::block_part_message, height, round, index, bytes_ /* TODO: (proof) */)
 NOIR_FOR_EACH_FIELD(noir::p2p::block_id, hash, parts)
