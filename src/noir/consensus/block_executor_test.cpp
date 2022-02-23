@@ -43,9 +43,8 @@ TEST_CASE("Apply block", "[block_executor]") {
   auto [state_, state_db, priv_vals, session] = make_state(1, 1);
 
   auto proxyApp = std::make_shared<app_connection>();
-  auto mempool = std::make_shared<tx_pool::tx_pool>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
-  auto block_exec = block_executor::new_block_executor(state_db, proxyApp, mempool, bls);
+  auto block_exec = block_executor::new_block_executor(state_db, proxyApp, bls);
 
   auto block_ = make_block(1, state_, commit{});
   auto block_id_ = p2p::block_id{block_->get_hash(), block_->make_part_set(65536)->header()};
