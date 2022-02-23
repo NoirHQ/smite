@@ -37,11 +37,11 @@ struct unapplied_tx {
     return tx_ptr->time_stamp;
   }
 
-  //  unapplied_tx(const unapplied_tx&) = delete;
-  //  unapplied_tx() = delete;
-  //  unapplied_tx& operator=(const unapplied_tx&) = delete;
-  //  unapplied_tx(unapplied_tx&&) = default;
-  //  unapplied_tx(const consensus::tx_ptr, uint64_t, uint64_t);
+  unapplied_tx(const unapplied_tx&) = delete;
+  unapplied_tx() = delete;
+  unapplied_tx& operator=(const unapplied_tx&) = delete;
+  unapplied_tx(unapplied_tx&&) = default;
+  explicit unapplied_tx(const consensus::wrapped_tx_ptr& wtx): tx_ptr(wtx) {}
 };
 
 class unapplied_tx_queue {
@@ -154,7 +154,7 @@ public:
       return false;
     }
 
-    auto res = queue_.insert({tx_ptr});
+    auto res = queue_.insert(unapplied_tx{tx_ptr});
     if (res.second) {
       size_in_bytes_ += bytes_size(tx_ptr);
       incoming_count_++;
