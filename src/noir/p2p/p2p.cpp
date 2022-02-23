@@ -1286,7 +1286,7 @@ bool connection::process_next_message(uint32_t message_length) {
     //
     //    } else {
 
-    codec::scale::datastream<char> ds_payload(pending_message_buffer.read_ptr(), message_length);
+    noir::core::codec::datastream<char> ds_payload(pending_message_buffer.read_ptr(), message_length);
     net_message msg;
     ds_payload >> msg;
     msg_handler m(shared_from_this());
