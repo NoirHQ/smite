@@ -84,28 +84,30 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
   postcheck_ = postcheck;
 }
 
-std::optional<std::future<bool>> tx_pool::check_tx(const consensus::wrapped_tx_ptr& tx_ptr, bool sync) {
-  if (tx_ptr->size() > config_.max_tx_bytes) {
+std::optional<std::future<bool>> tx_pool::check_tx(const consensus::tx& tx, bool sync) {
+  if (tx.size() > config_.max_tx_bytes) {
     return std::nullopt;
   }
 
-  if (precheck_ && !precheck_(tx_ptr->tx_data)) {
+  if (precheck_ && !precheck_(tx)) {
     return std::nullopt;
   }
 
-  if (tx_cache_.has(tx_ptr->id())) {
+  auto tx_id = consensus::get_tx_id(tx);
+
+  if (tx_cache_.has(tx_id)) {
     // already in cache
-    tx_cache_.put(tx_ptr->id(), tx_ptr);
+    tx_cache_.put(tx_id, tx);
     return std::nullopt;
   }
 
-  tx_cache_.put(tx_ptr->id(), tx_ptr);
+  tx_cache_.put(tx_id, tx);
 
-  consensus::response_check_tx res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx_ptr->tx_data});
-  auto result = async_thread_pool(thread_->get_executor(), [&, tx_ptr]() {
-    if (postcheck_ && !postcheck_(tx_ptr->tx_data, res)) {
+  auto result = async_thread_pool(thread_->get_executor(), [&, tx, tx_id]() {
+    consensus::response_check_tx res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
+    if (postcheck_ && !postcheck_(tx, res)) {
       if (res.code != consensus::code_type_ok) {
-        tx_cache_.del(tx_ptr->id());
+        tx_cache_.del(tx_id);
         return false;
       }
       // add tx to failed tx_pool
@@ -116,22 +118,31 @@ std::optional<std::future<bool>> tx_pool::check_tx(const consensus::wrapped_tx_p
     }
 
     std::lock_guard<std::mutex> lock(mutex_);
-    auto old = tx_queue_.get_tx(tx_ptr->sender, tx_ptr->nonce);
+    auto old = tx_queue_.get_tx(res.sender, res.nonce);
     if (old.has_value()) {
       auto old_tx = old.value();
-      if (tx_ptr->gas < old_tx->gas + config_.gas_price_bump) {
+      if (res.gas_wanted < old_tx->gas + config_.gas_price_bump) {
         if (!config_.keep_invalid_txs_in_cache) {
-          tx_cache_.del(tx_ptr->id());
+          tx_cache_.del(tx_id);
         }
         return false;
       }
-
       tx_queue_.erase(old_tx);
     }
 
-    if (!tx_queue_.add_tx(tx_ptr)) {
+    auto wtx = consensus::wrapped_tx{
+      .sender = res.sender,
+      ._id = tx_id,
+      .tx_data = tx,
+      .gas = res.gas_wanted,
+      .nonce = res.nonce,
+      .height = block_height_,
+      .time_stamp = consensus::get_time(),
+    };
+
+    if (!tx_queue_.add_tx(std::make_shared<consensus::wrapped_tx>(wtx))) {
       if (!config_.keep_invalid_txs_in_cache) {
-        tx_cache_.del(tx_ptr->id());
+        tx_cache_.del(tx_id);
       }
       return false;
     }
@@ -144,10 +155,10 @@ std::optional<std::future<bool>> tx_pool::check_tx(const consensus::wrapped_tx_p
   return result;
 }
 
-consensus::wrapped_tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
+std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  consensus::wrapped_tx_ptrs tx_ptrs;
+  std::vector<consensus::tx> txs;
   auto rbegin = tx_queue_.rbegin<unapplied_tx_queue::by_gas>(max_gas);
   auto rend = tx_queue_.rend<unapplied_tx_queue::by_gas>(0);
 
@@ -165,28 +176,28 @@ consensus::wrapped_tx_ptrs tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, u
 
     bytes += tx_ptr->size();
     gas += tx_ptr->gas;
-    tx_ptrs.push_back(tx_ptr);
+    txs.push_back(tx_ptr->tx_data);
   }
 
-  return tx_ptrs;
+  return txs;
 }
 
-consensus::wrapped_tx_ptrs tx_pool::reap_max_txs(uint64_t tx_count) {
+std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
   std::lock_guard<std::mutex> lock(mutex_);
   uint64_t count = std::min<uint64_t>(tx_count, tx_queue_.size());
 
-  consensus::wrapped_tx_ptrs tx_ptrs;
+  std::vector<consensus::tx> txs;
   for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
-    if (tx_ptrs.size() >= count) {
+    if (txs.size() >= count) {
       break;
     }
-    tx_ptrs.push_back(itr->tx_ptr);
+    txs.push_back(itr->tx_ptr->tx_data);
   }
 
-  return tx_ptrs;
+  return txs;
 }
 
-bool tx_pool::update(uint64_t block_height, consensus::wrapped_tx_ptrs& block_txs,
+bool tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
   std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
   std::lock_guard<std::mutex> lock(mutex_);
   block_height_ = block_height;
@@ -201,13 +212,14 @@ bool tx_pool::update(uint64_t block_height, consensus::wrapped_tx_ptrs& block_tx
 
   size_t size = std::min(block_txs.size(), responses.size());
   for (auto i = 0; i < size; i++) {
+    auto tx_id = consensus::get_tx_id(block_txs[i]);
     if (responses[i].code == consensus::code_type_ok) {
-      tx_cache_.put(block_txs[i]->id(), block_txs[i]);
+      tx_cache_.put(tx_id, block_txs[i]);
     } else if (!config_.keep_invalid_txs_in_cache) {
-      tx_cache_.del(block_txs[i]->id());
+      tx_cache_.del(tx_id);
     }
 
-    tx_queue_.erase(block_txs[i]->id());
+    tx_queue_.erase(tx_id);
   }
 
   if (config_.ttl_num_blocks > 0) {

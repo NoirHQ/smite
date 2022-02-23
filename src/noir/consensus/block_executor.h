@@ -59,12 +59,7 @@ struct block_executor {
       throw std::runtime_error(fmt::format(
         "negative max_data_bytes: max_bytes={} is too small to accommodate header and last_commit", max_bytes));
 
-    auto wrapped_txs = mempool->reap_max_bytes_max_gas(max_data_bytes, max_gas);
-    // Convert to list of bytes
-    std::vector<bytes> txs;
-    for (auto w_tx : wrapped_txs) {
-      txs.push_back(bytes{}); // todo - convert to bytes
-    }
+    auto txs = mempool->reap_max_bytes_max_gas(max_data_bytes, max_gas);
 
     auto prepared_proposal = proxyApp_->prepare_proposal_sync(request_prepare_proposal{txs, max_data_bytes, votes});
     auto new_txs = prepared_proposal.block_data;
@@ -205,7 +200,7 @@ struct block_executor {
       "committed state: height={}, num_txs... app_hash={}", block_->header.height, to_hex(commit_res.data)));
 
     // Update mempool
-    consensus::wrapped_tx_ptrs block_txs; // todo - convert from block_.data.txs to wrapped_tx
+    std::vector<consensus::tx> block_txs;
     mempool->update(block_->header.height, block_txs, abci_responses_->deliver_txs);
 
     bytes app_hash = commit_res.data;
