@@ -16,6 +16,13 @@ using tx_ptr = std::shared_ptr<tx>;
 using address_type = bytes;
 using tx_id_type = bytes32;
 
+static tx_id_type get_tx_id(const tx& tx) {
+  if (tx.size() == 0) {
+    return tx_id_type{};
+  }
+  return tx_id_type{to_hex(tx)}; // FIXME
+}
+
 struct wrapped_tx {
   address_type sender;
   std::optional<tx_id_type> _id;
@@ -28,7 +35,7 @@ struct wrapped_tx {
 
   tx_id_type id() {
     if (!_id.has_value()) {
-      _id = tx_id_type{to_hex(tx_data)}; // FIXME
+      _id = get_tx_id(tx_data);
     }
     return _id.value();
   }

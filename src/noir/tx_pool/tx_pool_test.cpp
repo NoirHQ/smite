@@ -36,7 +36,50 @@ private:
 
   std::shared_ptr<class tx_pool> tp = nullptr;
 
+  class test_application : public application::base_application {
+    std::mutex mutex_;
+
+  public:
+    consensus::response_check_tx res_{.sender = str_to_addr("user"), .nonce = 0};
+
+    consensus::response_check_tx check_tx() override {
+      std::lock_guard lock(mutex_);
+      consensus::response_check_tx res = res_;
+      res_.nonce++;
+      return res;
+    }
+
+    void set_nonce(uint64_t nonce) {
+      std::lock_guard lock(mutex_);
+      res_.nonce = nonce;
+    }
+
+    void set_gas(uint64_t gas) {
+      std::lock_guard lock(mutex_);
+      res_.gas_wanted = gas;
+    }
+  };
+
+  std::shared_ptr<test_application> test_app_conn = std::make_shared<test_application>();
+
 public:
+  auto new_tx() {
+    std::lock_guard<std::mutex> lock(mutex);
+    return codec::scale::encode(tx_id++);
+  }
+
+  auto new_txs(uint count) {
+    std::vector<consensus::tx> txs;
+    for (uint i = 0; i < count; i++) {
+      txs.push_back(new_tx());
+    }
+
+    for (auto tx : txs) {
+      REQUIRE(tx.size() != 0);
+    }
+    return txs;
+  }
+
   auto make_random_wrapped_tx(const std::string& sender) {
     wrapped_tx new_wrapped_tx;
     new_wrapped_tx.sender = str_to_addr(sender);
@@ -65,9 +108,18 @@ public:
 
   class tx_pool& make_tx_pool(config cfg) {
     auto proxy_app = std::make_shared<app_connection>();
+    proxy_app->application = test_app_conn;
     tp = std::make_shared<noir::tx_pool::tx_pool>(cfg, proxy_app, 0);
     tp->start();
     return *tp;
+  }
+
+  void set_gas(uint64_t gas_wanted) {
+    test_app_conn->set_gas(gas_wanted);
+  }
+
+  void set_nonce(uint64_t nonce) {
+    test_app_conn->set_nonce(nonce);
   }
 };
 
@@ -82,7 +134,7 @@ TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
   const uint64_t tx_count = 10;
   wrapped_tx_ptrs wtxs;
   for (auto i = 0; i < tx_count; i++) {
-    wtxs.push_back(std::make_shared<::wrapped_tx>(std::move(test_helper->make_random_wrapped_tx("user"))));
+    wtxs.push_back(std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user")));
   }
 
   // Add tx
@@ -142,7 +194,7 @@ TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
   uint64_t queue_size = 0;
   wrapped_tx_ptrs wtxs;
   for (uint64_t i = 0; i < tx_count; i++) {
-    wtxs.push_back(std::make_shared<::wrapped_tx>(std::move(test_helper->make_random_wrapped_tx("user"))));
+    wtxs.push_back(std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user")));
   }
 
   for (auto& wtx : wtxs) {
@@ -252,33 +304,27 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
   auto push_tx = [&](uint64_t count, bool sync = true) {
     std::vector<std::optional<std::future<bool>>> res_vec;
     for (uint64_t i = 0; i < count; i++) {
-      res_vec.push_back(
-        std::move(tp.check_tx(std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user")), sync)));
+      res_vec.push_back(tp.check_tx(test_helper->new_tx(), sync));
     }
     return res_vec;
   };
 
-  auto get_tx = [&](uint64_t count) { return tp.reap_max_txs(count); };
-
   SECTION("sync") {
-    auto res = push_tx(100);
-    for (auto& r : res) {
+    auto res_push = push_tx(100);
+    for (auto& r : res_push) {
       CHECKED_IF(r.has_value()) {
         CHECK(r.value().get());
       }
     }
 
     // fail case : same tx_id
-    test_helper->reset_tx_id();
-    auto res_failed = push_tx(100);
-    for (auto& r : res_failed) {
-      CHECKED_IF(r.has_value()) {
-        CHECK(r.value().get() == false);
-      }
+    auto txs = tp.reap_max_txs(100);
+    for (auto& tx : txs) {
+      CHECK(!tp.check_tx(tx, true).has_value());
     }
 
-    auto tx_ptrs = get_tx(100);
-    CHECK(tx_ptrs.size() == 100);
+    txs = tp.reap_max_txs(100);
+    CHECK(txs.size() == 100);
   }
 
   SECTION("async") {
@@ -333,8 +379,8 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
 
         uint64_t get_count = 0;
         while (get_count < 1000) {
-          auto res = get_tx(1000 - get_count);
-          get_count += res.size();
+          auto txs = tp.reap_max_txs(1000 - get_count);
+          get_count += txs.size();
         }
         return get_count;
       });
@@ -368,8 +414,8 @@ TEST_CASE("Push/Get tx", "[tx_pool]") {
 
           uint64_t get_count = 0;
           while (get_count < 500) {
-            auto res = get_tx(500 - get_count);
-            get_count += res.size();
+            auto txs = tp.reap_max_txs(500 - get_count);
+            get_count += txs.size();
           }
           return get_count;
         });
@@ -396,42 +442,20 @@ TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
   auto& tp = test_helper->make_tx_pool();
 
   const uint64_t tx_count = 10000;
-  consensus::wrapped_tx_ptrs wrapped_txs;
   for (auto i = 0; i < tx_count; i++) {
-    wrapped_txs.push_back(std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user")));
+    CHECK(tp.check_tx(test_helper->new_tx(), true)->get());
   }
-
-  for (auto& wrapped_tx : wrapped_txs) {
-    auto res = tp.check_tx(wrapped_tx, true);
-    CHECKED_IF(res.has_value()) {
-      CHECK(res.value().get());
-    }
-  }
-
-  consensus::wrapped_tx_ptrs wrapped_tx_vec;
-  auto get_total_bytes = [&]() {
-    uint64_t total_bytes = 0;
-    for (auto& wrapped_tx : wrapped_tx_vec) {
-      total_bytes += wrapped_tx->size();
-    }
-    return total_bytes;
-  };
-
-  auto get_total_gas = [&]() {
-    uint64_t total_gas = 0;
-    for (auto& wrapped_tx : wrapped_tx_vec) {
-      total_gas += wrapped_tx->gas;
-    }
-    return total_gas;
-  };
 
   uint tc = 100;
   for (uint i = 0; i < tc; i++) {
     uint64_t max_bytes = 1000;
     uint64_t max_gas = test_helper->rand_gas(1000000, 100000);
-    wrapped_tx_vec = tp.reap_max_bytes_max_gas(max_bytes, max_gas);
-    CHECK(get_total_bytes() <= max_bytes);
-    CHECK(get_total_gas() <= max_gas);
+    auto txs = tp.reap_max_bytes_max_gas(max_bytes, max_gas);
+    uint64_t total_bytes = 0;
+    for (auto& tx : txs) {
+      total_bytes += tx.size();
+    }
+    CHECK(total_bytes <= max_bytes);
   }
 }
 
@@ -440,29 +464,22 @@ TEST_CASE("Update", "[tx_pool]") {
 
   const uint64_t tx_count = 10;
 
-  auto put_tx = [&](class tx_pool& tp) {
-    consensus::wrapped_tx_ptrs wrapped_txs;
-    auto now = consensus::get_time();
-    for (auto i = 0; i < tx_count; i++) {
-      auto tx = test_helper->make_random_wrapped_tx("user");
-      tx.time_stamp = i % 2 ? now : now - std::chrono::microseconds(10000000LL).count();
-      wrapped_txs.push_back(std::make_shared<::wrapped_tx>(tx));
-    }
-    for (auto& wrapped_tx : wrapped_txs) {
-      auto res = tp.check_tx(wrapped_tx, true);
+  auto put_tx = [&](class tx_pool& tp, std::vector<tx> txs) {
+    for (auto& tx : txs) {
+      auto res = tp.check_tx(tx, true);
       CHECKED_IF(res.has_value()) {
         CHECK(res.value().get());
       }
     }
-    return wrapped_txs;
   };
 
   SECTION("Erase committed tx") {
     auto& tp = test_helper->make_tx_pool();
-    auto wrapped_txs = put_tx(tp);
+    auto txs = test_helper->new_txs(tx_count);
+    put_tx(tp, txs);
     std::vector<consensus::response_deliver_tx> res;
     res.resize(tx_count);
-    CHECK(tp.update(0, wrapped_txs, res));
+    CHECK(tp.update(0, txs, res));
     CHECK(tp.empty());
   }
 
@@ -471,12 +488,17 @@ TEST_CASE("Update", "[tx_pool]") {
       .ttl_num_blocks = 10,
     };
     auto& tp = test_helper->make_tx_pool(config);
-    put_tx(tp);
     std::vector<consensus::response_deliver_tx> res;
     res.resize(tx_count);
-    consensus::wrapped_tx_ptrs empty_wrapped_txs;
+    std::vector<tx> empty_txs;
     for (uint64_t i = 0; i < tx_count; i++) {
-      CHECK(tp.update(config.ttl_num_blocks + i, empty_wrapped_txs, res));
+      CHECK(tp.update(i, empty_txs, res));
+      auto txs = test_helper->new_txs(1);
+      put_tx(tp, txs);
+    }
+
+    for (uint64_t i = 0; i < tx_count; i++) {
+      CHECK(tp.update(config.ttl_num_blocks + i, empty_txs, res));
       CHECK(tp.size() == tx_count - i - 1);
     }
     CHECK(tp.empty());
@@ -484,15 +506,18 @@ TEST_CASE("Update", "[tx_pool]") {
 
   SECTION("Erase time expired tx") {
     config config{
-      .ttl_duration = std::chrono::microseconds(1000000LL).count(),
+      .ttl_duration = std::chrono::microseconds(100000LL).count(), // 100 msec
     };
     auto& tp = test_helper->make_tx_pool(config);
-    put_tx(tp);
+    auto txs = test_helper->new_txs(tx_count);
+    put_tx(tp, txs);
     std::vector<consensus::response_deliver_tx> res;
     res.resize(tx_count);
-    consensus::wrapped_tx_ptrs empty_wrapped_txs;
-    CHECK(tp.update(0, empty_wrapped_txs, res));
-    CHECK(tp.size() == tx_count / 2);
+    std::vector<consensus::tx> empty_txs;
+
+    usleep(100000LL); // sleep 100 msec
+    CHECK(tp.update(0, empty_txs, res));
+    CHECK(tp.empty());
   }
 }
 
@@ -501,15 +526,15 @@ TEST_CASE("Nonce override", "[tx_pool]") {
   config config;
   auto& tp = test_helper->make_tx_pool(config);
 
-  auto tx1 = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
+  auto tx1 = test_helper->new_tx();
   CHECK(tp.check_tx(tx1, true).value().get());
 
-  auto tx2 = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
-  tx2->gas = tx1->gas;
-  tx2->nonce = tx1->nonce;
+  auto tx2 = test_helper->new_tx();
+  test_helper->set_nonce(0);
   CHECK(!tp.check_tx(tx2, true).value().get());
 
-  tx2->gas = tx1->gas + config.gas_price_bump;
+  test_helper->set_nonce(0);
+  test_helper->set_gas(config.gas_price_bump);
   CHECK(tp.check_tx(tx2, true).value().get());
 }
 
@@ -518,34 +543,42 @@ TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
   uint tx_count = 1000;
   uint cache_size = 1000;
 
-  LRU_cache<tx_id_type, consensus::wrapped_tx_ptr> c{cache_size};
+  LRU_cache<tx_id_type, consensus::tx> c{cache_size};
 
-  consensus::wrapped_tx_ptr wrapped_txs[tx_count];
-  for (auto& wrapped_tx : wrapped_txs) {
-    wrapped_tx = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
-    c.put(wrapped_tx->id(), wrapped_tx);
+  struct test_tx {
+    tx tx;
+    tx_id_type id;
+  };
+  std::vector<test_tx> txs;
+
+  for (uint64_t i = 0; i < tx_count; i++) {
+    test_tx test_tx;
+    test_tx.tx = test_helper->new_tx();
+    test_tx.id = get_tx_id(test_tx.tx);
+    c.put(test_tx.id, test_tx.tx);
+    txs.push_back(test_tx);
   }
 
   SECTION("put") {
     CHECK(c.size() == tx_count);
-    for (auto& wrapped_tx : wrapped_txs) {
-      CHECK(c.has(wrapped_tx->id()));
+    for (auto& tx : txs) {
+      CHECK(c.has(tx.id));
     }
 
     // new tx, replace the oldest tx in cache
-    auto wrapped_tx = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
-    c.put(wrapped_tx->id(), wrapped_tx); // tx0 is replaced by new one
+    auto tx = test_helper->new_tx();
+    c.put(get_tx_id(tx), tx); // tx0 is replaced by new one
     CHECK(c.size() == tx_count);
-    CHECK(c.has(wrapped_tx->id()));
-    CHECK(!c.has(wrapped_txs[0]->id()));
+    CHECK(c.has(get_tx_id(tx)));
+    CHECK(!c.has(txs[0].id));
 
     // put again tx1
-    c.put(wrapped_txs[1]->id(), wrapped_txs[1]);
-    wrapped_tx = std::make_shared<::wrapped_tx>(test_helper->make_random_wrapped_tx("user"));
-    c.put(wrapped_tx->id(), wrapped_tx); // tx2 is replaced by new one
-    CHECK(c.has(wrapped_tx->id()));
-    CHECK(c.has(wrapped_txs[1]->id()));
-    CHECK(!c.has(wrapped_txs[2]->id()));
+    c.put(txs[1].id, txs[1].tx);
+    tx = test_helper->new_tx();
+    c.put(get_tx_id(tx), tx); // tx2 is replaced by new one
+    CHECK(c.has(get_tx_id(tx)));
+    CHECK(c.has(txs[1].id));
+    CHECK(!c.has(txs[2].id));
   }
 
   SECTION("invalid") {
@@ -555,16 +588,18 @@ TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
   }
 
   SECTION("del") {
-    CHECK(c.has(wrapped_txs[3]->id()));
-    c.del(wrapped_txs[3]->id());
-    CHECK(!c.has(wrapped_txs[3]->id()));
+    CHECK(c.has(txs[3].id));
+    c.del(txs[3].id);
+    CHECK(!c.has(txs[3].id));
     CHECK(c.size() == tx_count - 1);
   }
 
   SECTION("get") {
-    auto res = c.get(wrapped_txs[0]->id());
-    CHECKED_IF(res.has_value()) {
-      CHECK(!to_string(wrapped_txs[0]->id()).compare(to_string(res.value()->id())));
+    for (auto& tx : txs) {
+      auto res = c.get(tx.id);
+      CHECKED_IF(res.has_value()) {
+        CHECK(to_string(tx.id) == to_string(get_tx_id(res.value())));
+      }
     }
   }
 }
