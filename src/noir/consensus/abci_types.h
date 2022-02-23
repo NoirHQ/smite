@@ -148,13 +148,14 @@ struct response_check_tx {
   bytes data;
   std::string log;
   std::string info;
-  int64_t gas_wanted;
-  int64_t gas_used;
+  uint64_t gas_wanted;
+  uint64_t gas_used;
   std::vector<event> events;
   std::string codespace;
-  std::string sender;
+  address_type sender;
   int64_t priority;
   std::string mempool_error;
+  uint64_t nonce;
 };
 
 } // namespace noir::consensus
@@ -184,4 +185,4 @@ NOIR_FOR_EACH_FIELD(
 NOIR_FOR_EACH_FIELD(noir::consensus::abci_responses, deliver_txs, end_block, begin_block)
 NOIR_FOR_EACH_FIELD(noir::consensus::request_check_tx, tx, type)
 NOIR_FOR_EACH_FIELD(noir::consensus::response_check_tx, code, data, log, info, gas_wanted, gas_used, events, codespace,
-  sender, priority, mempool_error)
+  sender, priority, mempool_error, nonce)
