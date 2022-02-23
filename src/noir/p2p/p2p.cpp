@@ -275,7 +275,7 @@ using connection_wptr = std::weak_ptr<connection>;
 const string connection::unknown = "<unknown>";
 
 // called from connection strand
-struct msg_handler : public fc::visitor<void> {
+struct msg_handler {
   connection_ptr c;
 
   explicit msg_handler(const connection_ptr& conn): c(conn) {}
@@ -1301,11 +1301,13 @@ bool connection::process_next_message(uint32_t message_length) {
     //      return process_next_trx_message( message_length );
     //
     //    } else {
-    auto ds = pending_message_buffer.create_datastream();
+
+    codec::scale::datastream<char> ds_payload(pending_message_buffer.read_ptr(), message_length);
     net_message msg;
-    fc::raw::unpack(ds, msg);
+    ds_payload >> msg;
     msg_handler m(shared_from_this());
     std::visit(m, msg);
+    pending_message_buffer.advance_read_ptr(message_length); // required to manually advance
     //    }
 
   } catch (const fc::exception& e) {
