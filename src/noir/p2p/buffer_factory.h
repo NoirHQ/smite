@@ -4,11 +4,12 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
+#include <noir/codec/scale.h>
 #include <noir/p2p/protocol.h>
 
-#include <noir/core/types.h>
-
 namespace noir::p2p {
+
+using namespace noir::codec;
 
 using send_buffer_type = std::shared_ptr<std::vector<char>>;
 
@@ -27,14 +28,14 @@ protected:
 
 protected:
   static send_buffer_type create_send_buffer(const net_message& m) {
-    const uint32_t payload_size = noir::core::codec::encode_size(m);
+    const uint32_t payload_size = codec::scale::encode_size(m);
     const char* const header = reinterpret_cast<const char* const>(&payload_size);
     constexpr size_t header_size = sizeof(payload_size);
     static_assert(header_size == message_header_size, "invalid message_header_size");
     const size_t buffer_size = header_size + payload_size;
 
     auto send_buffer = std::make_shared<std::vector<char>>(buffer_size);
-    noir::core::codec::datastream<char> ds(send_buffer->data(), buffer_size);
+    codec::scale::datastream<char> ds(send_buffer->data(), buffer_size);
     ds.write(header, header_size);
     ds << m;
 
