@@ -32,7 +32,7 @@ struct hash : public crypto::hash {
   virtual const EVP_MD* type() = 0;
 
 protected:
-  EVP_MD_CTX* ctx;
+  EVP_MD_CTX* ctx = nullptr;
 };
 
 } // namespace noir::openssl
