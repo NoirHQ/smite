@@ -196,12 +196,19 @@ FC_REFLECT(noir::p2p::block_part_message, (height)(round)(index)(bytes_) /* TODO
 FC_REFLECT(noir::p2p::block_id, (hash)(parts))
 FC_REFLECT(noir::p2p::part_set_header, (total)(hash))
 FC_REFLECT(noir::p2p::vote_extension, (app_data_to_sign)(app_data_self_authenticating))
-
 FC_REFLECT(noir::p2p::vote_message, (type)(height)(round) /* (block_id_) temp disable */ (timestamp)
   /* (validator_address)(validator_index)(signature) don't include */ /* TODO: (chain_id) */ /* (vote_extension_) */)
-NOIR_FOR_EACH_FIELD(noir::p2p::vote_message, type, height, round, timestamp /*, vote_extension_ */)
-
 FC_REFLECT(noir::p2p::proposal_message,
   (type)(height)(round)(pol_round) /* (block_id_) temp disable */ (
     timestamp) /*(signature) don't include */ /* TODO: (chain_id) */) // TODO: remove all FC_REFLECTs
+
+NOIR_FOR_EACH_FIELD(noir::p2p::handshake_message, network_version, /*node_id,*/ time, /*token,*/ p2p_address,
+  last_irreversible_block_num, /*last_irreversible_block_id,*/ head_num, /*head_id,*/ generation)
+NOIR_FOR_EACH_FIELD(noir::p2p::go_away_message, reason/*, node_id*/)
+NOIR_FOR_EACH_FIELD(noir::p2p::time_message, org, rec, xmt, dst)
+NOIR_FOR_EACH_FIELD(noir::p2p::block_part_message, height, round, index, bytes_ /* TODO: (proof) */)
+NOIR_FOR_EACH_FIELD(noir::p2p::block_id, hash, parts)
+NOIR_FOR_EACH_FIELD(noir::p2p::part_set_header, total, hash)
+NOIR_FOR_EACH_FIELD(noir::p2p::vote_extension, app_data_to_sign, app_data_self_authenticating)
+NOIR_FOR_EACH_FIELD(noir::p2p::vote_message, type, height, round, timestamp /*, vote_extension_ */)
 NOIR_FOR_EACH_FIELD(noir::p2p::proposal_message, type, height, round, pol_round, timestamp)
