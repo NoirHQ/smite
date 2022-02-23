@@ -37,7 +37,9 @@ struct node {
     // Load or generate node_key - todo
     auto node_key_ = node_key::gen_node_key();
 
-    auto session = std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false));
+    auto db_dir = appbase::app().home_dir() / "db";
+    auto session =
+      std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
 
     return make_node(new_config, priv_vals[0], node_key_, std::make_shared<genesis_doc>(gen_doc), session);
   }
