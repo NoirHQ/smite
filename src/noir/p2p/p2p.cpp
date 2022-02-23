@@ -17,20 +17,13 @@
 #include <boost/asio/steady_timer.hpp>
 #include <fc/crypto/rand.hpp>
 #include <fc/exception/exception.hpp>
-#include <fc/io/json.hpp>
-#include <fc/io/raw.hpp>
 #include <fc/network/ip.hpp>
 #include <fc/network/message_buffer.hpp>
-#include <fc/reflect/variant.hpp>
-#include <fc/static_variant.hpp>
 
 #include <atomic>
 #include <shared_mutex>
 
 namespace noir::p2p {
-
-// todo - register here or in main?
-// static appbase::abstract_plugin &_p2p = appbase::app().register_plugin<p2p>();
 
 using std::vector;
 
@@ -258,15 +251,6 @@ public:
   //  void handle_message(packed_transaction_ptr msg);
 
   //  void process_signed_block(const block_id_type &id, signed_block_ptr msg);
-
-  fc::variant_object get_logger_variant() {
-    fc::mutable_variant_object mvo;
-    mvo("_name", peer_name());
-    std::lock_guard<std::mutex> g_conn(conn_mtx);
-    mvo("_id", conn_node_id)("_sid", conn_node_id.str().substr(0, 7))("_ip", remote_endpoint_ip)(
-      "_port", remote_endpoint_port)("_lip", local_endpoint_ip)("_lport", local_endpoint_port);
-    return mvo;
-  }
 };
 
 using connection_ptr = std::shared_ptr<connection>;
