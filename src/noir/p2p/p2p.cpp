@@ -71,8 +71,6 @@ private:
 
   void update_endpoints();
 
-  //  std::optional<peer_sync_state> peer_requested;  // this peer is requesting info from us
-
   std::atomic<bool> socket_open{false};
 
   const std::string peer_addr;
@@ -203,8 +201,6 @@ public:
     const std::shared_ptr<std::vector<char>>& send_buffer, go_away_reason close_after_send, bool to_sync_queue = false);
   //  void cancel_sync(go_away_reason);
   void flush_queues();
-  bool enqueue_sync_block();
-  void request_sync_blocks(uint32_t start, uint32_t end);
 
   void cancel_wait();
   void sync_wait();
@@ -296,7 +292,6 @@ public:
   std::unique_ptr<tcp::acceptor> acceptor;
   std::atomic<uint32_t> current_connection_id{0};
 
-  //  unique_ptr<sync_manager> sync_master;
   //  unique_ptr<dispatch_manager> dispatcher;
 
   /**
@@ -360,7 +355,7 @@ private:
 
 public:
   void update_chain_info();
-  //         lib_num, head_block_num, fork_head_blk_num, lib_id, head_blk_id, fork_head_blk_id
+
   std::tuple<uint32_t, uint32_t, block_id_type, block_id_type> get_chain_info() const;
 
   void start_listen_loop();
@@ -625,7 +620,6 @@ void p2p::plugin_initialize(const CLI::App& config) {
   ilog("Initialize p2p");
   try {
     auto p2p_options = config.get_subcommand("p2p");
-    //    my->sync_master.reset( new sync_manager( options.at( "sync-fetch-span" ).as<uint32_t>()));
 
     my->connector_period = std::chrono::seconds(60); // number of seconds to wait before cleaning up dead connections
     my->max_cleanup_time_ms = 1000; // max connection cleanup time per cleanup call in millisec
@@ -1006,9 +1000,7 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
   if (has_last_req && !shutdown) {
     //    my_impl->dispatcher->retry_fetch( self->shared_from_this() );
   }
-  //  self->peer_requested.reset();
   self->sent_handshake_count = 0;
-  //  if( !shutdown) my_impl->sync_master->sync_reset_lib_num( self->shared_from_this() );
   ilog("closing '${a}', ${p}", ("a", self->peer_address())("p", self->peer_name()));
   dlog("canceling wait on ${p}", ("p", self->peer_name())); // peer_name(), do not hold conn_mtx
   self->cancel_wait();
@@ -1293,7 +1285,6 @@ void connection::do_queue_write() {
 
           c->buffer_queue.out_callback(ec, w);
 
-          c->enqueue_sync_block();
           c->do_queue_write();
         } catch (const std::bad_alloc&) {
           throw;
@@ -1308,41 +1299,6 @@ void connection::do_queue_write() {
         }
       }));
   });
-}
-
-bool connection::enqueue_sync_block() {
-  //  if( !peer_requested ) {
-  //    return false;
-  //  } else {
-  //    dlog("enqueue sync block ${num}", ("num", peer_requested->last + 1) );
-  //  }
-  //  uint32_t num = ++peer_requested->last;
-  //  if(num == peer_requested->end_block) {
-  //    peer_requested.reset();
-  //    ilog("completing enqueue_sync_block ${num} to ${p}", ("num", num)("p", peer_name()) );
-  //  }
-  //  connection_wptr weak = shared_from_this();
-  //  app().post( priority::medium, [num, weak{std::move(weak)}]() {
-  //    connection_ptr c = weak.lock();
-  //    if( !c ) return;
-  //    controller& cc = my_impl->chain_plug->chain();
-  //    signed_block_ptr sb;
-  //    try {
-  //      sb = cc.fetch_block_by_number( num );
-  //    } FC_LOG_AND_DROP();
-  //    if( sb ) {
-  //      c->strand.post( [c, sb{std::move(sb)}]() {
-  //        c->enqueue_block( sb, true );
-  //      });
-  //    } else {
-  //      c->strand.post( [c, num]() {
-  //        ilog("enqueue sync, unable to fetch block ${num}", ("num", num) );
-  //        c->send_handshake();
-  //      });
-  //    }
-  //  });
-
-  return true;
 }
 
 void connection::check_heartbeat(tstamp current_time) {
