@@ -5,9 +5,6 @@
 //
 #pragma once
 #include <noir/common/types/bytes.h>
-#include <fc/crypto/private_key.hpp>
-#include <fc/crypto/public_key.hpp>
-#include <fc/crypto/sha256.hpp>
 #include <chrono>
 #include <cinttypes>
 #include <mutex>
@@ -20,10 +17,6 @@ using node_id = std::string; // a hex-encoded crypto.Address. It must be lower-c
 using tstamp = std::chrono::system_clock::duration::rep;
 
 using block_id_type = bytes32;
-
-using public_key_type = fc::crypto::public_key;
-using private_key_type = fc::crypto::private_key;
-using signature_type = fc::crypto::signature;
 
 /**
  * default value initializers
