@@ -353,17 +353,15 @@ public:
 
 private:
   mutable std::mutex chain_info_mtx; // protects chain_*
-  uint32_t chain_lib_num{0};
   uint32_t chain_head_blk_num{0};
   uint32_t chain_fork_head_blk_num{0};
-  block_id_type chain_lib_id;
   block_id_type chain_head_blk_id;
   block_id_type chain_fork_head_blk_id;
 
 public:
   void update_chain_info();
   //         lib_num, head_block_num, fork_head_blk_num, lib_id, head_blk_id, fork_head_blk_id
-  std::tuple<uint32_t, uint32_t, uint32_t, block_id_type, block_id_type, block_id_type> get_chain_info() const;
+  std::tuple<uint32_t, uint32_t, block_id_type, block_id_type> get_chain_info() const;
 
   void start_listen_loop();
 
@@ -486,8 +484,6 @@ void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, boo
 void p2p_impl::update_chain_info() {
   //  controller& cc = chain_plug->chain();
   //  std::lock_guard<std::mutex> g( chain_info_mtx );
-  //  chain_lib_num = cc.last_irreversible_block_num();
-  //  chain_lib_id = cc.last_irreversible_block_id();
   //  chain_head_blk_num = cc.head_block_num();
   //  chain_head_blk_id = cc.head_block_id();
   //  chain_fork_head_blk_num = cc.fork_db_pending_head_block_num();
@@ -496,10 +492,9 @@ void p2p_impl::update_chain_info() {
   //           ("lib", chain_lib_num)("head", chain_head_blk_num)("fork", chain_fork_head_blk_num) );
 }
 
-std::tuple<uint32_t, uint32_t, uint32_t, block_id_type, block_id_type, block_id_type> p2p_impl::get_chain_info() const {
+std::tuple<uint32_t, uint32_t, block_id_type, block_id_type> p2p_impl::get_chain_info() const {
   std::lock_guard<std::mutex> g(chain_info_mtx);
-  return std::make_tuple(chain_lib_num, chain_head_blk_num, chain_fork_head_blk_num, chain_lib_id, chain_head_blk_id,
-    chain_fork_head_blk_id);
+  return std::make_tuple(chain_head_blk_num, chain_fork_head_blk_num, chain_head_blk_id, chain_fork_head_blk_id);
 }
 
 connection_ptr p2p_impl::find_connection(const std::string& host) const {
@@ -821,7 +816,6 @@ connection::connection()
 bool connection::resolve_and_connect() {
   switch (no_retry) {
   case no_reason:
-  case wrong_version:
   case benign_other:
     break;
   default:
@@ -922,7 +916,6 @@ void connection::set_connection_type(const std::string& peer_add) {
 void connection::connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::resolver::results_type endpoints) {
   switch (no_retry) {
   case no_reason:
-  case wrong_version:
   case benign_other:
     break;
   default:
@@ -975,9 +968,8 @@ void connection::send_handshake(bool force) {
       c->last_handshake_sent.generation = ++c->sent_handshake_count;
       auto last_handshake_sent = c->last_handshake_sent;
       g_conn.unlock();
-      ilog("Sending handshake generation ${g} to ${ep}, lib ${lib}, head ${head}, id ${id}",
-        ("g", last_handshake_sent.generation)("ep", c->peer_name())(
-          "lib", last_handshake_sent.last_irreversible_block_num)("head", last_handshake_sent.head_num)(
+      ilog("Sending handshake generation ${g} to ${ep}, head ${head}, id ${id}",
+        ("g", last_handshake_sent.generation)("ep", c->peer_name())("head", last_handshake_sent.head_num)(
           "id", last_handshake_sent.head_id.to_string().substr(8, 16)));
       c->enqueue(last_handshake_sent);
     }
@@ -1057,15 +1049,12 @@ bool connection::populate_handshake(handshake_message& hello, bool force) {
   bool send = force;
   //  hello.network_version = net_version_base + net_version;
   const auto prev_head_id = hello.head_id;
-  uint32_t lib, head;
-  std::tie(lib, std::ignore, head, hello.last_irreversible_block_id, std::ignore, hello.head_id) =
-    my_impl->get_chain_info();
+  uint32_t head;
+  std::tie(std::ignore, head, std::ignore, hello.head_id) = my_impl->get_chain_info();
   // only send handshake if state has changed since last handshake
-  send |= lib != hello.last_irreversible_block_num;
   send |= head != hello.head_num;
   send |= prev_head_id != hello.head_id;
   //  if (!send) return false;
-  hello.last_irreversible_block_num = lib;
   hello.head_num = head;
   //  hello.chain_id = my_impl->chain_id;
   hello.node_id = my_impl->node_id;
@@ -1393,11 +1382,6 @@ void connection::send_time(const time_message& msg) {
 
 bool connection::is_valid(const handshake_message& msg) {
   bool valid = true;
-  //  if (msg.last_irreversible_block_num > msg.head_num) {
-  //    wlog("Handshake message validation: last irreversible block (${i}) is greater than head block (${h})",
-  //             ("i", msg.last_irreversible_block_num)("h", msg.head_num) );
-  //    valid = false;
-  //  }
   if (msg.p2p_address.empty()) {
     wlog("Handshake message validation: p2p_address is null string");
     valid = false;
@@ -1412,8 +1396,8 @@ void connection::handle_message(const handshake_message& msg) {
     enqueue(go_away_message(fatal_other));
     return;
   }
-  dlog("received handshake gen ${g} from ${ep}, lib ${lib}, head ${head}",
-    ("g", msg.generation)("ep", peer_name())("lib", msg.last_irreversible_block_num)("head", msg.head_num));
+  dlog("received handshake gen ${g} from ${ep}, head ${head}",
+    ("g", msg.generation)("ep", peer_name())("head", msg.head_num));
 
   connecting = false;
   if (msg.generation == 1) {
@@ -1477,22 +1461,13 @@ void connection::handle_message(const handshake_message& msg) {
 
 void connection::handle_message(const go_away_message& msg) {
   wlog("received go_away_message, reason = ${r}", ("r", reason_str(msg.reason)));
-
-  bool retry = no_retry == no_reason; // if no previous go away message
   no_retry = msg.reason;
   if (msg.reason == duplicate) {
     std::lock_guard<std::mutex> g_conn(conn_mtx);
     conn_node_id = msg.node_id;
   }
-  if (msg.reason == wrong_version) {
-    if (!retry)
-      no_retry = fatal_other; // only retry once on wrong version
-  } else {
-    retry = false;
-  }
   flush_queues();
-
-  close(retry); // reconnect if wrong_version
+  close(false);
 }
 
 void connection::handle_message(const time_message& msg) {
