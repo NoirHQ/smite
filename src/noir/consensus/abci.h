@@ -20,7 +20,8 @@ public:
 
   void plugin_initialize(const CLI::App& app_config) {
     ilog("Initialize abci");
-    auto config_ = config_setup();
+    auto config_ = config::get_default();
+    config_.base.chain_id = "test_chain";
     config_.base.mode = Validator; // todo - read from config or cli
     node_ = node::new_default_node(std::make_shared<config>(config_));
   }
