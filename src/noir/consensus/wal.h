@@ -8,10 +8,10 @@
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/types.h>
 #include <noir/p2p/protocol.h>
-
 #include <boost/asio/steady_timer.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <fc/io/cfile.hpp>
+#include <filesystem>
 
 namespace noir::consensus {
 
@@ -52,7 +52,6 @@ public:
     eof,
     corrupted,
   };
-  wal_decoder(const std::string& full_path, std::shared_ptr<std::mutex> mtx);
   wal_decoder(const std::string& full_path);
 
   /// \brief reads the next custom-encoded value from its reader and returns it.
@@ -61,8 +60,8 @@ public:
   result decode(timed_wal_message& msg);
 
 private:
-  std::shared_ptr<::fc::cfile> file_;
-  std::shared_ptr<std::mutex> mtx_;
+  std::unique_ptr<::fc::cfile> file_;
+  std::mutex mtx_;
 };
 
 /// \brief A WALEncoder writes custom-encoded WAL messages to an output stream.
@@ -71,7 +70,6 @@ class wal_encoder {
   friend class wal_file_manager;
 
 public:
-  wal_encoder(const std::string& full_path, std::shared_ptr<std::mutex> mtx);
   wal_encoder(const std::string& full_path);
 
   /// \brief writes the custom encoding of v to the stream. It returns an error if the encoded size of v is
@@ -94,23 +92,42 @@ private:
   static constexpr size_t max_msg_size = 1048576; // 1 MB; NOTE: keep in sync with types.PartSet sizes.
   static constexpr size_t max_msg_size_bytes = max_msg_size + 24; // time.Time + max consensus msg size
 
-  std::shared_ptr<::fc::cfile> file_;
-  std::shared_ptr<std::mutex> mtx_;
+  std::unique_ptr<::fc::cfile> file_;
+  std::mutex mtx_;
 };
 
 /// \brief WALFileManager manages wal file and mutex
+/// The first file to be written in the WALFileManager.Dir is the head file.
+///
+///	Dir/
+///	- <HeadPath>
+///
+/// Once the Head file reaches the size limit, it will be rotated.
+///
+///	Dir/
+///	- <HeadPath>.000   // First rolled file
+///	- <HeadPath>       // New head path, starts empty.
+///										 // The implicit index is 001.
+///
+/// As more files are written, the index numbers grow...
+///
+///	Dir/
+///	- <HeadPath>.000   // First rolled file
+///	- <HeadPath>.001   // Second rolled file
+///	- ...
+///	- <HeadPath>       // New head path
 class wal_file_manager {
 public:
-  wal_file_manager(const std::string& dir, size_t num_file, size_t rotate_size)
-    : dir_path_(dir), num_file_(num_file), rotate_size_(rotate_size), mtx_map_(),
-      rotate_mtx_(std::make_unique<std::mutex>()) {
-    auto ret = load_min_max_index();
-    if (!ret) { // no previous wal file found
-      min_index = 0;
-      max_index = 0;
+  wal_file_manager(const std::string& dir, const std::string& file_name, size_t num_file, size_t rotate_size)
+    : dir_path_(dir), head_name_(file_name), num_file_(num_file), rotate_size_(rotate_size) {
+    head_path_ = dir_path_ / head_name_;
+    if (!load_min_max_index()) { // no previous wal file found
+      min_index = max_index = 0;
+    } else {
+      ++max_index;
     }
-    encoder_ = get_wal_encoder(max_index);
     current_index = max_index;
+    encoder_ = get_wal_encoder(current_index);
   }
 
   /// \brief rotate wal file if necessary
@@ -123,86 +140,90 @@ public:
   }
 
   /// \brief gets wal_encoder of wal file of given index
-  /// \param[in] index indicates current_index if the value is -1
+  /// \param[in] index returns current using wal_encoder if index is -1
   /// \return shared_ptr of wal_encoder
   std::shared_ptr<wal_encoder> get_wal_encoder(int64_t index = -1) {
-    if (index < 0 || index == current_index) {
-      std::lock_guard<std::mutex> rg(*rotate_mtx_);
+    check(index <= max_index);
+    if (index < 0) { // returns current using encoder
+      std::lock_guard<std::mutex> g(mtx_);
       return encoder_;
     }
-    if (mtx_map_[index] == nullptr) {
-      mtx_map_[index] = std::make_shared<std::mutex>();
+    if (index == current_index) { // returns new encoder with implicit index
+      return make_shared<wal_encoder>(head_path_.string());
     }
-    return make_shared<wal_encoder>(full_path(dir_path_, index).string(), mtx_map_[index]);
+    return make_shared<wal_encoder>(full_path(dir_path_, index).string());
   }
 
   /// \brief gets wal_decoder of wal file of given index
   /// \param[in] index
   /// \return shared_ptr of wal_decoder
   std::shared_ptr<wal_decoder> get_wal_decoder(int64_t index) {
-    if (mtx_map_[index] == nullptr) {
-      mtx_map_[index] = std::make_shared<std::mutex>();
-    }
-    return make_shared<wal_decoder>(full_path(dir_path_, index).string(), mtx_map_[index]);
+    check(index <= max_index && index >= min_index);
+    return make_shared<wal_decoder>(full_path(dir_path_, index).string());
   }
 
-  /// \brief indicates index of current opened file
-  int64_t current_index = -1;
+  std::filesystem::path full_path(std::filesystem::path dir_path, int64_t index, bool implicit = true) {
+    if (implicit && index == current_index) {
+      return head_path_;
+    }
+    auto ret = head_path_;
+    ret += fmt::format("{:03}", index);
+    return ret;
+  }
+
   /// \brief indicates lowest index of available WAL file
   int64_t min_index = -1;
+
   /// \brief indicates highest index of available WAL file
   int64_t max_index = -1;
 
 private:
-  static constexpr std::basic_string_view file_name_prefix_{"cs_wal"};
   std::shared_ptr<wal_encoder> encoder_;
-  std::string dir_path_;
-  size_t num_file_; // TODO: configurable
+  std::filesystem::path dir_path_;
+  std::filesystem::path head_name_;
+  std::filesystem::path head_path_;
+  size_t num_file_;
   size_t rotate_size_;
-  std::map<int64_t, std::shared_ptr<std::mutex>> mtx_map_;
-  std::unique_ptr<std::mutex> rotate_mtx_;
+  std::mutex mtx_;
+  int64_t current_index = -1; ///< indicates implicit index of current opened file
 
-  static inline fc::path full_path(std::string dir_path, int index) {
-    return {dir_path + "/" + std::string(file_name_prefix_) + std::to_string(index)};
-  }
-
-  static inline int64_t index_from_file_name(const fc::path& file_name) {
-    static constexpr size_t len = file_name_prefix_.length();
+  int64_t index_from_file_name(const std::filesystem::path& file_name) {
+    auto wal_name = head_name_.string();
+    size_t len = wal_name.length();
     auto name = file_name.string();
-    if (name.compare(0, len, file_name_prefix_) != 0) {
+    if (name.compare(0, len, wal_name) != 0) {
+      return -1;
+    }
+    if (name.substr(len).empty()) {
       return -1;
     }
     return static_cast<int64_t>(std::stoull(name.substr(len)));
   }
 
   bool need_rotate() {
-    std::lock_guard<std::mutex> rg(*rotate_mtx_);
-    std::lock_guard<std::mutex> g(*encoder_->mtx_);
-    return encoder_->file_->tellp() >= rotate_size_; // TODO: handle exception
+    std::lock_guard<std::mutex> g(mtx_);
+    return encoder_->size() >= rotate_size_; // TODO: handle exception
   }
 
   bool rotate() {
-    std::lock_guard<std::mutex> rg(*rotate_mtx_);
-    std::lock_guard<std::mutex> g(*encoder_->mtx_);
+    std::lock_guard<std::mutex> g(mtx_);
     auto& file_ = encoder_->file_;
-    auto new_index = max_index = max_index + 1;
-    auto new_path_ = full_path(dir_path_, new_index);
+    auto new_file_path = full_path(dir_path_, current_index, false);
     try {
-      file_->flush();
-      file_->sync();
-
-      if (new_index - min_index >= num_file_) {
-        fc::remove(full_path(dir_path_, min_index));
-        mtx_map_[min_index] = nullptr;
+      encoder_->flush_and_sync();
+      if (current_index - min_index >= num_file_) {
+        std::filesystem::remove(full_path(dir_path_, min_index));
         min_index++;
       }
-      if (fc::exists(new_path_)) {
-        wlog("wal file for new index${index} already exists: ${path}", ("index", new_index)("path", new_path_));
+      if (std::filesystem::exists(new_file_path)) {
+        check(std::filesystem::is_regular_file(new_file_path),
+          fmt::format("unable to replace existing file: {}", new_file_path.string()));
+        wlog(fmt::format("wal file for new index {} already exists: {}", current_index, new_file_path.string()));
       }
-      fc::remove(new_path_);
-      encoder_ = get_wal_encoder(new_index);
-      current_index = new_index;
-      ilog("created wal file for new index${index}: ${path}", ("index", new_index)("path", new_path_));
+      std::filesystem::rename(file_->get_file_path().string(), new_file_path);
+      current_index = ++max_index;
+      encoder_ = get_wal_encoder(current_index);
+      ilog(fmt::format("created wal file for new index: {}", current_index));
     } catch (...) {
       return false;
     }
@@ -210,30 +231,30 @@ private:
   }
 
   bool load_min_max_index() {
-    std::lock_guard<std::mutex> rg(*rotate_mtx_);
-    for (auto it = fc::directory_iterator(dir_path_); it != fc::directory_iterator(); ++it) {
-      if (fc::is_regular_file(*it)) {
-        auto index_ = index_from_file_name(it->filename());
+    std::lock_guard<std::mutex> g(mtx_);
+    for (auto it = std::filesystem::directory_iterator(dir_path_); it != std::filesystem::end(it); ++it) {
+      if (std::filesystem::is_regular_file(*it)) {
+        auto index_ = index_from_file_name(it->path().filename());
         if (index_ < 0) {
           continue;
         }
         if (min_index < 0 || index_ < min_index) {
           min_index = index_;
         }
-        if (max_index < 0 || index_ > max_index) {
+        if (index_ > max_index) {
           max_index = index_;
         }
       }
     }
 
-    return (min_index > 0 && max_index > 0);
+    return (min_index >= 0 && max_index >= 0);
   }
 };
 
 /// \brief WAL is an interface for any write-ahead logger.
 class wal {
 public:
-  virtual ~wal() {}
+  virtual ~wal() = default;
   /// \brief Write is called in newStep and for each receive on the peerMsgQueue and the timeoutTicker.
   /// \param[in] msg
   /// \return true on success, false otherwise
@@ -275,17 +296,16 @@ public:
 class base_wal : public wal {
 public:
   base_wal(const base_wal&) = delete; // do not allow copy
-  base_wal(const std::string& path, size_t num_file, size_t rotate_size)
-    : file_manager_(std::make_unique<wal_file_manager>(path, num_file, rotate_size)),
+  base_wal(const std::string& dir, const std::string& file_name, size_t num_file, size_t rotate_size)
+    : file_manager_(std::make_unique<wal_file_manager>(dir, file_name, num_file, rotate_size)),
       flush_interval(std::chrono::system_clock::duration(2000000)) { // 2seconds = 2000000 microseconds
     thread_pool.emplace("consensus", thread_pool_size);
     {
-      file_manager_->get_wal_encoder();
       // std::lock_guard<std::mutex> g(flush_ticker_mtx);
-      flush_ticker.reset(new boost::asio::steady_timer(thread_pool->get_executor()));
+      flush_ticker = std::make_unique<boost::asio::steady_timer>(thread_pool->get_executor());
     }
   }
-  ~base_wal() override {}
+  ~base_wal() override = default;
 
   bool write(const wal_message& msg) override {
     size_t len;
@@ -392,12 +412,12 @@ public:
           return {nullptr};
         }
 
-        if (auto* ret = std::get_if<end_height_message>(&msg.msg.msg); ret) {
-          if (ret->height == height) { // found
+        if (auto* ptr = std::get_if<end_height_message>(&msg.msg.msg); ptr) {
+          if (ptr->height == height) { // found
             found = true;
             return std::move(decoder);
           }
-          last_height_found = ret->height;
+          last_height_found = ptr->height;
         }
       }
     }
@@ -451,8 +471,7 @@ class nil_wal : public wal {
     return true;
   }
 
-  virtual std::shared_ptr<wal_decoder> search_for_end_height(
-    int64_t height, wal_search_options options, bool& found) override {
+  std::shared_ptr<wal_decoder> search_for_end_height(int64_t height, wal_search_options options, bool& found) override {
     return {nullptr};
   }
 };
