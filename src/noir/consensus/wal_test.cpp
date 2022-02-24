@@ -6,15 +6,17 @@
 #include <catch2/catch_all.hpp>
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/wal.h>
+#include <filesystem>
 
 namespace {
 
 using namespace noir::consensus;
+namespace fs = std::filesystem;
 
 int count_dir(const std::string& tmp_path) {
   int cnt = 0;
-  for (auto it = fc::directory_iterator(tmp_path); it != fc::directory_iterator(); ++it) {
-    if (fc::is_regular_file(*it)) {
+  for (auto it = fs::directory_iterator(tmp_path); it != fs::directory_iterator(); ++it) {
+    if (fs::is_regular_file(*it)) {
       ++cnt;
     }
   }
@@ -23,15 +25,16 @@ int count_dir(const std::string& tmp_path) {
 
 TEST_CASE("simple encode/decode", "[wal_codec]") {
   static constexpr size_t enc_size = 0x100;
+  static constexpr size_t rotation_file_num = 5;
   auto [temp_dir, wal_manager_] = [](size_t enc_size) {
-    static constexpr size_t rotation_file_num = 5;
     auto temp_dir = std::make_shared<fc::temp_directory>();
     auto tmp_path = temp_dir->path().string();
-    REQUIRE(fc::is_directory(tmp_path) == true);
+    auto wal_head_name = "wal";
+    REQUIRE(fs::is_directory(tmp_path) == true);
     REQUIRE(count_dir(tmp_path) == 0);
 
     return std::tuple<std::shared_ptr<fc::temp_directory>, std::shared_ptr<wal_file_manager>>(
-      std::move(temp_dir), std::make_shared<wal_file_manager>(tmp_path, rotation_file_num, enc_size));
+      std::move(temp_dir), std::make_shared<wal_file_manager>(tmp_path, wal_head_name, rotation_file_num, enc_size));
   }(enc_size);
   auto tmp_path = temp_dir->path().string();
   auto write_msg_to_wal_file = [&wal_manager_ = wal_manager_](const timed_wal_message& msg, size_t& len) {
@@ -76,7 +79,7 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
   SECTION("encode/decode with file rotation") {
     timed_wal_message msg{};
     int exp = 0;
-    for (auto i = 0; i < 5; ++i) {
+    for (auto i = 0; i < rotation_file_num; ++i) {
       for (size_t size_ = 0; size_ < enc_size;) {
         size_t tmp;
         CHECK(write_msg_to_wal_file(msg, tmp) == true);
@@ -90,7 +93,7 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
 
     int count = 0;
     timed_wal_message exp_msg{};
-    for (auto i = 0; i < 5; ++i) {
+    for (auto i = 0; i < rotation_file_num; ++i) {
       auto decoder = wal_manager_->get_wal_decoder(i);
       timed_wal_message ret{.msg = {end_height_message{}}};
       while (count <= exp) {
@@ -106,7 +109,7 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
     }
     CHECK(exp == count);
 
-    for (auto i = 0; i < 5; ++i) {
+    for (auto i = 0; i < rotation_file_num; ++i) {
       for (size_t size_ = 0; size_ < enc_size;) {
         size_t tmp;
         CHECK(write_msg_to_wal_file(msg, tmp) == true);
@@ -114,9 +117,9 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
       }
     }
     CHECK(flush_to_wal_file() == true);
-    CHECK(count_dir(tmp_path) == 5);
+    CHECK(count_dir(tmp_path) == rotation_file_num + 1); // wal, wal000, wal001, wal00x
 
-    fc::remove_all(tmp_path);
+    fs::remove_all(tmp_path);
   }
 
   SECTION("async test") {
@@ -228,10 +231,11 @@ TEST_CASE("basic_wal test", "[basic_wal]") {
     static constexpr size_t rotation_file_num = 5;
     auto temp_dir = std::make_shared<fc::temp_directory>();
     auto tmp_path = temp_dir->path().string();
-    REQUIRE(fc::is_directory(tmp_path) == true);
+    auto wal_head_name = "wal";
+    REQUIRE(fs::is_directory(tmp_path) == true);
     REQUIRE(count_dir(tmp_path) == 0);
 
-    auto wal_ = std::make_shared<base_wal>(tmp_path, rotation_file_num, enc_size);
+    auto wal_ = std::make_shared<base_wal>(tmp_path, wal_head_name, rotation_file_num, enc_size);
     wal_->set_flush_interval(std::chrono::milliseconds(100));
 
     return std::tuple<std::shared_ptr<fc::temp_directory>, std::shared_ptr<base_wal>>(
