@@ -26,7 +26,7 @@ auto random_leaf_with_key(version next_version) -> std::pair<node_, node_key> {
   std::vector<char> blob(32);
   RAND_bytes((uint8_t*)blob.data(), blob.size());
   auto node = node_::leaf(address, blob);
-  auto node_key = jmt::node_key{next_version, nibble_path({(uint8_t*)address.data(), address.size()})};
+  auto node_key = jmt::node_key{next_version, nibble_path(address.to_span())};
   return {node, node_key};
 }
 
@@ -37,8 +37,8 @@ TEST_CASE("[tree_cache] get_node", "[jmt]") {
   auto db = reader_type();
   auto cache = tree_cache<reader_type, std::vector<char>>(db, next_version);
 
-  // auto [node, node_key] = random_leaf_with_key(next_version);
-  // db.put_node(node_key, node);
+  auto [node, node_key] = random_leaf_with_key(next_version);
+  db.put_node(node_key, node);
 
-  // CHECK(cache.get_node(node_key).value() == node);
+  CHECK(cache.get_node(node_key).value() == node);
 }

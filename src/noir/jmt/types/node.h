@@ -18,8 +18,6 @@
 
 namespace noir::jmt {
 
-extern bytes32 sparse_merkle_placeholder_hash;
-
 namespace detail {
   inline void serialize_u64_varint(uint64_t num, std::vector<uint8_t>& binary) {
     auto encoded = codec::bcs::encode(varuint64(num));
@@ -70,21 +68,20 @@ struct node_key {
     return out;
   }
 
+  std::string to_string() const {
+    return fmt::format("{{version: {}, nibble_path: {}}}", version, nibble_path.to_string());
+  }
+
   jmt::version version;
   jmt::nibble_path nibble_path;
 };
 
 inline bool operator==(const node_key& a, const node_key& b) {
-  return a.version == b.version &&
-    std::equal(
-      a.nibble_path.bytes.begin(), a.nibble_path.bytes.end(), b.nibble_path.bytes.begin(), b.nibble_path.bytes.end());
+  return std::tie(a.version, a.nibble_path) == std::tie(b.version, b.nibble_path);
 }
 
 inline bool operator<(const node_key& a, const node_key& b) {
-  return a.version < b.version ||
-    (a.nibble_path.bytes.size() <= b.nibble_path.bytes.size() &&
-      std::memcmp(a.nibble_path.bytes.data(), b.nibble_path.bytes.data(),
-        std::min(a.nibble_path.bytes.size(), b.nibble_path.bytes.size())) < 0);
+  return std::tie(a.version, a.nibble_path) < std::tie(b.version, b.nibble_path);
 }
 
 struct leaf {};
@@ -126,10 +123,9 @@ struct child {
 };
 
 // for deterministic serialization
-// using children = std::unordered_map<nibble, child, hash>;
-using children = std::map<nibble, child>;
+using children = std::unordered_map<nibble, child, hash<nibble>>;
 
-bool operator==(const children::value_type& a, const children::value_type& b) {
+inline bool operator==(const children::value_type& a, const children::value_type& b) {
   return std::tie(a.first, a.second) == std::tie(b.first, b.second);
 }
 
@@ -298,14 +294,14 @@ struct internal_node {
     return {};
   }
 
-  jmt::children children;
-  size_t leaf_count;
-
   friend bool operator==(const internal_node& a, const internal_node& b) {
     if (a.leaf_count != b.leaf_count)
       return false;
     return std::equal(a.children.begin(), a.children.end(), b.children.begin(), b.children.end());
   }
+
+  jmt::children children;
+  size_t leaf_count;
 };
 
 NOIR_FOR_EACH_FIELD_EMBED(internal_node, children, leaf_count);
@@ -325,7 +321,7 @@ struct leaf_node {
   leaf_node(const bytes32& account_key, const T& value): account_key(account_key), value(value) {
     // XXX
     auto hash = crypto::sha3_256()(value);
-    value_hash = bytes32(hash.data(), hash.size());
+    value_hash = bytes32(std::span{hash.data(), hash.size()});
   }
 
   bytes32 hash() const {
@@ -382,11 +378,12 @@ struct node {
 
   jmt::node_type node_type() {
     if (std::holds_alternative<leaf_node<T>>(data)) {
-      return leaf();
+      return jmt::leaf{};
     } else if (std::holds_alternative<internal_node>(data)) {
       return std::get<internal_node>(data).node_type();
     }
     check(false);
+    __builtin_unreachable();
   }
 
   size_t leaf_count() {
@@ -462,9 +459,17 @@ template<typename T>
 using node_batch = std::map<node_key, node<T>>;
 
 struct stale_node_index {
+  std::string to_string() const {
+    return fmt::format("{{version: {}, node_key:{}}}", stale_since_version, node_key.to_string());
+  }
+
   version stale_since_version;
   jmt::node_key node_key;
 };
+
+inline bool operator<(const stale_node_index& a, const stale_node_index& b) {
+  return std::tie(a.stale_since_version, a.node_key) < std::tie(b.stale_since_version, b.node_key);
+}
 
 using stale_node_index_batch = std::set<stale_node_index>;
 
@@ -480,6 +485,25 @@ struct tree_update_batch {
   jmt::node_batch<T> node_batch;
   jmt::stale_node_index_batch stale_node_index_batch;
   std::vector<jmt::node_stats> node_stats;
+};
+
+template<typename T>
+struct tree_reader {
+  using value_type = T;
+
+  auto get_node(const jmt::node_key& node_key) -> result<jmt::node<T>> {
+    auto node = get_node_option(node_key);
+    if (node && *node)
+      return **node;
+    return make_unexpected(fmt::format("missing node at key: {}", node_key.to_string()));
+  }
+  virtual auto get_node_option(const jmt::node_key& node_key) -> result<std::optional<node<T>>> = 0;
+  virtual auto get_rightmost_leaf() -> result<std::optional<std::pair<jmt::node_key, leaf_node<T>>>> = 0;
+};
+
+template<typename T>
+struct tree_writer {
+  virtual auto write_node_batch(const jmt::node_batch<T>& node_batch) -> result<void> = 0;
 };
 
 } // namespace noir::jmt

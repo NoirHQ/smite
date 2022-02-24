@@ -5,22 +5,29 @@
 //
 #pragma once
 #include <noir/common/check.h>
+#include <noir/common/concepts.h>
 #include <noir/common/for_each.h>
+#include <noir/common/hex.h>
 #include <noir/common/types/hash.h>
+#include <noir/crypto/hash/xxhash.h>
 #include <fmt/format.h>
-#include <compare>
-#include <iterator>
 #include <optional>
 #include <span>
 #include <string>
 #include <vector>
 
+#include <iostream>
+
 namespace noir::jmt {
+
+extern size_t root_nibble_height;
 
 struct nibble {
   constexpr nibble() = default;
   constexpr nibble(const nibble&) = default;
   constexpr nibble(nibble&&) = default;
+  constexpr nibble& operator=(const nibble&) = default;
+
   constexpr nibble(uint8_t v): value(v) {}
 
   nibble& operator=(uint8_t v) {
@@ -31,6 +38,11 @@ struct nibble {
 
   constexpr operator uint8_t() {
     return value;
+  }
+
+  std::string to_string() const {
+    const char* charmap = "0123456789abcdef";
+    return {charmap[value]};
   }
 
   friend bool operator==(const nibble& a, const nibble& b) {
@@ -52,7 +64,11 @@ struct nibble_path {
   nibble_path(const nibble_path&) = default;
   nibble_path& operator=(const nibble_path& path) = default;
 
-  nibble_path(std::span<uint8_t> bytes, bool odd = false): bytes({bytes.begin(), bytes.end()}) {
+  template<Byte T, size_t N = std::dynamic_extent>
+  constexpr nibble_path(std::span<T, N> bytes, bool odd = false): bytes({bytes.begin(), bytes.end()}) {
+    check(bytes.size() <= 32);
+    std::span s{(uint8_t*)bytes.data(), bytes.size()};
+    this->bytes = {s.begin(), s.end()};
     if (!odd) {
       num_nibbles = bytes.size() * 2;
     } else {
@@ -62,8 +78,9 @@ struct nibble_path {
   }
 
   void push(nibble n) {
+    check(num_nibbles < root_nibble_height);
     if (num_nibbles % 2 == 0) {
-      bytes.push_back(n.value);
+      bytes.push_back(n.value << 4);
     } else {
       bytes[num_nibbles / 2] |= n.value;
     }
@@ -109,100 +126,122 @@ struct nibble_path {
     return (bytes[i / 2] >> (i % 2 == 1 ? 0 : 4)) & 0xf;
   }
 
+  nibble get_nibble(size_t i) const {
+    check(i < num_nibbles);
+    return (bytes[i / 2] >> (i % 2 == 1 ? 0 : 4)) & 0xf;
+  }
+
   // TODO: bits
 
-  struct nibble_iterator : std::iterator<std::random_access_iterator_tag, const nibble> {
-    nibble_iterator(nibble_path& path, int pos = 0): path(path), pos(pos) {
-      if (pos < 0 || pos >= path.num_nibbles) {
-        pos = -1;
-      } else if (pos < path.num_nibbles) {
-        item.emplace(path.get_nibble(pos));
-      }
+  struct nibble_iterator {
+  private:
+    nibble_iterator(const jmt::nibble_path& nibble_path, size_t start, size_t end)
+      : nibble_path(nibble_path), pos({start, end}), start(start) {
+      check(start <= end);
+      check(start <= root_nibble_height);
+      check(end <= root_nibble_height);
     }
-    nibble_iterator(const nibble_iterator& it): nibble_iterator(it.path, it.pos) {}
+
+    friend class jmt::nibble_path;
+
+  public:
+    nibble_iterator(const nibble_iterator& it)
+      : nibble_path(it.nibble_path), pos({it.pos.start, it.pos.end}), start(it.start) {}
 
     nibble_iterator& operator=(const nibble_iterator& it) {
-      if (this != &it) {
-        path = it.path;
-        pos = it.pos;
-        item.reset();
-        if (pos < 0 || pos >= path.num_nibbles) {
-          pos = -1;
-        } else if (pos < path.num_nibbles) {
-          item.emplace(path.get_nibble(pos));
-        }
-      }
+      if (this != &it)
+        *this = it;
       return *this;
     }
 
-    friend bool operator==(const nibble_iterator& a, const nibble_iterator& b) {
-      return a.pos == b.pos;
-    }
-    friend bool operator!=(const nibble_iterator& a, const nibble_iterator& b) {
-      return a.pos != b.pos;
-    }
-
-    const nibble& operator*() const {
-      check(item.has_value(), "cannot dereference end iterator");
-      return *item;
-    }
-    const nibble* operator->() const {
-      check(item.has_value(), "cannot dereference end iterator");
-      return &*item;
-    }
-
-    nibble_iterator& operator++() {
-      check(item.has_value(), "cannot increment end iterator");
-      if (++pos < path.num_nibbles) {
-        item.emplace(path.get_nibble(pos));
-      } else {
-        item = std::nullopt;
-        pos = -1;
+    std::optional<nibble> next() {
+      if (pos.start < pos.end) {
+        return nibble_path.get_nibble(pos.start++);
       }
-      return *this;
+      return {};
     }
 
-    nibble_iterator& operator--() {
-      if (!item.has_value()) {
-        check(path.num_nibbles, "cannot decrement end iterator when the nibble path is empty");
-        pos = path.num_nibbles - 1;
-      } else {
-        check(--pos >= 0, "cannot decrement iterator at the beginning of the nibble path");
+    std::optional<nibble> peek() {
+      if (pos.start < pos.end) {
+        return nibble_path.get_nibble(pos.start);
       }
-      item.emplace(path.get_nibble(pos));
-      return *this;
+      return {};
     }
 
-    nibble_iterator operator++(int) {
-      nibble_iterator it(*this);
-      return ++it;
+    nibble_iterator visited_nibbles() {
+      check(start <= pos.start);
+      check(pos.start <= root_nibble_height);
+      return nibble_iterator(nibble_path, start, pos.start);
     }
 
-    nibble_iterator operator--(int) {
-      nibble_iterator it(*this);
-      return --it;
+    nibble_iterator remaining_nibbles() {
+      check(pos.start <= pos.end);
+      check(pos.end <= root_nibble_height);
+      return nibble_iterator(nibble_path, pos.start, pos.end);
     }
 
-    nibble_path& path;
-    int pos;
+    size_t num_nibbles() const {
+      return pos.end - start;
+    }
+
+    bool is_finished() const {
+      return pos.start != pos.end;
+    }
+
+    const jmt::nibble_path& nibble_path;
+    struct {
+      size_t start;
+      size_t end;
+    } pos;
+    const size_t start;
     std::optional<nibble> item;
   };
 
-  nibble_iterator begin() {
-    return {*this};
-  }
-
-  nibble_iterator end() {
-    return {*this, -1};
+  nibble_iterator nibbles() const {
+    check(num_nibbles <= root_nibble_height);
+    return {*this, 0, num_nibbles};
   }
 
   bool is_empty() const {
     return num_nibbles == 0;
   }
 
+  std::string to_string() const {
+    if (!num_nibbles)
+      return "";
+    const char* charmap = "0123456789abcdef";
+    std::string s;
+    auto it = nibbles();
+    while (auto n = it.next()) {
+      s += charmap[n->value];
+    }
+    return fmt::format("{}", s);
+  }
+
+  friend bool operator==(const nibble_path& a, const nibble_path& b) {
+    return a.bytes == b.bytes;
+  }
+
+  friend bool operator<(const nibble_path& a, const nibble_path& b) {
+    return a.bytes < b.bytes;
+  }
+
   size_t num_nibbles;
   std::vector<uint8_t> bytes;
 };
+
+inline size_t skip_common_prefix(nibble_path::nibble_iterator& x, nibble_path::nibble_iterator& y) {
+  size_t count = 0;
+  for (;;) {
+    if (x.is_finished() || y.is_finished() || x.peek() != y.peek()) {
+      break;
+    }
+    count += 1;
+    x.next();
+    y.next();
+  }
+  return count;
+}
 
 } // namespace noir::jmt
 
@@ -215,8 +254,11 @@ struct hash<jmt::nibble> {
   }
 };
 
-inline std::string to_string(jmt::nibble n) {
-  return std::to_string(n.value);
-}
+template<>
+struct hash<jmt::nibble_path> {
+  std::size_t operator()(const jmt::nibble_path& n) const {
+    return crypto::xxh64()({(const char*)n.bytes.data(), n.bytes.size()});
+  }
+};
 
 } // namespace noir

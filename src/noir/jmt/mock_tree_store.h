@@ -7,26 +7,7 @@
 #include <noir/jmt/types/node.h>
 #include <shared_mutex>
 
-#include <iostream>
-
 namespace noir::jmt {
-
-template<typename T>
-struct tree_reader {
-  auto get_node(const jmt::node_key& node_key) -> result<jmt::node<T>> {
-    auto node = get_node_option(node_key);
-    if (node && *node)
-      return **node;
-    return unexpected(fmt::format("missing node at _key_"));
-  }
-  virtual auto get_node_option(const jmt::node_key& node_key) -> result<std::optional<node<T>>> = 0;
-  virtual auto get_rightmost_leaf() -> result<std::optional<std::pair<jmt::node_key, leaf_node<T>>>> = 0;
-};
-
-template<typename T>
-struct tree_writer {
-  virtual auto write_node_batch(const jmt::node_batch<T>& node_batch) -> result<void> = 0;
-};
 
 template<typename T>
 struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
@@ -64,8 +45,7 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
 
   auto put_node(const jmt::node_key& node_key, const jmt::node<T>& node) -> result<void> {
     std::unique_lock _{data.lock};
-    if (data._0.contains(node_key))
-      return unexpected(fmt::format("key _ exists"));
+    ensure(!data._0.contains(node_key), "key {} exists", node_key.to_string());
     data._0.insert({node_key, node});
     return {};
   }
@@ -74,22 +54,16 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
     std::unique_lock _{data.lock};
     auto is_new_entry = !data._1.contains(index);
     data._1.insert(index);
-    if (!is_new_entry) {
-      return unexpected(std::string{"duplicated retire log"});
-    }
+    ensure(is_new_entry, "duplicated retire log");
     return {};
   }
 
   auto write_tree_update_batch(const tree_update_batch<T>& batch) -> result<void> {
     for (const auto& [k, v] : batch.node_batch) {
-      auto result = put_node(k, v);
-      if (!result)
-        return result.error();
+      return_if_error(put_node(k, v));
     }
     for (const auto& i : batch.stale_node_index_batch) {
-      auto result = put_stale_node_index(i);
-      if (!result)
-        return result.error();
+      return_if_error(put_stale_node_index(i));
     }
     return {};
   }
@@ -106,21 +80,20 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
     for (const auto& log : to_prune) {
       auto removed = data._0.contains(log.node_key);
       data._0.erase(log.node_key);
-      if (!removed) {
-        return unexpected(std::string{"stale node index referes to non-existent node"});
-      }
+      ensure(removed, "stale node index refers to non-existent node");
       data._1.erase(log);
     }
+    return {};
   }
 
-  auto num_nodes() const {
+  auto num_nodes() {
     std::shared_lock _{data.lock};
     return data._0.size();
   }
 
   struct {
     std::shared_mutex lock;
-    std::unordered_map<node_key, node<T>, noir::hash<node_key>> _0;
+    std::unordered_map<node_key, node<T>, hash<node_key>> _0;
     std::set<stale_node_index> _1;
   } data;
   bool allow_overwrite;
