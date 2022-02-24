@@ -10,6 +10,7 @@
 #include <noir/common/for_each.h>
 #include <noir/common/types.h>
 #include <boost/pfr.hpp>
+#include <map>
 #include <optional>
 #include <variant>
 
