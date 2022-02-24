@@ -17,8 +17,6 @@ struct handshake_message {
   bytes32 node_id; ///< used to identify peers and prevent self-connect
   tstamp time{0};
   std::string p2p_address;
-  uint32_t last_irreversible_block_num = 0;
-  block_id_type last_irreversible_block_id;
   uint32_t head_num = 0;
   block_id_type head_id;
   //  string os;
@@ -130,14 +128,10 @@ enum go_away_reason {
   self, ///< the connection is to itself
   duplicate, ///< the connection is redundant
   wrong_chain, ///< the peer's chain id doesn't match
-  wrong_version, ///< the peer's network version doesn't match
-  forked, ///< the peer's irreversible blocks are different
   unlinkable, ///< the peer sent a block we couldn't use
-  bad_transaction, ///< the peer sent a transaction that failed verification
   validation, ///< the peer sent a block that failed validation
   benign_other, ///< reasons such as a timeout. not fatal but warrant resetting
-  fatal_other, ///< a catch-all for errors we don't have discriminated
-  authentication ///< peer failed authenicatio
+  fatal_other ///< a catch-all for errors we don't have discriminated
 };
 
 constexpr auto reason_str(go_away_reason rsn) {
@@ -150,18 +144,10 @@ constexpr auto reason_str(go_away_reason rsn) {
     return "duplicate";
   case wrong_chain:
     return "wrong chain";
-  case wrong_version:
-    return "wrong version";
-  case forked:
-    return "chain is forked";
   case unlinkable:
     return "unlinkable block received";
-  case bad_transaction:
-    return "bad transaction";
   case validation:
     return "invalid block";
-  case authentication:
-    return "authentication failure";
   case fatal_other:
     return "some other failure";
   case benign_other:
@@ -183,8 +169,8 @@ using net_message =
 
 } // namespace noir::p2p
 
-NOIR_FOR_EACH_FIELD(noir::p2p::handshake_message, network_version, node_id, time, p2p_address,
-  last_irreversible_block_num, last_irreversible_block_id, head_num, head_id, generation)
+NOIR_FOR_EACH_FIELD(
+  noir::p2p::handshake_message, network_version, node_id, time, p2p_address, head_num, head_id, generation)
 NOIR_FOR_EACH_FIELD(noir::p2p::go_away_message, reason, node_id)
 NOIR_FOR_EACH_FIELD(noir::p2p::time_message, org, rec, xmt, dst)
 NOIR_FOR_EACH_FIELD(noir::p2p::block_part_message, height, round, index, bytes_ /* TODO: (proof) */)
