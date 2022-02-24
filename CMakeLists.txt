@@ -22,8 +22,8 @@ endif()
 add_compile_definitions(BOOST_ASIO_HAS_STD_INVOKE_RESULT)
 
 if(APPLE)
-  set(BOOST_ROOT "/usr/local/opt/boost")
-  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl")
+  set(BOOST_ROOT "/usr/local/opt/boost" CACHE BOOL "boost root directory")
+  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl" CACHE BOOL "openssl root directory")
 endif()
 
 find_package(rocksdb)
