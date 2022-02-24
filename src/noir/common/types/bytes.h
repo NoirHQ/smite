@@ -256,5 +256,7 @@ template<>
 struct is_foreachable<bytes20> : std::false_type {};
 template<>
 struct is_foreachable<bytes32> : std::false_type {};
+template<>
+struct is_foreachable<bytes256> : std::false_type {};
 
 } // namespace noir
