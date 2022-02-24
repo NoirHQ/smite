@@ -5,7 +5,11 @@
 //
 #pragma once
 #include <noir/common/hex.h>
-#include <noir/p2p/protocol.h>
+#include <noir/common/types/bytes.h>
+
+#include <fc/crypto/private_key.hpp>
+#include <fc/crypto/public_key.hpp>
+#include <fc/crypto/sha256.hpp>
 
 namespace noir::consensus {
 

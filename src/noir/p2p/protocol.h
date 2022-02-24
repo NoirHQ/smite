@@ -17,11 +17,8 @@ struct handshake_message {
   //  chain_id_type chain_id; ///< used to identify chain bytes32 node_id; ///< used to identify peers and prevent
   //  self-connect
   bytes32 node_id; ///< used to identify peers and prevent self-connect
-  //  chain::public_key_type key; ///< authentication key; may be a producer or peer key, or empty
   tstamp time{0};
-  bytes32 token; ///< digest of time to prove we own the private key of the key above
-  //  chain::signature_type sig; ///< signature for the digest
-  string p2p_address;
+  std::string p2p_address;
   uint32_t last_irreversible_block_num = 0;
   block_id_type last_irreversible_block_id;
   uint32_t head_num = 0;
@@ -188,7 +185,7 @@ using net_message =
 
 } // namespace noir::p2p
 
-NOIR_FOR_EACH_FIELD(noir::p2p::handshake_message, network_version, node_id, time, token, p2p_address,
+NOIR_FOR_EACH_FIELD(noir::p2p::handshake_message, network_version, node_id, time, p2p_address,
   last_irreversible_block_num, last_irreversible_block_id, head_num, head_id, generation)
 NOIR_FOR_EACH_FIELD(noir::p2p::go_away_message, reason, node_id)
 NOIR_FOR_EACH_FIELD(noir::p2p::time_message, org, rec, xmt, dst)
