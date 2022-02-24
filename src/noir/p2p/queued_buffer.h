@@ -4,12 +4,9 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/p2p/types.h>
-
 #include <boost/asio/buffer.hpp>
 #include <boost/core/noncopyable.hpp>
 #include <boost/system/error_code.hpp>
-
 #include <deque>
 #include <vector>
 #include <shared_mutex>
