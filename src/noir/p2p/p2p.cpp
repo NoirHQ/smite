@@ -5,6 +5,7 @@
 //
 #include <noir/common/log.h>
 #include <noir/common/thread_pool.h>
+#include <noir/consensus/abci.h>
 #include <noir/consensus/block.h>
 #include <noir/consensus/tx.h>
 #include <noir/p2p/buffer_factory.h>
@@ -324,6 +325,7 @@ public:
 
   //  chain_plugin *chain_plug = nullptr;
   //  producer_plugin *producer_plug = nullptr;
+  consensus::abci* abci_plug{nullptr};
   /** @} */
 
   mutable std::shared_mutex connections_mtx;
@@ -656,6 +658,13 @@ void p2p::plugin_startup() {
     ilog("my node_id is ${id}", ("id", my->node_id.to_string()));
 
     //    my->producer_plug = app().find_plugin<producer_plugin>();
+    if (auto plug = appbase::app().find_plugin<consensus::abci>(); plug->get_state() == started) {
+      ilog("abci_plugin is up and running; p2p <--> abci");
+      my->abci_plug = plug;
+      // TODO: initialize channels between p2p and abci
+    } else {
+      ilog("abci_plugin is not running; will be simply testing p2p activities");
+    }
 
     my->thread_pool.emplace("p2p", my->thread_pool_size);
 

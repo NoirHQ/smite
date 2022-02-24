@@ -6,10 +6,8 @@
 #pragma once
 #include <noir/common/log.h>
 #include <noir/consensus/block_executor.h>
-#include <noir/consensus/common_test.h>
 #include <noir/consensus/consensus_reactor.h>
 #include <noir/consensus/node_key.h>
-#include <noir/consensus/node_setup.h>
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 
@@ -32,7 +30,18 @@ struct node {
 
   static std::unique_ptr<node> new_default_node(const std::shared_ptr<config>& new_config) {
     // Load or generate priv - todo
-    auto [gen_doc, priv_vals] = rand_genesis_doc(*new_config, 1, false, 10);
+    std::vector<genesis_validator> validators;
+    std::vector<priv_validator> priv_validators;
+    auto priv_val = priv_validator{};
+    priv_val.type = MockSignerClient;
+    fc::crypto::private_key new_key("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"); // TODO: read from a file
+    priv_val.priv_key_.key = fc::from_base58(new_key.to_string());
+    priv_val.pub_key_ = priv_val.priv_key_.get_pub_key();
+    auto vote_power = 10;
+    auto val = validator{priv_val.pub_key_.address(), priv_val.pub_key_, vote_power, 0};
+    validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
+    priv_validators.push_back(priv_val);
+    auto gen_doc = genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators};
 
     // Load or generate node_key - todo
     auto node_key_ = node_key::gen_node_key();
@@ -41,7 +50,7 @@ struct node {
     auto session =
       std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
 
-    return make_node(new_config, priv_vals[0], node_key_, std::make_shared<genesis_doc>(gen_doc), session);
+    return make_node(new_config, priv_validators[0], node_key_, std::make_shared<genesis_doc>(gen_doc), session);
   }
 
   static std::unique_ptr<node> make_node(const std::shared_ptr<config>& new_config,
@@ -84,6 +93,53 @@ struct node {
     node_->state_sync_on = new_state_sync_on;
     node_->cs_reactor = new_cs_reactor;
     return node_;
+  }
+
+  static void log_node_startup_info(state& state_, pub_key& pub_key_, node_mode mode) {
+    ilog(fmt::format("Version info: version={}, mode={}", state_.version, mode_str(mode)));
+    switch (mode) {
+    case Full:
+      ilog("################################");
+      ilog("### This node is a full_node ###");
+      ilog("################################");
+      break;
+    case Validator:
+      ilog("#####################################");
+      ilog("### This node is a validator_node ###");
+      ilog("#####################################");
+      {
+        auto addr = pub_key_.address();
+        if (state_.validators.has_address(addr))
+          ilog("   > node is in the active validator set");
+        else
+          ilog("   > node is NOT in the active validator set");
+      }
+      break;
+    case Seed:
+      ilog("################################");
+      ilog("### This node is a seed_node ###");
+      ilog("################################");
+      break;
+    case Unknown:
+      ilog("#################################");
+      ilog("### This node is unknown_mode ###");
+      ilog("#################################");
+      break;
+    }
+  }
+
+  static std::tuple<std::shared_ptr<consensus_reactor>, std::shared_ptr<consensus_state>> create_consensus_reactor(
+    const std::shared_ptr<config>& config_, const std::shared_ptr<state>& state_,
+    const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& block_store_,
+    const priv_validator& priv_validator_, bool wait_sync) {
+    auto cs_state = consensus_state::new_state(config_->consensus, *state_, block_exec_, block_store_);
+
+    if (config_->base.mode == Validator)
+      cs_state->set_priv_validator(priv_validator_);
+
+    auto cs_reactor = consensus_reactor::new_consensus_reactor(cs_state, wait_sync);
+
+    return {cs_reactor, cs_state};
   }
 
   void on_start() {
