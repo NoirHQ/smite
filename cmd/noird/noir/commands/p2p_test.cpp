@@ -6,6 +6,8 @@
 #include <noir/p2p/p2p.h>
 #include <appbase/application.hpp>
 
+#include <fc/log/logger.hpp>
+
 namespace noir::commands {
 
 CLI::App* p2p_test(CLI::App& root) {

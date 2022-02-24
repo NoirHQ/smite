@@ -148,9 +148,6 @@ public:
 private:
   static void _close(connection* self, bool reconnect, bool shutdown); // for easy capture
 
-  bool process_next_block_message(uint32_t message_length);
-  bool process_next_trx_message(uint32_t message_length);
-
 public:
   bool populate_handshake(handshake_message& hello, bool force);
 
@@ -313,17 +310,6 @@ public:
   string p2p_server_address;
 
   vector<string> supplied_peers;
-  vector<public_key_type> allowed_peers; ///< peer keys allowed to connect
-  std::map<public_key_type,
-    private_key_type>
-    private_keys; ///< overlapping with producer keys, also authenticating non-producing nodes
-  enum possible_connections : char {
-    None = 0,
-    Producers = 1 << 0,
-    Specified = 1 << 1,
-    Any = 1 << 2
-  };
-  possible_connections allowed_connections{None};
 
   boost::asio::steady_timer::duration connector_period{0};
   boost::asio::steady_timer::duration txn_exp_period{0};
@@ -402,32 +388,6 @@ public:
   /** \brief Peer heartbeat ticker.
    */
   void ticker();
-  /** @} */
-  /** \brief Determine if a peer is allowed to connect.
-   *
-   * Checks current connection mode and key authentication.
-   *
-   * \return False if the peer should not connect, true otherwise.
-   */
-  bool authenticate_peer(const handshake_message& msg) const;
-  /** \brief Retrieve public key used to authenticate with peers.
-   *
-   * Finds a key to use for authentication.  If this node is a producer, use
-   * the front of the producer key map.  If the node is not a producer but has
-   * a configured private key, use it.  If the node is neither a producer nor has
-   * a private key, returns an empty key.
-   *
-   * \note On a node with multiple private keys configured, the key with the first
-   *       numerically smaller byte will always be used.
-   */
-  public_key_type get_authentication_key() const;
-  /** \brief Returns a signature of the digest using the corresponding private key of the signer.
-   *
-   * If there are no configured private keys, returns an empty signature.
-   */
-  signature_type sign_compact(const public_key_type& signer, const bytes32& digest) const;
-
-  constexpr static uint16_t to_protocol_version(uint16_t v);
 
   connection_ptr find_connection(const string& host) const; // must call with held mutex
 };
@@ -691,11 +651,6 @@ void p2p::plugin_initialize(const CLI::App& config) {
     my->thread_pool_size = 2; // number of threads to use
 
     // my->user_agent_name = ""; // The name supplied to identify this node amongst the peers
-
-    // Can be 'any' or 'producers' or 'specified' or 'none'. If 'specified', peer-key must be specified at least once.
-    // If only 'producers', peer-key is not required. 'producers' and 'specified' may be combined.
-    // if (options.count("allowed-connection")) {
-    my->allowed_connections = p2p_impl::Producers;
 
     //    my->chain_plug = app().find_plugin<chain_plugin>();
     //    my->chain_id = my->chain_plug->get_chain_id();
@@ -1116,13 +1071,7 @@ bool connection::populate_handshake(handshake_message& hello, bool force) {
   hello.head_num = head;
   //  hello.chain_id = my_impl->chain_id;
   hello.node_id = my_impl->node_id;
-  //  hello.key = my_impl->get_authentication_key();
   hello.time = sc::duration_cast<sc::nanoseconds>(sc::system_clock::now().time_since_epoch()).count();
-  hello.token = bytes32(fc::sha256::hash(hello.time).str());
-  //  hello.sig = my_impl->sign_compact(hello.key, hello.token);
-  // If we couldn't sign, don't send a token.
-  //  if(hello.sig == chain::signature_type())
-  //    hello.token = sha256();
   hello.p2p_address = my_impl->p2p_address;
   if (is_transactions_only_connection())
     hello.p2p_address += ":trx";
@@ -1260,27 +1209,12 @@ void connection::start_read_message() {
 bool connection::process_next_message(uint32_t message_length) {
   try {
     latest_msg_time = get_time();
-
-    // if next message is a block we already have, exit early
-    auto peek_ds = pending_message_buffer.create_peek_datastream();
-    //    unsigned_int which{};
-    //    fc::raw::unpack(peek_ds, which);
-    //    if( which == signed_block_which || which == signed_block_v0_which ) {
-    //      return process_next_block_message( message_length );
-    //
-    //    } else if( which == trx_message_v1_which || which == packed_transaction_v0_which ) {
-    //      return process_next_trx_message( message_length );
-    //
-    //    } else {
-
     noir::core::codec::datastream<char> ds_payload(pending_message_buffer.read_ptr(), message_length);
     net_message msg;
     ds_payload >> msg;
     msg_handler m(shared_from_this());
     std::visit(m, msg);
     pending_message_buffer.advance_read_ptr(message_length); // required to manually advance
-    //    }
-
   } catch (const fc::exception& e) {
     elog("Exception in handling message from ${p}: ${s}", ("p", peer_name())("s", e.to_detail_string()));
     close();
@@ -1535,12 +1469,6 @@ void connection::handle_message(const handshake_message& msg) {
     }
     g_conn.unlock();
 
-    //    if( !my_impl->authenticate_peer( msg ) ) {
-    //      elog("Peer not authenticated.  Closing connection." );
-    //      enqueue( go_away_message( authentication ) );
-    //      return;
-    //    }
-
     if (sent_handshake_count == 0) {
       send_handshake();
     }
@@ -1549,7 +1477,6 @@ void connection::handle_message(const handshake_message& msg) {
   std::unique_lock<std::mutex> g_conn(conn_mtx);
   last_handshake_recv = msg;
   g_conn.unlock();
-  //  my_impl->sync_master->recv_handshake( shared_from_this(), msg );
 }
 
 void connection::handle_message(const go_away_message& msg) {
