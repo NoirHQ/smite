@@ -5,6 +5,7 @@
 //
 #pragma once
 
+#include <noir/jmt/types/common.h>
 #include <noir/jmt/types/nibble.h>
 #include <noir/jmt/types/node.h>
-#include <noir/jmt/types/version.h>
+#include <noir/jmt/types/tree_cache.h>

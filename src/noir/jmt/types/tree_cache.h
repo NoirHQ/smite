@@ -9,6 +9,8 @@
 
 namespace noir::jmt {
 
+extern jmt::version pre_genesis_version;
+
 template<typename T>
 struct frozen_tree_cache {
   node_batch<T> node_cache;
@@ -17,19 +19,17 @@ struct frozen_tree_cache {
   std::vector<bytes32> root_hashes;
 };
 
-extern jmt::version pre_genesis_version;
-
-template<typename R, typename T>
+template<typename R, typename T = typename R::value_type>
 struct tree_cache {
-  tree_cache(tree_cache&&) = default;
-  tree_cache(const tree_cache&) = default;
-  tree_cache& operator=(const tree_cache&) = default;
+  // tree_cache(tree_cache&&) = default;
+  // tree_cache(const tree_cache&) = default;
+  // tree_cache& operator=(const tree_cache&) = default;
 
   tree_cache(R& reader, version next_version = 0): reader(reader), next_version(next_version) {
     if (!next_version) {
       auto pre_genesis_root_key = node_key{pre_genesis_version, {}};
       auto pre_genesis_root = reader.get_node_option(pre_genesis_root_key);
-      if (pre_genesis_root) {
+      if (pre_genesis_root && *pre_genesis_root) {
         root_node_key = pre_genesis_root_key;
       } else {
         auto genesis_root_key = node_key{0, {}};
@@ -46,9 +46,9 @@ struct tree_cache {
     if (it != node_cache.end()) {
       return it->second;
     }
-    it = frozen_cache.node_cache.find(node_key);
-    if (it != frozen_cache.node_cache.end()) {
-      return it->second;
+    auto fit = frozen_cache.node_cache.find(node_key);
+    if (fit != frozen_cache.node_cache.end()) {
+      return fit->second;
     }
     // TODO: metric
     return reader.get_node(node_key);
@@ -60,8 +60,7 @@ struct tree_cache {
         num_new_leaves += 1;
       node_cache.insert({node_key, new_node});
     } else {
-      // TODO: error message
-      return unexpected(error{"node with key already exists in node_batch"});
+      return make_unexpected(fmt::format("node with key `{}` already exists in node_batch", node_key.to_string()));
     }
     return {};
   }
@@ -82,7 +81,7 @@ struct tree_cache {
   void freeze() {
     auto root_node = get_node(root_node_key);
     // TODO: error message
-    check(root_node, fmt::format("root node with key must exist"));
+    check(bool(root_node), fmt::format("root node with key must exist"));
     auto root_hash = (*root_node).hash();
     frozen_cache.root_hashes.push_back(root_hash);
     jmt::node_stats node_stats{
@@ -92,20 +91,24 @@ struct tree_cache {
       num_stale_leaves,
     };
     frozen_cache.node_stats.push_back(node_stats);
-    frozen_cache.node_cache.insert(frozen_cache.node_cache.end(), node_cache.begin(), node_cache.end());
+    frozen_cache.node_cache.insert(node_cache.begin(), node_cache.end());
     node_cache.clear();
     auto stale_since_version = next_version;
-    std::transform(frozen_cache.stale_node_index_cache.begin(), frozen_cache.stale_node_index_cache.end(),
-      frozen_cache.stale_node_index_cache.begin(), [=](const auto& s) {
-        return stale_node_index{stale_since_version, s.node_key};
-      });
+    std::for_each(stale_node_index_cache.begin(), stale_node_index_cache.end(), [&](const auto& node_key) {
+      frozen_cache.stale_node_index_cache.insert({stale_since_version, node_key});
+    });
+    stale_node_index_cache.clear();
     num_stale_leaves = 0;
     num_new_leaves = 0;
     next_version += 1;
   }
 
-  operator std::pair<std::vector<bytes32>, tree_update_batch<T>>() {
-    return {
+  template<typename U>
+  auto into();
+
+  template<>
+  auto into<std::pair<std::vector<bytes32>, tree_update_batch<T>>>() {
+    return std::pair<std::vector<bytes32>, tree_update_batch<T>>{
       frozen_cache.root_hashes,
       {frozen_cache.node_cache, frozen_cache.stale_node_index_cache, frozen_cache.node_stats},
     };
@@ -113,7 +116,7 @@ struct tree_cache {
 
   node_key root_node_key;
   version next_version;
-  std::map<node_key, node<T>> node_cache;
+  std::unordered_map<node_key, node<T>, hash<node_key>> node_cache;
   size_t num_new_leaves = 0;
   std::set<node_key> stale_node_index_cache;
   size_t num_stale_leaves = 0;

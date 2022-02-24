@@ -15,14 +15,14 @@ node_key random_63nibbles_node_key() {
   std::vector<uint8_t> bytes(32);
   RAND_bytes(bytes.data(), bytes.size());
   bytes.back() &= 0xf0;
-  return {0, nibble_path(bytes, true)};
+  return {0, nibble_path(std::span(bytes), true)};
 }
 
 std::tuple<node_key, bytes32> gen_leaf_key(version ver, const nibble_path& path, nibble n) {
   check(path.num_nibbles == 63);
   auto np = path;
   np.push(n);
-  auto account_key = bytes32((char*)np.bytes.data(), np.bytes.size());
+  auto account_key = bytes32(np.bytes);
   return {node_key{ver, np}, account_key};
 }
 
