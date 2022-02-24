@@ -346,7 +346,6 @@ public:
 
   //  chain_plugin *chain_plug = nullptr;
   //  producer_plugin *producer_plug = nullptr;
-  bool use_socket_read_watermark = false;
   /** @} */
 
   mutable std::shared_mutex connections_mtx;
@@ -684,7 +683,6 @@ void p2p::plugin_initialize(const CLI::App& config) {
     my->max_nodes_per_host = 1;
     my->p2p_accept_transactions = true;
     my->p2p_reject_incomplete_blocks = true;
-    my->use_socket_read_watermark = false;
     my->keepalive_interval = std::chrono::milliseconds(30000);
     my->heartbeat_timeout = std::chrono::milliseconds(30000 * 2);
 
@@ -1150,17 +1148,6 @@ void connection::start_read_message() {
     std::size_t minimum_read =
       std::atomic_exchange<decltype(outstanding_read_bytes.load())>(&outstanding_read_bytes, 0);
     minimum_read = minimum_read != 0 ? minimum_read : message_header_size;
-
-    if (my_impl->use_socket_read_watermark) {
-      const size_t max_socket_read_watermark = 4096;
-      std::size_t socket_read_watermark = std::min<std::size_t>(minimum_read, max_socket_read_watermark);
-      boost::asio::socket_base::receive_low_watermark read_watermark_opt(socket_read_watermark);
-      boost::system::error_code ec;
-      socket->set_option(read_watermark_opt, ec);
-      if (ec) {
-        elog("unable to set read watermark ${peer}: ${e1}", ("peer", peer_name())("e1", ec.message()));
-      }
-    }
 
     auto completion_handler = [minimum_read](
                                 boost::system::error_code ec, std::size_t bytes_transferred) -> std::size_t {
