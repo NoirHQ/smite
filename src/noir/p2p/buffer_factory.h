@@ -4,8 +4,9 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/core/types.h>
 #include <noir/p2p/protocol.h>
+
+#include <noir/core/types.h>
 
 namespace noir::p2p {
 
