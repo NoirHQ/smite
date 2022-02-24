@@ -10,8 +10,6 @@
 
 namespace noir::p2p {
 
-using namespace fc;
-
 struct handshake_message {
   uint16_t network_version = 0; ///< incremental value above a computed base
   //  chain_id_type chain_id; ///< used to identify chain bytes32 node_id; ///< used to identify peers and prevent

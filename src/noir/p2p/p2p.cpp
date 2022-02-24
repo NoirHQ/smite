@@ -37,7 +37,7 @@ using fc::time_point_sec;
 
 class connection : public std::enable_shared_from_this<connection> {
 public:
-  explicit connection(string endpoint);
+  explicit connection(std::string endpoint);
   connection();
 
   ~connection() {}
@@ -47,11 +47,11 @@ public:
   bool socket_is_open() const {
     return socket_open.load();
   } // thread safe, atomic
-  const string& peer_address() const {
+  const std::string& peer_address() const {
     return peer_addr;
   } // thread safe, const
 
-  void set_connection_type(const string& peer_addr);
+  void set_connection_type(const std::string& peer_addr);
 
   bool is_transactions_only_connection() const {
     return connection_type == transactions_only;
@@ -67,7 +67,7 @@ public:
   }
 
 private:
-  static const string unknown;
+  static const std::string unknown;
 
   void update_endpoints();
 
@@ -75,7 +75,7 @@ private:
 
   std::atomic<bool> socket_open{false};
 
-  const string peer_addr;
+  const std::string peer_addr;
   enum connection_types : char {
     both,
     transactions_only,
@@ -99,9 +99,6 @@ public:
   std::atomic<bool> connecting{true};
   std::atomic<bool> syncing{false};
 
-  std::atomic<uint16_t> protocol_version = 0;
-  uint16_t consecutive_rejected_blocks = 0;
-  //  block_status_monitor block_status_monitor_;
   std::atomic<uint16_t> consecutive_immediate_connection_close = 0;
 
   std::mutex response_expected_timer_mtx;
@@ -117,10 +114,10 @@ public:
   uint32_t fork_head_num{0};
   fc::time_point last_close;
   bytes32 conn_node_id;
-  string remote_endpoint_ip;
-  string remote_endpoint_port;
-  string local_endpoint_ip;
-  string local_endpoint_port;
+  std::string remote_endpoint_ip;
+  std::string remote_endpoint_port;
+  std::string local_endpoint_ip;
+  std::string local_endpoint_port;
 
   connection_status get_status() const;
 
@@ -193,7 +190,7 @@ public:
 
   /** @} */
 
-  const string peer_name();
+  const std::string peer_name();
 
   void blk_send_branch(const block_id_type& msg_head_id);
   void blk_send_branch_impl(uint32_t msg_head_num, uint32_t lib_num, uint32_t head_num);
@@ -253,7 +250,7 @@ public:
 using connection_ptr = std::shared_ptr<connection>;
 using connection_wptr = std::weak_ptr<connection>;
 
-const string connection::unknown = "<unknown>";
+const std::string connection::unknown = "<unknown>";
 
 // called from connection strand
 struct msg_handler {
@@ -296,7 +293,7 @@ struct msg_handler {
 //------------------------------------------------------------------------
 class p2p_impl : public std::enable_shared_from_this<p2p_impl> {
 public:
-  unique_ptr<tcp::acceptor> acceptor;
+  std::unique_ptr<tcp::acceptor> acceptor;
   std::atomic<uint32_t> current_connection_id{0};
 
   //  unique_ptr<sync_manager> sync_master;
@@ -306,10 +303,10 @@ public:
    * Thread safe, only updated in plugin initialize
    *  @{
    */
-  string p2p_address;
-  string p2p_server_address;
+  std::string p2p_address;
+  std::string p2p_server_address;
 
-  vector<string> supplied_peers;
+  vector<std::string> supplied_peers;
 
   boost::asio::steady_timer::duration connector_period{0};
   boost::asio::steady_timer::duration txn_exp_period{0};
@@ -328,7 +325,7 @@ public:
 
   //  chain_id_type chain_id;
   bytes32 node_id;
-  string user_agent_name;
+  std::string user_agent_name;
 
   //  chain_plugin *chain_plug = nullptr;
   //  producer_plugin *producer_plug = nullptr;
@@ -338,14 +335,14 @@ public:
   std::set<connection_ptr> connections;
 
   std::mutex connector_check_timer_mtx;
-  unique_ptr<boost::asio::steady_timer> connector_check_timer;
+  std::unique_ptr<boost::asio::steady_timer> connector_check_timer;
   int connector_checks_in_flight{0};
 
   std::mutex expire_timer_mtx;
-  unique_ptr<boost::asio::steady_timer> expire_timer;
+  std::unique_ptr<boost::asio::steady_timer> expire_timer;
 
   std::mutex keepalive_timer_mtx;
-  unique_ptr<boost::asio::steady_timer> keepalive_timer;
+  std::unique_ptr<boost::asio::steady_timer> keepalive_timer;
 
   std::atomic<bool> in_shutdown{false};
 
@@ -389,7 +386,7 @@ public:
    */
   void ticker();
 
-  connection_ptr find_connection(const string& host) const; // must call with held mutex
+  connection_ptr find_connection(const std::string& host) const; // must call with held mutex
 };
 
 static p2p_impl* my_impl;
@@ -505,7 +502,7 @@ std::tuple<uint32_t, uint32_t, uint32_t, block_id_type, block_id_type, block_id_
     chain_fork_head_blk_id);
 }
 
-connection_ptr p2p_impl::find_connection(const string& host) const {
+connection_ptr p2p_impl::find_connection(const std::string& host) const {
   for (const auto& c : connections)
     if (c->peer_address() == host)
       return c;
@@ -524,7 +521,7 @@ void p2p_impl::start_listen_loop() {
             uint32_t from_addr = 0;
             boost::system::error_code rec;
             const auto& paddr_add = socket->remote_endpoint(rec).address();
-            string paddr_str;
+            std::string paddr_str;
             if (rec) {
               elog("Error getting remote endpoint: ${m}", ("m", rec.message()));
             } else {
@@ -762,7 +759,7 @@ void p2p::plugin_startup() {
 
 void p2p::plugin_shutdown() {}
 
-string p2p::connect(const string& host) {
+std::string p2p::connect(const std::string& host) {
   std::lock_guard<std::shared_mutex> g(my->connections_mtx);
   if (my->find_connection(host))
     return "already connected";
@@ -777,7 +774,7 @@ string p2p::connect(const string& host) {
   return "added connection";
 }
 
-string p2p::disconnect(const string& host) {
+std::string p2p::disconnect(const std::string& host) {
   std::lock_guard<std::shared_mutex> g(my->connections_mtx);
   for (auto itr = my->connections.begin(); itr != my->connections.end(); ++itr) {
     if ((*itr)->peer_address() == host) {
@@ -790,7 +787,7 @@ string p2p::disconnect(const string& host) {
   return "no known connection for host";
 }
 
-std::optional<connection_status> p2p::status(const string& endpoint) const {
+std::optional<connection_status> p2p::status(const std::string& endpoint) const {
   return std::optional<connection_status>();
 }
 
@@ -807,7 +804,7 @@ std::vector<connection_status> p2p::connections() const {
 //------------------------------------------------------------------------
 // connection
 //------------------------------------------------------------------------
-connection::connection(string endpoint)
+connection::connection(std::string endpoint)
   : peer_addr(endpoint), strand(my_impl->thread_pool->get_executor()),
     socket(new tcp::socket(my_impl->thread_pool->get_executor())), connection_id(++my_impl->current_connection_id),
     response_expected_timer(my_impl->thread_pool->get_executor()), last_handshake_recv(), last_handshake_sent() {
@@ -832,7 +829,7 @@ bool connection::resolve_and_connect() {
     return false;
   }
 
-  string::size_type colon = peer_address().find(':');
+  std::string::size_type colon = peer_address().find(':');
   if (colon == std::string::npos || colon == 0) {
     elog("Invalid peer address. must be \"host:port[:<blk>|<trx>]\": ${p}", ("p", peer_address()));
     return false;
@@ -851,10 +848,11 @@ bool connection::resolve_and_connect() {
   }
 
   strand.post([c]() {
-    string::size_type colon = c->peer_address().find(':');
-    string::size_type colon2 = c->peer_address().find(':', colon + 1);
-    string host = c->peer_address().substr(0, colon);
-    string port = c->peer_address().substr(colon + 1, colon2 == string::npos ? string::npos : colon2 - (colon + 1));
+    std::string::size_type colon = c->peer_address().find(':');
+    std::string::size_type colon2 = c->peer_address().find(':', colon + 1);
+    std::string host = c->peer_address().substr(0, colon);
+    std::string port =
+      c->peer_address().substr(colon + 1, colon2 == std::string::npos ? std::string::npos : colon2 - (colon + 1));
     idump((host)(port));
     c->set_connection_type(c->peer_address());
 
@@ -893,19 +891,19 @@ bool connection::connected() {
   return socket_is_open() && !connecting;
 }
 
-void connection::set_connection_type(const string& peer_add) {
+void connection::set_connection_type(const std::string& peer_add) {
   // host:port:[<trx>|<blk>]
-  string::size_type colon = peer_add.find(':');
-  string::size_type colon2 = peer_add.find(':', colon + 1);
-  string::size_type end = colon2 == string::npos
-    ? string::npos
+  std::string::size_type colon = peer_add.find(':');
+  std::string::size_type colon2 = peer_add.find(':', colon + 1);
+  std::string::size_type end = colon2 == std::string::npos
+    ? std::string::npos
     : peer_add.find_first_of(" :+=.,<>!$%^&(*)|-#@\t",
         colon2 + 1); // future proof by including most symbols without using regex
-  string host = peer_add.substr(0, colon);
-  string port = peer_add.substr(colon + 1, colon2 == string::npos ? string::npos : colon2 - (colon + 1));
-  string type = colon2 == string::npos ? ""
-    : end == string::npos              ? peer_add.substr(colon2 + 1)
-                                       : peer_add.substr(colon2 + 1, end - (colon2 + 1));
+  std::string host = peer_add.substr(0, colon);
+  std::string port = peer_add.substr(colon + 1, colon2 == std::string::npos ? std::string::npos : colon2 - (colon + 1));
+  std::string type = colon2 == std::string::npos ? ""
+    : end == std::string::npos                   ? peer_add.substr(colon2 + 1)
+                                                 : peer_add.substr(colon2 + 1, end - (colon2 + 1));
 
   if (type.empty()) {
     dlog("Setting connection type for: ${peer} to both transactions and blocks", ("peer", peer_add));
@@ -1028,7 +1026,7 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
   }
 }
 
-const string connection::peer_name() {
+const std::string connection::peer_name() {
   std::lock_guard<std::mutex> g_conn(conn_mtx);
   if (!last_handshake_recv.p2p_address.empty()) {
     return last_handshake_recv.p2p_address;
@@ -1359,21 +1357,19 @@ bool connection::enqueue_sync_block() {
 }
 
 void connection::check_heartbeat(tstamp current_time) {
-  if (protocol_version >= heartbeat_interval) {
-    if (latest_msg_time > 0 && current_time > latest_msg_time + hb_timeout) {
-      no_retry = benign_other;
-      if (!peer_address().empty()) {
-        wlog("heartbeat timed out for peer address ${adr}", ("adr", peer_address()));
-        close(true); // reconnect
-      } else {
-        {
-          std::lock_guard<std::mutex> g_conn(conn_mtx);
-          wlog("heartbeat timed out from ${p} ", ("p", last_handshake_recv.p2p_address));
-        }
-        close(false); // don't reconnect
+  if (latest_msg_time > 0 && current_time > latest_msg_time + hb_timeout) {
+    no_retry = benign_other;
+    if (!peer_address().empty()) {
+      wlog("heartbeat timed out for peer address ${adr}", ("adr", peer_address()));
+      close(true); // reconnect
+    } else {
+      {
+        std::lock_guard<std::mutex> g_conn(conn_mtx);
+        wlog("heartbeat timed out from ${p} ", ("p", last_handshake_recv.p2p_address));
       }
-      return;
+      close(false); // don't reconnect
     }
+    return;
   }
   send_time();
 }
