@@ -14,6 +14,8 @@
 #include <noir/jmt/types/proof.h>
 #include <fmt/format.h>
 #include <bit>
+#include <map>
+#include <set>
 #include <unordered_map>
 
 namespace noir::jmt {
