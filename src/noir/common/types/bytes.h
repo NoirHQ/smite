@@ -153,12 +153,14 @@ struct bytesN {
     return bytes{data_.begin(), data_.end()};
   }
 
-  std::span<T> to_span() {
-    return std::span{data_.data(), data_.size()};
+  template<Byte U = T>
+  constexpr std::span<U> to_span() {
+    return std::span{(U*)data_.data(), data_.size()};
   }
 
-  std::span<const T> to_span() const {
-    return std::span{data_.data(), data_.size()};
+  template<Byte U = T>
+  constexpr std::span<const U> to_span() const {
+    return std::span{(const U*)data_.data(), data_.size()};
   }
 
   void clear() {
