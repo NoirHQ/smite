@@ -104,7 +104,8 @@ struct tree_cache {
   }
 
   std::pair<std::vector<bytes32>, tree_update_batch<T>> deltas() {
-    return {frozen_cache.root_hashes, {frozen_cache.node_cache, frozen_cache.stale_node_index_cache, frozen_cache.node_stats}};
+    return {frozen_cache.root_hashes,
+      {frozen_cache.node_cache, frozen_cache.stale_node_index_cache, frozen_cache.node_stats}};
   }
 
   node_key root_node_key;

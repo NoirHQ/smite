@@ -84,12 +84,10 @@ struct jellyfish_merkle_tree {
   }
 
   auto batch_put_value_sets(const std::vector<std::vector<std::pair<bytes32, T>>>& value_sets,
-    std::optional<std::vector<std::reference_wrapper<unordered_map<jmt::nibble_path, bytes32>>>>
-      node_hashes,
+    std::optional<std::vector<std::reference_wrapper<unordered_map<jmt::nibble_path, bytes32>>>> node_hashes,
     jmt::version first_version) -> result<std::pair<std::vector<bytes32>, tree_update_batch<T>>> {
     auto tree_cache = jmt::tree_cache(reader, first_version);
-    std::vector<std::optional<std::reference_wrapper<unordered_map<jmt::nibble_path, bytes32>>>>
-      hash_sets;
+    std::vector<std::optional<std::reference_wrapper<unordered_map<jmt::nibble_path, bytes32>>>> hash_sets;
     if (node_hashes) {
       for (const auto& hashes : *node_hashes) {
         hash_sets.push_back(hashes);
@@ -121,8 +119,7 @@ struct jellyfish_merkle_tree {
   }
 
   auto batch_insert_at(jmt::node_key& node_key, jmt::version version, std::span<std::pair<bytes32, T>> kvs,
-    size_t depth,
-    std::optional<std::reference_wrapper<unordered_map<nibble_path, bytes32>>> hash_cache,
+    size_t depth, std::optional<std::reference_wrapper<unordered_map<nibble_path, bytes32>>> hash_cache,
     jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, node<T>>> {
     check(kvs.size());
     auto res = tree_cache.get_node(node_key);
@@ -242,8 +239,7 @@ struct jellyfish_merkle_tree {
   }
 
   auto batch_create_subtree(const jmt::node_key& node_key, jmt::version version, std::span<std::pair<bytes32, T>> kvs,
-    size_t depth,
-    std::optional<std::reference_wrapper<unordered_map<nibble_path, bytes32>>> hash_cache,
+    size_t depth, std::optional<std::reference_wrapper<unordered_map<nibble_path, bytes32>>> hash_cache,
     jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, node<T>>> {
     if (kvs.size() == 1) {
       auto new_leaf_node = node<T>::leaf(std::get<0>(kvs[0]), std::get<1>(kvs[0]));
