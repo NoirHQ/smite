@@ -117,7 +117,7 @@ struct jellyfish_merkle_tree {
       tree_cache.freeze();
     }
     check(value_set == value_sets.end() && hash_set == hash_sets.end());
-    return tree_cache.template into<std::pair<std::vector<bytes32>, tree_update_batch<T>>>();
+    return tree_cache.deltas();
   }
 
   auto batch_insert_at(jmt::node_key& node_key, jmt::version version, std::span<std::pair<bytes32, T>> kvs,
