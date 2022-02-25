@@ -30,6 +30,9 @@ wal_decoder::result wal_decoder::decode(timed_wal_message& msg) {
       noir::bytes len_(4);
       file_->read(len_.data(), len_.size());
       len = stoull(to_hex(len_), nullptr, 16);
+      if (len > wal_file_manager::max_msg_size_bytes) {
+        return result::corrupted;
+      }
     }
     {
       noir::bytes dat(len);
@@ -71,9 +74,9 @@ bool wal_encoder::encode(const timed_wal_message& msg, size_t& size) {
   });
 
   auto dat = noir::codec::scale::encode(msg);
-  if (dat.size() > max_msg_size_bytes) { // TODO: handle error
+  if (dat.size() > wal_file_manager::max_msg_size_bytes) { // TODO: handle error
     elog("msg is too big: ${length} bytes, max: ${maxMsgSizeBytes} bytes",
-      ("length", dat.size())("maxMsgSizeBytes", max_msg_size_bytes));
+      ("length", dat.size())("maxMsgSizeBytes", wal_file_manager::max_msg_size_bytes));
     return false;
   }
 
