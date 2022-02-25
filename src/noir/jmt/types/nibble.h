@@ -260,7 +260,11 @@ struct hash<jmt::nibble> {
 template<>
 struct hash<jmt::nibble_path> {
   std::size_t operator()(const jmt::nibble_path& n) const {
-    return crypto::xxh64()({(const char*)n.bytes.data(), n.bytes.size()});
+    crypto::xxh64 hash;
+    hash.init()
+      .update({(char*)&n.num_nibbles, sizeof(n.num_nibbles)})
+      .update({(const char*)n.bytes.data(), n.bytes.size()});
+    return hash.final();
   }
 };
 
