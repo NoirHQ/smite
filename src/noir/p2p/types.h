@@ -36,4 +36,15 @@ constexpr auto def_keepalive_interval = 32000;
 
 constexpr auto message_header_size = 4;
 
+enum round_step_type {
+  RoundStepNewHeight = 1, // Wait til CommitTime + timeoutCommit
+  RoundStepNewRound = 2, // Setup new round and go to RoundStepPropose
+  RoundStepPropose = 3, // Did propose, gossip proposal
+  RoundStepPrevote = 4, // Did prevote, gossip prevotes
+  RoundStepPrevoteWait = 5, // Did receive any +2/3 prevotes, start timeout
+  RoundStepPrecommit = 6, // Did precommit, gossip precommits
+  RoundStepPrecommitWait = 7, // Did receive any +2/3 precommits, start timeout
+  RoundStepCommit = 8 // Entered commit state machine
+};
+
 } // namespace noir::p2p

@@ -214,7 +214,7 @@ struct height_vote_set {
 struct round_state {
   int64_t height;
   int32_t round;
-  round_step_type step;
+  p2p::round_step_type step;
   p2p::tstamp start_time;
 
   // Subjective time when +2/3 precommits for Block at Round were found

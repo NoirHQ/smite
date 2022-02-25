@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/types.h>
+#include <noir/consensus/bit_array.h>
 #include <noir/consensus/merkle/proof.h>
 #include <noir/p2p/types.h>
 
@@ -95,6 +96,23 @@ struct vote_extension {
   }
 };
 
+///< consensus message starts
+struct new_round_step_message {
+  int64_t height;
+  int32_t round;
+  round_step_type step;
+  int64_t seconds_since_start_time;
+  int32_t last_commit_round;
+};
+
+struct new_valid_block_message {
+  int64_t height;
+  int32_t round;
+  part_set_header block_part_set_header;
+  consensus::bit_array block_parts;
+  bool is_commit;
+};
+
 struct proposal_message {
   signed_msg_type type;
   int64_t height;
@@ -103,6 +121,12 @@ struct proposal_message {
   block_id block_id_;
   tstamp timestamp{0};
   bytes signature;
+};
+
+struct proposal_pol_message {
+  int64_t height;
+  int32_t proposal_pol_round;
+  consensus::bit_array proposal_pol;
 };
 
 struct block_part_message {
@@ -124,6 +148,29 @@ struct vote_message {
   bytes signature;
   vote_extension vote_extension_;
 };
+
+struct has_vote_message {
+  int64_t height;
+  int32_t round;
+  signed_msg_type type;
+  int32_t index;
+};
+
+struct vote_set_maj23_message {
+  int64_t height;
+  int32_t round;
+  signed_msg_type type;
+  block_id block_id_;
+};
+
+struct vote_set_bits_message {
+  int64_t height;
+  int32_t round;
+  signed_msg_type type;
+  block_id block_id_;
+  consensus::bit_array votes;
+};
+///< consensus message ends
 
 enum go_away_reason {
   no_reason, ///< no reason to go away
