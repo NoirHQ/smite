@@ -76,7 +76,7 @@ struct jellyfish_merkle_tree {
       if (it != hash_cache->end()) {
         return it->second;
       }
-      check(false, fmt::format("_key_ cannot be found in hash_cache"));
+      check(false, fmt::format("{} cannot be found in hash_cache", node_key.to_string()));
       __builtin_unreachable();
     } else {
       return node.hash();
@@ -499,6 +499,31 @@ public:
       }
     }
     bail("jellyfish merkle tree has cyclic graph inside");
+  }
+
+  void traverse_node(jmt::tree_cache<R, T>& tree_cache, const node_key& key, int depth) {
+    std::cout << std::string(depth * 2, ' ') << key.to_string() << " ";
+    auto node = tree_cache.get_node(key);
+    if (!node) {
+      std::cout << "ERROR" << std::endl;
+      return;
+    }
+    if (std::holds_alternative<jmt::internal_node>(node->data)) {
+      auto internal_node = std::get<jmt::internal_node>(node->data);
+      std::cout << fmt::format("internal{{leaf_count: {}}}", internal_node.leaf_count) << std::endl;
+      for (const auto& c : internal_node.children) {
+        traverse_node(tree_cache, key.gen_child_node_key(c.second.version, c.first), depth + 1);
+      }
+    } else if (std::holds_alternative<jmt::leaf_node<T>>(node->data)) {
+      std::cout << fmt::format("leaf{{value: {}}}", to_string(std::get<leaf_node<T>>(node->data).value)) << std::endl;
+    } else if (std::holds_alternative<jmt::null>(node->data)) {
+      std::cout << "null{}" << std::endl;
+    }
+  }
+
+  void debug(jmt::version version) {
+    auto tree_cache = jmt::tree_cache(reader, version);
+    traverse_node(tree_cache, tree_cache.root_node_key, 0);
   }
 
 private:
