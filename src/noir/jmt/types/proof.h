@@ -11,7 +11,7 @@
 
 namespace noir::jmt {
 
-const char noir_hash_prefix[] = "DIEM::";
+const char noir_hash_prefix[] = "NOIR::";
 const char sparse_merkle_internal_salt[] = "SparseMerkleInternal";
 
 using default_hasher = crypto::sha3_256;
