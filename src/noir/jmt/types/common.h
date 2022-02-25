@@ -5,8 +5,8 @@
 //
 #pragma once
 #include <noir/common/expected.h>
-#include <noir/common/types/hash.h>
 #include <noir/common/types/bytes.h>
+#include <noir/common/types/hash.h>
 #include <string>
 #include <unordered_map>
 
