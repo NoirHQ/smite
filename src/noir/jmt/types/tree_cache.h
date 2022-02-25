@@ -109,7 +109,7 @@ struct tree_cache {
 
   node_key root_node_key;
   version next_version;
-  std::unordered_map<node_key, node<T>, hash<node_key>> node_cache;
+  unordered_map<node_key, node<T>> node_cache;
   size_t num_new_leaves = 0;
   std::set<node_key> stale_node_index_cache;
   size_t num_stale_leaves = 0;
