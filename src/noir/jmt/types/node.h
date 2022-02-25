@@ -512,9 +512,10 @@ template<>
 struct hash<jmt::node_key> {
   std::size_t operator()(const jmt::node_key& key) const {
     crypto::xxh64 hash;
+    auto nhash = noir::hash<jmt::nibble_path>()(key.nibble_path);
     hash.init()
       .update({(char*)&key.version, 8})
-      .update({(const char*)key.nibble_path.bytes.data(), key.nibble_path.bytes.size()});
+      .update({(char*)&nhash, sizeof(nhash)});
     return hash.final();
   }
 };
