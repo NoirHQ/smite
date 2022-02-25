@@ -44,14 +44,14 @@ struct message_handler {
 };
 
 consensus_state::consensus_state()
-  : timeout_ticker_channel(appbase::app().get_channel<channels::timeout_ticker>()),
-    internal_mq_channel(appbase::app().get_channel<channels::internal_message_queue>()),
-    peer_mq_channel(appbase::app().get_channel<channels::peer_message_queue>()) {
-  timeout_ticker_subscription = appbase::app().get_channel<channels::timeout_ticker>().subscribe(
+  : timeout_ticker_channel(appbase::app().get_channel<plugin_interface::channels::timeout_ticker>()),
+    internal_mq_channel(appbase::app().get_channel<plugin_interface::channels::internal_message_queue>()),
+    peer_mq_channel(appbase::app().get_channel<plugin_interface::channels::peer_message_queue>()) {
+  timeout_ticker_subscription = appbase::app().get_channel<plugin_interface::channels::timeout_ticker>().subscribe(
     std::bind(&consensus_state::tock, this, std::placeholders::_1));
-  internal_mq_subscription = appbase::app().get_channel<channels::internal_message_queue>().subscribe(
+  internal_mq_subscription = appbase::app().get_channel<plugin_interface::channels::internal_message_queue>().subscribe(
     std::bind(&consensus_state::receive_routine, this, std::placeholders::_1));
-  peer_mq_subscription = appbase::app().get_channel<channels::peer_message_queue>().subscribe(
+  peer_mq_subscription = appbase::app().get_channel<plugin_interface::channels::peer_message_queue>().subscribe(
     std::bind(&consensus_state::receive_routine, this, std::placeholders::_1));
 
   thread_pool.emplace("consensus", thread_pool_size);
@@ -283,7 +283,7 @@ void consensus_state::new_step() {
  * Updates (state transitions) happen on timeouts, complete proposals, and 2/3 majorities.
  * State must be locked before any internal state is updated.
  */
-void consensus_state::receive_routine(msg_info_ptr mi) {
+void consensus_state::receive_routine(p2p::msg_info_ptr mi) {
   message_handler m(shared_from_this());
   std::visit(m, mi->msg);
 }
@@ -537,12 +537,13 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     // proposal_.signature = p.signature; // TODO: no need; already updated proposal_.signature
 
     // Send proposal and block_parts
-    internal_mq_channel.publish(appbase::priority::medium, std::make_shared<msg_info>(msg_info{proposal_, ""}));
+    internal_mq_channel.publish(
+      appbase::priority::medium, std::make_shared<p2p::msg_info>(p2p::msg_info{proposal_, ""}));
 
     for (auto i = 0; i < block_parts_->total; i++) {
       auto part_ = block_parts_->get_part(i);
       auto msg = p2p::block_part_message{rs.height, rs.round, part_->index, part_->bytes_, part_->proof_};
-      internal_mq_channel.publish(appbase::priority::medium, std::make_shared<msg_info>(msg_info{msg, ""}));
+      internal_mq_channel.publish(appbase::priority::medium, std::make_shared<p2p::msg_info>(p2p::msg_info{msg, ""}));
     }
     dlog(fmt::format("signed proposal: height={} round={}", height, round));
   } else {
@@ -1209,7 +1210,7 @@ vote consensus_state::sign_add_vote(p2p::signed_msg_type msg_type, bytes hash, p
   auto vote_ = sign_vote(msg_type, hash, header);
   if (vote_.has_value()) {
     internal_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<msg_info>(msg_info{p2p::vote_message(vote_.value()), ""}));
+      appbase::priority::medium, std::make_shared<p2p::msg_info>(p2p::msg_info{p2p::vote_message(vote_.value()), ""}));
     dlog(fmt::format("signed and pushed vote: height={} round={}", rs.height, rs.round));
     return vote_.value();
   }
