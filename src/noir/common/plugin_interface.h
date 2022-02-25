@@ -29,6 +29,6 @@ namespace egress {
   namespace channels {
     using broadcast_message_queue = appbase::channel_decl<struct broadcast_message_queue_tag, std::span<const char>>;
   }
-} // namespace incoming
+} // namespace egress
 
 } // namespace noir::plugin_interface

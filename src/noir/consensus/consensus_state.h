@@ -43,7 +43,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void on_start();
 
   void update_height(int64_t height);
-  void update_round_step(int32_t rount, round_step_type step);
+  void update_round_step(int32_t rount, p2p::round_step_type step);
   void schedule_round_0(round_state& rs_);
   void update_to_state(state& state_);
   void new_step();
@@ -52,7 +52,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void handle_msg();
 
   void schedule_timeout(
-    std::chrono::system_clock::duration duration_, int64_t height, int32_t round, round_step_type step);
+    std::chrono::system_clock::duration duration_, int64_t height, int32_t round, p2p::round_step_type step);
   void tick(timeout_info_ptr ti);
   void tock(timeout_info_ptr ti);
   void handle_timeout(timeout_info_ptr ti);
