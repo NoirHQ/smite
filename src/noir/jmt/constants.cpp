@@ -8,7 +8,7 @@
 
 namespace noir::jmt {
 
-bytes32 sparse_merkle_placeholder_hash(std::span{"SPARSE_MERKLE_PLACEHOLDER_HASH"}, false);
+bytes32 sparse_merkle_placeholder_hash(std::span("SPARSE_MERKLE_PLACEHOLDER_HASH\x00\x00", 32));
 
 version pre_genesis_version = std::numeric_limits<uint64_t>::max();
 

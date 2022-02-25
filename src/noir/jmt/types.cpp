@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/jmt/types/common.h>
+#include <bitset>
 #include <numeric>
 
 namespace noir::jmt {
