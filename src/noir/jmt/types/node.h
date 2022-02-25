@@ -118,8 +118,7 @@ struct child {
   jmt::node_type node_type;
 
   friend bool operator==(const child& a, const child& b) {
-    return a.hash == b.hash && a.version == b.version && a.node_type == b.node_type;
-    // return std::tie(a.hash, a.version, a.type) != std::tie(b.hash, b.version, b.type);
+    return std::tie(a.hash, a.version, a.node_type) == std::tie(b.hash, b.version, b.node_type);
   }
 };
 
@@ -296,9 +295,7 @@ struct internal_node {
   }
 
   friend bool operator==(const internal_node& a, const internal_node& b) {
-    if (a.leaf_count != b.leaf_count)
-      return false;
-    return std::equal(a.children.begin(), a.children.end(), b.children.begin(), b.children.end());
+    return std::tie(a.children, a.leaf_count) == std::tie(b.children, b.leaf_count);
   }
 
   jmt::children children;
@@ -329,13 +326,13 @@ struct leaf_node {
     return sparse_merkle_leaf_node{account_key, value_hash}.hash();
   }
 
-  bytes32 account_key;
-  bytes32 value_hash;
-  T value;
-
   friend bool operator==(const leaf_node<T>& a, const leaf_node<T>& b) {
     return std::tie(a.account_key, a.value_hash, a.value) == std::tie(b.account_key, b.value_hash, b.value);
   }
+
+  bytes32 account_key;
+  bytes32 value_hash;
+  T value;
 };
 
 template<typename T, typename F>
