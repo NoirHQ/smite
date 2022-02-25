@@ -88,10 +88,6 @@ public:
   size_t size();
 
 private:
-  // FIXME: below constants are not correct
-  static constexpr size_t max_msg_size = 1048576; // 1 MB; NOTE: keep in sync with types.PartSet sizes.
-  static constexpr size_t max_msg_size_bytes = max_msg_size + 24; // time.Time + max consensus msg size
-
   std::unique_ptr<::fc::cfile> file_;
   std::mutex mtx_;
 };
@@ -178,6 +174,9 @@ public:
   int64_t max_index = -1;
 
   static constexpr std::string_view corrupted_postfix = ".CORRUPTED";
+  // FIXME: below constants are not correct
+  static constexpr size_t max_msg_size = 1048576; // 1 MB; NOTE: keep in sync with types.PartSet sizes.
+  static constexpr size_t max_msg_size_bytes = max_msg_size + 24; // time.Time + max consensus msg size
 
 private:
   std::shared_ptr<wal_encoder> encoder_;
