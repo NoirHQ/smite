@@ -257,8 +257,6 @@ public:
   std::unique_ptr<tcp::acceptor> acceptor;
   std::atomic<uint32_t> current_connection_id{0};
 
-  //  unique_ptr<dispatch_manager> dispatcher;
-
   /**
    * Thread safe, only updated in plugin initialize
    *  @{
@@ -287,11 +285,15 @@ public:
   bytes32 node_id;
   std::string user_agent_name;
 
-  //  chain_plugin *chain_plug = nullptr;
-  //  producer_plugin *producer_plug = nullptr;
+  // External plugins
   consensus::abci* abci_plug{nullptr};
+
+  // Channels
   plugin_interface::incoming::channels::peer_message_queue::channel_type& peer_mq_channel =
     appbase::app().get_channel<plugin_interface::incoming::channels::peer_message_queue>();
+  plugin_interface::egress::channels::broadcast_message_queue::channel_type::handle broadcast_mq_subscription =
+    appbase::app().get_channel<plugin_interface::egress::channels::broadcast_message_queue>().subscribe(
+      std::bind(&p2p_impl::broadcast_message, this, std::placeholders::_1));
   /** @} */
 
   mutable std::shared_mutex connections_mtx;
@@ -308,8 +310,6 @@ public:
   std::unique_ptr<boost::asio::steady_timer> keepalive_timer;
 
   std::atomic<bool> in_shutdown{false};
-
-  //  compat::channels::transaction_ack::channel_type::handle incoming_transaction_ack_subscription;
 
   uint16_t thread_pool_size = 2;
   std::optional<named_thread_pool> thread_pool;
@@ -348,6 +348,8 @@ public:
   void ticker();
 
   connection_ptr find_connection(const std::string& host) const; // must call with held mutex
+
+  void broadcast_message(std::span<const char> msg);
 };
 
 static p2p_impl* my_impl;
@@ -558,6 +560,11 @@ void p2p_impl::ticker() {
       return true;
     });
   });
+}
+
+void p2p_impl::broadcast_message(std::span<const char> msg) {
+  dlog(fmt::format("about to broadcast message: size={}", msg.size()));
+  // TODO: implement
 }
 
 //------------------------------------------------------------------------
