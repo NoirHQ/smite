@@ -223,7 +223,7 @@ struct nibble_path {
   }
 
   friend bool operator<(const nibble_path& a, const nibble_path& b) {
-    return a.bytes < b.bytes;
+    return std::tie(a.num_nibbles, a.bytes) < std::tie(b.num_nibbles, b.bytes);
   }
 
   size_t num_nibbles;
