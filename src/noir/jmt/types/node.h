@@ -132,10 +132,10 @@ inline bool operator==(const children::value_type& a, const children::value_type
 struct internal_node {
   internal_node() = default;
 
-  internal_node(const children& ch): children(ch), leaf_count(sum_leaf_count(children)) {
+  internal_node(const children& ch): children(ch), leaf_count(sum_leaf_count(ch)) {
     check(!ch.empty(), "children must not be empty");
     if (ch.size() == 1) {
-      check(ch.begin()->second.is_leaf(), "if there's only one child, it must not be a leaf");
+      check(!ch.begin()->second.is_leaf(), "if there's only one child, it must not be a leaf");
     }
   }
 
