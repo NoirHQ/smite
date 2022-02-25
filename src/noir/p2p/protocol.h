@@ -8,6 +8,8 @@
 #include <noir/consensus/merkle/proof.h>
 #include <noir/p2p/types.h>
 
+#include <variant>
+
 namespace noir::p2p {
 
 struct handshake_message {
