@@ -47,6 +47,7 @@ struct message_handler {
 consensus_state::consensus_state()
   : timeout_ticker_channel(appbase::app().get_channel<plugin_interface::channels::timeout_ticker>()),
     internal_mq_channel(appbase::app().get_channel<plugin_interface::channels::internal_message_queue>()),
+    broadcast_mq_channel(appbase::app().get_channel<plugin_interface::egress::channels::broadcast_message_queue>()),
     wal_(std::make_unique<nil_wal>()) {
   timeout_ticker_subscription = appbase::app().get_channel<plugin_interface::channels::timeout_ticker>().subscribe(
     std::bind(&consensus_state::tock, this, std::placeholders::_1));

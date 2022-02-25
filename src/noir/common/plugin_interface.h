@@ -23,9 +23,12 @@ namespace incoming {
   namespace channels {
     using peer_message_queue = appbase::channel_decl<struct peer_message_queue_tag, p2p::msg_info_ptr>;
   }
+} // namespace incoming
 
-  namespace methods {}
-
+namespace egress {
+  namespace channels {
+    using broadcast_message_queue = appbase::channel_decl<struct broadcast_message_queue_tag, std::span<const char>>;
+  }
 } // namespace incoming
 
 } // namespace noir::plugin_interface
