@@ -77,6 +77,9 @@ struct nibble_path {
     }
   }
 
+  template<Byte T>
+  constexpr nibble_path(const std::vector<T>& bytes, bool odd = false): nibble_path(std::span(bytes), odd) {}
+
   void push(nibble n) {
     check(num_nibbles < root_nibble_height);
     if (num_nibbles % 2 == 0) {
