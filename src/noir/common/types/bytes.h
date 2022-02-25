@@ -8,6 +8,7 @@
 #include <noir/common/concepts.h>
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
+#include <noir/common/types/string.h>
 #include <fmt/format.h>
 #include <span>
 
@@ -20,6 +21,9 @@ using byte_type = char;
 /// \brief an alias name for variable-length byte sequence
 /// \ingroup common
 using bytes = std::vector<byte_type>;
+
+template<>
+std::string to_string(const bytes& v);
 
 /// \brief thin wrapper for fixed-length byte sequence
 /// \ingroup common
