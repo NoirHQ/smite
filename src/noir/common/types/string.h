@@ -9,7 +9,7 @@
 namespace noir {
 
 template<typename T>
-std::string to_string(T&& v) {
+std::string to_string(const T& v) {
   constexpr bool has_to_string = requires(const T& t) {
     t.to_string();
   };

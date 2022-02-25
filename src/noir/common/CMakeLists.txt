@@ -4,6 +4,7 @@ target_sources(noir
     hex.cpp
     thread_pool.cpp
     log.cpp
+    types.cpp
 )
 
 add_noir_test(common_types_test types_test.cpp)
