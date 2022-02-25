@@ -128,8 +128,8 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //  // state changes may be triggered by: msgs from peers,
   //  // msgs from ourself, or by timeouts
   //  peerMsgQueue     chan msgInfo
-  plugin_interface::channels::peer_message_queue::channel_type& peer_mq_channel;
-  plugin_interface::channels::peer_message_queue::channel_type::handle peer_mq_subscription;
+  // plugin_interface::incoming::channels::peer_message_queue::channel_type& peer_mq_channel; // moved to p2p
+  plugin_interface::incoming::channels::peer_message_queue::channel_type::handle peer_mq_subscription;
 
   //  internalMsgQueue chan msgInfo
   plugin_interface::channels::internal_message_queue::channel_type& internal_mq_channel;
