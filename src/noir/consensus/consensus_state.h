@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/block_executor.h>
 #include <noir/consensus/config.h>
@@ -46,7 +47,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void update_to_state(state& state_);
   void new_step();
 
-  void receive_routine(msg_info_ptr mi);
+  void receive_routine(p2p::msg_info_ptr mi);
   void handle_msg();
 
   void schedule_timeout(
@@ -127,16 +128,16 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //  // state changes may be triggered by: msgs from peers,
   //  // msgs from ourself, or by timeouts
   //  peerMsgQueue     chan msgInfo
-  channels::peer_message_queue::channel_type& peer_mq_channel;
-  channels::peer_message_queue::channel_type::handle peer_mq_subscription;
+  plugin_interface::channels::peer_message_queue::channel_type& peer_mq_channel;
+  plugin_interface::channels::peer_message_queue::channel_type::handle peer_mq_subscription;
 
   //  internalMsgQueue chan msgInfo
-  channels::internal_message_queue::channel_type& internal_mq_channel;
-  channels::internal_message_queue::channel_type::handle internal_mq_subscription;
+  plugin_interface::channels::internal_message_queue::channel_type& internal_mq_channel;
+  plugin_interface::channels::internal_message_queue::channel_type::handle internal_mq_subscription;
 
-  //    timeoutTicker    TimeoutTicker
-  channels::timeout_ticker::channel_type& timeout_ticker_channel;
-  channels::timeout_ticker::channel_type::handle timeout_ticker_subscription;
+  //  timeoutTicker TimeoutTicker
+  plugin_interface::channels::timeout_ticker::channel_type& timeout_ticker_channel;
+  plugin_interface::channels::timeout_ticker::channel_type::handle timeout_ticker_subscription;
   std::mutex timeout_ticker_mtx;
   std::unique_ptr<boost::asio::steady_timer> timeout_ticker_timer;
   uint16_t thread_pool_size = 2;

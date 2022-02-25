@@ -8,13 +8,12 @@
 #include <noir/consensus/crypto.h>
 #include <noir/consensus/node_id.h>
 #include <noir/consensus/params.h>
+#include <noir/consensus/protocol.h>
 #include <noir/consensus/validator.h>
 #include <noir/consensus/vote.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 
-#include <appbase/application.hpp>
-#include <appbase/channel.hpp>
 #include <fmt/core.h>
 
 namespace noir::consensus {
@@ -208,17 +207,6 @@ struct height_vote_set {
   }
 };
 
-enum round_step_type {
-  NewHeight = 1, // Wait til CommitTime + timeoutCommit
-  NewRound = 2, // Setup new round and go to RoundStepPropose
-  Propose = 3, // Did propose, gossip proposal
-  Prevote = 4, // Did prevote, gossip prevotes
-  PrevoteWait = 5, // Did receive any +2/3 prevotes, start timeout
-  Precommit = 6, // Did precommit, gossip precommits
-  PrecommitWait = 7, // Did receive any +2/3 precommits, start timeout
-  Commit = 8 // Entered commit state machine
-};
-
 /**
  * Defines the internal consensus state.
  * NOTE: not thread safe
@@ -260,29 +248,6 @@ struct round_state {
     return {.height = height, .round = round, .step = static_cast<int32_t>(step)};
   }
 };
-
-struct timeout_info {
-  std::chrono::system_clock::duration duration_;
-  int64_t height;
-  int32_t round;
-  round_step_type step;
-};
-
-using consensus_message = std::variant<p2p::proposal_message, p2p::block_part_message, p2p::vote_message>;
-
-struct msg_info {
-  consensus_message msg;
-  p2p::node_id peer_id;
-};
-
-using timeout_info_ptr = std::shared_ptr<timeout_info>;
-using msg_info_ptr = std::shared_ptr<msg_info>;
-
-namespace channels {
-  using timeout_ticker = appbase::channel_decl<struct timeout_ticker_tag, timeout_info_ptr>;
-  using internal_message_queue = appbase::channel_decl<struct internal_message_queue_tag, msg_info_ptr>;
-  using peer_message_queue = appbase::channel_decl<struct peer_message_queue_tag, msg_info_ptr>;
-} // namespace channels
 
 inline p2p::tstamp get_time() {
   return std::chrono::system_clock::now().time_since_epoch().count();

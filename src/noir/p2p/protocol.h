@@ -167,6 +167,14 @@ struct go_away_message {
 using net_message =
   std::variant<handshake_message, go_away_message, time_message, proposal_message, block_part_message, vote_message>;
 
+using consensus_message = std::variant<proposal_message, block_part_message, vote_message>;
+
+struct msg_info {
+  consensus_message msg;
+  node_id peer_id;
+};
+using msg_info_ptr = std::shared_ptr<msg_info>;
+
 } // namespace noir::p2p
 
 NOIR_FOR_EACH_FIELD(
