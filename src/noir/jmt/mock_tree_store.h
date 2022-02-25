@@ -93,7 +93,7 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
 
   struct {
     std::shared_mutex lock;
-    std::unordered_map<node_key, node<T>, hash<node_key>> _0;
+    unordered_map<node_key, node<T>> _0;
     std::set<stale_node_index> _1;
   } data;
   bool allow_overwrite;

@@ -16,7 +16,6 @@
 #include <bit>
 #include <map>
 #include <set>
-#include <unordered_map>
 
 namespace noir::jmt {
 
@@ -125,7 +124,7 @@ struct child {
 };
 
 // for deterministic serialization
-using children = std::unordered_map<nibble, child, hash<nibble>>;
+using children = unordered_map<nibble, child>;
 
 inline bool operator==(const children::value_type& a, const children::value_type& b) {
   return std::tie(a.first, a.second) == std::tie(b.first, b.second);

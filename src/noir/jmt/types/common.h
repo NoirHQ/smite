@@ -5,8 +5,10 @@
 //
 #pragma once
 #include <noir/common/expected.h>
+#include <noir/common/types/hash.h>
 #include <noir/common/types/bytes.h>
 #include <string>
+#include <unordered_map>
 
 namespace noir::jmt {
 
@@ -20,6 +22,9 @@ using version = uint64_t;
 size_t common_prefix_bits_len(const bytes32& a, const bytes32& b);
 
 extern bytes32 sparse_merkle_placeholder_hash;
+
+template<typename K, typename V>
+using unordered_map = std::unordered_map<K, V, noir::hash<K>>;
 
 } // namespace noir::jmt
 
