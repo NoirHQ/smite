@@ -536,14 +536,18 @@ public:
     }
     if (std::holds_alternative<jmt::internal_node>(node->data)) {
       auto internal_node = std::get<jmt::internal_node>(node->data);
-      std::cout << fmt::format("internal{{leaf_count: {}}}", internal_node.leaf_count) << std::endl;
+      std::cout << fmt::format(
+                     "internal{{leaf_count: {}}} {}", internal_node.leaf_count, internal_node.hash().to_string())
+                << std::endl;
       for (const auto& c : internal_node.children) {
         traverse_node(tree_cache, key.gen_child_node_key(c.second.version, c.first), depth + 1);
       }
     } else if (std::holds_alternative<jmt::leaf_node<T>>(node->data)) {
-      std::cout << fmt::format("leaf{{value: {}}}", to_string(std::get<leaf_node<T>>(node->data).value)) << std::endl;
+      auto leaf_node = std::get<jmt::leaf_node<T>>(node->data);
+      std::cout << fmt::format("leaf{{value: {}}} {}", to_string(leaf_node.value), leaf_node.hash().to_string())
+                << std::endl;
     } else if (std::holds_alternative<jmt::null>(node->data)) {
-      std::cout << "null{}" << std::endl;
+      std::cout << "null{} " << sparse_merkle_placeholder_hash << std::endl;
     }
   }
 
