@@ -268,6 +268,51 @@ struct proposal : p2p::proposal_message {
   }
 };
 
+/// \brief contains known state of a peer
+struct peer_round_state {
+  int64_t height{};
+  int32_t round{};
+  p2p::round_step_type step{};
+
+  p2p::tstamp start_time{};
+
+  bool proposal{};
+  p2p::part_set_header proposal_block_part_set_header;
+  std::shared_ptr<bit_array> proposal_block_parts;
+  int32_t proposal_pol_round{};
+
+  std::shared_ptr<bit_array> proposal_pol;
+  std::shared_ptr<bit_array> prevotes;
+  std::shared_ptr<bit_array> precommits;
+  int32_t last_commit_round{};
+  std::shared_ptr<bit_array> last_commit;
+
+  int32_t catchup_commit_round{};
+
+  std::shared_ptr<bit_array> catchup_commit;
+
+  peer_round_state() = default;
+  peer_round_state(const peer_round_state&) = default;
+  peer_round_state& operator=(const peer_round_state& v) {
+    proposal_block_part_set_header = v.proposal_block_part_set_header; // TODO: check if this is correct
+
+    height = v.height;
+    round = v.round;
+    step = v.step;
+    start_time = v.start_time;
+    proposal = v.proposal;
+    proposal_pol_round = v.proposal_pol_round;
+    last_commit_round = v.last_commit_round;
+    catchup_commit_round = v.catchup_commit_round;
+    proposal_block_parts = v.proposal_block_parts->copy();
+    proposal_pol = v.proposal_pol->copy();
+    prevotes = v.prevotes->copy();
+    precommits = v.precommits->copy();
+    last_commit = v.last_commit->copy();
+    catchup_commit = v.catchup_commit->copy();
+  }
+};
+
 /// \brief SignedHeader is a header along with the commits that prove it.
 struct signed_header {
   noir::consensus::block_header header;
