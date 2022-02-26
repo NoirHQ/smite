@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/hex.h>
 #include <noir/jmt/types.h>
+#include <iosfwd>
 
 namespace noir::jmt {
 

@@ -16,8 +16,6 @@
 #include <string>
 #include <vector>
 
-#include <iostream>
-
 namespace noir::jmt {
 
 extern size_t root_nibble_height;
