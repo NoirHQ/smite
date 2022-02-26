@@ -14,6 +14,7 @@
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
 #include <noir/consensus/wal.h>
+#include <noir/consensus/types/round_state.h>
 
 namespace noir::consensus {
 
@@ -133,6 +134,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   plugin_interface::incoming::channels::peer_message_queue::channel_type::handle peer_mq_subscription;
 
   plugin_interface::egress::channels::broadcast_message_queue::channel_type& broadcast_mq_channel;
+  plugin_interface::egress::channels::event_switch_message_queue::channel_type& event_switch_mq_channel;
 
   //  internalMsgQueue chan msgInfo
   plugin_interface::channels::internal_message_queue::channel_type& internal_mq_channel;

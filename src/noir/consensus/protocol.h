@@ -8,6 +8,12 @@
 
 namespace noir::consensus {
 
+enum event_type {
+  EventNewRoundStep = 1,
+  EventValidBlock,
+  EventVote
+};
+
 struct timeout_info {
   std::chrono::system_clock::duration duration_;
   int64_t height;
