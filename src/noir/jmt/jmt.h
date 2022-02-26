@@ -101,8 +101,8 @@ struct jellyfish_merkle_tree {
       check(value_set->size(), "transactions that output empty write set should not be included");
       auto version = first_version + idx;
       std::map<bytes32, T> sorted_kvs;
-      for (const auto& kv : *value_set) {
-        sorted_kvs.insert(kv);
+      for (const auto& [k, v] : *value_set) {
+        sorted_kvs.insert_or_assign(k, v);
       }
       std::vector<std::pair<bytes32, T>> deduped_and_sorted_kvs{sorted_kvs.begin(), sorted_kvs.end()};
       auto root_node_key = tree_cache.root_node_key;
@@ -158,9 +158,9 @@ struct jellyfish_merkle_tree {
               new_child_node_key = std::get<0>(*res);
               new_child_node = std::get<1>(*res);
             }
-            children.insert(std::make_pair(child_index,
+            children.insert_or_assign(child_index,
               jmt::child{
-                get_hash(new_child_node_key, new_child_node, hash_cache), version, new_child_node.node_type()}));
+                get_hash(new_child_node_key, new_child_node, hash_cache), version, new_child_node.node_type()});
           }
           auto new_internal_node = jmt::internal_node(children);
           node_key.version = version;
@@ -224,12 +224,12 @@ struct jellyfish_merkle_tree {
           new_child_node_key = std::get<0>(*res);
           new_child_node = std::get<1>(*res);
         }
-        children.insert(std::make_pair(child_index,
-          jmt::child{get_hash(new_child_node_key, new_child_node, hash_cache), version, new_child_node.node_type()}));
+        children.insert_or_assign(child_index,
+          jmt::child{get_hash(new_child_node_key, new_child_node, hash_cache), version, new_child_node.node_type()});
       }
       if (isolated_existing_leaf) {
         auto existing_leaf_node_key = node_key.gen_child_node_key(version, existing_leaf_bucket);
-        children.insert(std::make_pair(existing_leaf_bucket, jmt::child{existing_leaf_node.hash(), version, leaf{}}));
+        children.insert_or_assign(existing_leaf_bucket, jmt::child{existing_leaf_node.hash(), version, leaf{}});
         return_if_error(tree_cache.put_node(existing_leaf_node_key, jmt::node<T>{existing_leaf_node}));
       }
       auto new_internal_node = jmt::internal_node(children);
@@ -258,8 +258,8 @@ struct jellyfish_merkle_tree {
           return make_unexpected(res.error());
         }
         auto [new_child_node_key, new_child_node] = *res;
-        children.insert(std::make_pair(child_index,
-          jmt::child{get_hash(new_child_node_key, new_child_node, hash_cache), version, new_child_node.node_type()}));
+        children.insert_or_assign(child_index,
+          jmt::child{get_hash(new_child_node_key, new_child_node, hash_cache), version, new_child_node.node_type()});
       }
       auto new_internal_node = jmt::internal_node(children);
       return_if_error(tree_cache.put_node(node_key, jmt::node<T>{new_internal_node}));
@@ -328,7 +328,7 @@ struct jellyfish_merkle_tree {
     }
     auto [_, new_child_node] = res.value();
     auto& children = internal_node.children;
-    children.insert({child_index, jmt::child{new_child_node.hash, version, new_child_node.node_type}});
+    children.insert_or_assign(child_index, jmt::child{new_child_node.hash, version, new_child_node.node_type});
     auto new_internal_node = jmt::internal_node(children);
     node_key.version = version;
     tree_cache.put_node(node_key, new_internal_node);
@@ -370,7 +370,7 @@ struct jellyfish_merkle_tree {
     auto new_leaf_index = *new_leaf_index_opt;
     check(existing_leaf_index != new_leaf_index);
     jmt::children children;
-    children.insert({existing_leaf_index, child{existing_leaf_node.hash(), version, leaf{}}});
+    children.insert_or_assign(existing_leaf_index, child{existing_leaf_node.hash(), version, leaf{}});
     node_key = jmt::node_key{version, common_nibble_path};
     return_if_error(tree_cache.put_node(node_key.gen_child_node_key(version, existing_leaf_index), existing_leaf_node));
     auto res = create_leaf_node(node_key.gen_child_node_key(version, new_leaf_index), nibble_iter, value, tree_cache);
@@ -378,7 +378,7 @@ struct jellyfish_merkle_tree {
       return make_unexpected(res.error());
     }
     const auto& [_, new_leaf_node] = res.value();
-    children.insert({new_leaf_index, child{new_leaf_node.hash(), leaf{}}});
+    children.insert_or_assign(new_leaf_index, child{new_leaf_node.hash(), leaf{}});
     auto internal_node = jmt::internal_node(children);
     auto next_internal_node = internal_node;
     return_if_error(tree_cache.put_node(node_key, internal_node));
@@ -390,7 +390,7 @@ struct jellyfish_merkle_tree {
       auto nibble = *popped;
       node_key = jmt::node_key{version, common_nibble_path};
       jmt::children children;
-      children.insert({nibble, child{next_internal_node.hash(), version, next_internal_node.node_type()}});
+      children.insert_or_assign(nibble, child{next_internal_node.hash(), version, next_internal_node.node_type()});
       auto internal_node = jmt::internal_node(children);
       next_internal_node = internal_node;
       return_if_error(tree_cache.put_node(node_key, internal_node));

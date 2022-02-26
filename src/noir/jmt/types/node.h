@@ -225,7 +225,7 @@ struct internal_node {
         ds >> leaf_count;
         type = internal{leaf_count};
       }
-      children.insert({next_child, jmt::child{hash, version, type}});
+      children.insert_or_assign(next_child, jmt::child{hash, version, type});
       existence_bitmap &= ~child_bit;
     }
     check(!existence_bitmap);
