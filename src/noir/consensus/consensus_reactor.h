@@ -17,7 +17,7 @@ struct consensus_reactor {
   std::shared_ptr<consensus_state> cs_state;
 
   std::mutex mtx;
-  std::map<node_id, peer_state> peers;
+  std::map<std::string, std::shared_ptr<peer_state>> peers;
   bool wait_sync;
 
   // Receive events from consensus_state
@@ -61,7 +61,11 @@ struct consensus_reactor {
 
   void on_stop() {}
 
-  void GetPeerState() {}
+  std::shared_ptr<peer_state> get_peer_state(std::string peer_id) {
+    std::lock_guard<std::mutex> g(mtx);
+    auto it = peers.find(peer_id);
+    return it == peers.end() ? nullptr : it->second;
+  }
 
   void broadcast_new_round_step_message(const round_state& rs) {
     auto msg = make_round_step_message(rs);
@@ -94,6 +98,45 @@ struct consensus_reactor {
   void handleVoteMessage() {}
 
   void handleMessage() {}
+
+  template<class... Ts>
+  struct overload : Ts... {
+    using Ts::operator()...;
+  };
+  template<class... Ts>
+  overload(Ts...) -> overload<Ts...>;
+
+  void process_peer_msg(p2p::p2p_msg_info_ptr info) {
+    if (info->broadcast) {
+      /* TODO: how to handle broadcast?
+       * need to check if msg is known (look up in a cache)
+       * if already seen one, discard
+       */
+    }
+    auto from = info->peer_id;
+    dlog(fmt::format("received message={} from {}", info->msg.index(), from));
+    auto ps = get_peer_state(from);
+    if (!ps) {
+      wlog(fmt::format("unable to find peer_state for from={}", from));
+      return;
+    }
+
+    std::visit(
+      overload{[](p2p::handshake_message& msg) {}, [](p2p::go_away_message& msg) {}, [](p2p::time_message& msg) {},
+        [&ps](p2p::proposal_message& msg) {
+          ps->set_has_proposal(msg);
+          // TODO: r.state.peerMsgQueue <- msgInfo{pMsg, envelope.From}
+        },
+        [&ps](p2p::block_part_message& msg) {
+          ps->set_has_proposal_block_part(msg.height, msg.round, msg.index);
+          // TODO: r.state.peerMsgQueue <- msgInfo{bpMsg, envelope.From}
+        },
+        [&ps](p2p::vote_message& msg) {
+          ps->set_has_vote(msg);
+          // TODO: many more
+        }},
+      info->msg);
+  }
 };
 
 } // namespace noir::consensus
