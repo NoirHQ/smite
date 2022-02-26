@@ -7,6 +7,7 @@
 
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/round_state.h>
 #include <noir/p2p/protocol.h>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/filesystem/operations.hpp>

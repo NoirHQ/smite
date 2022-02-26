@@ -20,6 +20,10 @@ struct consensus_reactor {
   std::map<node_id, peer_state> peers;
   bool wait_sync;
 
+  plugin_interface::egress::channels::event_switch_message_queue::channel_type::handle event_switch_mq_subscription =
+    appbase::app().get_channel<plugin_interface::egress::channels::event_switch_message_queue>().subscribe(
+      std::bind(&consensus_reactor::process_event, this, std::placeholders::_1));
+
   // todo
   //  stateCh       *p2p.Channel
   //  dataCh        *p2p.Channel
@@ -39,6 +43,7 @@ struct consensus_reactor {
   void on_start() {
     cs_state->on_start();
   }
+  void process_event(plugin_interface::event_info_ptr msg) {}
 
   void on_stop() {}
 

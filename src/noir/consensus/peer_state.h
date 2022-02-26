@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/consensus/node_id.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/peer_round_state.h>
 
 #include <utility>
 
