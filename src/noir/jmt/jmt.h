@@ -142,7 +142,7 @@ struct jellyfish_merkle_tree {
             if (child) {
               auto child_node_key = node_key.gen_child_node_key(child->get().version, child_index);
               auto res = batch_insert_at(
-                child_node_key, version, kvs.subspan(left, right + 1), depth + 1, hash_cache, tree_cache);
+                child_node_key, version, kvs.subspan(left, (right - left + 1)), depth + 1, hash_cache, tree_cache);
               if (!res) {
                 return make_unexpected(res.error());
               }
@@ -151,7 +151,7 @@ struct jellyfish_merkle_tree {
             } else {
               auto new_child_node_key_ = node_key.gen_child_node_key(version, child_index);
               auto res = batch_create_subtree(
-                new_child_node_key_, version, kvs.subspan(left, right + 1), depth + 1, hash_cache, tree_cache);
+                new_child_node_key_, version, kvs.subspan(left, (right - left + 1)), depth + 1, hash_cache, tree_cache);
               if (!res) {
                 return make_unexpected(res.error());
               }
@@ -175,7 +175,7 @@ struct jellyfish_merkle_tree {
         },
         [&](jmt::null&) -> result<std::pair<jmt::node_key, jmt::node<T>>> {
           if (!node_key.nibble_path.is_empty()) {
-            bail("null node exists for non-root node with node_key _key_");
+            bail("null node exists for non-root node with node_key {}", node_key.to_string());
           }
           if (node_key.version == version) {
             tree_cache.delete_node(node_key, false);
@@ -209,7 +209,7 @@ struct jellyfish_merkle_tree {
         if (existing_leaf_bucket == child_index) {
           isolated_existing_leaf = false;
           auto res = batch_create_subtree_with_existing_leaf(child_node_key, version, existing_leaf_node,
-            kvs.subspan(left, right + 1), depth + 1, hash_cache, tree_cache);
+            kvs.subspan(left, (right - left + 1)), depth + 1, hash_cache, tree_cache);
           if (!res) {
             return make_unexpected(res.error());
           }
@@ -217,7 +217,7 @@ struct jellyfish_merkle_tree {
           new_child_node = std::get<1>(*res);
         } else {
           auto res = batch_create_subtree(
-            child_node_key, version, kvs.subspan(left, right + 1), depth + 1, hash_cache, tree_cache);
+            child_node_key, version, kvs.subspan(left, (right - left + 1)), depth + 1, hash_cache, tree_cache);
           if (!res) {
             return make_unexpected(res.error());
           }
@@ -253,7 +253,7 @@ struct jellyfish_merkle_tree {
         auto child_index = nibble(std::get<0>(kvs[left]), depth);
         auto child_node_key = node_key.gen_child_node_key(version, child_index);
         auto res = batch_create_subtree(
-          child_node_key, version, kvs.subspan(left, right + 1), depth + 1, hash_cache, tree_cache);
+          child_node_key, version, kvs.subspan(left, (right - left + 1)), depth + 1, hash_cache, tree_cache);
         if (!res) {
           return make_unexpected(res.error());
         }
@@ -455,13 +455,13 @@ struct jellyfish_merkle_tree {
 public:
   auto put_value_set(const std::vector<std::pair<bytes32, T>>& value_set, jmt::version version)
     -> result<std::pair<bytes32, tree_update_batch<T>>> {
-    auto res = batch_put_value_sets({value_set}, std::nullopt, version);
+    auto res = batch_put_value_sets({value_set}, {}, version);
     if (!res) {
       return make_unexpected(res.error());
     }
     auto [root_hashes, tree_update_batch] = res.value();
     check(root_hashes.size() == 1, "root_hashes must consist of a single value");
-    return {root_hashes[0], tree_update_batch};
+    return std::make_pair(root_hashes[0], tree_update_batch);
   }
 
   auto put_value_sets(const std::vector<std::vector<std::pair<bytes32, T>>>& value_sets, jmt::version first_version)
