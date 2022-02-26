@@ -29,7 +29,7 @@ namespace methods {}
 
 namespace incoming {
   namespace channels {
-    using peer_message_queue = appbase::channel_decl<struct peer_message_queue_tag, p2p::msg_info_ptr>;
+    using peer_message_queue = appbase::channel_decl<struct peer_message_queue_tag, p2p::p2p_msg_info_ptr>;
   }
 } // namespace incoming
 

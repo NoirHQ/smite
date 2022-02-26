@@ -55,9 +55,6 @@ consensus_state::consensus_state()
     std::bind(&consensus_state::tock, this, std::placeholders::_1));
   internal_mq_subscription = appbase::app().get_channel<plugin_interface::channels::internal_message_queue>().subscribe(
     std::bind(&consensus_state::receive_routine, this, std::placeholders::_1));
-  peer_mq_subscription =
-    appbase::app().get_channel<plugin_interface::incoming::channels::peer_message_queue>().subscribe(
-      std::bind(&consensus_state::receive_routine, this, std::placeholders::_1));
 
   thread_pool.emplace("consensus", thread_pool_size);
   {
