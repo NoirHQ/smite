@@ -16,7 +16,7 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
     if (data._0.contains(node_key)) {
       return data._0.at(node_key);
     }
-    return std::nullopt;
+    return {};
   }
 
   auto get_rightmost_leaf() -> result<std::optional<std::pair<jmt::node_key, leaf_node<T>>>> override {
@@ -36,9 +36,8 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
   auto write_node_batch(const jmt::node_batch<T>& node_batch) -> result<void> override {
     std::unique_lock _{data.lock};
     for (const auto& [node_key, node] : node_batch) {
-      if (!allow_overwrite)
-        check(!data._0.contains(node_key));
-      data._0.insert({node_key, node});
+      check(allow_overwrite || !data._0.contains(node_key));
+      data._0.insert_or_assign(node_key, node);
     }
     return {};
   }
@@ -52,9 +51,8 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
 
   auto put_stale_node_index(const stale_node_index& index) -> result<void> {
     std::unique_lock _{data.lock};
-    auto is_new_entry = !data._1.contains(index);
+    check(!data._1.contains(index), "duplicated retire log");
     data._1.insert(index);
-    ensure(is_new_entry, "duplicated retire log");
     return {};
   }
 
