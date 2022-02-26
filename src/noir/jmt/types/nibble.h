@@ -186,7 +186,7 @@ struct nibble_path {
     }
 
     bool is_finished() const {
-      return pos.start != pos.end;
+      return pos.start == pos.end;
     }
 
     const jmt::nibble_path& nibble_path;
@@ -227,7 +227,7 @@ struct nibble_path {
     return std::tie(a.num_nibbles, a.bytes) < std::tie(b.num_nibbles, b.bytes);
   }
 
-  size_t num_nibbles;
+  size_t num_nibbles = 0;
   std::vector<uint8_t> bytes;
 };
 
