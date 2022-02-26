@@ -808,7 +808,7 @@ struct msg_handler {
     }
     dlog("handle proposal_message");
     my_impl->peer_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<msg_info>(msg_info{msg, "" /* TODO: include peer_id */}));
+      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
   }
 
   void operator()(const block_part_message& msg) const {
@@ -818,7 +818,7 @@ struct msg_handler {
     }
     dlog("handle block_part_message");
     my_impl->peer_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<msg_info>(msg_info{msg, "" /* TODO: include peer_id */}));
+      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
   }
 
   void operator()(const vote_message& msg) const {
@@ -828,7 +828,7 @@ struct msg_handler {
     }
     dlog("handle vote_message");
     my_impl->peer_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<msg_info>(msg_info{msg, "" /* TODO: include peer_id */}));
+      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
   }
 };
 

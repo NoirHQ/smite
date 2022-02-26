@@ -215,9 +215,14 @@ struct go_away_message {
 
 using net_message =
   std::variant<handshake_message, go_away_message, time_message, proposal_message, block_part_message, vote_message>;
+struct p2p_msg_info {
+  net_message msg;
+  node_id peer_id;
+  bool broadcast;
+};
+using p2p_msg_info_ptr = std::shared_ptr<p2p_msg_info>;
 
 using consensus_message = std::variant<proposal_message, block_part_message, vote_message>;
-
 struct msg_info {
   consensus_message msg;
   node_id peer_id;
