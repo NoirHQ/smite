@@ -225,7 +225,7 @@ struct internal_node {
         ds >> leaf_count;
         type = internal{leaf_count};
       }
-      children.insert(std::make_pair(nibble(next_child), jmt::child{hash, version, type}));
+      children.insert({next_child, jmt::child{hash, version, type}});
       existence_bitmap &= ~child_bit;
     }
     check(!existence_bitmap);
@@ -513,9 +513,7 @@ struct hash<jmt::node_key> {
   std::size_t operator()(const jmt::node_key& key) const {
     crypto::xxh64 hash;
     auto nhash = noir::hash<jmt::nibble_path>()(key.nibble_path);
-    hash.init()
-      .update({(char*)&key.version, 8})
-      .update({(char*)&nhash, sizeof(nhash)});
+    hash.init().update({(char*)&key.version, 8}).update({(char*)&nhash, sizeof(nhash)});
     return hash.final();
   }
 };
