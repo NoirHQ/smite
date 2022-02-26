@@ -317,9 +317,7 @@ struct leaf_node {
   leaf_node() = default;
 
   leaf_node(const bytes32& account_key, const T& value): account_key(account_key), value(value) {
-    // XXX
-    auto hash = crypto::sha3_256()(value);
-    value_hash = bytes32(std::span{hash.data(), hash.size()});
+    default_hasher{}(value, value_hash);
   }
 
   bytes32 hash() const {
@@ -465,6 +463,10 @@ struct stale_node_index {
   jmt::node_key node_key;
 };
 
+inline bool operator==(const stale_node_index& a, const stale_node_index& b) {
+  return std::tie(a.stale_since_version, a.node_key) == std::tie(b.stale_since_version, b.node_key);
+}
+
 inline bool operator<(const stale_node_index& a, const stale_node_index& b) {
   return std::tie(a.stale_since_version, a.node_key) < std::tie(b.stale_since_version, b.node_key);
 }
@@ -478,12 +480,23 @@ struct node_stats {
   size_t stale_leaves;
 };
 
+inline bool operator==(const node_stats& a, const node_stats& b) {
+  return std::tie(a.new_nodes, a.new_leaves, a.stale_nodes, a.stale_leaves)
+    == std::tie(b.new_nodes, b.new_leaves, b.stale_nodes, b.stale_leaves);
+}
+
 template<typename T>
 struct tree_update_batch {
   jmt::node_batch<T> node_batch;
   jmt::stale_node_index_batch stale_node_index_batch;
   std::vector<jmt::node_stats> node_stats;
 };
+
+template<typename T>
+inline bool operator==(const tree_update_batch<T>& a, const tree_update_batch<T>& b) {
+  return std::tie(a.node_batch, a.stale_node_index_batch, a.node_stats)
+    == std::tie(b.node_batch, b.stale_node_index_batch, b.node_stats);
+}
 
 template<typename T>
 struct tree_reader {
