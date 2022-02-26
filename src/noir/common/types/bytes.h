@@ -10,6 +10,8 @@
 #include <noir/common/hex.h>
 #include <noir/common/types/string.h>
 #include <fmt/format.h>
+#include <bitset>
+#include <numeric>
 #include <span>
 
 namespace noir {
@@ -157,14 +159,22 @@ struct bytesN {
     return bytes{data_.begin(), data_.end()};
   }
 
-  template<Byte U = T>
-  constexpr std::span<U> to_span() {
-    return std::span{(U*)data_.data(), data_.size()};
+  template<Byte U = T, size_t S = std::dynamic_extent>
+  constexpr std::span<U, S> to_span() {
+    return {(U*)data_.data(), data_.size()};
   }
 
-  template<Byte U = T>
-  constexpr std::span<const U> to_span() const {
-    return std::span{(const U*)data_.data(), data_.size()};
+  template<Byte U = T, size_t S = std::dynamic_extent>
+  constexpr std::span<const U, S> to_span() const {
+    return {(const U*)data_.data(), data_.size()};
+  }
+
+  constexpr std::bitset<8 * N> to_bitset() const {
+    std::bitset<8 * N> out;
+    return std::accumulate(data_.begin(), data_.end(), out, [](auto out, uint8_t v) {
+      decltype(out) current(v);
+      return (std::move(out) << 8) | current;
+    });
   }
 
   void clear() {
