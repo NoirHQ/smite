@@ -34,9 +34,9 @@ TEST_CASE("[node] encode/decode", "[jmt]") {
   auto leaf2_keys = gen_leaf_key(0, internal_node_key.nibble_path, 2);
   auto leaf2_node = node<bytes>::leaf(std::get<1>(leaf2_keys), bytes{0x01});
 
-  auto children = jmt::children();
-  children.insert(std::make_pair(nibble(1), child{leaf1_node.hash(), 0, leaf{}}));
-  children.insert(std::make_pair(nibble(2), child{leaf2_node.hash(), 0, leaf{}}));
+  jmt::children children;
+  children.insert({1, child{leaf1_node.hash(), 0, leaf{}}});
+  children.insert({2, child{leaf2_node.hash(), 0, leaf{}}});
 
   bytes32 account_key;
   RAND_bytes((uint8_t*)account_key.data(), account_key.size());
