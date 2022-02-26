@@ -91,7 +91,7 @@ struct sparse_merkle_proof {
           node.right_child = hash;
         } else {
           node.left_child = hash;
-          node.right_child = *it;;
+          node.right_child = *it;
         }
         hash = node.hash();
       }

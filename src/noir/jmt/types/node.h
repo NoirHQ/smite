@@ -481,8 +481,8 @@ struct node_stats {
 };
 
 inline bool operator==(const node_stats& a, const node_stats& b) {
-  return std::tie(a.new_nodes, a.new_leaves, a.stale_nodes, a.stale_leaves)
-    == std::tie(b.new_nodes, b.new_leaves, b.stale_nodes, b.stale_leaves);
+  return std::tie(a.new_nodes, a.new_leaves, a.stale_nodes, a.stale_leaves) ==
+    std::tie(b.new_nodes, b.new_leaves, b.stale_nodes, b.stale_leaves);
 }
 
 template<typename T>
@@ -494,8 +494,8 @@ struct tree_update_batch {
 
 template<typename T>
 inline bool operator==(const tree_update_batch<T>& a, const tree_update_batch<T>& b) {
-  return std::tie(a.node_batch, a.stale_node_index_batch, a.node_stats)
-    == std::tie(b.node_batch, b.stale_node_index_batch, b.node_stats);
+  return std::tie(a.node_batch, a.stale_node_index_batch, a.node_stats) ==
+    std::tie(b.node_batch, b.stale_node_index_batch, b.node_stats);
 }
 
 template<typename T>

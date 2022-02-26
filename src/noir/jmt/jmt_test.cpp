@@ -198,9 +198,7 @@ TEST_CASE("[jmt] batch_insertion", "[jmt]") {
     batch_type{{key2, value2_update}},
   };
   batch_type one_batch;
-  std::for_each(batches.begin(), batches.end(), [&](const auto& batch) {
-    one_batch.push_back(batch[0]);
-  });
+  std::for_each(batches.begin(), batches.end(), [&](const auto& batch) { one_batch.push_back(batch[0]); });
 
   auto to_verify = one_batch;
   to_verify.erase(to_verify.begin() + 1);
@@ -318,8 +316,10 @@ TEST_CASE("[jmt] put_value_sets", "[jmt]") {
       db.write_tree_update_batch(batch);
       root_hashes_one_by_one.push_back(root);
       batch_one_by_one.node_batch.insert(batch.node_batch.begin(), batch.node_batch.end());
-      batch_one_by_one.stale_node_index_batch.insert(batch.stale_node_index_batch.begin(), batch.stale_node_index_batch.end());
-      batch_one_by_one.node_stats.insert(batch_one_by_one.node_stats.end(), batch.node_stats.begin(), batch.node_stats.end());
+      batch_one_by_one.stale_node_index_batch.insert(
+        batch.stale_node_index_batch.begin(), batch.stale_node_index_batch.end());
+      batch_one_by_one.node_stats.insert(
+        batch_one_by_one.node_stats.end(), batch.node_stats.begin(), batch.node_stats.end());
     }
   }
   {
