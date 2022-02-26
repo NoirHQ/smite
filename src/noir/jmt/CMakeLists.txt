@@ -5,5 +5,7 @@ target_sources(noir
 )
 
 add_noir_test(jmt_test ${CMAKE_CURRENT_SOURCE_DIR}/jmt_test.cpp)
+target_link_libraries(jmt_test range-v3)
+
 add_noir_test(jmt_node_types_test ${CMAKE_CURRENT_SOURCE_DIR}/types/node_test.cpp)
 add_noir_test(jmt_tree_cache_test ${CMAKE_CURRENT_SOURCE_DIR}/types/tree_cache_test.cpp)
