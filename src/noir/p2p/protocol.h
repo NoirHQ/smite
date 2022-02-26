@@ -109,7 +109,7 @@ struct new_valid_block_message {
   int64_t height;
   int32_t round;
   part_set_header block_part_set_header;
-  consensus::bit_array block_parts;
+  std::shared_ptr<consensus::bit_array> block_parts;
   bool is_commit;
 };
 
