@@ -43,19 +43,46 @@ struct consensus_reactor {
   void on_start() {
     cs_state->on_start();
   }
-  void process_event(plugin_interface::event_info_ptr msg) {}
+
+  void process_event(const plugin_interface::event_info_ptr& info) {
+    switch (info->event_) {
+    case EventNewRoundStep:
+      broadcast_new_round_step_message(std::get<round_state>(info->message_));
+      break;
+    case EventValidBlock:
+      broadcast_new_valid_block_message(std::get<round_state>(info->message_));
+      break;
+    case EventVote:
+      broadcast_has_vote_message(std::get<p2p::vote_message>(info->message_));
+      break;
+    }
+  }
 
   void on_stop() {}
 
   void GetPeerState() {}
 
-  void broadcastNewRoundStepMessage() {}
+  void broadcast_new_round_step_message(const round_state& rs) {
+    auto msg = make_round_step_message(rs);
+    // TODO: broadcast
+  }
 
-  void broadcastNewValidBlockMessage() {}
+  void broadcast_new_valid_block_message(const round_state& rs) {
+    auto msg = p2p::new_valid_block_message{rs.height, rs.round,
+      rs.proposal_block_parts->header() /* TODO: check if this is correct*/, rs.proposal_block_parts->get_bit_array(),
+      rs.step == p2p::RoundStepCommit};
+    // TODO: broadcast
+  }
 
-  void broadcastHasVoteMessage() {}
+  void broadcast_has_vote_message(const p2p::vote_message& vote_) {
+    auto msg = p2p::has_vote_message{vote_.height, vote_.round, vote_.type, vote_.validator_index};
+    // TODO: broadcast
+  }
 
-  void makeRoundStepMessage() {}
+  p2p::new_round_step_message make_round_step_message(const round_state& rs) {
+    return p2p::new_round_step_message{
+      rs.height, rs.round, rs.step, rs.start_time /* TODO: find elapsed seconds*/, rs.last_commit->round};
+  }
 
   void sendNewRoundStepMessage() {}
 
