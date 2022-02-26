@@ -416,15 +416,41 @@ struct jellyfish_merkle_tree {
     return {std::get<0>(res.value())};
   }
 
-  auto get_root_node(jmt::version version) {}
+  auto get_root_node(jmt::version version) -> result<node<T>> {
+    auto root_node_opt = get_root_node_option(version);
+    ensure(root_node_opt && *root_node_opt, "root node not found for version {}", version);
+    return **root_node_opt;
+  }
 
-  auto get_root_node_option(jmt::version version) {}
+  auto get_root_node_option(jmt::version version) -> result<std::optional<node<T>>> {
+    return reader.get_node_option(node_key{version});
+  }
 
-  auto get_root_node_hash(jmt::version version) {}
+  auto get_root_node_hash(jmt::version version) -> result<bytes32> {
+    return get_root_node(version)->hash();
+  }
 
-  auto get_root_node_hash_option(jmt::version version) {}
+  auto get_root_node_hash_option(jmt::version version) -> result<std::optional<bytes32>> {
+    auto root_node_opt = get_root_node_option(version);
+    if (!root_node_opt) {
+      return make_unexpected(root_node_opt.error());
+    }
+    if (*root_node_opt) {
+      return root_node_opt->value().hash();
+    }
+    return std::nullopt;
+  }
 
-  auto get_leaf_count(jmt::version version) {}
+  auto get_leaf_count(jmt::version version) -> result<std::optional<size_t>> {
+    auto root_node_opt = get_root_node_option(version);
+    if (!root_node_opt) {
+      return make_unexpected(root_node_opt.error());
+    }
+    if (*root_node_opt) {
+      return root_node_opt->value().leaf_count();
+    }
+    return std::nullopt;
+  }
 
 public:
   auto put_value_set(const std::vector<std::pair<bytes32, T>>& value_set, jmt::version version)
@@ -460,7 +486,7 @@ public:
     auto nibble_path = jmt::nibble_path(key.to_span<uint8_t>());
     auto nibble_iter = nibble_path.nibbles();
 
-    for (auto nibble_depth = 0; nibble_depth < root_nibble_height; ++nibble_depth) {
+    for (auto nibble_depth = 0; nibble_depth <= root_nibble_height; ++nibble_depth) {
       auto next_node = reader.get_node(next_node_key);
       if (!next_node) {
         if (!nibble_depth) {
