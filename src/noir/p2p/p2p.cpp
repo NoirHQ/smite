@@ -781,10 +781,10 @@ struct msg_handler {
 
   explicit msg_handler(const connection_ptr& conn): c(conn) {}
 
-  //  template<typename T>
-  //  void operator()( const T& ) const {
-  //    EOS_ASSERT( false, plugin_config_exception, "Not implemented, call handle_message directly instead" );
-  //  }
+  template<typename T>
+  void operator()(const T&) const {
+    // Skip the rest
+  }
 
   void operator()(const handshake_message& msg) const {
     dlog("handle handshake_message");
@@ -801,35 +801,15 @@ struct msg_handler {
     c->handle_message(msg);
   }
 
-  void operator()(const proposal_message& msg) const {
-    if (!my_impl->abci_plug) {
-      dlog("abci is not connected: discard proposal_message");
-      return;
-    }
-    dlog("handle proposal_message");
-    my_impl->peer_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
-  }
-
-  void operator()(const block_part_message& msg) const {
-    if (!my_impl->abci_plug) {
-      dlog("abci is not connected: discard block_part_message");
-      return;
-    }
-    dlog("handle block_part_message");
-    my_impl->peer_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
-  }
-
-  void operator()(const vote_message& msg) const {
-    if (!my_impl->abci_plug) {
-      dlog("abci is not connected: discard vote_message");
-      return;
-    }
-    dlog("handle vote_message");
-    my_impl->peer_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
-  }
+  //  void operator()(const proposal_message& msg) const {
+  //    if (!my_impl->abci_plug) {
+  //      dlog("abci is not connected: discard proposal_message");
+  //      return;
+  //    }
+  //    dlog("handle proposal_message");
+  //    my_impl->peer_mq_channel.publish(
+  //      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
+  //  }
 };
 
 //------------------------------------------------------------------------
@@ -1234,7 +1214,11 @@ bool connection::process_next_message(uint32_t message_length) {
     net_message msg;
     ds_payload >> msg;
     msg_handler m(shared_from_this());
-    std::visit(m, msg);
+    std::visit(m, msg); ///< take local actions
+    my_impl->peer_mq_channel.publish( ///< notify consensus_reactor to take additional actions
+      appbase::priority::medium,
+      std::make_shared<p2p_msg_info>(
+        p2p_msg_info{msg, "" /* TODO: include peer_id */, false /* TODO: how to handle broadcast? */}));
     pending_message_buffer.advance_read_ptr(message_length); // required to manually advance
   } catch (const fc::exception& e) {
     elog("Exception in handling message from ${p}: ${s}", ("p", peer_name())("s", e.to_detail_string()));

@@ -26,6 +26,18 @@ struct peer_state {
     ret->prs = prs_;
     return ret;
   }
+
+  void set_has_proposal(const p2p::proposal_message& msg) {
+    // TODO:
+  }
+
+  void set_has_proposal_block_part(int64_t height, int32_t round, int index) {
+    // TODO:
+  }
+
+  void set_has_vote(const p2p::vote_message& msg) {
+    // TODO:
+  }
 };
 
 } // namespace noir::consensus
