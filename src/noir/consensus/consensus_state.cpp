@@ -380,6 +380,8 @@ void consensus_state::new_step() {
   n_steps++;
 
   // todo - notify consensus_reactor about rs
+  event_switch_mq_channel.publish(appbase::priority::medium,
+    std::make_shared<plugin_interface::event_info>(plugin_interface::event_info{EventNewRoundStep, round_state{rs}}));
 }
 
 /**
@@ -894,8 +896,8 @@ void consensus_state::enter_commit(int64_t height, int32_t round) {
       rs.proposal_block = {};
       rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
 
-      // publish event valid block // todo
-      // fire event valid block // todo - is this required?
+      event_switch_mq_channel.publish(appbase::priority::medium,
+        std::make_shared<plugin_interface::event_info>(plugin_interface::event_info{EventValidBlock, round_state{rs}}));
     }
   }
 }
@@ -1118,7 +1120,9 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
 
     dlog("added vote to last precommits");
 
-    // fire event // todo
+    event_switch_mq_channel.publish(appbase::priority::medium,
+      std::make_shared<plugin_interface::event_info>(
+        plugin_interface::event_info{EventVote, p2p::vote_message{vote_}}));
 
     // if we can skip timeoutCommit and have all the votes now,
     if (cs_config.skip_timeout_commit && rs.last_commit->has_all()) {
@@ -1153,7 +1157,8 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
     return false;
   }
 
-  // fire event vote value // todo
+  event_switch_mq_channel.publish(appbase::priority::medium,
+    std::make_shared<plugin_interface::event_info>(plugin_interface::event_info{EventVote, p2p::vote_message{vote_}}));
 
   switch (vote_.type) {
   case p2p::Prevote: {
@@ -1196,7 +1201,9 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
           rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
         }
 
-        // fire event valid block value // todo
+        event_switch_mq_channel.publish(appbase::priority::medium,
+          std::make_shared<plugin_interface::event_info>(
+            plugin_interface::event_info{EventValidBlock, round_state{rs}}));
       }
     }
 
