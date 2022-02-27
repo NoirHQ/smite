@@ -116,6 +116,12 @@ struct vote_set {
 
   std::shared_ptr<bit_array> get_bit_array();
 
+  int get_size() {
+    if (this == nullptr)
+      return 0;
+    return val_set.size();
+  }
+
   bool add_vote(std::optional<vote> vote_);
 
   std::optional<vote> get_vote(int32_t val_index, const std::string& block_key) {
@@ -128,6 +134,40 @@ struct vote_set {
       auto existing = votes_by_block[block_key].get_by_index(val_index);
       if (existing.has_value())
         return existing;
+    }
+    return {};
+  }
+
+  std::shared_ptr<bit_array> bit_array_by_block_id(p2p::block_id block_id_) {
+    std::lock_guard<std::mutex> g(mtx);
+    auto it = votes_by_block.find(block_id_.key());
+    if (it != votes_by_block.end())
+      return it->second.bit_array_->copy();
+    return {};
+  }
+
+  std::optional<std::string> set_peer_maj23(std::string peer_id, p2p::block_id block_id_) {
+    std::lock_guard<std::mutex> g(mtx);
+
+    auto block_key = block_id_.key();
+
+    // Make sure peer has not sent us something yet
+    if (auto it = peer_maj23s.find(peer_id); it != peer_maj23s.end()) {
+      if (it->second == block_id_)
+        return {}; // nothing to do
+      return "setPeerMaj23: Received conflicting blockID";
+    }
+    peer_maj23s[peer_id] = block_id_;
+
+    // Create votes_by_block
+    auto it = votes_by_block.find(block_key);
+    if (it != votes_by_block.end()) {
+      if (it->second.peer_maj23)
+        return {}; // nothing to do
+      it->second.peer_maj23 = true;
+    } else {
+      auto new_votes_by_block = block_votes::new_block_votes(true, val_set.size());
+      votes_by_block[block_key] = new_votes_by_block;
     }
     return {};
   }

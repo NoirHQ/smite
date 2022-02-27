@@ -13,18 +13,34 @@
 namespace noir::consensus {
 
 struct peer_state {
-  node_id peer_id;
+  std::string peer_id;
 
   std::mutex mtx;
   bool is_running{};
   peer_round_state prs;
 
-  static std::shared_ptr<peer_state> new_peer_state(node_id peer_id_) {
+  static std::shared_ptr<peer_state> new_peer_state(const std::string& peer_id_) {
     auto ret = std::make_shared<peer_state>();
-    ret->peer_id = std::move(peer_id_);
+    ret->peer_id = peer_id_;
     peer_round_state prs_;
     ret->prs = prs_;
     return ret;
+  }
+
+  void apply_new_round_step_message(const p2p::new_round_step_message& msg) {
+    // TODO:
+  }
+
+  void apply_new_valid_block_message(const p2p::new_valid_block_message& msg) {
+    // TODO:
+  }
+
+  void apply_has_vote_message(const p2p::has_vote_message& msg) {
+    // TODO:
+  }
+
+  void apply_vote_set_bits_message(const p2p::vote_set_bits_message& msg, std::shared_ptr<bit_array> our_votes) {
+    // TODO:
   }
 
   void set_has_proposal(const p2p::proposal_message& msg) {
@@ -32,6 +48,10 @@ struct peer_state {
   }
 
   void set_has_proposal_block_part(int64_t height, int32_t round, int index) {
+    // TODO:
+  }
+
+  void ensure_vote_bit_arrays(int64_t height, int num_validators) {
     // TODO:
   }
 
