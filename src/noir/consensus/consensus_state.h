@@ -13,8 +13,8 @@
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
-#include <noir/consensus/wal.h>
 #include <noir/consensus/types/round_state.h>
+#include <noir/consensus/wal.h>
 
 namespace noir::consensus {
 
