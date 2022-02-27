@@ -12,9 +12,9 @@
 namespace noir::consensus {
 
 struct bit_array {
-  std::mutex mtx;
   int bits{};
   std::vector<bool> elem;
+  std::mutex mtx;
 
   bit_array() = default;
   bit_array(const bit_array& b): bits(b.bits), elem(b.elem) {}
@@ -45,11 +45,60 @@ struct bit_array {
     return true;
   }
 
+  std::shared_ptr<bit_array> update(std::shared_ptr<bit_array> o) {
+    if (o == nullptr)
+      return nullptr;
+    std::lock_guard<std::mutex> g(mtx);
+    std::lock_guard<std::mutex> g2(o->mtx);
+    elem = o->elem;
+  }
+
+  std::shared_ptr<bit_array> sub(std::shared_ptr<bit_array> o) {
+    if (o == nullptr)
+      return nullptr;
+    std::lock_guard<std::mutex> g(mtx);
+    std::lock_guard<std::mutex> g2(o->mtx);
+    auto c = copy_bits(bits);
+    auto smaller = std::min(elem.size(), o->elem.size());
+    for (auto i = 0; i < smaller; i++) {
+      c->elem[i] = c->elem[i] & (~o->elem[i]); // and not
+    }
+    return c; // TODO: check if sub is correctly implemented
+  }
+
+  /// \brief returns a bit_array resulting from a bitwise OR of two bit_arrays
+  std::shared_ptr<bit_array> or_op(std::shared_ptr<bit_array> o) {
+    if (o == nullptr)
+      return copy();
+    std::lock_guard<std::mutex> g(mtx);
+    std::lock_guard<std::mutex> g2(o->mtx);
+    auto c = copy_bits(std::max(bits, o->bits));
+    auto smaller = std::min(elem.size(), o->elem.size());
+    for (auto i = 0; i < smaller; i++) {
+      c->elem[i] = c->elem[i] | (o->elem[i]); // or
+    }
+    return c;
+  }
+
   std::shared_ptr<bit_array> copy() const {
     auto copy = std::make_shared<bit_array>();
     copy->bits = bits;
     copy->elem = elem;
     return copy;
+  }
+
+  std::shared_ptr<bit_array> copy_bits(int bits) const {
+    if (bits > elem.size())
+      bits = elem.size();
+    auto ret = std::make_shared<bit_array>();
+    ret->bits = bits;
+    ret->elem.resize(bits);
+    std::copy(elem.begin(), elem.begin() + bits, ret->elem.begin());
+    return ret;
+  }
+
+  int num_elems(const int bits) const {
+    return (bits + 63) / 64;
   }
 
   std::string string() const {

@@ -28,35 +28,212 @@ struct peer_state {
   }
 
   void apply_new_round_step_message(const p2p::new_round_step_message& msg) {
-    // TODO:
+    std::lock_guard<std::mutex> g(mtx);
+
+    // Ignore duplicates or decreased values
+    bool passed_checks{false};
+    if (msg.height < prs.height)
+      return;
+    else if (msg.height > prs.height)
+      passed_checks = true;
+    if (!passed_checks && msg.round < prs.round)
+      return;
+    else if (msg.round > prs.round)
+      passed_checks = true;
+    if (!passed_checks && msg.step < prs.step)
+      return;
+    else if (msg.step > prs.step)
+      passed_checks = true;
+    if (!passed_checks)
+      return;
+
+    auto ps_height = prs.height;
+    auto ps_round = prs.round;
+    auto ps_catchup_commit_round = prs.catchup_commit_round;
+    auto ps_catchup_commit = prs.catchup_commit;
+    auto start_time = get_time() - msg.seconds_since_start_time; // TODO: check if this is correct
+
+    prs.height = msg.height;
+    prs.round = msg.round;
+    prs.step = msg.step;
+    prs.start_time = start_time;
+
+    if (ps_height != msg.height || ps_round != msg.round) {
+      prs.proposal = false;
+      prs.proposal_block_part_set_header = p2p::part_set_header{};
+      prs.proposal_block_parts = nullptr;
+      prs.proposal_pol_round = -1;
+      prs.proposal_pol = nullptr;
+      prs.prevotes = nullptr;
+      prs.precommits = nullptr;
+    }
+
+    if (ps_height == msg.height && ps_round != msg.round && msg.round == ps_catchup_commit_round) {
+      // Peer caught up to catchup_commit_round so we need to preserve ps_catchup_commit
+      prs.precommits = ps_catchup_commit;
+    }
+
+    if (ps_height != msg.height) {
+      if (ps_height + 1 == msg.height && ps_round == msg.last_commit_round) {
+        prs.last_commit_round = msg.last_commit_round;
+        prs.last_commit = prs.precommits;
+      } else {
+        prs.last_commit_round = msg.last_commit_round;
+        prs.last_commit = nullptr;
+      }
+      prs.catchup_commit_round = -1;
+      prs.catchup_commit = nullptr;
+    }
   }
 
   void apply_new_valid_block_message(const p2p::new_valid_block_message& msg) {
-    // TODO:
+    std::lock_guard<std::mutex> g(mtx);
+    if (prs.height != msg.height)
+      return;
+    if (prs.round != msg.round && !msg.is_commit)
+      return;
+    prs.proposal_block_part_set_header = msg.block_part_set_header;
+    prs.proposal_block_parts = msg.block_parts;
+  }
+
+  void apply_proposal_pol_message(const p2p::proposal_pol_message& msg) {
+    std::lock_guard<std::mutex> g(mtx);
+    if (prs.height != msg.height)
+      return;
+    if (prs.proposal_pol_round != msg.proposal_pol_round)
+      return;
+    prs.proposal_pol = msg.proposal_pol;
   }
 
   void apply_has_vote_message(const p2p::has_vote_message& msg) {
-    // TODO:
+    std::lock_guard<std::mutex> g(mtx);
+    if (prs.height != msg.height)
+      return;
+    set_has_vote_(msg.height, msg.round, msg.type, msg.index);
   }
 
   void apply_vote_set_bits_message(const p2p::vote_set_bits_message& msg, std::shared_ptr<bit_array> our_votes) {
-    // TODO:
+    std::lock_guard<std::mutex> g(mtx);
+    auto votes = get_vote_bit_array(msg.height, msg.round, msg.type);
+    if (!votes) {
+      if (our_votes == nullptr) {
+        votes->update(msg.votes);
+      } else {
+        auto other_votes = votes->sub(our_votes);
+        auto has_votes = other_votes->or_op(msg.votes);
+        votes->update(has_votes);
+      }
+    }
   }
 
   void set_has_proposal(const p2p::proposal_message& msg) {
-    // TODO:
+    std::lock_guard<std::mutex> g(mtx);
+    if (prs.height != msg.height || prs.round != msg.round)
+      return;
+    if (prs.proposal)
+      return;
+    prs.proposal = true;
+    if (prs.proposal_block_parts != nullptr)
+      return;
+    prs.proposal_block_part_set_header = msg.block_id_.parts;
+    prs.proposal_block_parts = bit_array::new_bit_array(msg.block_id_.parts.total);
+    prs.proposal_pol_round = msg.pol_round;
+    prs.proposal_pol = nullptr;
   }
 
   void set_has_proposal_block_part(int64_t height, int32_t round, int index) {
-    // TODO:
+    std::lock_guard<std::mutex> g(mtx);
+    if (prs.height != height || prs.round != round)
+      return;
+    prs.proposal_block_parts->set_index(index, true);
   }
 
+private:
+  void ensure_vote_bit_arrays_(int64_t height, int num_validators) {
+    if (prs.height == height) {
+      if (prs.prevotes == nullptr) {
+        prs.prevotes = bit_array::new_bit_array(num_validators);
+      }
+      if (prs.precommits == nullptr) {
+        prs.precommits = bit_array::new_bit_array(num_validators);
+      }
+      if (prs.catchup_commit == nullptr) {
+        prs.catchup_commit = bit_array::new_bit_array(num_validators);
+      }
+      if (prs.proposal_pol == nullptr) {
+        prs.proposal_pol = bit_array::new_bit_array(num_validators);
+      }
+    } else if (prs.height == height + 1) {
+      if (prs.last_commit == nullptr) {
+        prs.last_commit = bit_array::new_bit_array(num_validators);
+      }
+    }
+  }
+
+public:
   void ensure_vote_bit_arrays(int64_t height, int num_validators) {
-    // TODO:
+    std::lock_guard<std::mutex> g(mtx);
+    ensure_vote_bit_arrays_(height, num_validators);
   }
 
+private:
+  void set_has_vote_(int64_t height, int32_t round, p2p::signed_msg_type vote_type, int32_t index) {
+    dlog(fmt::format("set_has_vote: type={} index={}", (int)vote_type, index));
+    auto ps_votes = get_vote_bit_array(height, round, vote_type);
+    if (!ps_votes)
+      ps_votes->set_index(index, true);
+  }
+
+public:
   void set_has_vote(const p2p::vote_message& msg) {
-    // TODO:
+    std::lock_guard<std::mutex> g(mtx);
+    set_has_vote_(msg.height, msg.round, msg.type, msg.validator_index);
+  }
+
+  std::shared_ptr<bit_array> get_vote_bit_array(int64_t height, int32_t round, p2p::signed_msg_type vote_type) {
+    // is_vote_type_valid // TODO:
+    if (prs.height == height) {
+      if (prs.round == round) {
+        switch (vote_type) {
+        case p2p::Prevote:
+          return prs.prevotes;
+        case p2p::Precommit:
+          return prs.precommits;
+        }
+      }
+
+      if (prs.catchup_commit_round == round) {
+        switch (vote_type) {
+        case p2p::Prevote:
+          return {};
+        case p2p::Precommit:
+          return prs.catchup_commit;
+        }
+      }
+
+      if (prs.proposal_pol_round == round) {
+        switch (vote_type) {
+        case p2p::Prevote:
+          return prs.proposal_pol;
+        case p2p::Precommit:
+          return {};
+        }
+      }
+
+      return {};
+    }
+    if (prs.height == height + 1) {
+      if (prs.last_commit_round == round) {
+        switch (vote_type) {
+        case p2p::Prevote:
+          return {};
+        case p2p::Precommit:
+          return prs.last_commit;
+        }
+      }
+      return {};
+    }
+    return {};
   }
 };
 
