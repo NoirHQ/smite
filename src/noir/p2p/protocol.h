@@ -126,7 +126,7 @@ struct proposal_message {
 struct proposal_pol_message {
   int64_t height;
   int32_t proposal_pol_round;
-  consensus::bit_array proposal_pol;
+  std::shared_ptr<consensus::bit_array> proposal_pol;
 };
 
 struct block_part_message {
@@ -168,7 +168,7 @@ struct vote_set_bits_message {
   int32_t round;
   signed_msg_type type;
   block_id block_id_;
-  consensus::bit_array votes;
+  std::shared_ptr<consensus::bit_array> votes;
 };
 ///< consensus message ends
 

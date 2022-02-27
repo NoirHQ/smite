@@ -175,6 +175,7 @@ struct consensus_reactor {
                    ps->set_has_proposal(msg);
                    // TODO: r.state.peerMsgQueue <- msgInfo{pMsg, envelope.From}
                  },
+                 [&ps](p2p::proposal_pol_message& msg) { ps->apply_proposal_pol_message(msg); },
                  [&ps](p2p::block_part_message& msg) {
                    ps->set_has_proposal_block_part(msg.height, msg.round, msg.index);
                    // TODO: r.state.peerMsgQueue <- msgInfo{bpMsg, envelope.From}
