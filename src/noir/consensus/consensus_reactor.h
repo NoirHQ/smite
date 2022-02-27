@@ -57,8 +57,6 @@ struct consensus_reactor {
     }
   }
 
-  void process_peer_msg(p2p::p2p_msg_info_ptr info) {}
-
   void on_stop() {}
 
   std::shared_ptr<peer_state> get_peer_state(std::string peer_id) {
