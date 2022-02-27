@@ -9,7 +9,6 @@
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
 #include <noir/common/types/string.h>
-#include <fmt/format.h>
 #include <bitset>
 #include <numeric>
 #include <span>
@@ -24,16 +23,22 @@ using byte_type = char;
 /// \ingroup common
 using bytes = std::vector<byte_type>;
 
+/// \brief stringify bytes
+/// \ingroup common
 template<>
 std::string to_string(const bytes& v);
 
 /// \brief thin wrapper for fixed-length byte sequence
+/// \tparam N length of byte sequence
+/// \tparam T byte-compatible type
 /// \ingroup common
 template<size_t N, Byte T = byte_type>
-struct bytesN {
+class bytesN {
+private:
   std::array<T, N> data_;
 
-  using underlying_type = decltype(data_);
+public:
+  using underlying_type = std::array<T, N>;
   using value_type = typename underlying_type::value_type;
   using size_type = typename underlying_type::size_type;
   using difference_type = typename underlying_type::difference_type;
@@ -48,33 +53,37 @@ struct bytesN {
 
   constexpr bytesN() = default;
 
-  /// \brief constructs bytesN from a hex string
+  /// \brief constructs bytesN from hex string
+  /// \param s hex string, must have the length of 2 * N unless \p canonical is false
+  /// \param canonical whether the input generates the exact size of bytesN
   constexpr bytesN(std::string_view s, bool canonical = true) {
     auto size = from_hex(s, data_);
-    check(!canonical || size == N, fmt::format("invalid bytes length: expected({}), actual({})", N, size));
+    check(!canonical || size == N, "invalid bytes length: expected({}), actual({})", N, size);
     if (size < N) {
       std::fill(data_.begin() + size, data_.end(), 0);
     }
   }
 
-  /// \brief constructs bytesN from a byte sequence
+  /// \brief constructs bytesN from byte sequence
+  /// \param bytes byte sequence, must have the size of \p N unless \p canonical is false
+  /// \param canonical whether the input generates the exact size of bytesN
   template<Byte U, size_t S = std::dynamic_extent>
   constexpr bytesN(std::span<U, S> bytes, bool canonical = true) {
     auto size = bytes.size();
-    check(!canonical || size == N, fmt::format("invalid bytes length: expected({}), actual({})", N, size));
+    check(!canonical || size == N, "invalid bytes length: expected({}), actual({})", N, size);
     std::copy(bytes.begin(), bytes.end(), data_.begin());
     if (size < N) {
       std::fill(data_.begin() + size, data_.end(), 0);
     }
   }
 
-  /// \brief constructs bytesN from a pointer to byte sequence and its size
+  /// \brief constructs bytesN from pointer to byte sequence and its size
   // XXX: trailing "//" in the next line forbids clang-format from erasing line break.
   [[deprecated("ambiguous, consider using bytesN(std::string_view) or bytesN(std::span)")]] //
   constexpr bytesN(const char* data, size_t size, bool canonical = true)
     : bytesN(std::span{data, size}, canonical) {}
 
-  /// \brief constructs bytesN from a byte vector
+  /// \brief constructs bytesN from byte vector
   template<Byte U>
   constexpr bytesN(const std::vector<U>& bytes, bool canonical = true)
     : bytesN(std::span{(T*)bytes.data(), bytes.size()}, canonical) {}
@@ -180,63 +189,67 @@ struct bytesN {
   void clear() {
     std::fill(data_.begin(), data_.end(), 0);
   }
-};
 
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator==(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  if constexpr (N1 != N2)
+  template<size_t S, Byte U>
+  constexpr bool operator==(const bytesN<S, U>& v) const {
+    if constexpr (N != S) {
+      return false;
+    }
+    return !std::memcmp(data(), v.data(), N);
+  }
+
+  template<size_t S, Byte U>
+  constexpr bool operator!=(const bytesN<S, U>& v) const {
+    if constexpr (N != S) {
+      return true;
+    }
+    return std::memcmp(data(), v.data(), N);
+  }
+
+  template<size_t S, Byte U>
+  constexpr bool operator<(const bytesN<S, U>& v) const {
+    auto cmp = std::memcmp(data(), v.data(), std::min(N, S));
+    if (cmp < 0) {
+      return true;
+    } else if (!cmp) {
+      return N < S;
+    }
     return false;
-  return !std::memcmp(a.data_.data(), b.data_.data(), N1);
-}
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator!=(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  if constexpr (N1 != N2)
-    return true;
-  return std::memcmp(a.data_.data(), b.data_.data(), N1);
-}
+  }
 
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator<(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  auto cmp = std::memcmp(a.data_.data(), b.data_.data(), std::min(N1, N2));
-  if (cmp < 0) {
-    return true;
-  } else if (!cmp) {
-    return N1 < N2;
+  template<size_t S, Byte U>
+  constexpr bool operator<=(const bytesN<S, U>& v) const {
+    auto cmp = std::memcmp(data(), v.data(), std::min(N, S));
+    if (cmp < 0) {
+      return true;
+    } else if (!cmp) {
+      return N <= S;
+    }
+    return false;
   }
-  return false;
-}
 
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator<=(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  auto cmp = std::memcmp(a.data_.data(), b.data_.data(), std::min(N1, N2));
-  if (cmp < 0) {
-    return true;
-  } else if (!cmp) {
-    return N1 <= N2;
+  template<size_t S, Byte U>
+  constexpr bool operator>(const bytesN<S, U>& v) const {
+    auto cmp = std::memcmp(data(), v.data(), std::min(N, S));
+    if (cmp > 0) {
+      return true;
+    } else if (!cmp) {
+      return N > S;
+    }
+    return false;
   }
-  return false;
-}
 
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator>(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  auto cmp = std::memcmp(a.data_.data(), b.data_.data(), std::min(N1, N2));
-  if (cmp > 0) {
-    return true;
-  } else if (!cmp) {
-    return N1 > N2;
+  template<size_t S, Byte U>
+  constexpr bool operator>=(const bytesN<S, U>& v) const {
+    auto cmp = std::memcmp(data(), v.data(), std::min(N, S));
+    if (cmp > 0) {
+      return true;
+    } else if (!cmp) {
+      return N >= S;
+    }
+    return false;
   }
-  return false;
-}
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator>=(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  auto cmp = std::memcmp(a.data_.data(), b.data_.data(), std::min(N1, N2));
-  if (cmp > 0) {
-    return true;
-  } else if (!cmp) {
-    return N1 >= N2;
-  }
-  return false;
-}
+};
 
 template<typename DataStream, size_t N, Byte U = byte_type>
 DataStream& operator<<(DataStream& ds, const bytesN<N, U>& v) {
