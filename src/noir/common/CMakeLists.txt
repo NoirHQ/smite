@@ -7,4 +7,5 @@ target_sources(noir
     types.cpp
 )
 
+add_noir_test(check_test test/check_test.cpp)
 add_noir_test(common_types_test types_test.cpp)
