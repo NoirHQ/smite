@@ -65,6 +65,7 @@ struct commit_sig {
     }
     default: {
       check(false, fmt::format("Unknown BlockIDFlag: {}", flag));
+      __builtin_unreachable();
     }
     }
   }
