@@ -116,9 +116,7 @@ struct vote_set {
 
   std::shared_ptr<bit_array> get_bit_array();
 
-  int get_size() {
-    if (this == nullptr)
-      return 0;
+  virtual int get_size() const {
     return val_set.size();
   }
 
@@ -219,6 +217,17 @@ struct vote_set {
       commit_sigs.push_back(commit_sig_);
     }
     return commit::new_commit(height, round, maj23.value(), commit_sigs);
+  }
+};
+
+struct nil_vote_set : vote_set {
+  nil_vote_set() {
+    height = 0;
+    round = -1;
+    signed_msg_type_ = p2p::signed_msg_type::Unknown;
+  }
+  int get_size() const override {
+    return 0;
   }
 };
 
