@@ -54,7 +54,7 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
                },
                [&ps](p2p::new_valid_block_message& msg) { ps->apply_new_valid_block_message(msg); },
                [&ps](p2p::has_vote_message& msg) { ps->apply_has_vote_message(msg); },
-               [this, &ps](p2p::vote_set_maj23_message& msg) {
+               [this, &ps, &from](p2p::vote_set_maj23_message& msg) {
                  std::unique_lock<std::mutex> lock(cs_state->mtx);
                  auto height = cs_state->rs.height;
                  auto votes = cs_state->rs.votes;
@@ -82,22 +82,23 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
                    check(false, "bad VoteSetBitsMessage field type; forgot to add a check in ValidateBasic?");
                  }
 
-                 // TODO: send back vote_set_bits
+                 auto response = p2p::vote_set_bits_message{msg.height, msg.round, msg.type, msg.block_id_, our_votes};
+                 transmit_new_envelope("", from, response);
                },
                /***************************************************************************************************/
                ///< data messages: proposal, proposal_pol, block_part
-               [&ps](p2p::proposal_message& msg) {
+               [this, &ps, &from](p2p::proposal_message& msg) {
                  ps->set_has_proposal(msg);
-                 // TODO: r.state.peerMsgQueue <- msgInfo{pMsg, envelope.From}
+                 transmit_new_envelope("", from, msg);
                },
                [&ps](p2p::proposal_pol_message& msg) { ps->apply_proposal_pol_message(msg); },
-               [&ps](p2p::block_part_message& msg) {
+               [this, &ps, &from](p2p::block_part_message& msg) {
                  ps->set_has_proposal_block_part(msg.height, msg.round, msg.index);
-                 // TODO: r.state.peerMsgQueue <- msgInfo{bpMsg, envelope.From}
+                 transmit_new_envelope("", from, msg);
                },
                /***************************************************************************************************/
                ///< vote message: vote
-               [this, &ps](p2p::vote_message& msg) {
+               [this, &ps, &from](p2p::vote_message& msg) {
                  std::unique_lock<std::mutex> lock(cs_state->mtx);
                  auto height = cs_state->rs.height;
                  auto val_size = cs_state->rs.validators->size();
@@ -107,7 +108,8 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
                  ps->ensure_vote_bit_arrays(height, val_size);
                  ps->ensure_vote_bit_arrays(height - 1, last_commit_size);
                  ps->set_has_vote(msg);
-                 // TODO: r.state.peerMsgQueue <- msgInfo{vMsg, envelope.From}
+
+                 transmit_new_envelope("", from, msg);
                },
                /***************************************************************************************************/
                ///< vote_set_bits message: vote_set_bits

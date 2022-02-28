@@ -73,19 +73,19 @@ struct consensus_reactor {
 
   void broadcast_new_round_step_message(const round_state& rs) {
     auto msg = make_round_step_message(rs);
-    // TODO: broadcast
+    transmit_new_envelope("", "", msg, true);
   }
 
   void broadcast_new_valid_block_message(const round_state& rs) {
     auto msg = p2p::new_valid_block_message{rs.height, rs.round,
       rs.proposal_block_parts->header() /* TODO: check if this is correct*/, rs.proposal_block_parts->get_bit_array(),
       rs.step == p2p::round_step_type::Commit};
-    // TODO: broadcast
+    transmit_new_envelope("", "", msg, true);
   }
 
   void broadcast_has_vote_message(const p2p::vote_message& vote_) {
     auto msg = p2p::has_vote_message{vote_.height, vote_.round, vote_.type, vote_.validator_index};
-    // TODO: broadcast
+    transmit_new_envelope("", "", msg, true);
   }
 
   p2p::new_round_step_message make_round_step_message(const round_state& rs) {
