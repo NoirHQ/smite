@@ -294,7 +294,7 @@ public:
     appbase::app().get_channel<plugin_interface::incoming::channels::receive_message_queue>();
   plugin_interface::egress::channels::transmit_message_queue::channel_type::handle xmt_mq_subscription =
     appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
-      std::bind(&p2p_impl::broadcast_message, this, std::placeholders::_1));
+      std::bind(&p2p_impl::transmit_message, this, std::placeholders::_1));
   /** @} */
 
   mutable std::shared_mutex connections_mtx;
@@ -350,7 +350,7 @@ public:
 
   connection_ptr find_connection(const std::string& host) const; // must call with held mutex
 
-  void broadcast_message(const envelope_ptr& env);
+  void transmit_message(const envelope_ptr& env);
 };
 
 static p2p_impl* my_impl;
@@ -563,9 +563,19 @@ void p2p_impl::ticker() {
   });
 }
 
-void p2p_impl::broadcast_message(const envelope_ptr& env) {
-  dlog(fmt::format("about to broadcast message: size={}", env->message.size()));
-  // TODO: implement
+void p2p_impl::transmit_message(const envelope_ptr& env) {
+  dlog(fmt::format(
+    "about to transmit message: to={} broadcast={} size={}", env->to, env->broadcast, env->message.size()));
+  if (env->broadcast) {
+    for_each_connection([env](auto& c) {
+      if (c->socket_is_open()) {
+        c->strand.post([c, env]() { c->enqueue(*env); });
+      }
+      return true;
+    });
+  } else {
+    // Unicast
+  }
 }
 
 //------------------------------------------------------------------------
@@ -803,11 +813,11 @@ struct msg_handler {
   }
 
   void operator()(const envelope& msg) const {
+    dlog(fmt::format(" <<< envelope : from={} size={}", msg.from, msg.message.size()));
     if (!my_impl->abci_plug) {
-      dlog("abci is not connected: discard envelope");
+      dlog("abci is not connected; discard envelope");
       return;
     }
-    dlog("handle envelope");
     my_impl->recv_mq_channel.publish( ///< notify consensus_reactor to take additional actions
       appbase::priority::medium, std::make_shared<envelope>(msg));
   }
