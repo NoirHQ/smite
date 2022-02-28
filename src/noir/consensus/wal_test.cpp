@@ -320,7 +320,7 @@ TEST_CASE("basic_wal test", "[basic_wal]") {
         REQUIRE(dec != nullptr);
         timed_wal_message msg{};
         CHECK(dec->decode(msg) == wal_decoder::result::success);
-        auto* msg_body = get_if<noir::p2p::msg_info>(&msg.msg.msg);
+        auto* msg_body = get_if<noir::p2p::internal_msg_info>(&msg.msg.msg);
         REQUIRE(msg_body != nullptr);
         auto* bp_msg = get_if<noir::p2p::block_part_message>(&msg_body->msg);
         REQUIRE(bp_msg != nullptr);

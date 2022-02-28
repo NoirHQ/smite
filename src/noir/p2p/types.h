@@ -68,4 +68,14 @@ constexpr auto round_step_to_str(round_step_type step) {
   }
 }
 
+struct envelope {
+  std::string from;
+  std::string to;
+  bool broadcast;
+  bytes message;
+};
+using envelope_ptr = std::shared_ptr<envelope>;
+
 } // namespace noir::p2p
+
+NOIR_FOR_EACH_FIELD(noir::p2p::envelope, from, to, broadcast, message)

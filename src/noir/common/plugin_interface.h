@@ -22,14 +22,14 @@ using event_info_ptr = std::shared_ptr<event_info>;
 
 namespace channels {
   using timeout_ticker = appbase::channel_decl<struct timeout_ticker_tag, consensus::timeout_info_ptr>;
-  using internal_message_queue = appbase::channel_decl<struct internal_message_queue_tag, p2p::msg_info_ptr>;
+  using internal_message_queue = appbase::channel_decl<struct internal_message_queue_tag, p2p::internal_msg_info_ptr>;
 } // namespace channels
 
 namespace methods {}
 
 namespace incoming {
   namespace channels {
-    using peer_message_queue = appbase::channel_decl<struct peer_message_queue_tag, p2p::p2p_msg_info_ptr>;
+    using peer_message_queue = appbase::channel_decl<struct peer_message_queue_tag, p2p::envelope_ptr>;
   }
 } // namespace incoming
 

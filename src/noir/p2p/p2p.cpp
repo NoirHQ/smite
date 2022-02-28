@@ -781,10 +781,10 @@ struct msg_handler {
 
   explicit msg_handler(const connection_ptr& conn): c(conn) {}
 
-  template<typename T>
-  void operator()(const T&) const {
-    // Skip the rest
-  }
+  // template<typename T>
+  // void operator()(const T&) const {
+  //   // Skip the rest
+  // }
 
   void operator()(const handshake_message& msg) const {
     dlog("handle handshake_message");
@@ -801,15 +801,15 @@ struct msg_handler {
     c->handle_message(msg);
   }
 
-  //  void operator()(const proposal_message& msg) const {
-  //    if (!my_impl->abci_plug) {
-  //      dlog("abci is not connected: discard proposal_message");
-  //      return;
-  //    }
-  //    dlog("handle proposal_message");
-  //    my_impl->peer_mq_channel.publish(
-  //      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
-  //  }
+  void operator()(const envelope& msg) const {
+    if (!my_impl->abci_plug) {
+      dlog("abci is not connected: discard envelope");
+      return;
+    }
+    dlog("handle envelope");
+    my_impl->peer_mq_channel.publish( ///< notify consensus_reactor to take additional actions
+      appbase::priority::medium, std::make_shared<envelope>(msg));
+  }
 };
 
 //------------------------------------------------------------------------
@@ -1210,15 +1210,11 @@ void connection::start_read_message() {
 bool connection::process_next_message(uint32_t message_length) {
   try {
     latest_msg_time = get_time();
-    noir::core::codec::datastream<char> ds_payload(pending_message_buffer.read_ptr(), message_length);
+    noir::core::codec::datastream<char> ds(pending_message_buffer.read_ptr(), message_length);
     net_message msg;
-    ds_payload >> msg;
+    ds >> msg;
     msg_handler m(shared_from_this());
-    std::visit(m, msg); ///< take local actions
-    my_impl->peer_mq_channel.publish( ///< notify consensus_reactor to take additional actions
-      appbase::priority::medium,
-      std::make_shared<p2p_msg_info>(
-        p2p_msg_info{msg, "" /* TODO: include peer_id */, false /* TODO: how to handle broadcast? */}));
+    std::visit(m, msg);
     pending_message_buffer.advance_read_ptr(message_length); // required to manually advance
   } catch (const fc::exception& e) {
     elog("Exception in handling message from ${p}: ${s}", ("p", peer_name())("s", e.to_detail_string()));

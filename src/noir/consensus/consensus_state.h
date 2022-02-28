@@ -49,7 +49,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void update_to_state(state& state_);
   void new_step();
 
-  void receive_routine(p2p::msg_info_ptr mi);
+  void receive_routine(p2p::internal_msg_info_ptr mi);
   void handle_msg();
 
   void schedule_timeout(

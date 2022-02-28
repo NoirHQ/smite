@@ -390,7 +390,7 @@ void consensus_state::new_step() {
  * Updates (state transitions) happen on timeouts, complete proposals, and 2/3 majorities.
  * State must be locked before any internal state is updated.
  */
-void consensus_state::receive_routine(p2p::msg_info_ptr mi) {
+void consensus_state::receive_routine(p2p::internal_msg_info_ptr mi) {
   message_handler m(shared_from_this());
   if (!wal_->write_sync({*mi})) { // TODO: sync is not needed for peer_message_queue
     elog("failed writing to WAL");
@@ -659,12 +659,13 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
 
     // Send proposal and block_parts
     internal_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<p2p::msg_info>(p2p::msg_info{proposal_, ""}));
+      appbase::priority::medium, std::make_shared<p2p::internal_msg_info>(p2p::internal_msg_info{proposal_, ""}));
 
     for (auto i = 0; i < block_parts_->total; i++) {
       auto part_ = block_parts_->get_part(i);
       auto msg = p2p::block_part_message{rs.height, rs.round, part_->index, part_->bytes_, part_->proof_};
-      internal_mq_channel.publish(appbase::priority::medium, std::make_shared<p2p::msg_info>(p2p::msg_info{msg, ""}));
+      internal_mq_channel.publish(
+        appbase::priority::medium, std::make_shared<p2p::internal_msg_info>(p2p::internal_msg_info{msg, ""}));
     }
     dlog(fmt::format("signed proposal: height={} round={}", height, round));
   } else {
@@ -1348,8 +1349,8 @@ vote consensus_state::sign_add_vote(p2p::signed_msg_type msg_type, bytes hash, p
 
   auto vote_ = sign_vote(msg_type, hash, header);
   if (vote_.has_value()) {
-    internal_mq_channel.publish(
-      appbase::priority::medium, std::make_shared<p2p::msg_info>(p2p::msg_info{p2p::vote_message(vote_.value()), ""}));
+    internal_mq_channel.publish(appbase::priority::medium,
+      std::make_shared<p2p::internal_msg_info>(p2p::internal_msg_info{p2p::vote_message(vote_.value()), ""}));
     dlog(fmt::format("signed and pushed vote: height={} round={}", rs.height, rs.round));
     return vote_.value();
   }

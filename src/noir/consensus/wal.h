@@ -24,7 +24,8 @@ struct end_height_message {
   int64_t height;
 };
 
-using wal_message_body_t = std::variant<end_height_message, p2p::msg_info, timeout_info, round_state::event_data>;
+using wal_message_body_t =
+  std::variant<end_height_message, p2p::internal_msg_info, timeout_info, round_state::event_data>;
 
 /// \brief default WALMessage type
 struct wal_message {

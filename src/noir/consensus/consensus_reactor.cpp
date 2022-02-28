@@ -5,6 +5,8 @@
 //
 #include <noir/consensus/consensus_reactor.h>
 
+#include <noir/core/types.h>
+
 namespace noir::consensus {
 
 template<class... Ts>
@@ -14,15 +16,20 @@ struct overload : Ts... {
 template<class... Ts>
 overload(Ts...) -> overload<Ts...>;
 
-void consensus_reactor::process_peer_msg(p2p::p2p_msg_info_ptr info) {
+void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
   if (info->broadcast) {
     /* TODO: how to handle broadcast?
      * need to check if msg is known (look up in a cache)
      * if already seen one, discard
      */
   }
-  auto from = info->peer_id;
-  dlog(fmt::format("received message={} from {}", info->msg.index(), from));
+  auto from = info->from;
+
+  noir::core::codec::datastream<char> ds(info->message.data(), info->message.size());
+  p2p::reactor_message msg;
+  ds >> msg;
+
+  dlog(fmt::format("received message={} from {}", msg.index(), from));
   auto ps = get_peer_state(from);
   if (!ps) {
     wlog(fmt::format("unable to find peer_state for from={}", from));
@@ -127,7 +134,7 @@ void consensus_reactor::process_peer_msg(p2p::p2p_msg_info_ptr info) {
                    ps->apply_vote_set_bits_message(msg, nullptr);
                  }
                }},
-    info->msg);
+    msg);
 }
 
 } // namespace noir::consensus

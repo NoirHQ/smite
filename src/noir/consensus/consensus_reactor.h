@@ -57,7 +57,7 @@ struct consensus_reactor {
     }
   }
 
-  void process_peer_msg(p2p::p2p_msg_info_ptr info);
+  void process_peer_msg(p2p::envelope_ptr info);
 
   void on_stop() {}
 
