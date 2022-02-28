@@ -50,7 +50,7 @@ auto process_block_wal_msg = [](wal& wal_, int64_t height) {
     noir::p2p::vote_message vote_{};
     vote_.timestamp = get_time();
     vote_.height = height;
-    msg.msg = {msg_info{vote_}};
+    msg.msg = {internal_msg_info{vote_}};
     wal_.write(msg);
   }
   {
