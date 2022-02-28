@@ -29,13 +29,13 @@ namespace methods {}
 
 namespace incoming {
   namespace channels {
-    using peer_message_queue = appbase::channel_decl<struct peer_message_queue_tag, p2p::envelope_ptr>;
+    using receive_message_queue = appbase::channel_decl<struct receive_message_queue_tag, p2p::envelope_ptr>;
   }
 } // namespace incoming
 
 namespace egress {
   namespace channels {
-    using broadcast_message_queue = appbase::channel_decl<struct broadcast_message_queue_tag, p2p::envelope_ptr>;
+    using transmit_message_queue = appbase::channel_decl<struct transmit_message_queue_tag, p2p::envelope_ptr>;
     using event_switch_message_queue = appbase::channel_decl<struct event_switch_message_queue_tag, event_info_ptr>;
   } // namespace channels
 } // namespace egress

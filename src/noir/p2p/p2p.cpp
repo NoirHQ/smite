@@ -290,10 +290,10 @@ public:
   consensus::abci* abci_plug{nullptr};
 
   // Channels
-  plugin_interface::incoming::channels::peer_message_queue::channel_type& peer_mq_channel =
-    appbase::app().get_channel<plugin_interface::incoming::channels::peer_message_queue>();
-  plugin_interface::egress::channels::broadcast_message_queue::channel_type::handle broadcast_mq_subscription =
-    appbase::app().get_channel<plugin_interface::egress::channels::broadcast_message_queue>().subscribe(
+  plugin_interface::incoming::channels::receive_message_queue::channel_type& recv_mq_channel =
+    appbase::app().get_channel<plugin_interface::incoming::channels::receive_message_queue>();
+  plugin_interface::egress::channels::transmit_message_queue::channel_type::handle xmt_mq_subscription =
+    appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
       std::bind(&p2p_impl::broadcast_message, this, std::placeholders::_1));
   /** @} */
 
@@ -808,7 +808,7 @@ struct msg_handler {
       return;
     }
     dlog("handle envelope");
-    my_impl->peer_mq_channel.publish( ///< notify consensus_reactor to take additional actions
+    my_impl->recv_mq_channel.publish( ///< notify consensus_reactor to take additional actions
       appbase::priority::medium, std::make_shared<envelope>(msg));
   }
 };

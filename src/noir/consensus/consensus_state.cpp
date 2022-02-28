@@ -391,7 +391,7 @@ void consensus_state::new_step() {
  */
 void consensus_state::receive_routine(p2p::internal_msg_info_ptr mi) {
   message_handler m(shared_from_this());
-  if (!wal_->write_sync({*mi})) { // TODO: sync is not needed for peer_message_queue
+  if (!wal_->write_sync({*mi})) { // TODO: sync is not needed for receive_message_queue
     elog("failed writing to WAL");
   }
   std::visit(m, mi->msg);
