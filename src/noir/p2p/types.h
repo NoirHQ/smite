@@ -36,15 +36,38 @@ constexpr auto def_keepalive_interval = 32000;
 
 constexpr auto message_header_size = 4;
 
-enum round_step_type {
-  RoundStepNewHeight = 1, // Wait til CommitTime + timeoutCommit
-  RoundStepNewRound = 2, // Setup new round and go to RoundStepPropose
-  RoundStepPropose = 3, // Did propose, gossip proposal
-  RoundStepPrevote = 4, // Did prevote, gossip prevotes
-  RoundStepPrevoteWait = 5, // Did receive any +2/3 prevotes, start timeout
-  RoundStepPrecommit = 6, // Did precommit, gossip precommits
-  RoundStepPrecommitWait = 7, // Did receive any +2/3 precommits, start timeout
-  RoundStepCommit = 8 // Entered commit state machine
+enum class round_step_type {
+  NewHeight = 1, // Wait til CommitTime + timeoutCommit
+  NewRound = 2, // Setup new round and go to RoundStepPropose
+  Propose = 3, // Did propose, gossip proposal
+  Prevote = 4, // Did prevote, gossip prevotes
+  PrevoteWait = 5, // Did receive any +2/3 prevotes, start timeout
+  Precommit = 6, // Did precommit, gossip precommits
+  PrecommitWait = 7, // Did receive any +2/3 precommits, start timeout
+  Commit = 8 // Entered commit state machine
 };
+
+constexpr auto round_step_to_str(round_step_type step) {
+  switch (step) {
+  case round_step_type::NewHeight:
+    return "NewHeight";
+  case round_step_type::NewRound:
+    return "NewRound";
+  case round_step_type::Propose:
+    return "Propose";
+  case round_step_type::Prevote:
+    return "Prevote";
+  case round_step_type::PrevoteWait:
+    return "PrevoteWait";
+  case round_step_type::Precommit:
+    return "Precommit";
+  case round_step_type::PrecommitWait:
+    return "PrecommitWait";
+  case round_step_type::Commit:
+    return "Commit";
+  default:
+    return "Unknown";
+  }
+}
 
 } // namespace noir::p2p

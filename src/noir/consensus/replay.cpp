@@ -126,7 +126,8 @@ struct wal_replay_handler {
     return true;
   }
   bool operator()(const timeout_info& msg) {
-    ilog(fmt::format("Replay: {}/{}/{}, timeout={}", msg.height, msg.round, msg.step, msg.duration_.count()));
+    ilog(fmt::format(
+      "Replay: {}/{}/{}, timeout={}", msg.height, msg.round, p2p::round_step_to_str(msg.step), msg.duration_.count()));
     cs->handle_timeout(std::make_shared<timeout_info>(msg));
     return true;
   }
