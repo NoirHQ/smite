@@ -221,7 +221,7 @@ TEST_CASE("simple encode/decode", "[wal_codec]") {
 
 inline noir::bytes gen_random_bytes(size_t num) {
   noir::bytes ret(num);
-  fc::rand_pseudo_bytes(ret.data(), static_cast<int>(ret.size()));
+  noir::crypto::rand_bytes(ret);
   return ret;
 }
 
