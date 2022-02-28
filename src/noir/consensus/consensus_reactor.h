@@ -75,7 +75,7 @@ struct consensus_reactor {
   void broadcast_new_valid_block_message(const round_state& rs) {
     auto msg = p2p::new_valid_block_message{rs.height, rs.round,
       rs.proposal_block_parts->header() /* TODO: check if this is correct*/, rs.proposal_block_parts->get_bit_array(),
-      rs.step == p2p::RoundStepCommit};
+      rs.step == p2p::round_step_type::Commit};
     // TODO: broadcast
   }
 

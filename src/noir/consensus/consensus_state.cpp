@@ -13,11 +13,13 @@
 
 namespace noir::consensus {
 namespace fs = std::filesystem;
+using p2p::round_step_to_str;
+using p2p::round_step_type;
 
 struct message_handler {
   std::shared_ptr<consensus_state> cs;
 
-  explicit message_handler(const std::shared_ptr<consensus_state>& cs_): cs(cs_) {}
+  explicit message_handler(std::shared_ptr<consensus_state> cs_): cs(std::move(cs_)) {}
 
   void operator()(p2p::proposal_message& msg) {
     std::lock_guard<std::mutex> g(cs->mtx);
@@ -126,7 +128,7 @@ void consensus_state::update_priv_validator_pub_key() {
     timeout = cs_config.timeout_precommit;
 
   // no GetPubKey retry beyond the proposal/voting in RetrySignerClient
-  if (rs.step >= p2p::RoundStepPrecommit && local_priv_validator_type == RetrySignerClient)
+  if (rs.step >= round_step_type::Precommit && local_priv_validator_type == RetrySignerClient)
     timeout = std::chrono::system_clock::duration::zero();
 
   auto key = local_priv_validator->get_pub_key();
@@ -266,7 +268,7 @@ void consensus_state::update_height(int64_t height) {
   rs.height = height;
 }
 
-void consensus_state::update_round_step(int32_t round, p2p::round_step_type step) {
+void consensus_state::update_round_step(int32_t round, round_step_type step) {
   rs.round = round;
   rs.step = step;
 }
@@ -276,7 +278,7 @@ void consensus_state::update_round_step(int32_t round, p2p::round_step_type step
  */
 void consensus_state::schedule_round_0(round_state& rs_) {
   auto sleep_duration = rs_.start_time - get_time();
-  schedule_timeout(std::chrono::microseconds(sleep_duration), rs_.height, 0, p2p::RoundStepNewHeight); // todo
+  schedule_timeout(std::chrono::microseconds(sleep_duration), rs_.height, 0, round_step_type::NewHeight); // todo
 }
 
 /**
@@ -342,7 +344,7 @@ void consensus_state::update_to_state(state& state_) {
 
   // RoundState fields
   update_height(height);
-  update_round_step(0, p2p::RoundStepNewHeight);
+  update_round_step(0, round_step_type::NewHeight);
 
   if (rs.commit_time == 0)
     rs.start_time = cs_config.commit(get_time());
@@ -402,15 +404,15 @@ void consensus_state::handle_msg() {
 }
 
 void consensus_state::schedule_timeout(
-  std::chrono::system_clock::duration duration_, int64_t height, int32_t round, p2p::round_step_type step) {
+  std::chrono::system_clock::duration duration_, int64_t height, int32_t round, round_step_type step) {
   tick(std::make_shared<timeout_info>(timeout_info{duration_, height, round, step}));
 }
 
 void consensus_state::tick(timeout_info_ptr ti) {
   std::lock_guard<std::mutex> g(timeout_ticker_mtx);
   dlog(fmt::format("received tick: old_ti=[duration={} {}/{}/{}], new_ti=[duration={} {}/{}/{}]",
-    old_ti->duration_.count(), old_ti->height, old_ti->round, old_ti->step, ti->duration_.count(), ti->height,
-    ti->round, old_ti->step));
+    old_ti->duration_.count(), old_ti->height, old_ti->round, round_step_to_str(old_ti->step), ti->duration_.count(),
+    ti->height, ti->round, round_step_to_str(old_ti->step)));
 
   // ignore tickers for old height/round/step
   if (ti->height < old_ti->height) {
@@ -419,7 +421,7 @@ void consensus_state::tick(timeout_info_ptr ti) {
     if (ti->round < old_ti->round) {
       return;
     } else if (ti->round == old_ti->round) {
-      if ((old_ti->step > 0) && (ti->step <= old_ti->step)) {
+      if ((static_cast<int>(old_ti->step) > 0) && (ti->step <= old_ti->step)) {
         return;
       }
     }
@@ -440,7 +442,8 @@ void consensus_state::tick(timeout_info_ptr ti) {
 }
 
 void consensus_state::tock(timeout_info_ptr ti) {
-  ilog(fmt::format("Timed out: hrs={}/{}/{}, timeout={}", ti->height, ti->round, ti->step, ti->duration_.count()));
+  ilog(fmt::format(
+    "Timed out: hrs={}/{}/{}, timeout={}", ti->height, ti->round, round_step_to_str(ti->step), ti->duration_.count()));
   if (!wal_->write({*ti})) {
     elog("failed writing to WAL");
   }
@@ -449,28 +452,30 @@ void consensus_state::tock(timeout_info_ptr ti) {
 
 void consensus_state::handle_timeout(timeout_info_ptr ti) {
   std::lock_guard<std::mutex> g(mtx);
-  dlog(fmt::format("Received tock: hrs={}/{}/{}, timeout={}", ti->height, ti->round, ti->step, ti->duration_.count()));
+  dlog(fmt::format("Received tock: hrs={}/{}/{}, timeout={}", ti->height, ti->round, round_step_to_str(ti->step),
+    ti->duration_.count()));
 
   // timeouts must be for current height, round, step
   if ((ti->height != rs.height) || (ti->round < rs.round) || (ti->round == rs.round && ti->step < rs.step)) {
-    dlog(fmt::format("Ignoring tock because we are ahead: hrs={}/{}/{}", ti->height, ti->round, ti->step));
+    dlog(fmt::format(
+      "Ignoring tock because we are ahead: hrs={}/{}/{}", ti->height, ti->round, round_step_to_str(ti->step)));
     return;
   }
 
   switch (ti->step) {
-  case p2p::RoundStepNewHeight:
+  case round_step_type::NewHeight:
     enter_new_round(ti->height, 0);
     break;
-  case p2p::RoundStepNewRound:
+  case round_step_type::NewRound:
     enter_propose(ti->height, 0);
     break;
-  case p2p::RoundStepPropose:
+  case round_step_type::Propose:
     enter_prevote(ti->height, ti->round);
     break;
-  case p2p::RoundStepPrevoteWait:
+  case round_step_type::PrevoteWait:
     enter_precommit(ti->height, ti->round);
     break;
-  case p2p::RoundStepPrecommitWait:
+  case round_step_type::PrecommitWait:
     enter_precommit(ti->height, ti->round);
     enter_new_round(ti->height, ti->round + 1);
     break;
@@ -480,8 +485,9 @@ void consensus_state::handle_timeout(timeout_info_ptr ti) {
 }
 
 void consensus_state::enter_new_round(int64_t height, int32_t round) {
-  if ((rs.height != height) || (round < rs.round) || (rs.round == round && rs.step != p2p::RoundStepNewHeight)) {
-    dlog(fmt::format("entering new round with invalid args: hrs={}/{}/{}", rs.height, rs.round, rs.step));
+  if ((rs.height != height) || (round < rs.round) || (rs.round == round && rs.step != round_step_type::NewHeight)) {
+    dlog(fmt::format(
+      "entering new round with invalid args: hrs={}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
     return;
   }
 
@@ -489,7 +495,7 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
   if (rs.start_time > now) {
     dlog("need to set a buffer and log message here for sanity");
   }
-  dlog(fmt::format("entering new round: current={}/{}/{}", rs.height, rs.round, rs.step));
+  dlog(fmt::format("entering new round: current={}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
   // increment validators if necessary
   auto validators = rs.validators;
@@ -500,7 +506,7 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
   // Setup new round
   // we don't fire newStep for this step,
   // but we fire an event, so update the round step first
-  update_round_step(round, p2p::RoundStepNewRound);
+  update_round_step(round, round_step_type::NewRound);
   rs.validators = validators;
   if (round == 0) {
     // We've already reset these upon new height,
@@ -534,21 +540,22 @@ bool consensus_state::need_proof_block(int64_t height) {
 }
 
 void consensus_state::enter_propose(int64_t height, int32_t round) {
-  if (rs.height != height || round < rs.round || (rs.round == round && p2p::RoundStepPropose <= rs.step)) {
-    dlog(fmt::format("entering propose step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+  if (rs.height != height || round < rs.round || (rs.round == round && round_step_type::Propose <= rs.step)) {
+    dlog(fmt::format(
+      "entering propose step with invalid args: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
     return;
   }
-  dlog(fmt::format("entering propose step: {}/{}/{}", rs.height, rs.round, rs.step));
+  dlog(fmt::format("entering propose step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
   auto defer = make_scoped_exit([this, height, round]() {
-    update_round_step(round, p2p::RoundStepPropose);
+    update_round_step(round, round_step_type::Propose);
     new_step();
     if (is_proposal_complete())
       enter_prevote(height, rs.round);
   });
 
   // If we don't get the proposal and all block parts quick enough, enter_prevote
-  schedule_timeout(cs_config.propose(round), height, round, p2p::RoundStepPropose);
+  schedule_timeout(cs_config.propose(round), height, round, round_step_type::Propose);
 
   // Nothing more to do if we are not a validator
   if (!local_priv_validator.has_value()) {
@@ -670,14 +677,15 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
  * Prevote for locked_block if we are locked or proposal_blocke if valid. Otherwise vote nil.
  */
 void consensus_state::enter_prevote(int64_t height, int32_t round) {
-  if (rs.height != height || round < rs.round || (rs.round == round && p2p::RoundStepPrevote <= rs.step)) {
-    dlog(fmt::format("entering prevote step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+  if (rs.height != height || round < rs.round || (rs.round == round && round_step_type::Prevote <= rs.step)) {
+    dlog(fmt::format(
+      "entering prevote step with invalid args: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
     return;
   }
-  dlog(fmt::format("entering prevote step: {}/{}/{}", rs.height, rs.round, rs.step));
+  dlog(fmt::format("entering prevote step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
   auto defer = make_scoped_exit([this, height, round]() {
-    update_round_step(round, p2p::RoundStepPrevote);
+    update_round_step(round, round_step_type::Prevote);
     new_step();
   });
 
@@ -711,8 +719,9 @@ void consensus_state::do_prevote(int64_t height, int32_t round) {
 }
 
 void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
-  if (rs.height != height || round < rs.round || (rs.round == round && p2p::RoundStepPrevoteWait <= rs.step)) {
-    dlog(fmt::format("entering prevote_wait step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+  if (rs.height != height || round < rs.round || (rs.round == round && round_step_type::PrevoteWait <= rs.step)) {
+    dlog(fmt::format(
+      "entering prevote_wait step with invalid args: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
     return;
   }
 
@@ -721,15 +730,15 @@ void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
       fmt::format("entering prevote_wait step ({}/{}), but prevotes does not have any 2/3+ votes", height, round));
   }
 
-  dlog(fmt::format("entering prevote_wait step: {}/{}/{}", rs.height, rs.round, rs.step));
+  dlog(fmt::format("entering prevote_wait step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
   auto defer = make_scoped_exit([this, height, round]() {
-    update_round_step(round, p2p::RoundStepPrevoteWait);
+    update_round_step(round, round_step_type::PrevoteWait);
     new_step();
   });
 
   // Wait for some more prevotes
-  schedule_timeout(cs_config.prevote(round), height, round, p2p::RoundStepPrevoteWait);
+  schedule_timeout(cs_config.prevote(round), height, round, round_step_type::PrevoteWait);
 }
 
 /**
@@ -739,14 +748,15 @@ void consensus_state::enter_prevote_wait(int64_t height, int32_t round) {
  * or, precommit nil
  */
 void consensus_state::enter_precommit(int64_t height, int32_t round) {
-  if (rs.height != height || round < rs.round || (rs.round == round && p2p::RoundStepPrecommit <= rs.step)) {
-    dlog(fmt::format("entering precommit step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+  if (rs.height != height || round < rs.round || (rs.round == round && round_step_type::Precommit <= rs.step)) {
+    dlog(fmt::format(
+      "entering precommit step with invalid args: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
     return;
   }
-  dlog(fmt::format("entering precommit step: {}/{}/{}", rs.height, rs.round, rs.step));
+  dlog(fmt::format("entering precommit step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
   auto defer = make_scoped_exit([this, height, round]() {
-    update_round_step(round, p2p::RoundStepPrecommit);
+    update_round_step(round, round_step_type::Precommit);
     new_step();
   });
 
@@ -843,7 +853,7 @@ void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {
       fmt::format("entering precommit_wait step ({}/{}), but prevotes does not have any 2/3+ votes", height, round));
   }
 
-  dlog(fmt::format("entering precommit_wait step: {}/{}/{}", rs.height, rs.round, rs.step));
+  dlog(fmt::format("entering precommit_wait step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
   auto defer = make_scoped_exit([this, height, round]() {
     rs.triggered_timeout_precommit = true;
@@ -851,18 +861,19 @@ void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {
   });
 
   // wait for more precommits
-  schedule_timeout(cs_config.precommit(round), height, round, p2p::RoundStepPrecommitWait);
+  schedule_timeout(cs_config.precommit(round), height, round, round_step_type::PrecommitWait);
 }
 
 void consensus_state::enter_commit(int64_t height, int32_t round) {
-  if (rs.height != height || p2p::RoundStepCommit <= rs.step) {
-    dlog(fmt::format("entering commit step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+  if (rs.height != height || round_step_type::Commit <= rs.step) {
+    dlog(
+      fmt::format("entering commit step with invalid args: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
     return;
   }
-  dlog(fmt::format("entering commit step: {}/{}/{}", rs.height, rs.round, rs.step));
+  dlog(fmt::format("entering commit step: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
 
   auto defer = make_scoped_exit([this, height, round]() {
-    update_round_step(round, p2p::RoundStepCommit);
+    update_round_step(round, round_step_type::Commit);
     rs.commit_round = round;
     rs.commit_time = get_time();
     new_step();
@@ -917,8 +928,9 @@ void consensus_state::try_finalize_commit(int64_t height) {
 }
 
 void consensus_state::finalize_commit(int64_t height) {
-  if (rs.height != height || rs.step != p2p::RoundStepCommit) {
-    dlog(fmt::format("entering finalize commit step with invalid args: {}/{}/{}", rs.height, rs.round, rs.step));
+  if (rs.height != height || rs.step != round_step_type::Commit) {
+    dlog(fmt::format(
+      "entering finalize commit step with invalid args: {}/{}/{}", rs.height, rs.round, round_step_to_str(rs.step)));
     return;
   }
 
@@ -1073,12 +1085,12 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node
       }
     }
 
-    if (rs.step <= p2p::RoundStepPropose && is_proposal_complete()) {
+    if (rs.step <= round_step_type::Propose && is_proposal_complete()) {
       // Move to the next step
       enter_prevote(height_, rs.round);
       if (block_id_.has_value())
         enter_precommit(height_, rs.round);
-    } else if (rs.step == p2p::RoundStepCommit) {
+    } else if (rs.step == round_step_type::Commit) {
       // If we're waiting on the proposal block...
       try_finalize_commit(height_);
     }
@@ -1107,7 +1119,7 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
   // A precommit for the previous height?
   // These come in while we wait timeoutCommit
   if (vote_.height + 1 == rs.height && vote_.type == p2p::Precommit) {
-    if (rs.step != p2p::RoundStepNewHeight) {
+    if (rs.step != round_step_type::NewHeight) {
       dlog("precommit vote came in after commit timeout and has been ignored");
       return false;
     }
@@ -1208,7 +1220,7 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
     if (rs.round < vote_.round && prevotes->has_two_thirds_any()) {
       // Round-skip if there is any 2/3+ of votes ahead of us
       enter_new_round(height, vote_.round);
-    } else if (rs.round == vote_.round && p2p::RoundStepPrevote <= rs.step) {
+    } else if (rs.round == vote_.round && round_step_type::Prevote <= rs.step) {
       auto b_id = prevotes->two_thirds_majority();
       if (b_id.has_value() && (is_proposal_complete() || b_id->hash.empty()))
         enter_precommit(height, vote_.round);
