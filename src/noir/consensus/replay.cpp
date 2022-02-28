@@ -82,10 +82,7 @@ struct wal_consensus_msg_replay_handler {
     const std::shared_ptr<consensus_state>& cs_, const noir::p2p::node_id& peer_id)
     : cs(cs_), peer_id(peer_id) {}
 
-  void operator()(const std::shared_ptr<p2p::proposal_message>& msg) {
-    if (!msg.get()) {
-      return;
-    }
+  void operator()(const p2p::proposal_message& msg) {
     ilog("replay: Proposal");
   }
 
