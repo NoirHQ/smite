@@ -26,14 +26,13 @@ TEST_CASE("[common][bytes] fixed-length byte sequence", "[noir]") {
     CHECK(from_span.to_string() == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 
     // construct from byte vector
-    std::vector<uint8_t> data =
-      {0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b,
-       0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55};
+    std::vector<uint8_t> data = {0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f,
+      0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4, 0x64, 0x9b, 0x93, 0x4c, 0xa4, 0x95, 0x99, 0x1b, 0x78, 0x52, 0xb8, 0x55};
     auto from_vec = bytes32(data);
     CHECK(from_vec.to_string() == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 
     // implicit copy constructor
-    auto copied = bytes32(hash); 
+    auto copied = bytes32(hash);
     CHECK(copied.to_string() == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 
     // implicit move constructor
@@ -70,8 +69,8 @@ TEST_CASE("[common][bytes] fixed-length byte sequence", "[noir]") {
   }
 
   SECTION("base type") {
-    using sbytes32 = bytesN<32, char>;
-    using ubytes32 = bytesN<32, unsigned char>;
+    using sbytes32 = bytes_n<32, char>;
+    using ubytes32 = bytes_n<32, unsigned char>;
 
     sbytes32 shash{"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
 
