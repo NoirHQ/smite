@@ -11,6 +11,7 @@
 #include <noir/p2p/buffer_factory.h>
 #include <noir/p2p/p2p.h>
 #include <noir/p2p/queued_buffer.h>
+#include <noir/p2p/types.h>
 
 #include <appbase/application.hpp>
 #include <boost/asio/ip/host_name.hpp>
@@ -349,7 +350,7 @@ public:
 
   connection_ptr find_connection(const std::string& host) const; // must call with held mutex
 
-  void broadcast_message(std::span<const char> msg);
+  void broadcast_message(const envelope_ptr& env);
 };
 
 static p2p_impl* my_impl;
@@ -562,8 +563,8 @@ void p2p_impl::ticker() {
   });
 }
 
-void p2p_impl::broadcast_message(std::span<const char> msg) {
-  dlog(fmt::format("about to broadcast message: size={}", msg.size()));
+void p2p_impl::broadcast_message(const envelope_ptr& env) {
+  dlog(fmt::format("about to broadcast message: size={}", env->message.size()));
   // TODO: implement
 }
 

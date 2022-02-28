@@ -35,7 +35,7 @@ namespace incoming {
 
 namespace egress {
   namespace channels {
-    using broadcast_message_queue = appbase::channel_decl<struct broadcast_message_queue_tag, std::span<const char>>;
+    using broadcast_message_queue = appbase::channel_decl<struct broadcast_message_queue_tag, p2p::envelope_ptr>;
     using event_switch_message_queue = appbase::channel_decl<struct event_switch_message_queue_tag, event_info_ptr>;
   } // namespace channels
 } // namespace egress

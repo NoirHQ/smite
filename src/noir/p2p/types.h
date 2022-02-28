@@ -72,7 +72,7 @@ struct envelope {
   std::string from;
   std::string to;
   bool broadcast;
-  bytes message;
+  bytes message; ///< one of reactor_messages, serialized
 };
 using envelope_ptr = std::shared_ptr<envelope>;
 

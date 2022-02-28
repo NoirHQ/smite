@@ -20,18 +20,22 @@ struct consensus_reactor {
   std::map<std::string, std::shared_ptr<peer_state>> peers;
   bool wait_sync;
 
-  // Receive events from consensus_state
+  // Receive an event from consensus_state
   plugin_interface::egress::channels::event_switch_message_queue::channel_type::handle event_switch_mq_subscription =
     appbase::app().get_channel<plugin_interface::egress::channels::event_switch_message_queue>().subscribe(
       std::bind(&consensus_reactor::process_event, this, std::placeholders::_1));
 
-  // Received network messages from peers
+  // Receive an envelope from peers [via p2p]
   plugin_interface::incoming::channels::peer_message_queue::channel_type::handle peer_mq_subscription =
     appbase::app().get_channel<plugin_interface::incoming::channels::peer_message_queue>().subscribe(
       std::bind(&consensus_reactor::process_peer_msg, this, std::placeholders::_1));
 
+  // Send an envelope to peers [via p2p]
+  plugin_interface::egress::channels::broadcast_message_queue::channel_type& broadcast_mq_channel;
+
   consensus_reactor(std::shared_ptr<consensus_state> new_cs_state, bool new_wait_sync)
-    : cs_state(std::move(new_cs_state)), wait_sync(new_wait_sync) {}
+    : cs_state(std::move(new_cs_state)), wait_sync(new_wait_sync),
+      broadcast_mq_channel(appbase::app().get_channel<plugin_interface::egress::channels::broadcast_message_queue>()) {}
 
   static std::shared_ptr<consensus_reactor> new_consensus_reactor(
     std::shared_ptr<consensus_state>& new_cs_state, bool new_wait_sync) {
