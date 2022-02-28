@@ -76,10 +76,10 @@ bool consensus_state::catchup_replay(int64_t cs_height) {
 
 struct wal_consensus_msg_replay_handler {
   std::shared_ptr<consensus_state> cs;
-  const noir::p2p::node_id& peer_id;
+  const std::string& peer_id;
 
   explicit wal_consensus_msg_replay_handler(
-    const std::shared_ptr<consensus_state>& cs_, const noir::p2p::node_id& peer_id)
+    const std::shared_ptr<consensus_state>& cs_, const std::string& peer_id)
     : cs(cs_), peer_id(peer_id) {}
 
   void operator()(const p2p::proposal_message& msg) {

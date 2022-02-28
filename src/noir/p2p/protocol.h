@@ -220,7 +220,7 @@ using net_message =
 //   has_vote_message, vote_set_maj23_message, vote_set_bits_message>;
 struct p2p_msg_info {
   net_message msg;
-  node_id peer_id;
+  std::string peer_id;
   bool broadcast;
 };
 using p2p_msg_info_ptr = std::shared_ptr<p2p_msg_info>;
@@ -228,7 +228,7 @@ using p2p_msg_info_ptr = std::shared_ptr<p2p_msg_info>;
 using consensus_message = std::variant<proposal_message, block_part_message, vote_message>;
 struct msg_info {
   consensus_message msg;
-  node_id peer_id;
+  std::string peer_id;
 };
 using msg_info_ptr = std::shared_ptr<msg_info>;
 
