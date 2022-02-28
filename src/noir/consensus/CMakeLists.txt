@@ -1,6 +1,7 @@
 target_sources(noir
   PRIVATE
   block.cpp
+  consensus_reactor.cpp
   consensus_state.cpp
   merkle/proof.cpp
   merkle/tree.cpp
