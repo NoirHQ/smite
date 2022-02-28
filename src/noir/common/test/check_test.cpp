@@ -16,7 +16,9 @@ TEST_CASE("[check]", "[common]") {
   // (predicate == false), throws std::runtime_error with message by default
   CHECK_THROWS_WITH(check(false, "always fail"), "always fail");
   // (predicate == false), throws with the formatted string with arguments
-  CHECK_THROWS_WITH(check(false, "int: {}, string: {}, bool: {}", 255, "alice", true), "int: 255, string: alice, bool: true");
+  CHECK_THROWS_WITH(
+    check(false, "int: {}, string: {}, bool: {}", 255, "alice", true), "int: 255, string: alice, bool: true");
   // (predicate == false), throws with the exception type
-  CHECK_THROWS_MATCHES(check<std::logic_error>(false, "logic error triggered"), std::logic_error, Message("logic error triggered"));
+  CHECK_THROWS_MATCHES(
+    check<std::logic_error>(false, "logic error triggered"), std::logic_error, Message("logic error triggered"));
 }
