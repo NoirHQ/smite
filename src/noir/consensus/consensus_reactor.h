@@ -47,6 +47,8 @@ struct consensus_reactor {
     cs_state->on_start();
   }
 
+  void on_stop() {}
+
   void process_event(const plugin_interface::event_info_ptr& info) {
     switch (info->event_) {
     case EventNewRoundStep:
@@ -62,8 +64,6 @@ struct consensus_reactor {
   }
 
   void process_peer_msg(p2p::envelope_ptr info);
-
-  void on_stop() {}
 
   std::shared_ptr<peer_state> get_peer_state(std::string peer_id) {
     std::lock_guard<std::mutex> g(mtx);
@@ -93,15 +93,8 @@ struct consensus_reactor {
       rs.height, rs.round, rs.step, rs.start_time /* TODO: find elapsed seconds*/, rs.last_commit->round};
   }
 
-  void sendNewRoundStepMessage() {}
-
-  void gossipVotesForHeight() {}
-
-  void handleStateMessage() {}
-
-  void handleVoteMessage() {}
-
-  void handleMessage() {}
+  void transmit_new_envelope(std::string from, std::string to, const p2p::reactor_message& msg, bool broadcast = false,
+    int priority = appbase::priority::medium);
 };
 
 } // namespace noir::consensus

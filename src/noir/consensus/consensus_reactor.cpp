@@ -137,4 +137,20 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
     msg);
 }
 
+void consensus_reactor::transmit_new_envelope(
+  std::string from, std::string to, const p2p::reactor_message& msg, bool broadcast, int priority) {
+  dlog(fmt::format("transmitting a new envelope: to={}, msg_type={}, broadcast={}", to, msg.index(), broadcast));
+  auto new_env = std::make_shared<p2p::envelope>();
+  new_env->from = from;
+  new_env->to = to;
+  new_env->broadcast = broadcast;
+
+  const uint32_t payload_size = noir::core::codec::encode_size(msg);
+  new_env->message.resize(payload_size);
+  noir::core::codec::datastream<char> ds(new_env->message.data(), payload_size);
+  ds << msg;
+
+  xmt_mq_channel.publish(priority, new_env);
+}
+
 } // namespace noir::consensus
