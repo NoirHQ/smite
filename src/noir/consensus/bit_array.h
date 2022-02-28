@@ -11,7 +11,7 @@
 
 namespace noir::consensus {
 
-struct bit_array {
+struct bit_array : std::enable_shared_from_this<bit_array> {
   int bits{};
   std::vector<bool> elem;
   std::mutex mtx;
@@ -51,6 +51,7 @@ struct bit_array {
     std::lock_guard<std::mutex> g(mtx);
     std::lock_guard<std::mutex> g2(o->mtx);
     elem = o->elem;
+    return shared_from_this();
   }
 
   std::shared_ptr<bit_array> sub(std::shared_ptr<bit_array> o) {
