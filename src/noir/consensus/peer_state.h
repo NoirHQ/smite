@@ -199,6 +199,8 @@ public:
           return prs.prevotes;
         case p2p::Precommit:
           return prs.precommits;
+        default:
+          break;
         }
       }
 
@@ -208,6 +210,8 @@ public:
           return {};
         case p2p::Precommit:
           return prs.catchup_commit;
+        default:
+          break;
         }
       }
 
@@ -217,6 +221,8 @@ public:
           return prs.proposal_pol;
         case p2p::Precommit:
           return {};
+        default:
+          break;
         }
       }
 
@@ -229,6 +235,8 @@ public:
           return {};
         case p2p::Precommit:
           return prs.last_commit;
+        default:
+          break;
         }
       }
       return {};
