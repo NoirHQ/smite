@@ -29,7 +29,7 @@ TEST_CASE("[api] send_raw_tx", "[params]") {
     CHECK_THROWS_WITH(a.send_raw_tx(params), "invalid json request");
     vector<string> v;
     params = fc::variant(v);
-    CHECK_THROWS_WITH(a.send_raw_tx(params), "invalid parameters: not enough params to decode");
+    CHECK_THROWS_WITH(a.send_raw_tx(params), "missing value for required argument 0");
     v = {"0x1", "0x2"};
     params = fc::variant(v);
     CHECK_THROWS_WITH(a.send_raw_tx(params), "too many arguments, want at most 1");
