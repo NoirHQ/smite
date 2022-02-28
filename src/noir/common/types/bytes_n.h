@@ -156,7 +156,7 @@ public:
   }
 
   template<Byte U = T, size_t S = std::dynamic_extent>
-  constexpr std::span<U, S>  to_span() {
+  constexpr std::span<U, S> to_span() {
     return std::span((U*)data_.data(), data_.size());
   }
 
