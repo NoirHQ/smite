@@ -7,12 +7,13 @@
 #include <noir/common/for_each.h>
 #include <noir/common/types/bytes.h>
 
+#include <memory>
 #include <mutex>
 #include <vector>
 
 namespace noir::consensus {
 
-struct bit_array : std::enable_shared_from_this<bit_array> {
+struct bit_array : public std::enable_shared_from_this<bit_array> {
   int bits{};
   std::vector<bool> elem;
   std::mutex mtx;

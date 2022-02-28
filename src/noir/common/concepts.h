@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <cstddef>
 #include <type_traits>
 
 namespace noir {
