@@ -322,7 +322,7 @@ void consensus_state::update_to_state(state& state_) {
 
   if (state_.last_block_height == 0) {
     // very first commit should be empty
-    rs.last_commit = nullptr;
+    rs.last_commit = std::make_shared<nil_vote_set>();
   } else if (rs.commit_round > -1 && rs.votes != nullptr) {
     // Use rs.votes
     if (!rs.votes->precommits(rs.commit_round)->has_two_thirds_majority()) {
