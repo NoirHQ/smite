@@ -217,10 +217,9 @@ struct go_away_message {
 using net_message = std::variant<handshake_message, go_away_message, time_message, envelope>;
 
 /// \brief messages that will be delivered to consensus_reactor
-using reactor_message = std::variant<proposal_message, block_part_message, vote_message>;
-// using reactor_message = std::variant<new_round_step_message,
-//   new_valid_block_message, proposal_message, proposal_pol_message, block_part_message, vote_message,
-//   has_vote_message, vote_set_maj23_message, vote_set_bits_message>;
+using reactor_message =
+  std::variant<new_round_step_message, new_valid_block_message, proposal_message, proposal_pol_message,
+    block_part_message, vote_message, has_vote_message, vote_set_maj23_message, vote_set_bits_message>;
 
 /// \brief messages that will be passed from consensus_state to consensus_reactor
 using internal_message = std::variant<proposal_message, block_part_message, vote_message>;
