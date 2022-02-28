@@ -11,11 +11,11 @@
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/merkle/proof.h>
 #include <noir/consensus/tx.h>
+#include <noir/crypto/rand.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 #include <fmt/format.h>
 
-#include <fc/crypto/rand.hpp>
 #include <utility>
 
 namespace noir::consensus {

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <noir/crypto/rand.h>
 #include <noir/db/rocks_session.h>
 #include <noir/db/session.h>
 
@@ -37,6 +38,6 @@ inline noir::db::session::session<noir::db::session::rocksdb_t> make_session(
 
 inline noir::bytes gen_random_bytes(size_t num) {
   noir::bytes ret(num);
-  fc::rand_pseudo_bytes(ret.data(), ret.size());
+  noir::crypto::rand_bytes(ret);
   return ret;
 }
