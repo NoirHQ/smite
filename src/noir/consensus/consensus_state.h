@@ -168,12 +168,40 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   std::string wal_head_name = "wal";
 
   std::unique_ptr<wal> wal_;
+
+  /// \brief load configured wal file
+  /// \return true on success, false otherwise
   bool load_wal_file();
-  bool do_wal_catchup = false; // determines if we even try to do the catchup
-  bool replay_mode = false; // so we don't log signing errors during replay
+
+  bool do_wal_catchup = false; ///< determines if we even try to do the catchup
+  bool replay_mode = false; ///< so we don't log signing errors during replay
+
+  /// \brief Replay only those messages since the last block. `timeoutRoutine` should run concurrently to read off
+  /// tickChan.
+  /// \param[in] cs_height
+  /// \return true on success, false otherwise
   bool catchup_replay(int64_t cs_height);
+
+  /// \brief Functionality to replay blocks and messages on recovery from a crash.
+  /// There are two general failure scenarios:
+  ///   1. failure during consensus
+  ///   2. failure while applying the block
+  ///     The former is handled by the WAL, the latter by the proxyApp Handshake on
+  ///     restart, which ultimately hands off the work to the WAL.
+  ///
+  /// //-----------------------------------------
+  /// // 1. Recover from failure during consensus
+  /// // (by replaying messages from the WAL)
+  /// //-----------------------------------------
+  /// Unmarshal and apply a single message to the consensus state as if it were
+  /// received in receiveRoutine.  Lines that start with "#" are ignored.
+  /// \note receiveRoutine should not be running.
+  /// \param[in] msg
+  /// \return true on success, false otherwise
   bool read_replay_message(const timed_wal_message& msg);
 
+  /// \brief get round_state::event_data from round_state
+  /// \return round_state::event_data object
   round_state::event_data get_round_state_event();
 
   //  // for tests where we want to limit the number of transitions the state makes
@@ -204,6 +232,10 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //  onStopCh chan *cstypes.RoundState
 };
 
+/// \brief repair wal file until first error is encountered
+/// \param[in] src path to corrupt file
+/// \param[in] dst path to new wal file
+/// \return true on success, false otherwise
 bool repair_wal_file(const std::string& src, const std::string& dst);
 
 } // namespace noir::consensus
