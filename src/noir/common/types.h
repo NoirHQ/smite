@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/types/bytes.h>
+#include <noir/common/types/bytes_n.h>
 #include <noir/common/types/inttypes.h>
 #include <noir/common/types/string.h>
 #include <noir/common/types/varint.h>
