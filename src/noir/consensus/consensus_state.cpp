@@ -92,9 +92,9 @@ int64_t consensus_state::get_last_height() {
   return rs.height - 1;
 }
 
-std::unique_ptr<round_state> consensus_state::get_round_state() {
+std::shared_ptr<round_state> consensus_state::get_round_state() {
   std::lock_guard<std::mutex> g(mtx);
-  auto rs_copy = std::make_unique<round_state>();
+  auto rs_copy = std::make_shared<round_state>();
   *rs_copy = rs;
   return rs_copy;
 }

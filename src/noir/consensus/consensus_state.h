@@ -32,7 +32,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   state get_state();
   int64_t get_last_height();
-  std::unique_ptr<round_state> get_round_state();
+  std::shared_ptr<round_state> get_round_state();
   void set_priv_validator(const priv_validator& priv);
   void update_priv_validator_pub_key();
   void reconstruct_last_commit(state& state_);

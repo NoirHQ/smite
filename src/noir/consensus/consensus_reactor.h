@@ -16,9 +16,13 @@ struct consensus_reactor {
 
   std::shared_ptr<consensus_state> cs_state;
 
-  std::mutex mtx;
   std::map<std::string, std::shared_ptr<peer_state>> peers;
   bool wait_sync;
+
+  std::mutex mtx;
+
+  uint16_t thread_pool_size = 5;
+  std::optional<named_thread_pool> thread_pool;
 
   // Receive an event from consensus_state
   plugin_interface::egress::channels::event_switch_message_queue::channel_type::handle event_switch_mq_subscription =
@@ -40,7 +44,9 @@ struct consensus_reactor {
 
   consensus_reactor(std::shared_ptr<consensus_state> new_cs_state, bool new_wait_sync)
     : cs_state(std::move(new_cs_state)), wait_sync(new_wait_sync),
-      xmt_mq_channel(appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
+      xmt_mq_channel(appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {
+    thread_pool.emplace("cs_reactor", thread_pool_size);
+  }
 
   static std::shared_ptr<consensus_reactor> new_consensus_reactor(
     std::shared_ptr<consensus_state>& new_cs_state, bool new_wait_sync) {
@@ -71,6 +77,11 @@ struct consensus_reactor {
   void process_peer_update(const std::string& peer_id, p2p::peer_status status);
 
   void process_peer_msg(p2p::envelope_ptr info);
+
+  void gossip_data_routine(std::shared_ptr<peer_state> ps);
+
+  void gossip_data_for_catchup(const std::shared_ptr<round_state>& rs, const std::shared_ptr<peer_round_state>& prs,
+    const std::shared_ptr<peer_state>& ps);
 
   std::shared_ptr<peer_state> get_peer_state(std::string peer_id) {
     std::lock_guard<std::mutex> g(mtx);
