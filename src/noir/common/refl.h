@@ -83,6 +83,13 @@ void for_each_field(F&& f, const T& v) {
 
 } // namespace noir::refl
 
+namespace noir {
+
+template<typename T>
+concept reflection = refl::has_refl_v<T>;
+
+} // namespace noir
+
 #define NOIR_REFLECT_IMPL(r, TYPE, INDEX, FIELD) \
   template<> \
   struct field<INDEX, TYPE> { \
