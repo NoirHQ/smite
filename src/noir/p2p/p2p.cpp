@@ -564,8 +564,8 @@ void p2p_impl::ticker() {
 }
 
 void p2p_impl::transmit_message(const envelope_ptr& env) {
-  dlog(
-    fmt::format("about to transmit message: to='{}' broadcast={} size={}", env->to, env->broadcast, env->message.size()));
+  // dlog(fmt::format("about to transmit message: to='{}' broadcast={} size={}", env->to, env->broadcast,
+  // env->message.size()));
   if (env->broadcast) {
     for_each_connection([env](auto& c) {
       if (c->socket_is_open()) {
@@ -1210,6 +1210,9 @@ void connection::start_read_message() {
           if (close_connection) {
             elog("Closing connection to: ${p}", ("p", conn->peer_name()));
             conn->close();
+            ///< notify consensus of peer down
+            appbase::app().get_method<plugin_interface::methods::update_peer_status>()(
+              to_hex(conn->conn_node_id), peer_status::down);
           }
         }));
   } catch (...) {
@@ -1446,6 +1449,9 @@ void connection::handle_message(const handshake_message& msg) {
   std::unique_lock<std::mutex> g_conn(conn_mtx);
   last_handshake_recv = msg;
   g_conn.unlock();
+
+  ///< notify consensus of peer up
+  appbase::app().get_method<plugin_interface::methods::update_peer_status>()(to_hex(conn_node_id), peer_status::up);
 }
 
 void connection::handle_message(const go_away_message& msg) {

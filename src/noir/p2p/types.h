@@ -68,6 +68,28 @@ constexpr auto round_step_to_str(round_step_type step) {
   }
 }
 
+enum class peer_status {
+  up, // Connected and ready
+  down, // Disconnected
+  good, // Peer observed as good
+  bad // Peer observed as bad
+};
+
+constexpr auto peer_status_to_str(peer_status status) {
+  switch (status) {
+  case peer_status::up:
+    return "Up";
+  case peer_status::down:
+    return "Down";
+  case peer_status::good:
+    return "Good";
+  case peer_status::bad:
+    return "Bad";
+  default:
+    return "Unknown";
+  }
+}
+
 struct envelope {
   std::string from;
   std::string to;

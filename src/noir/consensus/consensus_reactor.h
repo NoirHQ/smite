@@ -33,6 +33,11 @@ struct consensus_reactor {
   // Send an envelope to peers [via p2p]
   plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel;
 
+  // Methods
+  plugin_interface::methods::update_peer_status::method_type::handle update_peer_status_provider =
+    appbase::app().get_method<plugin_interface::methods::update_peer_status>().register_provider(
+      [this](const std::string& peer_id, p2p::peer_status status) -> void { process_peer_update(peer_id, status); });
+
   consensus_reactor(std::shared_ptr<consensus_state> new_cs_state, bool new_wait_sync)
     : cs_state(std::move(new_cs_state)), wait_sync(new_wait_sync),
       xmt_mq_channel(appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
@@ -62,6 +67,8 @@ struct consensus_reactor {
       break;
     }
   }
+
+  void process_peer_update(const std::string& peer_id, p2p::peer_status status);
 
   void process_peer_msg(p2p::envelope_ptr info);
 
