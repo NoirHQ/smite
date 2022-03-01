@@ -257,9 +257,9 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
 template<typename Stream, foreachable T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   auto size = 0ull;
-  for_each_field(v, [&](const auto& val) { size += encode_size(val); });
+  for_each_field([&](const auto& val) { size += encode_size(val); }, v);
   detail::encode_prefix(ds, size, 0xc0);
-  for_each_field(v, [&](const auto& val) { ds << val; });
+  for_each_field([&](const auto& val) { ds << val; }, v);
   return ds;
 }
 
@@ -268,12 +268,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   check(prefix >= 0xc0, "not matched prefix type");
   auto size = detail::decode_prefix(ds, prefix, 0xc0);
-  for_each_field(v, [&](auto& val) {
-    auto start = ds.tellp();
-    ds >> val;
-    size -= (ds.tellp() - start);
-    check(size >= 0, "insufficient bytes provided");
-  });
+  for_each_field(
+    [&](auto& val) {
+      auto start = ds.tellp();
+      ds >> val;
+      size -= (ds.tellp() - start);
+      check(size >= 0, "insufficient bytes provided");
+    },
+    v);
   return ds;
 }
 

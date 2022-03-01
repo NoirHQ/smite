@@ -227,13 +227,13 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::tuple<Ts...>& v) {
 // Structures
 template<typename Stream, foreachable T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
-  for_each_field(v, [&](const auto& val) { ds << val; });
+  for_each_field([&](const auto& val) { ds << val; }, v);
   return ds;
 }
 
 template<typename Stream, foreachable T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
-  for_each_field(v, [&](auto& val) { ds >> val; });
+  for_each_field([&](auto& val) { ds >> val; }, v);
   return ds;
 }
 

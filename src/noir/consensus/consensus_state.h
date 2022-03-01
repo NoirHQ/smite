@@ -240,4 +240,4 @@ bool repair_wal_file(const std::string& src, const std::string& dst);
 
 } // namespace noir::consensus
 
-NOIR_FOR_EACH_FIELD(noir::consensus::consensus_state, local_state, n_steps)
+NOIR_REFLECT(noir::consensus::consensus_state, local_state, n_steps)
