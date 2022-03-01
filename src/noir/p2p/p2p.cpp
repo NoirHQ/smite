@@ -575,6 +575,13 @@ void p2p_impl::transmit_message(const envelope_ptr& env) {
     });
   } else {
     // Unicast
+    for_each_connection([env](auto& c) {
+      if (c->socket_is_open() && (to_hex(c->conn_node_id) == env->to)) {
+        dlog(fmt::format("unicast to {}", to_hex(env->to)));
+        c->strand.post([c, env]() { c->enqueue(*env); });
+      }
+      return true;
+    });
   }
 }
 
@@ -812,7 +819,8 @@ struct msg_handler {
     c->handle_message(msg);
   }
 
-  void operator()(const envelope& msg) const {
+  void operator()(envelope& msg) {
+    msg.from = to_hex(c->conn_node_id); // manually set from, overriding original
     dlog(fmt::format(" <<< envelope : from='{}' size={}", msg.from, msg.message.size()));
     if (!my_impl->abci_plug) {
       dlog("abci is not connected; discard envelope");

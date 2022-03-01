@@ -15,15 +15,17 @@ namespace noir::consensus {
 struct peer_state {
   std::string peer_id;
 
-  std::mutex mtx;
   bool is_running{};
   peer_round_state prs;
+  std::mutex mtx;
 
   static std::shared_ptr<peer_state> new_peer_state(const std::string& peer_id_) {
     auto ret = std::make_shared<peer_state>();
     ret->peer_id = peer_id_;
-    peer_round_state prs_;
-    ret->prs = prs_;
+    ret->prs.round = -1;
+    ret->prs.proposal_pol_round = -1;
+    ret->prs.last_commit_round = -1;
+    ret->prs.catchup_commit_round = -1;
     return ret;
   }
 

@@ -18,11 +18,36 @@ overload(Ts...) -> overload<Ts...>;
 
 void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::peer_status status) {
   dlog(fmt::format("peer update: peer_id={}, status={}", peer_id, p2p::peer_status_to_str(status)));
+  std::lock_guard<std::mutex> g(mtx);
   switch (status) {
-  case p2p::peer_status::up:
+  case p2p::peer_status::up: {
+    auto it = peers.find(peer_id);
+    if (it == peers.end()) {
+      auto ps = peer_state::new_peer_state(peer_id);
+      peers[peer_id] = ps;
+      it = peers.find(peer_id);
+    }
+    if (!it->second->is_running) {
+      it->second->is_running = true;
+
+      // Start threads for this peer
+      // gossip(it->second) // TODO
+
+      if (!wait_sync) {
+        // send_new_round_step_message(peer_id); // TODO
+      }
+    }
     break;
-  case p2p::peer_status::down:
+  }
+  case p2p::peer_status::down: {
+    auto it = peers.find(peer_id);
+    if (it != peers.end() && it->second->is_running) {
+      // TODO: stop all threads
+
+      peers.erase(it);
+    }
     break;
+  }
   default:
     break;
   }
