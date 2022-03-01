@@ -83,4 +83,4 @@ struct app_connection {
 
 } // namespace noir::consensus
 
-NOIR_FOR_EACH_FIELD(noir::consensus::app_connection, mtx, application);
+NOIR_REFLECT(noir::consensus::app_connection, mtx, application);

@@ -54,8 +54,6 @@ struct nibble {
   uint8_t value;
 };
 
-NOIR_FOR_EACH_FIELD_EMBED(nibble, value);
-
 struct nibble_path {
   nibble_path() = default;
   nibble_path(nibble_path&&) = default;
@@ -267,3 +265,5 @@ struct hash<jmt::nibble_path> {
 };
 
 } // namespace noir
+
+NOIR_REFLECT(noir::jmt::nibble, value);
