@@ -564,8 +564,8 @@ void p2p_impl::ticker() {
 }
 
 void p2p_impl::transmit_message(const envelope_ptr& env) {
-  dlog(fmt::format(
-    "about to transmit message: to={} broadcast={} size={}", env->to, env->broadcast, env->message.size()));
+  dlog(
+    fmt::format("about to transmit message: to='{}' broadcast={} size={}", env->to, env->broadcast, env->message.size()));
   if (env->broadcast) {
     for_each_connection([env](auto& c) {
       if (c->socket_is_open()) {
@@ -813,7 +813,7 @@ struct msg_handler {
   }
 
   void operator()(const envelope& msg) const {
-    dlog(fmt::format(" <<< envelope : from={} size={}", msg.from, msg.message.size()));
+    dlog(fmt::format(" <<< envelope : from='{}' size={}", msg.from, msg.message.size()));
     if (!my_impl->abci_plug) {
       dlog("abci is not connected; discard envelope");
       return;

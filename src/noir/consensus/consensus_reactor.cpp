@@ -29,10 +29,10 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
   p2p::reactor_message msg;
   ds >> msg;
 
-  dlog(fmt::format("received message={} from {}", msg.index(), from));
+  dlog(fmt::format("received message={} from='{}'", msg.index(), from));
   auto ps = get_peer_state(from);
   if (!ps) {
-    wlog(fmt::format("unable to find peer_state for from={}", from));
+    wlog(fmt::format("unable to find peer_state for from='{}'", from));
     return;
   }
 
