@@ -16,7 +16,9 @@ else()
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/XKCP)
 endif()
 
-add_cached_library(XKCP ${XKCP_ARCH}/libXKCP.a
-  INTERFACE
-    ${XKCP_ARCH}/libXKCP.a.headers)
-add_dependencies(XKCP ${XKCP_ARCH}/libXKCP.a)
+add_custom_target(XKCP_build DEPENDS ${XKCP_ARCH}/libXKCP.a)
+
+add_library(XKCP STATIC IMPORTED GLOBAL)
+add_dependencies(XKCP XKCP_build)
+set_target_properties(XKCP PROPERTIES IMPORTED_LOCATION ${XKCP_ARCH}/libXKCP.a)
+target_include_directories(XKCP INTERFACE ${XKCP_ARCH}/libXKCP.a.headers)
