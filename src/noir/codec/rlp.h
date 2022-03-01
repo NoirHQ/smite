@@ -147,8 +147,8 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
   return ds;
 }
 
-template<typename Stream, Byte T>
-datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T> v) {
+template<typename Stream, Byte T, size_t N>
+datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T, N> v) {
   auto size = v.size();
   if (size == 1 && !(v[0] & 0x80)) {
     ds.put(v[0]);
@@ -159,8 +159,8 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T> v) {
   return ds;
 }
 
-template<typename Stream, Byte T>
-datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T> v) {
+template<typename Stream, Byte T, size_t N>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
   auto prefix = static_cast<unsigned char>(ds.get());
   if (prefix < 0x80) {
     check(v.size() == 1, "not matched length");
