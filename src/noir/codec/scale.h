@@ -82,7 +82,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const unsigned_int& v) {
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, unsigned_int& v) {
-  char tmp = ds.peek();
+  uint8_t tmp = ds.peek();
   switch (tmp & 0b11) {
   case 0b00: {
     uint8_t val = 0;
@@ -226,14 +226,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T (&v)[N]) {
   return ds;
 }
 
-template<typename Stream, Byte T>
-datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T> v) {
+template<typename Stream, Byte T, size_t N>
+datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T, N> v) {
   ds.write(v.data(), v.size());
   return ds;
 }
 
-template<typename Stream, Byte T>
-datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T> v) {
+template<typename Stream, Byte T, size_t N>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
   ds.read(v.data(), v.size());
   return ds;
 }
@@ -250,12 +250,11 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
-  std::vector<char> tmp;
-  ds >> tmp;
-  if (tmp.size()) {
-    v = std::string(tmp.data(), tmp.data() + tmp.size());
-  } else {
-    v = {};
+  unsigned_int size;
+  ds >> size;
+  v.resize(size);
+  if (size) {
+    ds.read(v.data(), v.size());
   }
   return ds;
 }
@@ -290,7 +289,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
 template<typename Stream, typename... Ts>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::variant<Ts...>& v) {
   check(v.index() <= 0xff, "no more than 256 variants are supported");
-  char index = v.index();
+  uint8_t index = v.index();
   ds << index;
   std::visit([&](auto& val) { ds << val; }, v);
   return ds;
@@ -315,7 +314,7 @@ namespace detail {
 
 template<typename Stream, typename... Ts>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& v) {
-  char index = 0;
+  uint8_t index = 0;
   ds >> index;
   detail::decode<0>(ds, v, index);
   return ds;
