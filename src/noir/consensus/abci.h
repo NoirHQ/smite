@@ -19,7 +19,7 @@ public:
   void set_program_options(CLI::App& app_config) {
     auto abci_options = app_config.add_section("abci",
       "###############################################\n"
-      "###        ABCI Configuration Options        ###\n"
+      "###        ABCI Configuration Options       ###\n"
       "###############################################");
     abci_options->add_option("--do-not-start-node", "Do not start node")->default_val(false);
   }
