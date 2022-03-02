@@ -3,18 +3,12 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/common/overloaded.h>
 #include <noir/consensus/consensus_reactor.h>
 
 #include <noir/core/types.h>
 
 namespace noir::consensus {
-
-template<class... Ts>
-struct overload : Ts... {
-  using Ts::operator()...;
-};
-template<class... Ts>
-overload(Ts...) -> overload<Ts...>;
 
 void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::peer_status status) {
   dlog(fmt::format("peer update: peer_id={}, status={}", peer_id, p2p::peer_status_to_str(status)));
@@ -73,7 +67,7 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
     return;
   }
 
-  std::visit(overload{///
+  std::visit(overloaded{///
                /***************************************************************************************************/
                ///< state messages: new_round_step, new_valid_block, has_vote, vote_set_maj23
                [this, &ps](p2p::new_round_step_message& msg) {
