@@ -3,7 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/common/cli_helper.h>
+#include <noir/common/helper/cli.h>
 #include <eth/rpc/api.h>
 #include <eth/rpc/rpc.h>
 

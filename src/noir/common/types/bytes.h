@@ -4,273 +4,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/check.h>
 #include <noir/common/concepts.h>
-#include <noir/common/for_each.h>
-#include <noir/common/hex.h>
 #include <noir/common/types/string.h>
-#include <fmt/format.h>
-#include <bitset>
-#include <numeric>
-#include <span>
+#include <vector>
 
 namespace noir {
 
-/// \brief an alias name for one byte
+/// \brief alias name of default byte type
 /// \ingroup common
 using byte_type = char;
 
-/// \brief an alias name for variable-length byte sequence
+/// \brief alias name for variable-length byte sequence
 /// \ingroup common
-using bytes = std::vector<byte_type>;
+template<Byte T>
+using bytes_vec = std::vector<T>;
 
-template<>
-std::string to_string(const bytes& v);
-
-/// \brief thin wrapper for fixed-length byte sequence
+/// \brief convenient name for variable-length sequence of default byte type
 /// \ingroup common
-template<size_t N, Byte T = byte_type>
-struct bytesN {
-  std::array<T, N> data_;
+using bytes = bytes_vec<byte_type>;
 
-  using underlying_type = decltype(data_);
-  using value_type = typename underlying_type::value_type;
-  using size_type = typename underlying_type::size_type;
-  using difference_type = typename underlying_type::difference_type;
-  using reference = typename underlying_type::reference;
-  using const_reference = typename underlying_type::const_reference;
-  using pointer = typename underlying_type::pointer;
-  using const_pointer = typename underlying_type::const_pointer;
-  using iterator = typename underlying_type::iterator;
-  using const_iterator = typename underlying_type::const_iterator;
-  using reverse_iterator = typename underlying_type::reverse_iterator;
-  using const_reverse_iterator = typename underlying_type::const_reverse_iterator;
+/// \brief stringify bytes
+/// \ingroup common
+std::string to_string(const bytes_vec<char>& v);
 
-  constexpr bytesN() = default;
-
-  /// \brief constructs bytesN from a hex string
-  constexpr bytesN(std::string_view s, bool canonical = true) {
-    auto size = from_hex(s, data_);
-    check(!canonical || size == N, fmt::format("invalid bytes length: expected({}), actual({})", N, size));
-    if (size < N) {
-      std::fill(data_.begin() + size, data_.end(), 0);
-    }
-  }
-
-  /// \brief constructs bytesN from a byte sequence
-  template<Byte U, size_t S = std::dynamic_extent>
-  constexpr bytesN(std::span<U, S> bytes, bool canonical = true) {
-    auto size = bytes.size();
-    check(!canonical || size == N, fmt::format("invalid bytes length: expected({}), actual({})", N, size));
-    std::copy(bytes.begin(), bytes.end(), data_.begin());
-    if (size < N) {
-      std::fill(data_.begin() + size, data_.end(), 0);
-    }
-  }
-
-  /// \brief constructs bytesN from a pointer to byte sequence and its size
-  // XXX: trailing "//" in the next line forbids clang-format from erasing line break.
-  [[deprecated("ambiguous, consider using bytesN(std::string_view) or bytesN(std::span)")]] //
-  constexpr bytesN(const char* data, size_t size, bool canonical = true)
-    : bytesN(std::span{data, size}, canonical) {}
-
-  /// \brief constructs bytesN from a byte vector
-  template<Byte U>
-  constexpr bytesN(const std::vector<U>& bytes, bool canonical = true)
-    : bytesN(std::span{(T*)bytes.data(), bytes.size()}, canonical) {}
-
-  constexpr reference at(size_type pos) {
-    return data_.at(pos);
-  }
-  constexpr const_reference at(size_type pos) const {
-    return data_.at(pos);
-  }
-  constexpr reference operator[](size_type pos) {
-    return data_[pos];
-  }
-  constexpr const_reference operator[](size_type pos) const {
-    return data_[pos];
-  }
-  constexpr reference front() {
-    return data_.front();
-  }
-  constexpr const_reference front() const {
-    return data_.front();
-  }
-  constexpr reference back() {
-    return data_.back();
-  }
-  constexpr const_reference back() const {
-    return data_.back();
-  }
-
-  constexpr T* data() noexcept {
-    return data_.data();
-  }
-  constexpr const T* data() const noexcept {
-    return data_.data();
-  }
-  constexpr const size_type size() const noexcept {
-    return data_.size();
-  }
-  [[nodiscard]] bool empty() const noexcept {
-    if constexpr (!N) {
-      return true;
-    }
-    for (auto i = 0; i < size(); ++i) {
-      if (data_[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  constexpr iterator begin() noexcept {
-    return data_.begin();
-  }
-  constexpr const_iterator begin() const noexcept {
-    return data_.begin();
-  }
-  constexpr iterator end() noexcept {
-    return data_.end();
-  }
-  constexpr const_iterator end() const noexcept {
-    return data_.end();
-  }
-
-  constexpr reverse_iterator rbegin() noexcept {
-    return data_.rbegin();
-  }
-  constexpr const_reverse_iterator rbegin() const noexcept {
-    return data_.rbegin();
-  }
-  constexpr reverse_iterator rend() noexcept {
-    return data_.rend();
-  }
-  constexpr const_reverse_iterator rend() const noexcept {
-    return data_.rend();
-  }
-
-  std::string to_string() const {
-    return to_hex({(const char*)data_.data(), data_.size()});
-  }
-
-  bytes to_bytes() const {
-    return bytes{data_.begin(), data_.end()};
-  }
-
-  template<Byte U = T, size_t S = std::dynamic_extent>
-  constexpr std::span<U, S> to_span() {
-    return {(U*)data_.data(), data_.size()};
-  }
-
-  template<Byte U = T, size_t S = std::dynamic_extent>
-  constexpr std::span<const U, S> to_span() const {
-    return {(const U*)data_.data(), data_.size()};
-  }
-
-  constexpr std::bitset<8 * N> to_bitset() const {
-    std::bitset<8 * N> out;
-    return std::accumulate(data_.begin(), data_.end(), out, [](auto out, uint8_t v) {
-      decltype(out) current(v);
-      return (std::move(out) << 8) | current;
-    });
-  }
-
-  void clear() {
-    std::fill(data_.begin(), data_.end(), 0);
-  }
-};
-
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator==(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  if constexpr (N1 != N2)
-    return false;
-  return !std::memcmp(a.data_.data(), b.data_.data(), N1);
-}
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator!=(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  if constexpr (N1 != N2)
-    return true;
-  return std::memcmp(a.data_.data(), b.data_.data(), N1);
-}
-
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator<(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  auto cmp = std::memcmp(a.data_.data(), b.data_.data(), std::min(N1, N2));
-  if (cmp < 0) {
-    return true;
-  } else if (!cmp) {
-    return N1 < N2;
-  }
-  return false;
-}
-
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator<=(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  auto cmp = std::memcmp(a.data_.data(), b.data_.data(), std::min(N1, N2));
-  if (cmp < 0) {
-    return true;
-  } else if (!cmp) {
-    return N1 <= N2;
-  }
-  return false;
-}
-
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator>(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  auto cmp = std::memcmp(a.data_.data(), b.data_.data(), std::min(N1, N2));
-  if (cmp > 0) {
-    return true;
-  } else if (!cmp) {
-    return N1 > N2;
-  }
-  return false;
-}
-template<size_t N1, size_t N2, Byte T1, Byte T2>
-inline bool operator>=(const bytesN<N1, T1>& a, const bytesN<N2, T2>& b) {
-  auto cmp = std::memcmp(a.data_.data(), b.data_.data(), std::min(N1, N2));
-  if (cmp > 0) {
-    return true;
-  } else if (!cmp) {
-    return N1 >= N2;
-  }
-  return false;
-}
-
-template<typename DataStream, size_t N, Byte U = byte_type>
-DataStream& operator<<(DataStream& ds, const bytesN<N, U>& v) {
-  ds << v.to_span();
-  return ds;
-}
-
-template<typename DataStream, size_t N, Byte U = byte_type>
-DataStream& operator>>(DataStream& ds, bytesN<N, U>& v) {
-  ds >> v.to_span();
-  return ds;
-}
-
-template<size_t N, Byte U = byte_type>
-std::ostream& operator<<(std::ostream& ds, const bytesN<N, U>& v) {
-  ds.write(v.data(), v.size());
-  return ds;
-}
-
-template<size_t N, Byte U = byte_type>
-std::istream& operator>>(std::istream& ds, bytesN<N, U>& v) {
-  ds.read(v.data(), v.size());
-  return ds;
-}
-
-using bytes20 = bytesN<20>;
-using bytes32 = bytesN<32>;
-using bytes256 = bytesN<256>;
-
-template<>
-struct is_foreachable<bytes20> : std::false_type {};
-template<>
-struct is_foreachable<bytes32> : std::false_type {};
-template<>
-struct is_foreachable<bytes256> : std::false_type {};
+/// \brief stringify bytes
+/// \ingroup common
+std::string to_string(const bytes_vec<unsigned char>& v);
 
 } // namespace noir

@@ -4,11 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <nonstd/scope.hpp>
+#include <noir/common/types/hash.h>
+#include <unordered_map>
 
 namespace noir {
 
-using ::nonstd::make_scope_exit;
-using ::nonstd::scope_exit;
+template<typename K, typename V>
+using unordered_map = std::unordered_map<K, V, noir::hash<K>>;
 
 } // namespace noir

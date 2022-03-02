@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/for_each.h>
 #include <noir/consensus/merkle/tree.h>
 #include <optional>
 
@@ -68,4 +69,4 @@ std::pair<bytes, std::vector<std::shared_ptr<proof>>> proofs_from_bytes_list(con
 
 } // namespace noir::consensus::merkle
 
-NOIR_FOR_EACH_FIELD(noir::consensus::merkle::proof, total, index, leaf_hash, aunts)
+NOIR_REFLECT(noir::consensus::merkle::proof, total, index, leaf_hash, aunts)

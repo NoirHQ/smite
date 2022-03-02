@@ -10,15 +10,24 @@
 [submodule "libs/fc"]
 	path = libs/fc
 	url = https://github.com/noir-protocol/fc
-[submodule "libs/rocksdb"]
-	path = libs/rocksdb
-	url = https://github.com/facebook/rocksdb.git
-[submodule "libs/softfloat"]
-	path = libs/softfloat
-	url = https://github.com/eosio/berkeley-softfloat-3
+[submodule "libs/fixed_string"]
+	path = libs/fixed_string
+	url = https://github.com/unterumarmung/fixed_string
 [submodule "libs/fmt"]
 	path = libs/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "libs/range-v3"]
+	path = libs/range-v3
+	url = https://github.com/ericniebler/range-v3
+[submodule "libs/rocksdb"]
+	path = libs/rocksdb
+	url = https://github.com/facebook/rocksdb.git
+[submodule "libs/scope-lite"]
+	path = libs/scope-lite
+	url = https://github.com/martinmoene/scope-lite
+[submodule "libs/softfloat"]
+	path = libs/softfloat
+	url = https://github.com/eosio/berkeley-softfloat-3
 [submodule "libs/websocketpp"]
 	path = libs/websocketpp
 	url = https://github.com/zaphoyd/websocketpp
@@ -28,6 +37,3 @@
 [submodule "libs/xxHash"]
 	path = libs/xxHash
 	url = https://github.com/Cyan4973/xxHash
-[submodule "libs/range-v3"]
-	path = libs/range-v3
-	url = https://github.com/ericniebler/range-v3

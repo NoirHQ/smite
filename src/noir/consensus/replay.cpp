@@ -16,7 +16,7 @@ using namespace noir::p2p;
 bool consensus_state::catchup_replay(int64_t cs_height) {
   // Set replayMode to true so we don't log signing errors.
   replay_mode = true;
-  auto defer = make_scoped_exit([this]() { replay_mode = false; });
+  auto defer = make_scope_exit([this]() { replay_mode = false; });
 
   // Ensure that #ENDHEIGHT for this height doesn't exist.
   // NOTE: This is just a sanity check. As far as we know things work fine
@@ -53,7 +53,7 @@ bool consensus_state::catchup_replay(int64_t cs_height) {
     elog(fmt::format("cannot replay height {}. WAL does not contain #ENDHEIGHT for {}", cs_height, end_height));
     return false;
   }
-  auto defer_close = make_scoped_exit([&dec]() {
+  auto defer_close = make_scope_exit([&dec]() {
     // dec->close();
   });
 

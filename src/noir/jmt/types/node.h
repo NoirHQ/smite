@@ -302,8 +302,6 @@ struct internal_node {
   size_t leaf_count;
 };
 
-NOIR_FOR_EACH_FIELD_EMBED(internal_node, children, leaf_count);
-
 inline std::array<uint8_t, 2> get_child_and_sibling_half_start(nibble n, uint8_t height) {
   uint8_t child_half_start = (0xff << height) & n.value;
   uint8_t sibling_half_start = child_half_start ^ (1 << height);
@@ -333,15 +331,15 @@ struct leaf_node {
   T value;
 };
 
-template<typename T, typename F>
-void for_each_field(leaf_node<T>& v, F&& f) {
+template<typename F, typename T>
+void for_each_field(F&& f, leaf_node<T>& v) {
   f(v.account_key);
   f(v.value_hash);
   f(v.value);
 }
 
-template<typename T, typename F>
-void for_each_field(const leaf_node<T>& v, F&& f) {
+template<typename F, typename T>
+void for_each_field(F&& f, const leaf_node<T>& v) {
   f(v.account_key);
   f(v.value_hash);
   f(v.value);
@@ -532,3 +530,5 @@ struct hash<jmt::node_key> {
 };
 
 } // namespace noir
+
+NOIR_REFLECT(noir::jmt::internal_node, children, leaf_count);

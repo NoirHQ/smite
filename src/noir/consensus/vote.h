@@ -233,4 +233,4 @@ struct nil_vote_set : vote_set {
 
 } // namespace noir::consensus
 
-NOIR_FOR_EACH_FIELD_DERIVED(noir::consensus::vote, noir::p2p::vote_message)
+NOIR_REFLECT_DERIVED(noir::consensus::vote, noir::p2p::vote_message)

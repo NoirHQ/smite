@@ -11,11 +11,11 @@
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/merkle/proof.h>
 #include <noir/consensus/tx.h>
+#include <noir/crypto/rand.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 #include <fmt/format.h>
 
-#include <fc/crypto/rand.hpp>
 #include <utility>
 
 namespace noir::consensus {
@@ -65,6 +65,7 @@ struct commit_sig {
     }
     default: {
       check(false, fmt::format("Unknown BlockIDFlag: {}", flag));
+      __builtin_unreachable();
     }
     }
   }
@@ -343,12 +344,12 @@ using block_ptr = std::shared_ptr<block>;
 
 } // namespace noir::consensus
 
-NOIR_FOR_EACH_FIELD(noir::consensus::commit_sig, flag, validator_address, timestamp, signature, vote_extension)
-NOIR_FOR_EACH_FIELD(noir::consensus::part, index, bytes_, proof_)
-// NOIR_FOR_EACH_FIELD(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size)
-NOIR_FOR_EACH_FIELD(noir::consensus::block_data, txs, hash)
-NOIR_FOR_EACH_FIELD(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash,
-  data_hash, validators_hash, next_validators_hash, consensus_hash, app_hash, last_results_hash, proposer_address)
+NOIR_REFLECT(noir::consensus::commit_sig, flag, validator_address, timestamp, signature, vote_extension)
+NOIR_REFLECT(noir::consensus::part, index, bytes_, proof_)
+// NOIR_REFLECT(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size)
+NOIR_REFLECT(noir::consensus::block_data, txs, hash)
+NOIR_REFLECT(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash, data_hash,
+  validators_hash, next_validators_hash, consensus_hash, app_hash, last_results_hash, proposer_address)
 
 template<>
 struct noir::is_foreachable<noir::consensus::commit> : std::false_type {};

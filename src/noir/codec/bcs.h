@@ -154,14 +154,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T (&v)[N]) {
   return ds;
 }
 
-template<typename Stream, Byte T>
-datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T> v) {
+template<typename Stream, Byte T, size_t N>
+datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T, N> v) {
   ds.write(v.data(), v.size());
   return ds;
 }
 
-template<typename Stream, Byte T>
-datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T> v) {
+template<typename Stream, Byte T, size_t N>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
   ds.read(v.data(), v.size());
   return ds;
 }
@@ -201,12 +201,11 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
-  std::vector<char> tmp;
-  ds >> tmp;
-  if (tmp.size()) {
-    v = std::string(tmp.data(), tmp.data() + tmp.size());
-  } else {
-    v = {};
+  unsigned_int size;
+  ds >> size;
+  v.resize(size);
+  if (size) {
+    ds.read(v.data(), v.size());
   }
   return ds;
 }
@@ -227,13 +226,13 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::tuple<Ts...>& v) {
 // Structures
 template<typename Stream, foreachable T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
-  for_each_field(v, [&](const auto& val) { ds << val; });
+  for_each_field([&](const auto& val) { ds << val; }, v);
   return ds;
 }
 
 template<typename Stream, foreachable T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
-  for_each_field(v, [&](auto& val) { ds >> val; });
+  for_each_field([&](auto& val) { ds >> val; }, v);
   return ds;
 }
 

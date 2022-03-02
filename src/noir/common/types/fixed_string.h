@@ -4,11 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <nonstd/scope.hpp>
+#include <fixed_string.hpp>
 
 namespace noir {
 
-using ::nonstd::make_scope_exit;
-using ::nonstd::scope_exit;
+using fixstr::fixed_string;
 
-} // namespace noir
+}

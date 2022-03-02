@@ -8,6 +8,7 @@
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/wal.h>
+#include <noir/crypto/rand.h>
 #include <filesystem>
 
 namespace {
@@ -86,7 +87,7 @@ TEST_CASE("catchup_replay", "[consensus_state_wal]") {
   });
 
   auto [temp_dir, cs] = prepare_consensus(1);
-  auto defer = noir::make_scoped_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
+  auto defer = noir::make_scope_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
   auto& wal_ = cs->wal_;
 
   std::for_each(tests.begin(), tests.end(), [&, &cs = cs](const test_case& t) {
@@ -103,7 +104,7 @@ auto corrupt_wal_file = [](const std::string& wal_path) {
   std::array<char, 100> corrupt_msg;
   size_t len = sizeof(corrupt_msg);
   char* corrupt_ptr = static_cast<char*>(static_cast<void*>(&corrupt_msg));
-  fc::rand_pseudo_bytes(corrupt_ptr, len);
+  noir::crypto::rand_bytes({corrupt_ptr, len});
   fc::cfile file_;
   file_.set_file_path(wal_path);
   file_.open(fc::cfile::update_rw_mode);
@@ -126,7 +127,7 @@ TEST_CASE("repair_wal_file", "[consensus_state_wal]") {
 
   auto [temp_dir, cs] = prepare_consensus(1);
   auto wal_path = fs::path{(temp_dir->path() / cs->cs_config.wal_path / cs->wal_head_name).string()};
-  auto defer = noir::make_scoped_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
+  auto defer = noir::make_scope_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
 
   std::for_each(tests.begin(), tests.end(), [&, &cs = cs](const test_case& t) {
     SECTION(t.name) {
