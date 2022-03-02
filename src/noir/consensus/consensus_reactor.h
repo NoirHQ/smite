@@ -90,6 +90,8 @@ struct consensus_reactor {
 
   bool pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set& votes_);
 
+  void query_maj23_routine(std::shared_ptr<peer_state> ps);
+
   std::shared_ptr<peer_state> get_peer_state(std::string peer_id) {
     std::lock_guard<std::mutex> g(mtx);
     auto it = peers.find(peer_id);
@@ -117,6 +119,8 @@ struct consensus_reactor {
     return p2p::new_round_step_message{
       rs.height, rs.round, rs.step, rs.start_time /* TODO: find elapsed seconds*/, rs.last_commit->round};
   }
+
+  void send_new_round_step_message(std::string peer_id);
 
   void transmit_new_envelope(std::string from, std::string to, const p2p::reactor_message& msg, bool broadcast = false,
     int priority = appbase::priority::medium);

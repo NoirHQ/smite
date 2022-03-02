@@ -32,18 +32,18 @@ void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::pee
 
       // Start gossips for this peer
       // gossip_data_routine(it->second); // TODO: uncomment
+      // gossip_votes_routine(it->second); // TODO: uncomment
+      // query_maj23_routine(it->second); // TODO: uncomment
 
-      if (!wait_sync) {
-        // send_new_round_step_message(peer_id); // TODO
-      }
+      // if (!wait_sync)
+      //  send_new_round_step_message(peer_id); // TODO: uncomment
     }
     break;
   }
   case p2p::peer_status::down: {
     auto it = peers.find(peer_id);
     if (it != peers.end() && it->second->is_running) {
-      // TODO: stop all threads
-
+      it->second->is_running = false; // TODO: is this enough to stop all threads?
       peers.erase(it);
     }
     break;
@@ -332,6 +332,76 @@ bool consensus_reactor::gossip_votes_for_height(const std::shared_ptr<round_stat
 
 bool consensus_reactor::pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set& votes_) {
   // TODO : implement, requires votes_ to handle VoteSetReader
+}
+
+/// \brief detect and react when there is a signature DDoS attack in progress
+void consensus_reactor::query_maj23_routine(std::shared_ptr<peer_state> ps) {
+  ps->strand->post([this, ps{std::move(ps)}]() {
+    while (true) {
+      if (!ps->is_running)
+        return;
+
+      // Send height/round/prevotes
+      {
+        auto rs = cs_state->get_round_state();
+        auto prs = ps->get_round_state();
+        if (rs->height == prs->height) {
+          if (auto maj23 = rs->votes->prevotes(prs->round)->two_thirds_majority(); maj23.has_value()) {
+            transmit_new_envelope(
+              "", ps->peer_id, p2p::vote_set_maj23_message{prs->height, prs->round, p2p::Prevote, maj23.value()});
+            std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
+          }
+        }
+      }
+
+      // Send height/round/Precommits
+      {
+        auto rs = cs_state->get_round_state();
+        auto prs = ps->get_round_state();
+        if (rs->height == prs->height) {
+          if (auto maj23 = rs->votes->precommits(prs->round)->two_thirds_majority(); maj23.has_value()) {
+            transmit_new_envelope(
+              "", ps->peer_id, p2p::vote_set_maj23_message{prs->height, prs->round, p2p::Precommit, maj23.value()});
+            std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
+          }
+        }
+      }
+
+      // Send height/round/proposal_pol
+      {
+        auto rs = cs_state->get_round_state();
+        auto prs = ps->get_round_state();
+        if (rs->height == prs->height && prs->proposal_pol_round >= 0) {
+          if (auto maj23 = rs->votes->prevotes(prs->proposal_pol_round)->two_thirds_majority(); maj23.has_value()) {
+            transmit_new_envelope("", ps->peer_id,
+              p2p::vote_set_maj23_message{prs->height, prs->proposal_pol_round, p2p::Prevote, maj23.value()});
+            std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
+          }
+        }
+      }
+
+      // Send height/catchup_commit_round/catchup_commit
+      {
+        auto prs = ps->get_round_state();
+        if (prs->catchup_commit_round != -1 && prs->height > 0 && prs->height <= cs_state->block_store_->height() &&
+          prs->height >= cs_state->block_store_->base()) {
+          if (auto commit_ = cs_state->load_commit(prs->height); commit_ != nullptr) {
+            transmit_new_envelope("", ps->peer_id,
+              p2p::vote_set_maj23_message{prs->height, commit_->round, p2p::Precommit, commit_->my_block_id});
+            std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
+          }
+        }
+      }
+
+      std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
+    }
+  });
+}
+
+void consensus_reactor::send_new_round_step_message(std::string peer_id) {
+  auto rs = cs_state->get_round_state();
+  auto msg = make_round_step_message(*rs);
+  transmit_new_envelope("", peer_id, msg);
 }
 
 void consensus_reactor::transmit_new_envelope(
