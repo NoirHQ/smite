@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/hex.h>
+#include <noir/common/refl.h>
 #include <noir/common/types/bytes.h>
 
 #include <fc/crypto/private_key.hpp>
@@ -73,3 +74,6 @@ public:
 };
 
 } // namespace noir::consensus
+
+NOIR_REFLECT(noir::consensus::pub_key, key)
+NOIR_REFLECT(noir::consensus::priv_key, key)

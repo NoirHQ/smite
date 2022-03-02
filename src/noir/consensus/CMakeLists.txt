@@ -7,6 +7,7 @@ target_sources(noir
   consensus_state.cpp
   merkle/proof.cpp
   merkle/tree.cpp
+  privval/file.cpp
   priv_validator.cpp
   replay.cpp
   validation.cpp
@@ -18,6 +19,7 @@ add_noir_test(bit_array_test test/bit_array_test.cpp)
 add_noir_test(block_executor_test test/block_executor_test.cpp)
 add_noir_test(block_test test/block_test.cpp)
 add_noir_test(consensus_state_test test/consensus_state_test.cpp)
+add_noir_test(privval_test privval/test/file_test.cpp)
 add_noir_test(replay_test test/replay_test.cpp)
 add_noir_test(tree_test merkle/test/tree_test.cpp)
 add_noir_test(validator_test test/validator_test.cpp)
