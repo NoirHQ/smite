@@ -15,6 +15,7 @@ target_link_libraries(noir
   b2
   expected
   fc
+  fixed_string
   fmt
   rocksdb
   softfloat
