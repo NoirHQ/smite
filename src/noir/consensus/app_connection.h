@@ -41,6 +41,12 @@ struct app_connection {
     return res;
   }
 
+  response_check_tx& check_tx_sync(request_check_tx req) {
+    std::lock_guard<std::mutex> g(mtx);
+    auto& res = application->check_tx();
+    return res;
+  }
+
   response_check_tx& check_tx_async(request_check_tx req) {
     std::lock_guard<std::mutex> g(mtx);
     auto& res = application->check_tx();

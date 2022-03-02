@@ -5,7 +5,6 @@
 //
 #pragma once
 
-#include <noir/common/thread_pool.h>
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/app_connection.h>
 #include <noir/consensus/tx.h>
@@ -44,8 +43,6 @@ private:
 
   std::shared_ptr<consensus::app_connection> proxy_app_;
 
-  std::unique_ptr<named_thread_pool> thread_ = nullptr;
-
   uint64_t block_height_ = 0;
 
   precheck_func* precheck_ = nullptr;
@@ -57,7 +54,7 @@ public:
   tx_pool();
   tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxyApp, uint64_t block_height);
 
-  virtual ~tx_pool();
+  virtual ~tx_pool() = default;
 
   APPBASE_PLUGIN_REQUIRES()
   void set_program_options(CLI::App& config) override;
@@ -66,13 +63,12 @@ public:
   void plugin_startup();
   void plugin_shutdown();
 
-  void start();
-  void stop();
-
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
 
-  std::optional<std::future<bool>> check_tx(const consensus::tx& tx, bool sync);
+  bool check_tx_sync(const consensus::tx& tx);
+  bool check_tx_async(const consensus::tx& tx);
+
   std::vector<consensus::tx> reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
   std::vector<consensus::tx> reap_max_txs(uint64_t tx_count);
   bool update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
@@ -85,6 +81,8 @@ public:
   void flush_app_conn();
 
 private:
+  bool check_tx_internal(const consensus::tx_id_type& tx_id, const consensus::tx& tx);
+  bool add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
   void update_recheck_txs();
 };
 

@@ -15,18 +15,12 @@ tx_pool::tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& 
   : config_(cfg), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
     proxy_app_(new_proxy_app), block_height_(block_height) {}
 
-tx_pool::~tx_pool() {
-  stop();
-  thread_.reset();
-}
-
 void tx_pool::set_program_options(CLI::App& cfg) {
   auto tx_pool_options = cfg.add_section("tx_pool",
     "###############################################\n"
     "###      TX_POOL Configuration Options      ###\n"
     "###############################################");
 
-  tx_pool_options->add_option("--thread_num", "A number of thread.")->default_val(5);
   tx_pool_options->add_option("--max_tx_num", "The maximum number of tx that the pool can store.")->default_val(10000);
   tx_pool_options->add_option("--max_tx_bytes", "The maximum bytes a single tx can hold.")->default_val(1024 * 1024);
   tx_pool_options->add_option("--ttl_duration", "Time(us) until tx expires in the pool. If it is '0', tx never expires")
@@ -42,7 +36,6 @@ void tx_pool::plugin_initialize(const CLI::App& config) {
   try {
     auto tx_pool_options = config.get_subcommand("tx_pool");
 
-    config_.thread_num = tx_pool_options->get_option("--thread_num")->as<uint32_t>();
     config_.max_tx_num = tx_pool_options->get_option("--max_tx_num")->as<uint64_t>();
     config_.max_tx_bytes = tx_pool_options->get_option("--max_tx_bytes")->as<uint64_t>();
     config_.ttl_duration = tx_pool_options->get_option("--ttl_duration")->as<p2p::tstamp>();
@@ -54,26 +47,10 @@ void tx_pool::plugin_initialize(const CLI::App& config) {
 
 void tx_pool::plugin_startup() {
   ilog("Start tx_pool");
-  start();
 }
 
 void tx_pool::plugin_shutdown() {
   ilog("Shutdown tx_pool");
-  stop();
-}
-
-void tx_pool::start() {
-  if (!is_running_) {
-    thread_ = std::make_unique<named_thread_pool>("tx_pool", config_.thread_num);
-    is_running_ = true;
-  }
-}
-
-void tx_pool::stop() {
-  if (is_running_) {
-    thread_->stop();
-    is_running_ = false;
-  }
 }
 
 void tx_pool::set_precheck(precheck_func* precheck) {
@@ -84,75 +61,92 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
   postcheck_ = postcheck;
 }
 
-std::optional<std::future<bool>> tx_pool::check_tx(const consensus::tx& tx, bool sync) {
-  if (tx.size() > config_.max_tx_bytes) {
-    return std::nullopt;
+bool tx_pool::check_tx_sync(const consensus::tx& tx) {
+  try {
+    auto tx_id = consensus::get_tx_id(tx);
+    auto res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = tx});
+    check_tx_internal(tx_id, tx);
+    return add_tx(tx_id, tx, res);
+  } catch (std::exception& e) {
+    elog(fmt::format("{}", e.what()));
+    return false;
   }
+}
 
-  if (precheck_ && !precheck_(tx)) {
-    return std::nullopt;
+bool tx_pool::check_tx_async(const consensus::tx& tx) {
+  try {
+    auto tx_id = consensus::get_tx_id(tx);
+    check_tx_internal(tx_id, tx);
+    auto& res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
+    res.set_callback([&, tx_id, tx](consensus::response_check_tx& res) { return add_tx(tx_id, tx, res); });
+    return true;
+  } catch (std::exception& e) {
+    elog(fmt::format("{}", e.what()));
+    return false;
   }
+}
 
-  auto tx_id = consensus::get_tx_id(tx);
+bool tx_pool::check_tx_internal(const consensus::tx_id_type& tx_id, const consensus::tx& tx) {
+  check(tx.size() < config_.max_tx_bytes,
+    fmt::format("tx size {} bigger than {} (tx_id: {})", tx_id.to_string(), tx.size(), config_.max_tx_bytes));
+
+  if (precheck_) {
+    check(precheck_(tx), fmt::format("tx failed precheck (tx_id: {})", tx_id.to_string()));
+  }
 
   if (tx_cache_.has(tx_id)) {
-    // already in cache
     tx_cache_.put(tx_id, tx);
-    return std::nullopt;
+    check(false, fmt::format("tx exists already in cache (tx_id: {})", tx_id.to_string()));
   }
 
   tx_cache_.put(tx_id, tx);
 
-  auto result = async_thread_pool(thread_->get_executor(), [&, tx, tx_id]() {
-    consensus::response_check_tx res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
-    if (postcheck_ && !postcheck_(tx, res)) {
-      if (res.code != consensus::code_type_ok) {
-        tx_cache_.del(tx_id);
-        return false;
-      }
-      // add tx to failed tx_pool
+  return true;
+}
+
+bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res) {
+
+  if (postcheck_ && !postcheck_(tx, res)) {
+    if (res.code != consensus::code_type_ok) {
+      tx_cache_.del(tx_id);
+      dlog(fmt::format("reject bad transaction (tx_id: {})", tx_id.to_string()));
+      return false;
     }
+  }
 
-    if (!res.sender.empty()) {
-      // check tx_pool has sender
-    }
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto old = tx_queue_.get_tx(res.sender, res.nonce);
-    if (old.has_value()) {
-      auto old_tx = old.value();
-      if (res.gas_wanted < old_tx->gas + config_.gas_price_bump) {
-        if (!config_.keep_invalid_txs_in_cache) {
-          tx_cache_.del(tx_id);
-        }
-        return false;
-      }
-      tx_queue_.erase(old_tx);
-    }
-
-    auto wtx = consensus::wrapped_tx{
-      .sender = res.sender,
-      ._id = tx_id,
-      .tx_data = tx,
-      .gas = res.gas_wanted,
-      .nonce = res.nonce,
-      .height = block_height_,
-      .time_stamp = consensus::get_time(),
-    };
-
-    if (!tx_queue_.add_tx(std::make_shared<consensus::wrapped_tx>(wtx))) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto old = tx_queue_.get_tx(res.sender, res.nonce);
+  if (old.has_value()) {
+    auto old_tx = old.value();
+    if (res.gas_wanted < old_tx->gas + config_.gas_price_bump) {
       if (!config_.keep_invalid_txs_in_cache) {
         tx_cache_.del(tx_id);
       }
+      dlog(
+        fmt::format("gas price is not enough for nonce override (tx_id: {}, nonce: {})", tx_id.to_string(), res.nonce));
       return false;
     }
-    return true;
-  });
-
-  if (sync) {
-    result.wait();
+    tx_queue_.erase(old_tx);
   }
-  return result;
+
+  auto wtx = consensus::wrapped_tx{
+    .sender = res.sender,
+    ._id = tx_id,
+    .tx_data = tx,
+    .gas = res.gas_wanted,
+    .nonce = res.nonce,
+    .height = block_height_,
+    .time_stamp = consensus::get_time(),
+  };
+
+  if (!tx_queue_.add_tx(std::make_shared<consensus::wrapped_tx>(wtx))) {
+    if (!config_.keep_invalid_txs_in_cache) {
+      tx_cache_.del(tx_id);
+    }
+    dlog(fmt::format("add tx fail (tx_id: {})", tx_id.to_string()));
+    return false;
+  }
+  return true;
 }
 
 std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
