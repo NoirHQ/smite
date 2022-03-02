@@ -9,40 +9,49 @@
 namespace noir::application {
 
 class base_application {
+  consensus::response_init_chain response_init_chain_;
+  consensus::response_prepare_proposal response_prepare_proposal_;
+  consensus::response_begin_block response_begin_block_;
+  consensus::response_deliver_tx response_deliver_tx_;
+  consensus::response_check_tx response_check_tx_;
+  consensus::response_end_block response_end_block_;
+  consensus::response_commit response_commit_;
+  consensus::response_extend_vote response_extend_vote_;
+  consensus::response_verify_vote_extension response_verify_vote_extension_;
+
 public:
   virtual void info() {}
   virtual void query() {}
 
-  virtual consensus::response_init_chain init_chain() {
-    return consensus::response_init_chain{};
+  virtual consensus::response_init_chain& init_chain() {
+    return response_init_chain_;
   }
-  virtual consensus::response_prepare_proposal prepare_proposal() {
-    return consensus::response_prepare_proposal{};
+  virtual consensus::response_prepare_proposal& prepare_proposal() {
+    return response_prepare_proposal_;
   }
-
-  virtual consensus::response_begin_block begin_block() {
+  virtual consensus::response_begin_block& begin_block() {
     ilog("!!! BeginBlock !!!");
-    return consensus::response_begin_block{};
+    return response_begin_block_;
   }
-  virtual consensus::response_deliver_tx deliver_tx() {
+  virtual consensus::response_deliver_tx& deliver_tx() {
     ilog("!!! DeliverTx !!!");
-    return consensus::response_deliver_tx{};
+    return response_deliver_tx_;
   }
-  virtual consensus::response_check_tx check_tx() {
-    return consensus::response_check_tx{};
+  virtual consensus::response_check_tx& check_tx() {
+    return response_check_tx_;
   }
-  virtual consensus::response_end_block end_block() {
+  virtual consensus::response_end_block& end_block() {
     ilog("!!! EndBlock !!!");
-    return consensus::response_end_block{};
+    return response_end_block_;
   }
-  virtual consensus::response_commit commit() {
-    return consensus::response_commit{};
+  virtual consensus::response_commit& commit() {
+    return response_commit_;
   }
-  virtual consensus::response_extend_vote extend_vote() {
-    return consensus::response_extend_vote{};
+  virtual consensus::response_extend_vote& extend_vote() {
+    return response_extend_vote_;
   }
-  virtual consensus::response_verify_vote_extension verify_vote_extension() {
-    return consensus::response_verify_vote_extension{};
+  virtual consensus::response_verify_vote_extension& verify_vote_extension() {
+    return response_verify_vote_extension_;
   }
 
   virtual void list_snapshots() {}
