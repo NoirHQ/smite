@@ -83,6 +83,16 @@ struct bit_array : std::enable_shared_from_this<bit_array> {
     return c;
   }
 
+  std::shared_ptr<bit_array> not_op() {
+    if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
+      return nullptr;
+    std::lock_guard<std::mutex> g(mtx);
+    auto c = copy();
+    for (auto i = 0; i < c->elem.size(); i++)
+      c->elem[i] = ~(c->elem[i]);
+    return c;
+  }
+
   std::shared_ptr<bit_array> copy() const {
     if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
       return nullptr;

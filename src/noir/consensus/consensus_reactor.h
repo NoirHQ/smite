@@ -83,6 +83,13 @@ struct consensus_reactor {
   void gossip_data_for_catchup(const std::shared_ptr<round_state>& rs, const std::shared_ptr<peer_round_state>& prs,
     const std::shared_ptr<peer_state>& ps);
 
+  void gossip_votes_routine(std::shared_ptr<peer_state> ps);
+
+  bool gossip_votes_for_height(const std::shared_ptr<round_state>& rs, const std::shared_ptr<peer_round_state>& prs,
+    const std::shared_ptr<peer_state>& ps);
+
+  bool pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set& votes_);
+
   std::shared_ptr<peer_state> get_peer_state(std::string peer_id) {
     std::lock_guard<std::mutex> g(mtx);
     auto it = peers.find(peer_id);

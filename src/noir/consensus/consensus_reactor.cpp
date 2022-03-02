@@ -247,7 +247,91 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
 
 void consensus_reactor::gossip_data_for_catchup(const std::shared_ptr<round_state>& rs,
   const std::shared_ptr<peer_round_state>& prs, const std::shared_ptr<peer_state>& ps) {
-  // TODO: implement
+  if (auto [index, ok] = prs->proposal_block_parts->not_op()->pick_random(); ok) {
+    // Verify peer's part_set_header
+    block_meta block_meta_;
+    if (!cs_state->block_store_->load_block_meta(prs->height, block_meta_)) {
+      elog("failed to load block_meta");
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      return;
+    } else if (block_meta_.bl_id.parts != prs->proposal_block_part_set_header) {
+      ilog("peer proposal_block_part_set_header mismatch");
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      return;
+    }
+
+    part part_;
+    if (!cs_state->block_store_->load_block_part(prs->height, index, part_)) {
+      elog("failed to load block_part");
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      return;
+    }
+
+    dlog("sending block_part for catchup");
+    transmit_new_envelope(
+      "", ps->peer_id, p2p::block_part_message{prs->height, prs->round, part_.index, part_.bytes_, part_.proof_});
+    return;
+  }
+  std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+}
+
+void consensus_reactor::gossip_votes_routine(std::shared_ptr<peer_state> ps) {
+  ps->strand->post([this, ps{std::move(ps)}]() {
+    while (true) {
+      if (!ps->is_running)
+        return;
+
+      auto rs = cs_state->get_round_state();
+      auto prs = ps->get_round_state();
+
+      // If height matches, send last_commit, prevotes, precommits
+      if (rs->height == prs->height) {
+        if (gossip_votes_for_height(rs, prs, ps))
+          continue;
+      }
+
+      // Special catchup - if peer is lagged by 1, send last_commit
+      if (prs->height != 0 && rs->height == prs->height + 1) {
+        if (pick_send_vote(ps, *rs->last_commit)) {
+          dlog("picked last_commit to send");
+          continue;
+        }
+      }
+
+      // Catchup logic - if peer is lagged by more than 1, send commit
+      auto block_store_base = cs_state->block_store_->base();
+      if (block_store_base > 0 && prs->height != 0 && rs->height >= prs->height + 2 &&
+        prs->height >= block_store_base) {
+        // Load block_commit for prs->height which contains precommit sig
+        commit commit_;
+        if (cs_state->block_store_->load_block_commit(prs->height, commit_)) {
+          // if (pick_send_vote(ps, commit_)) { // TODO: uncomment
+          //  dlog("picked catchup commit to send");
+          //  continue;
+          // }
+        }
+      }
+
+      // Nothing to do, so just sleep for a while
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+    }
+  });
+}
+
+bool consensus_reactor::gossip_votes_for_height(const std::shared_ptr<round_state>& rs,
+  const std::shared_ptr<peer_round_state>& prs, const std::shared_ptr<peer_state>& ps) {
+  // If there are last_commits to send
+  if (prs->step == p2p::round_step_type::NewHeight) {
+    // if (pick_send_vote(ps, rs->last_commit)) {
+    //  dlog("picked last_commit to send");
+    //  return true;
+    // }
+  }
+  // TODO
+}
+
+bool consensus_reactor::pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set& votes_) {
+  // TODO : implement, requires votes_ to handle VoteSetReader
 }
 
 void consensus_reactor::transmit_new_envelope(
