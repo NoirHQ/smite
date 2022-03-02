@@ -324,20 +324,15 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& v) {
 // Shared pointer
 template<typename Stream, typename T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::shared_ptr<T>& v) {
-  ds << bool(!!v);
-  if (!!v)
-    ds << *v;
+  check(!v, "shared pointer cannot be null");
+  ds << *v;
   return ds;
 }
 
 template<typename Stream, typename T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::shared_ptr<T>& v) {
-  bool b;
-  ds >> b;
-  if (b) {
-    v = std::make_shared<T>();
-    ds >> *v;
-  }
+  v = std::make_shared<T>();
+  ds >> *v;
   return ds;
 }
 
