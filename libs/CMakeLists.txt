@@ -16,6 +16,7 @@ add_subdirectory(expected)
 set(SKIP_FC_TESTS ON)
 add_subdirectory(fc)
 
+add_subdirectory(fixed_string)
 add_subdirectory(fmt)
 add_subdirectory(range-v3)
 add_subdirectory(xxHash/cmake_unofficial)

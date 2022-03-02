@@ -31,3 +31,6 @@
 [submodule "libs/range-v3"]
 	path = libs/range-v3
 	url = https://github.com/ericniebler/range-v3
+[submodule "libs/fixed_string"]
+	path = libs/fixed_string
+	url = https://github.com/unterumarmung/fixed_string
