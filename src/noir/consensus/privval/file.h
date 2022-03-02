@@ -61,6 +61,93 @@ struct file_pv_last_sign_state {
   static bool load(const std::filesystem::path& state_file_path, file_pv_last_sign_state& lss);
 };
 
+struct file_pv : public noir::consensus::priv_validator {
+  file_pv_key key;
+  file_pv_last_sign_state last_sign_state;
+
+  file_pv() = default;
+  file_pv(const file_pv&) = default;
+  file_pv(file_pv&&) = default;
+
+  /// \brief generates a new validator from the given key and paths.
+  /// \param[in] priv_key
+  /// \param[in] key_file_path
+  /// \param[in] state_file_path
+  file_pv(/* const */ noir::consensus::priv_key& priv_key, const std::filesystem::path& key_file_path,
+    const std::filesystem::path& state_file_path)
+    : key(file_pv_key{
+        .address = priv_key.get_pub_key().address(),
+        .pub_key = priv_key.get_pub_key(),
+        .priv_key = priv_key,
+        .file_path = key_file_path,
+      }),
+      last_sign_state(file_pv_last_sign_state{
+        .step = sign_step::none,
+        .file_path = state_file_path,
+      }) {}
+
+  priv_validator_type get_type() const override {
+    return priv_validator_type::FileSignerClient;
+  }
+
+  pub_key get_pub_key() const override {
+    return key.pub_key;
+  }
+
+  priv_key get_priv_key() const override {
+    return key.priv_key;
+  }
+
+  std::optional<std::string> sign_vote(vote& vote_) override {
+    return {};
+  }
+  std::optional<std::string> sign_proposal(proposal& proposal_) override {
+    return {};
+  }
+
+  /// \brief generates a new validator with randomly generated private key and sets the filePaths, but does not call
+  /// save()
+  /// \todo need to check default key_type
+  /// \param[in] key_file_path
+  /// \param[in] state_file_path
+  /// \param[in] key_type
+  /// \return shared_ptr of file_pv
+  static std::shared_ptr<file_pv> gen_file_pv(const std::filesystem::path& key_file_path,
+    const std::filesystem::path& state_file_path, const std::string& key_type = "secp256k1");
+
+  /// \brief loads a FilePV from the filePaths. The FilePV handles double signing prevention by persisting data to the
+  /// stateFilePath. If either file path does not exist, the program will exit.
+  /// \param[in] key_file_path
+  /// \param[in] state_file_path
+  /// \return shared_ptr of file_pv
+  static inline std::shared_ptr<file_pv> load_file_pv(
+    const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
+    return load_file_pv_internal(key_file_path, state_file_path, true);
+  }
+
+  /// \brief LoadFilePVEmptyState loads a FilePV from the given keyFilePath, with an empty LastSignState. If the
+  /// keyFilePath does not exist, the program will exit.
+  /// \param[in] key_file_path
+  /// \param[in] state_file_path
+  /// \return shared_ptr of file_pv
+  static inline std::shared_ptr<file_pv> load_file_pv_empty_state(
+    const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
+    return load_file_pv_internal(key_file_path, state_file_path, false);
+  }
+
+  /// \brief persists the FilePv to its filePath.
+  void save();
+
+private:
+  /// \brief load FilePV from given arguments
+  /// \param[in] key_file_path
+  /// \param[in] state_file_path
+  /// \param[in] load_state if true, we load from the stateFilePath. Otherwise, we use an empty LastSignState
+  /// \return shared_ptr of file_pv
+  static std::shared_ptr<file_pv> load_file_pv_internal(
+    const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path, bool load_state);
+};
+
 /// \}
 
 } // namespace noir::consensus::privval

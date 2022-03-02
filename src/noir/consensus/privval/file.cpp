@@ -46,4 +46,45 @@ bool file_pv_last_sign_state::load(const fs::path& state_file_path, file_pv_last
   return true;
 }
 
+std::shared_ptr<file_pv> file_pv::gen_file_pv(
+  const fs::path& key_file_path, const fs::path& state_file_path, const std::string& key_type) {
+  noir::consensus::priv_key priv_key_{};
+  // TODO: connect appropriate key_type
+  if (key_type == "secp256k1") {
+    // priv_key_.type = "secp256k1";
+    priv_key_.key = fc::from_base58(fc::crypto::private_key::generate().to_string());
+  } else if (key_type == "ed25519") {
+    // priv_key_.type = "ed25519";
+    priv_key_.key = fc::from_base58(fc::crypto::private_key::generate_r1().to_string());
+  } else {
+    elog(fmt::format("key type: {} is not supported", key_type)); // return err
+    return nullptr;
+  }
+  return std::make_shared<file_pv>(priv_key_, key_file_path, state_file_path);
+}
+
+std::shared_ptr<file_pv> file_pv::load_file_pv_internal(
+  const fs::path& key_file_path, const fs::path& state_file_path, bool load_state) {
+  auto ret = std::make_shared<file_pv>();
+  check(ret != nullptr);
+  {
+    check(file_pv_key::load(key_file_path, ret->key) == true, "error reading PrivValidator key from {}",
+      key_file_path.string());
+    // overwrite pubkey and address for convenience, TODO: Is this needed?
+    ret->key.pub_key = ret->key.priv_key.get_pub_key();
+    ret->key.address = ret->key.pub_key.address();
+  }
+  if (load_state) {
+    check(file_pv_last_sign_state::load(state_file_path, ret->last_sign_state) == true,
+      "error reading PrivValidator state from {}", state_file_path.string());
+  }
+
+  return ret;
+}
+
+void file_pv::save() {
+  key.save();
+  last_sign_state.save();
+}
+
 } // namespace noir::consensus::privval
