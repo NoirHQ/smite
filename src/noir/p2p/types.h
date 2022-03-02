@@ -4,7 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/refl.h>
 #include <noir/common/types/bytes_n.h>
+
 #include <chrono>
 #include <cinttypes>
 #include <mutex>
@@ -100,4 +102,4 @@ using envelope_ptr = std::shared_ptr<envelope>;
 
 } // namespace noir::p2p
 
-NOIR_FOR_EACH_FIELD(noir::p2p::envelope, from, to, broadcast, message)
+NOIR_REFLECT(noir::p2p::envelope, from, to, broadcast, message)
