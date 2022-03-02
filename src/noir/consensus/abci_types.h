@@ -156,6 +156,15 @@ struct response_check_tx {
   int64_t priority;
   std::string mempool_error;
   uint64_t nonce;
+
+  std::function<bool(response_check_tx&)> callback;
+  void set_callback(std::function<bool(response_check_tx&)>&& cb) {
+    callback = std::move(cb);
+  }
+
+  void invoke_callback() {
+    callback(*this);
+  }
 };
 
 } // namespace noir::consensus

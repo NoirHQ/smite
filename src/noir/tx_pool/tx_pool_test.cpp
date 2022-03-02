@@ -23,59 +23,105 @@ static address_type str_to_addr(const std::string& str) {
   return addr;
 }
 
+class test_application : public application::base_application {
+  std::shared_mutex mutex_;
+  using response_check_tx_ptr = std::shared_ptr<response_check_tx>;
+  std::list<response_check_tx_ptr> responses_;
+  uint64_t nonce_ = 0;
+  uint64_t gas_wanted_ = 0;
+
+  std::unique_ptr<named_thread_pool> thread_;
+  bool is_running = false;
+
+public:
+  test_application() {
+    thread_ = std::make_unique<named_thread_pool>("test_application_thread", 1);
+    is_running = true;
+
+    async_thread_pool(thread_->get_executor(), [&]() {
+      while (is_running) {
+        handle_response();
+        usleep(10);
+      }
+    });
+  }
+
+  ~test_application() {
+    is_running = false;
+    thread_->stop();
+  }
+
+  response_check_tx& check_tx() override {
+    std::lock_guard _(mutex_);
+    auto res = std::make_shared<response_check_tx>(response_check_tx{
+      .gas_wanted = gas_wanted_,
+      .sender = str_to_addr("user"),
+      .nonce = nonce_++,
+      .callback = nullptr,
+    });
+    responses_.push_back(res);
+    return *res;
+  }
+
+  void set_nonce(uint64_t nonce) {
+    std::lock_guard _(mutex_);
+    nonce_ = nonce;
+  }
+
+  void set_gas(uint64_t gas) {
+    std::lock_guard lock(mutex_);
+    gas_wanted_ = gas;
+  }
+
+  void handle_response() {
+    if (responses_.begin() != responses_.end()) {
+      auto res = responses_.front();
+      if (res->callback != nullptr) {
+        res->invoke_callback();
+        std::unique_lock _(mutex_);
+        responses_.pop_front();
+      }
+    }
+  }
+
+  void reset() {
+    std::unique_lock _(mutex_);
+    responses_.clear();
+    nonce_ = 0;
+    gas_wanted_ = 0;
+  }
+
+  bool is_empty_response() {
+    std::shared_lock _(mutex_);
+    return responses_.empty();
+  }
+};
+
 class test_helper {
 private:
-  uint64_t tx_id = 0;
-  uint64_t nonce = 0;
-  uint64_t height = 0;
+  uint64_t tx_id_ = 0;
+  uint64_t nonce_ = 0;
+  uint64_t height_ = 0;
 
-  std::mutex mutex;
+  std::mutex mutex_;
 
-  std::random_device random_device;
-  std::mt19937 generator{random_device()};
+  std::random_device random_device_;
+  std::mt19937 generator{random_device_()};
 
-  std::shared_ptr<class tx_pool> tp = nullptr;
+  std::shared_ptr<class tx_pool> tp_ = nullptr;
 
-  class test_application : public application::base_application {
-    std::mutex mutex_;
-
-  public:
-    consensus::response_check_tx res_{.sender = str_to_addr("user"), .nonce = 0};
-
-    consensus::response_check_tx check_tx() override {
-      std::lock_guard lock(mutex_);
-      consensus::response_check_tx res = res_;
-      res_.nonce++;
-      return res;
-    }
-
-    void set_nonce(uint64_t nonce) {
-      std::lock_guard lock(mutex_);
-      res_.nonce = nonce;
-    }
-
-    void set_gas(uint64_t gas) {
-      std::lock_guard lock(mutex_);
-      res_.gas_wanted = gas;
-    }
-  };
-
-  std::shared_ptr<test_application> test_app_conn = std::make_shared<test_application>();
+  std::shared_ptr<test_application> test_app_ = nullptr;
 
 public:
   auto new_tx() {
-    std::lock_guard<std::mutex> lock(mutex);
-    return codec::scale::encode(tx_id++);
+    std::lock_guard<std::mutex> lock(mutex_);
+    return codec::scale::encode(tx_id_++);
   }
 
   auto new_txs(uint count) {
     std::vector<consensus::tx> txs;
     for (uint i = 0; i < count; i++) {
       txs.push_back(new_tx());
-    }
-
-    for (auto tx : txs) {
-      REQUIRE(tx.size() != 0);
     }
     return txs;
   }
@@ -85,16 +131,16 @@ public:
     new_wrapped_tx.sender = str_to_addr(sender);
     new_wrapped_tx.gas = rand_gas();
 
-    std::lock_guard<std::mutex> lock(mutex);
-    new_wrapped_tx.tx_data = codec::scale::encode(tx_id++);
-    new_wrapped_tx.nonce = nonce++;
-    new_wrapped_tx.height = height++;
+    std::lock_guard<std::mutex> lock(mutex_);
+    new_wrapped_tx.tx_data = codec::scale::encode(tx_id_++);
+    new_wrapped_tx.nonce = nonce_++;
+    new_wrapped_tx.height = height_++;
     return std::make_shared<wrapped_tx>(new_wrapped_tx);
   }
 
   void reset_tx_id() {
-    std::lock_guard<std::mutex> lock(mutex);
-    tx_id = 0;
+    std::lock_guard<std::mutex> lock(mutex_);
+    tx_id_ = 0;
   }
 
   uint64_t rand_gas(uint64_t max = 0xFFFF, uint64_t min = 0) {
@@ -103,23 +149,27 @@ public:
   }
 
   class tx_pool& make_tx_pool() {
-    return make_tx_pool(config{});
+    config cfg{};
+    test_app_ = std::make_shared<test_application>();
+    return make_tx_pool(cfg, test_app_);
   }
 
-  class tx_pool& make_tx_pool(config cfg) {
+  class tx_pool& make_tx_pool(config& cfg) {
+    test_app_ = std::make_shared<test_application>();
+    return make_tx_pool(cfg, test_app_);
+  }
+
+  class tx_pool& make_tx_pool(std::shared_ptr<test_application>& test_app) {
+    config cfg{};
+    return make_tx_pool(cfg, test_app);
+  }
+
+  class tx_pool& make_tx_pool(config& cfg, std::shared_ptr<test_application>& test_app) {
     auto proxy_app = std::make_shared<app_connection>();
-    proxy_app->application = test_app_conn;
-    tp = std::make_shared<noir::tx_pool::tx_pool>(cfg, proxy_app, 0);
-    tp->start();
-    return *tp;
-  }
-
-  void set_gas(uint64_t gas_wanted) {
-    test_app_conn->set_gas(gas_wanted);
-  }
-
-  void set_nonce(uint64_t nonce) {
-    test_app_conn->set_nonce(nonce);
+    test_app_ = test_app;
+    proxy_app->application = test_app;
+    tp_ = std::make_shared<noir::tx_pool::tx_pool>(cfg, proxy_app, 0);
+    return *tp_;
   }
 };
 
@@ -296,142 +346,135 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
   }
 }
 
-TEST_CASE("Push/Get tx", "[tx_pool]") {
+TEST_CASE("Add/Get tx", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  auto& tp = test_helper->make_tx_pool();
-
-  auto push_tx = [&](uint64_t count, bool sync = true) {
-    std::vector<std::optional<std::future<bool>>> res_vec;
-    for (uint64_t i = 0; i < count; i++) {
-      res_vec.push_back(tp.check_tx(test_helper->new_tx(), sync));
-    }
-    return res_vec;
-  };
+  auto test_app = std::make_shared<test_application>();
+  auto& tp = test_helper->make_tx_pool(test_app);
 
   SECTION("sync") {
-    auto res_push = push_tx(100);
-    for (auto& r : res_push) {
-      CHECKED_IF(r.has_value()) {
-        CHECK(r.value().get());
-      }
-    }
+    uint tx_count = 10;
+    auto txs = test_helper->new_txs(tx_count);
 
-    // fail case : same tx_id
-    auto txs = tp.reap_max_txs(100);
     for (auto& tx : txs) {
-      CHECK(!tp.check_tx(tx, true).has_value());
+      CHECK(tp.check_tx_sync(tx));
     }
 
-    txs = tp.reap_max_txs(100);
-    CHECK(txs.size() == 100);
+    // fail case : same txs
+    for (auto& tx : txs) {
+      CHECK(!tp.check_tx_sync(tx));
+    }
+
+    CHECK(txs.size() == tx_count);
   }
 
   SECTION("async") {
-    uint64_t max_thread_num = 10;
-    auto thread = std::make_unique<named_thread_pool>("test_thread", max_thread_num);
+    size_t thread_num = 10;
+    auto thread = std::make_unique<named_thread_pool>("test_thread", thread_num);
+    uint tx_count = 100;
 
     SECTION("multi thread add") {
-      uint64_t thread_num = std::min<uint64_t>(5, max_thread_num);
-      uint64_t total_tx_num = 1000;
-      std::atomic<uint64_t> token = thread_num;
-      std::future<std::vector<std::optional<std::future<bool>>>> res[thread_num];
-      uint64_t tx_num_per_thread = total_tx_num / thread_num;
-      for (uint64_t t = 0; t < thread_num; t++) {
-        res[t] = async_thread_pool(thread->get_executor(), [&]() {
+      std::atomic<uint> token = thread_num;
+      std::future<void> fs[thread_num];
+      for (auto i = 0; i < thread_num; i++) {
+        fs[i] = async_thread_pool(thread->get_executor(), [&]() {
+          auto txs = test_helper->new_txs(tx_count);
           token.fetch_sub(1, std::memory_order_seq_cst);
           while (token.load(std::memory_order_seq_cst)) {
           } // wait other thread
-          return push_tx(tx_num_per_thread, false);
+          for (auto& tx : txs) {
+            CHECK(tp.check_tx_async(tx));
+          }
         });
       }
 
-      for (uint64_t t = 0; t < thread_num; t++) {
-        uint64_t added_tx = 0;
-        auto result = res[t].get();
-        for (auto& r : result) {
-          CHECKED_IF(r.has_value()) {
-            CHECKED_IF(r.value().get()) {
-              added_tx++;
-            }
-          }
-        }
-        CHECK(added_tx == tx_num_per_thread);
+      for (auto& f : fs) {
+        f.get();
+      }
+      while (!test_app->is_empty_response()) {
       }
 
-      CHECK(tp.size() == total_tx_num);
+      CHECK(tp.size() == tx_count * thread_num);
     }
 
     SECTION("1 thread add / 1 thread get") {
-      std::atomic<uint64_t> token = 2;
-
-      auto push_res = async_thread_pool(thread->get_executor(), [&]() {
+      std::atomic<uint> token = 2;
+      std::future<void> add_result;
+      add_result = async_thread_pool(thread->get_executor(), [&]() {
+        auto txs = test_helper->new_txs(tx_count);
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
-        return push_tx(1000, false);
+        for (auto& tx : txs) {
+          CHECK(tp.check_tx_async(tx));
+        }
       });
 
-      auto get_res = async_thread_pool(thread->get_executor(), [&]() {
+      std::future<uint> get_result;
+      get_result = async_thread_pool(thread->get_executor(), [&]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
-
-        uint64_t get_count = 0;
-        while (get_count < 1000) {
-          auto txs = tp.reap_max_txs(1000 - get_count);
+        uint get_count = 0;
+        auto start_time = get_time();
+        while (get_count < tx_count) {
+          auto txs = tp.reap_max_txs(tx_count - get_count);
           get_count += txs.size();
+          if (get_time() - start_time >= 5000000 /* 5sec */) {
+            break;
+          }
         }
         return get_count;
       });
 
-      push_res.wait();
-      auto res = push_res.get();
-      for (auto& r : res) {
-        CHECKED_IF(r.has_value()) {
-          CHECK(r.value().get());
-        }
+      add_result.get();
+      while (!test_app->is_empty_response()) {
       }
 
-      CHECK(get_res.get() == 1000);
+      CHECK(get_result.get() == tx_count);
     }
 
-    SECTION("1 thread add / 2 thread get") {
-      std::atomic<uint64_t> token = 3;
-      auto push_res = async_thread_pool(thread->get_executor(), [&]() {
-        token.fetch_sub(1, std::memory_order_seq_cst);
-        while (token.load(std::memory_order_seq_cst)) {
-        } // wait other thread
-        return push_tx(1000, false);
-      });
+    SECTION("2 thread add / 2 thread get") {
+      std::atomic<uint> token = 4;
+      std::future<void> add_result[2];
 
-      std::future<uint64_t> get_res[2];
-      for (auto& res : get_res) {
+      for (auto& res : add_result) {
+        res = async_thread_pool(thread->get_executor(), [&]() {
+          auto txs = test_helper->new_txs(tx_count);
+          token.fetch_sub(1, std::memory_order_seq_cst);
+          while (token.load(std::memory_order_seq_cst)) {
+          } // wait other thread
+          for (auto& tx : txs) {
+            CHECK(tp.check_tx_async(tx));
+          }
+        });
+      }
+
+      std::future<uint> get_result[2];
+      for (auto& res : get_result) {
         res = async_thread_pool(thread->get_executor(), [&]() {
           token.fetch_sub(1, std::memory_order_seq_cst);
           while (token.load(std::memory_order_seq_cst)) {
           } // wait other thread
-
-          uint64_t get_count = 0;
-          while (get_count < 500) {
-            auto txs = tp.reap_max_txs(500 - get_count);
+          uint get_count = 0;
+          auto start_time = get_time();
+          while (get_count < tx_count) {
+            auto txs = tp.reap_max_txs(tx_count - get_count);
             get_count += txs.size();
+            if (get_time() - start_time >= 5000000 /* 5sec */) {
+              break;
+            }
           }
           return get_count;
         });
       }
 
-      push_res.wait();
-      auto res = push_res.get();
-      for (auto& r : res) {
-        CHECKED_IF(r.has_value()) {
-          CHECK(r.value().get());
-        }
+      for (auto& res : add_result) {
+        res.get();
+      }
+      while (!test_app->is_empty_response()) {
       }
 
-      uint64_t get_count = 0;
-      get_count += get_res[0].get();
-      get_count += get_res[1].get();
-      CHECK(get_count == 1000);
+      CHECK(get_result[0].get() + get_result[1].get() == tx_count * 2);
     }
   }
 }
@@ -442,7 +485,7 @@ TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
 
   const uint64_t tx_count = 10000;
   for (auto i = 0; i < tx_count; i++) {
-    CHECK(tp.check_tx(test_helper->new_tx(), true)->get());
+    CHECK(tp.check_tx_sync(test_helper->new_tx()));
   }
 
   uint tc = 100;
@@ -462,13 +505,9 @@ TEST_CASE("Update", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
 
   const uint64_t tx_count = 10;
-
-  auto put_tx = [&](class tx_pool& tp, std::vector<tx> txs) {
+  auto put_tx = [&](class tx_pool& tp, std::vector<tx>& txs) {
     for (auto& tx : txs) {
-      auto res = tp.check_tx(tx, true);
-      CHECKED_IF(res.has_value()) {
-        CHECK(res.value().get());
-      }
+      CHECK(tp.check_tx_sync(tx));
     }
   };
 
@@ -522,19 +561,20 @@ TEST_CASE("Update", "[tx_pool]") {
 
 TEST_CASE("Nonce override", "[tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
+  auto test_app = std::make_shared<test_application>();
   config config;
-  auto& tp = test_helper->make_tx_pool(config);
+  auto& tp = test_helper->make_tx_pool(config, test_app);
 
   auto tx1 = test_helper->new_tx();
-  CHECK(tp.check_tx(tx1, true).value().get());
+  CHECK(tp.check_tx_sync(tx1));
 
   auto tx2 = test_helper->new_tx();
-  test_helper->set_nonce(0);
-  CHECK(!tp.check_tx(tx2, true).value().get());
+  test_app->set_nonce(0);
+  CHECK(!tp.check_tx_sync(tx2));
 
-  test_helper->set_nonce(0);
-  test_helper->set_gas(config.gas_price_bump);
-  CHECK(tp.check_tx(tx2, true).value().get());
+  test_app->set_nonce(0);
+  test_app->set_gas(config.gas_price_bump);
+  CHECK(tp.check_tx_sync(tx2));
 }
 
 TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
