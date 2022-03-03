@@ -20,7 +20,8 @@ static tx_id_type get_tx_id(const tx& tx) {
   if (tx.size() == 0) {
     return tx_id_type{};
   }
-  return tx_id_type{to_hex(tx), false}; // FIXME
+  crypto::sha3_256 hash;
+  return tx_id_type{hash.init().update(tx).final()}; // FIXME
 }
 
 struct wrapped_tx {
