@@ -53,12 +53,11 @@ public:
 
   response_check_tx& check_tx() override {
     std::lock_guard _(mutex_);
-    auto res = std::make_shared<response_check_tx>(response_check_tx{
-      .gas_wanted = gas_wanted_,
-      .sender = str_to_addr("user"),
-      .nonce = nonce_++,
-      .callback = nullptr,
-    });
+    auto res = std::make_shared<response_check_tx>();
+    res->gas_wanted = gas_wanted_;
+    res->sender = str_to_addr("user");
+    res->nonce = nonce_++;
+    res->callback = nullptr;
     responses_.push_back(res);
     return *res;
   }

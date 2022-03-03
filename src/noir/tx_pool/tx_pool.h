@@ -5,6 +5,7 @@
 //
 #pragma once
 
+#include <noir/common/thread_pool.h>
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/app_connection.h>
 #include <noir/consensus/tx.h>
@@ -48,7 +49,7 @@ private:
   precheck_func* precheck_ = nullptr;
   postcheck_func* postcheck_ = nullptr;
 
-  bool is_running_ = false;
+  std::unique_ptr<named_thread_pool> thread_ = std::make_unique<named_thread_pool>("tx_pool_thread", 1);
 
 public:
   tx_pool();

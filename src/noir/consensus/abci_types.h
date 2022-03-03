@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/consensus/types.h>
+#include <boost/asio.hpp>
 
 namespace noir::consensus {
 
@@ -157,13 +158,29 @@ struct response_check_tx {
   std::string mempool_error;
   uint64_t nonce;
 
-  std::function<bool(response_check_tx&)> callback;
-  void set_callback(std::function<bool(response_check_tx&)>&& cb) {
+  std::mutex mutex;
+  std::shared_ptr<boost::asio::deadline_timer> callback_timer = nullptr;
+  std::function<bool(response_check_tx&)> callback = nullptr;
+
+  void set_callback(std::function<bool(response_check_tx&)>&& cb, boost::asio::io_context& io) {
+    std::lock_guard _(mutex);
+    callback_timer = std::make_shared<boost::asio::deadline_timer>(io);
     callback = std::move(cb);
+    callback_timer->expires_from_now(boost::posix_time::seconds(10));
+    callback_timer->async_wait([&](const boost::system::error_code& e) {
+      if (!e) {
+        callback = nullptr;
+        wlog(fmt::format("check_tx_async is expired. tx_id={}", get_tx_id(data).to_string()));
+      }
+    });
   }
 
   void invoke_callback() {
-    callback(*this);
+    std::lock_guard _(mutex);
+    if (callback && callback_timer) {
+      callback_timer->cancel();
+      callback(*this);
+    }
   }
 };
 
@@ -193,4 +210,4 @@ NOIR_REFLECT(noir::consensus::response_deliver_tx, code, data, log, info, gas_wa
 NOIR_REFLECT(noir::consensus::abci_responses, deliver_txs, end_block, begin_block)
 NOIR_REFLECT(noir::consensus::request_check_tx, tx, type)
 NOIR_REFLECT(noir::consensus::response_check_tx, code, data, log, info, gas_wanted, gas_used, events, codespace, sender,
-  priority, mempool_error, nonce)
+  priority, mempool_error, nonce, mutex, callback_timer, callback)

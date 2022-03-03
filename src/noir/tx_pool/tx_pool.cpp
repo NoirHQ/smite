@@ -64,7 +64,7 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
 bool tx_pool::check_tx_sync(const consensus::tx& tx) {
   try {
     auto tx_id = consensus::get_tx_id(tx);
-    auto res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = tx});
+    auto& res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = tx});
     check_tx_internal(tx_id, tx);
     return add_tx(tx_id, tx, res);
   } catch (std::exception& e) {
@@ -78,7 +78,8 @@ bool tx_pool::check_tx_async(const consensus::tx& tx) {
     auto tx_id = consensus::get_tx_id(tx);
     check_tx_internal(tx_id, tx);
     auto& res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
-    res.set_callback([&, tx_id, tx](consensus::response_check_tx& res) { return add_tx(tx_id, tx, res); });
+    res.set_callback(
+      [&, tx_id, tx](consensus::response_check_tx& res) { return add_tx(tx_id, tx, res); }, thread_->get_executor());
     return true;
   } catch (std::exception& e) {
     elog(fmt::format("{}", e.what()));
@@ -95,17 +96,17 @@ bool tx_pool::check_tx_internal(const consensus::tx_id_type& tx_id, const consen
   }
 
   if (tx_cache_.has(tx_id)) {
+    // if tx already in pool, then just update cache
     tx_cache_.put(tx_id, tx);
-    check(false, fmt::format("tx exists already in cache (tx_id: {})", tx_id.to_string()));
+    check(!tx_queue_.has(tx_id), fmt::format("tx exists already in pool (tx_id: {})", tx_id.to_string()));
+  } else {
+    tx_cache_.put(tx_id, tx);
   }
-
-  tx_cache_.put(tx_id, tx);
 
   return true;
 }
 
 bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res) {
-
   if (postcheck_ && !postcheck_(tx, res)) {
     if (res.code != consensus::code_type_ok) {
       tx_cache_.del(tx_id);
