@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/codec/scale.h>
 #include <noir/consensus/block.h>
+#include <noir/core/types.h>
 //#include <noir/consensus/common_test.h>
 
 using namespace noir;
@@ -13,8 +13,8 @@ using namespace noir::consensus;
 
 TEST_CASE("Encode block", "[block]") {
   block org{block_header{}, block_data{.hash = {0, 1, 2}}, commit{}};
-  auto data = codec::scale::encode(org);
-  auto decoded = codec::scale::decode<block>(data);
+  auto data = core::codec::encode(org);
+  auto decoded = core::codec::decode<block>(data);
   CHECK(org.data.hash == decoded.data.hash);
 }
 
