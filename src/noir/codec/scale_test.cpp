@@ -229,3 +229,19 @@ TEST_CASE("[scale] big integer", "[codec]") {
   auto w = decode<uint256_t>(data);
   CHECK(v == w);
 }
+
+TEST_CASE("[scale] shared pointer", "[codec]") {
+  SECTION("null pointer") {
+    std::shared_ptr<int> v{};
+    CHECK_THROWS(encode(v));
+  }
+
+  SECTION("has value") {
+    auto v = std::make_shared<int8_t>(1);
+    auto data = encode(v);
+    CHECK(to_hex(data) == "01");
+
+    auto w = decode<std::shared_ptr<int8_t>>(data);
+    CHECK(*v == *w);
+  }
+}

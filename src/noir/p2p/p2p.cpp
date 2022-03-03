@@ -11,6 +11,7 @@
 #include <noir/p2p/buffer_factory.h>
 #include <noir/p2p/p2p.h>
 #include <noir/p2p/queued_buffer.h>
+#include <noir/p2p/types.h>
 
 #include <appbase/application.hpp>
 #include <boost/asio/ip/host_name.hpp>
@@ -289,11 +290,11 @@ public:
   consensus::abci* abci_plug{nullptr};
 
   // Channels
-  plugin_interface::incoming::channels::peer_message_queue::channel_type& peer_mq_channel =
-    appbase::app().get_channel<plugin_interface::incoming::channels::peer_message_queue>();
-  plugin_interface::egress::channels::broadcast_message_queue::channel_type::handle broadcast_mq_subscription =
-    appbase::app().get_channel<plugin_interface::egress::channels::broadcast_message_queue>().subscribe(
-      std::bind(&p2p_impl::broadcast_message, this, std::placeholders::_1));
+  plugin_interface::incoming::channels::receive_message_queue::channel_type& recv_mq_channel =
+    appbase::app().get_channel<plugin_interface::incoming::channels::receive_message_queue>();
+  plugin_interface::egress::channels::transmit_message_queue::channel_type::handle xmt_mq_subscription =
+    appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
+      std::bind(&p2p_impl::transmit_message, this, std::placeholders::_1));
   /** @} */
 
   mutable std::shared_mutex connections_mtx;
@@ -349,7 +350,7 @@ public:
 
   connection_ptr find_connection(const std::string& host) const; // must call with held mutex
 
-  void broadcast_message(std::span<const char> msg);
+  void transmit_message(const envelope_ptr& env);
 };
 
 static p2p_impl* my_impl;
@@ -562,9 +563,26 @@ void p2p_impl::ticker() {
   });
 }
 
-void p2p_impl::broadcast_message(std::span<const char> msg) {
-  dlog(fmt::format("about to broadcast message: size={}", msg.size()));
-  // TODO: implement
+void p2p_impl::transmit_message(const envelope_ptr& env) {
+  // dlog(fmt::format("about to transmit message: to='{}' broadcast={} size={}", env->to, env->broadcast,
+  // env->message.size()));
+  if (env->broadcast) {
+    for_each_connection([env](auto& c) {
+      if (c->socket_is_open()) {
+        c->strand.post([c, env]() { c->enqueue(*env); });
+      }
+      return true;
+    });
+  } else {
+    // Unicast
+    for_each_connection([env](auto& c) {
+      if (c->socket_is_open() && (to_hex(c->conn_node_id) == env->to)) {
+        dlog(fmt::format("unicast to {}", to_hex(env->to)));
+        c->strand.post([c, env]() { c->enqueue(*env); });
+      }
+      return true;
+    });
+  }
 }
 
 //------------------------------------------------------------------------
@@ -781,10 +799,10 @@ struct msg_handler {
 
   explicit msg_handler(const connection_ptr& conn): c(conn) {}
 
-  template<typename T>
-  void operator()(const T&) const {
-    // Skip the rest
-  }
+  // template<typename T>
+  // void operator()(const T&) const {
+  //   // Skip the rest
+  // }
 
   void operator()(const handshake_message& msg) const {
     dlog("handle handshake_message");
@@ -801,15 +819,16 @@ struct msg_handler {
     c->handle_message(msg);
   }
 
-  //  void operator()(const proposal_message& msg) const {
-  //    if (!my_impl->abci_plug) {
-  //      dlog("abci is not connected: discard proposal_message");
-  //      return;
-  //    }
-  //    dlog("handle proposal_message");
-  //    my_impl->peer_mq_channel.publish(
-  //      appbase::priority::medium, std::make_shared<p2p_msg_info>(p2p_msg_info{msg, "" /* TODO: include peer_id */}));
-  //  }
+  void operator()(envelope& msg) {
+    msg.from = to_hex(c->conn_node_id); // manually set from, overriding original
+    dlog(fmt::format(" <<< envelope : from='{}' size={}", msg.from, msg.message.size()));
+    if (!my_impl->abci_plug) {
+      dlog("abci is not connected; discard envelope");
+      return;
+    }
+    my_impl->recv_mq_channel.publish( ///< notify consensus_reactor to take additional actions
+      appbase::priority::medium, std::make_shared<envelope>(msg));
+  }
 };
 
 //------------------------------------------------------------------------
@@ -1199,6 +1218,9 @@ void connection::start_read_message() {
           if (close_connection) {
             elog("Closing connection to: ${p}", ("p", conn->peer_name()));
             conn->close();
+            ///< notify consensus of peer down
+            appbase::app().get_method<plugin_interface::methods::update_peer_status>()(
+              to_hex(conn->conn_node_id), peer_status::down);
           }
         }));
   } catch (...) {
@@ -1210,15 +1232,11 @@ void connection::start_read_message() {
 bool connection::process_next_message(uint32_t message_length) {
   try {
     latest_msg_time = get_time();
-    noir::core::codec::datastream<char> ds_payload(pending_message_buffer.read_ptr(), message_length);
+    noir::core::codec::datastream<char> ds(pending_message_buffer.read_ptr(), message_length);
     net_message msg;
-    ds_payload >> msg;
+    ds >> msg;
     msg_handler m(shared_from_this());
-    std::visit(m, msg); ///< take local actions
-    my_impl->peer_mq_channel.publish( ///< notify consensus_reactor to take additional actions
-      appbase::priority::medium,
-      std::make_shared<p2p_msg_info>(
-        p2p_msg_info{msg, "" /* TODO: include peer_id */, false /* TODO: how to handle broadcast? */}));
+    std::visit(m, msg);
     pending_message_buffer.advance_read_ptr(message_length); // required to manually advance
   } catch (const fc::exception& e) {
     elog("Exception in handling message from ${p}: ${s}", ("p", peer_name())("s", e.to_detail_string()));
@@ -1439,6 +1457,9 @@ void connection::handle_message(const handshake_message& msg) {
   std::unique_lock<std::mutex> g_conn(conn_mtx);
   last_handshake_recv = msg;
   g_conn.unlock();
+
+  ///< notify consensus of peer up
+  appbase::app().get_method<plugin_interface::methods::update_peer_status>()(to_hex(conn_node_id), peer_status::up);
 }
 
 void connection::handle_message(const go_away_message& msg) {

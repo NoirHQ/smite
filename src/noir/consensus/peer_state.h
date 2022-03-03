@@ -15,15 +15,19 @@ namespace noir::consensus {
 struct peer_state {
   std::string peer_id;
 
-  std::mutex mtx;
   bool is_running{};
   peer_round_state prs;
+  std::mutex mtx;
+  std::shared_ptr<boost::asio::io_context::strand> strand;
 
-  static std::shared_ptr<peer_state> new_peer_state(const std::string& peer_id_) {
+  static std::shared_ptr<peer_state> new_peer_state(const std::string& peer_id_, boost::asio::io_context& ioc) {
     auto ret = std::make_shared<peer_state>();
     ret->peer_id = peer_id_;
-    peer_round_state prs_;
-    ret->prs = prs_;
+    ret->prs.round = -1;
+    ret->prs.proposal_pol_round = -1;
+    ret->prs.last_commit_round = -1;
+    ret->prs.catchup_commit_round = -1;
+    ret->strand = std::make_shared<boost::asio::io_context::strand>(ioc);
     return ret;
   }
 
@@ -242,6 +246,21 @@ public:
       return {};
     }
     return {};
+  }
+
+  std::shared_ptr<peer_round_state> get_round_state() {
+    std::lock_guard<std::mutex> g(mtx);
+    auto new_prs = std::make_shared<peer_round_state>();
+    *new_prs = prs;
+    return new_prs;
+  }
+
+  void init_proposal_block_parts(const p2p::part_set_header& part_set_header_) {
+    std::lock_guard<std::mutex> g(mtx);
+    if (prs.proposal_block_parts != nullptr)
+      return;
+    prs.proposal_block_part_set_header = part_set_header_;
+    prs.proposal_block_parts = bit_array::new_bit_array(part_set_header_.total);
   }
 };
 

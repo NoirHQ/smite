@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/codec/scale.h>
+#include <noir/codec/bcs.h>
 
 namespace noir::core {
 
-namespace codec = noir::codec::scale;
+namespace codec = noir::codec::bcs;
 
 }

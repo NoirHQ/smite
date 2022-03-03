@@ -269,4 +269,24 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& v) {
   return ds;
 }
 
+// Shared pointer
+template<typename Stream, typename T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::shared_ptr<T>& v) {
+  ds << bool(!!v);
+  if (!!v)
+    ds << *v;
+  return ds;
+}
+
+template<typename Stream, typename T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::shared_ptr<T>& v) {
+  bool b;
+  ds >> b;
+  if (b) {
+    v = std::make_shared<T>();
+    ds >> *v;
+  }
+  return ds;
+}
+
 } // NOIR_CODEC(bcs)

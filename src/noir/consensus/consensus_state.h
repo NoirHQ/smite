@@ -32,7 +32,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   state get_state();
   int64_t get_last_height();
-  std::unique_ptr<round_state> get_round_state();
+  std::shared_ptr<round_state> get_round_state();
   void set_priv_validator(const priv_validator& priv);
   void update_priv_validator_pub_key();
   void reconstruct_last_commit(state& state_);
@@ -49,7 +49,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void update_to_state(state& state_);
   void new_step();
 
-  void receive_routine(p2p::msg_info_ptr mi);
+  void receive_routine(p2p::internal_msg_info_ptr mi);
   void handle_msg();
 
   void schedule_timeout(
@@ -131,10 +131,6 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //  // msgs from ourself, or by timeouts
   //  peerMsgQueue     chan msgInfo
   ///< no need for peer_mq; we have one at consensus_reactor which handles all messages from peers
-
-  plugin_interface::egress::channels::broadcast_message_queue::channel_type&
-    broadcast_mq_channel; // TODO: move to consensus_reactor; no need to directly broadcast here; we are triggering
-                          // events and publish them to reactor which in turn will broadcast if necessary
 
   plugin_interface::egress::channels::event_switch_message_queue::channel_type& event_switch_mq_channel;
 

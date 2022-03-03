@@ -16,10 +16,26 @@ public:
   abci() {}
   virtual ~abci() {}
 
-  void set_program_options(CLI::App& app_config) {}
+  void set_program_options(CLI::App& app_config) {
+    auto abci_options = app_config.add_section("abci",
+      "###############################################\n"
+      "###        ABCI Configuration Options       ###\n"
+      "###############################################");
+    abci_options->add_option("--do-not-start-node", "Do not start node")->default_val(false);
+  }
 
   void plugin_initialize(const CLI::App& app_config) {
     ilog("Initialize abci");
+
+    auto abci_options = app_config.get_subcommand("abci");
+    do_not_start_node = abci_options->get_option("--do-not-start-node")->as<bool>();
+    if (do_not_start_node) {
+      /* do not start node, but create an instance of consensus_reactor so network messages can be processed */
+      static std::shared_ptr<consensus_reactor> cs_reactor =
+        std::make_shared<consensus_reactor>(std::make_shared<consensus_state>(), false);
+      return;
+    }
+
     auto config_ = config::get_default();
     config_.base.chain_id = "test_chain";
     config_.base.mode = Validator; // todo - read from config or cli
@@ -27,11 +43,16 @@ public:
   }
 
   void plugin_startup() {
+    if (do_not_start_node)
+      return;
+
     node_->on_start();
   }
+
   void plugin_shutdown() {}
 
   std::unique_ptr<node> node_;
+  bool do_not_start_node{false};
 };
 
 } // namespace noir::consensus

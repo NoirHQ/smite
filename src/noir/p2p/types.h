@@ -4,15 +4,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/refl.h>
 #include <noir/common/types/bytes_n.h>
+
 #include <chrono>
 #include <cinttypes>
 #include <mutex>
 #include <vector>
 
 namespace noir::p2p {
-
-using node_id = std::string; // a hex-encoded crypto.Address. It must be lower-cased
 
 using tstamp = std::chrono::system_clock::duration::rep;
 
@@ -70,4 +70,36 @@ constexpr auto round_step_to_str(round_step_type step) {
   }
 }
 
+enum class peer_status {
+  up, // Connected and ready
+  down, // Disconnected
+  good, // Peer observed as good
+  bad // Peer observed as bad
+};
+
+constexpr auto peer_status_to_str(peer_status status) {
+  switch (status) {
+  case peer_status::up:
+    return "Up";
+  case peer_status::down:
+    return "Down";
+  case peer_status::good:
+    return "Good";
+  case peer_status::bad:
+    return "Bad";
+  default:
+    return "Unknown";
+  }
+}
+
+struct envelope {
+  std::string from;
+  std::string to;
+  bool broadcast;
+  bytes message; ///< one of reactor_messages, serialized
+};
+using envelope_ptr = std::shared_ptr<envelope>;
+
 } // namespace noir::p2p
+
+NOIR_REFLECT(noir::p2p::envelope, from, to, broadcast, message)

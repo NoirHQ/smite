@@ -254,7 +254,7 @@ TEST_CASE("basic_wal test", "[basic_wal]") {
     };
 
     wal_->on_start();
-    CHECK(wal_->write({noir::p2p::msg_info{.msg = bp_msg}}) == true);
+    CHECK(wal_->write({noir::p2p::internal_msg_info{.msg = bp_msg}}) == true);
     CHECK(wal_->flush_and_sync() == true);
   }
 
@@ -287,7 +287,7 @@ TEST_CASE("basic_wal test", "[basic_wal]") {
           .bytes_ = gen_random_bytes(32),
           .proof{.leaf_hash = gen_random_bytes(32)},
         };
-        CHECK(wal_->write({noir::p2p::msg_info{.msg = bp_msg}}) == true);
+        CHECK(wal_->write({noir::p2p::internal_msg_info{.msg = bp_msg}}) == true);
       }
       CHECK(wal_->write({noir::consensus::end_height_message{height}}) == true);
     }
@@ -320,7 +320,7 @@ TEST_CASE("basic_wal test", "[basic_wal]") {
         REQUIRE(dec != nullptr);
         timed_wal_message msg{};
         CHECK(dec->decode(msg) == wal_decoder::result::success);
-        auto* msg_body = get_if<noir::p2p::msg_info>(&msg.msg.msg);
+        auto* msg_body = get_if<noir::p2p::internal_msg_info>(&msg.msg.msg);
         REQUIRE(msg_body != nullptr);
         auto* bp_msg = get_if<noir::p2p::block_part_message>(&msg_body->msg);
         REQUIRE(bp_msg != nullptr);

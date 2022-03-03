@@ -320,4 +320,19 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& v) {
   return ds;
 }
 
+// Shared pointer
+template<typename Stream, typename T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::shared_ptr<T>& v) {
+  check(!!v, "shared pointer cannot be null");
+  ds << *v;
+  return ds;
+}
+
+template<typename Stream, typename T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::shared_ptr<T>& v) {
+  v = std::make_shared<T>();
+  ds >> *v;
+  return ds;
+}
+
 } // NOIR_CODEC(scale)

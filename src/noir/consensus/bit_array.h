@@ -7,8 +7,10 @@
 #include <noir/common/for_each.h>
 #include <noir/common/types/bytes.h>
 
+#include <algorithm>
 #include <memory>
 #include <mutex>
+#include <random>
 #include <vector>
 
 namespace noir::consensus {
@@ -83,7 +85,19 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
     return c;
   }
 
+  std::shared_ptr<bit_array> not_op() {
+    if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
+      return nullptr;
+    std::lock_guard<std::mutex> g(mtx);
+    auto c = copy();
+    for (auto i = 0; i < c->elem.size(); i++)
+      c->elem[i] = ~(c->elem[i]);
+    return c;
+  }
+
   std::shared_ptr<bit_array> copy() const {
+    if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
+      return nullptr;
     auto copy = std::make_shared<bit_array>();
     copy->bits = bits;
     copy->elem = elem;
@@ -131,6 +145,29 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
       bs.push_back(static_cast<char>(byte_));
     }
     return bs;
+  }
+
+  /// \brief returns a random index for a bit. If there is no value, returns 0, false
+  std::tuple<int, bool> pick_random() {
+    if (elem.empty())
+      return {0, false};
+    std::lock_guard<std::mutex> g(mtx);
+    auto true_indices = get_true_indices();
+    if (true_indices.empty())
+      return {0, false};
+    std::vector<int> result;
+    std::sample(
+      true_indices.begin(), true_indices.end(), std::back_inserter(result), 1, std::mt19937{std::random_device{}()});
+    return {result[0], true};
+  }
+
+  std::vector<int> get_true_indices() {
+    std::vector<int> ret;
+    for (auto i = 0; i < elem.size(); i++) {
+      if (elem[i])
+        ret.push_back(i);
+    }
+    return ret;
   }
 
   template<typename T>

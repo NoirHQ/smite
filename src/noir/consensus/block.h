@@ -161,6 +161,8 @@ struct part_set {
   }
 
   bool has_header(p2p::part_set_header header_) {
+    if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
+      return false;
     return header() == header_;
   }
 
