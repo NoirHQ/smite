@@ -95,7 +95,7 @@ TEST_CASE("priv_val_file: save/load lss", "[noir][consensus]") {
   compare_file_pv_last_sign_state(exp, ret);
 }
 
-TEST_CASE("test file_pv", "[priv_val_file]") {
+TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
   auto temp_dir = prepare_test_dir();
   auto temp_dir_path = temp_dir->path().string();
   auto defer = noir::make_scope_exit([&temp_dir_path]() { fs::remove_all(temp_dir_path); });
