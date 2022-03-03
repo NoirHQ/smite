@@ -48,6 +48,10 @@ struct consensus_reactor {
     thread_pool.emplace("cs_reactor", thread_pool_size);
   }
 
+  virtual ~consensus_reactor() {
+    thread_pool->stop();
+  }
+
   static std::shared_ptr<consensus_reactor> new_consensus_reactor(
     std::shared_ptr<consensus_state>& new_cs_state, bool new_wait_sync) {
     auto consensus_reactor_ = std::make_shared<consensus_reactor>(new_cs_state, new_wait_sync);
