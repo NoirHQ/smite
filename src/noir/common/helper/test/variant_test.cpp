@@ -189,8 +189,8 @@ TEMPLATE_TEST_CASE("variant: to/from_variant", "[noir][common]", signed_integral
 
   fc::variant tmp;
   TestType ret;
-  noir::to_variant(exp, tmp);
-  noir::from_variant(tmp, ret);
+  fc::to_variant(exp, tmp);
+  fc::from_variant(tmp, ret);
   CHECK(exp == ret);
 }
 
