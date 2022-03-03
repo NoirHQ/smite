@@ -9,6 +9,7 @@
 #include <noir/common/types.h>
 #include <noir/consensus/crypto.h>
 #include <noir/consensus/priv_validator.h>
+#include <noir/p2p/protocol.h>
 #include <fc/io/json.hpp>
 #include <filesystem>
 
@@ -51,6 +52,17 @@ struct file_pv_last_sign_state {
   bytes sign_bytes; // hex? bytes?
   std::string file_path;
 
+  /// \brief CheckHRS checks the given height, round, step (HRS) against that of the
+  /// FilePVLastSignState. It returns an error if the arguments constitute a regression,
+  /// or if they match but the SignBytes are empty.
+  /// It panics if the HRS matches the arguments, there's a SignBytes, but no Signature.
+  /// \param[in] height
+  /// \param[in] round
+  /// \param[in] step
+  /// \return indicates whether the last Signature should be reused - true if the HRS matches the arguments and the
+  /// SignBytes are not empty (indicating we have already signed for this HRS, and can reuse the existing signature)
+  bool check_hrs(int64_t height_, int32_t round_, sign_step step_) const;
+
   /// \brief persists the FilePvLastSignState to its filePath.
   void save();
 
@@ -86,25 +98,6 @@ struct file_pv : public noir::consensus::priv_validator {
         .file_path = state_file_path,
       }) {}
 
-  priv_validator_type get_type() const override {
-    return priv_validator_type::FileSignerClient;
-  }
-
-  pub_key get_pub_key() const override {
-    return key.pub_key;
-  }
-
-  priv_key get_priv_key() const override {
-    return key.priv_key;
-  }
-
-  std::optional<std::string> sign_vote(vote& vote_) override {
-    return {};
-  }
-  std::optional<std::string> sign_proposal(proposal& proposal_) override {
-    return {};
-  }
-
   /// \brief generates a new validator with randomly generated private key and sets the filePaths, but does not call
   /// save()
   /// \todo need to check default key_type
@@ -138,6 +131,85 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \brief persists the FilePv to its filePath.
   void save();
 
+  /// \brief loads a FilePV from the given filePaths or else generates a new one and saves it to the filePaths.
+  /// \param[in] key_file_path
+  /// \param[in] state_file_path
+  /// \return shared_ptr of file_pv
+  static std::shared_ptr<file_pv> load_or_gen_file_pv(
+    const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
+    std::shared_ptr<file_pv> ret;
+    if (std::filesystem::exists(key_file_path)) {
+      ret = load_file_pv(key_file_path, state_file_path);
+    } else {
+      ret = gen_file_pv(key_file_path, state_file_path);
+      check(ret != nullptr);
+      ret->save();
+    }
+    return ret;
+  }
+
+  /// \brief returns type of priv_validator
+  /// \return priv_validator_type
+  priv_validator_type get_type() const override {
+    return priv_validator_type::FileSignerClient;
+  }
+
+  /// \brief returns the address of the validator
+  /// \return address
+  bytes get_address() const {
+    return key.address;
+  }
+
+  /// \brief returns the public key of the validator
+  /// \return the public key of the validator
+  pub_key get_pub_key() const override {
+    return key.pub_key;
+  }
+
+  /// \brief returns the private key of the validator
+  /// \return the private key of the validator
+  priv_key get_priv_key() const override {
+    return key.priv_key;
+  }
+
+  /// \brief signs a canonical representation of the vote, along with the chainID
+  /// \param[in] vote_
+  /// \return
+  std::optional<std::string> sign_vote(noir::consensus::vote& vote) override {
+    if (!sign_vote_internal(vote)) {
+      return "error signing vote";
+    }
+    return {};
+  }
+
+  /// \brief signs a canonical representation of the proposal, along with the chainID
+  /// \param[in] proposal_
+  /// \return
+  std::optional<std::string> sign_proposal(noir::consensus::proposal& proposal) override {
+    if (!sign_proposal_internal(proposal)) {
+      return "error signing proposal";
+    }
+    return {};
+  }
+
+  /// \brief returns a string representation of the FilePV.
+  /// \return string representation of the FilePV.
+  inline std::string string() const;
+
+  /// \brief resets all fields in the FilePV.
+  /// \note Unsafe!
+  void reset() {
+    save_signed(0, 0, sign_step::none, bytes{}, bytes{});
+  }
+
+  /// \brief  persist height/round/step and signature
+  /// \param[in] height
+  /// \param[in] round
+  /// \param[in] step
+  /// \param[in] sign_bytes
+  /// \param[in] sig
+  void save_signed(int64_t height, int32_t round, sign_step step, const bytes& sign_bytes, const bytes& sig);
+
 private:
   /// \brief load FilePV from given arguments
   /// \param[in] key_file_path
@@ -146,6 +218,20 @@ private:
   /// \return shared_ptr of file_pv
   static std::shared_ptr<file_pv> load_file_pv_internal(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path, bool load_state);
+
+  /// \brief signVote checks if the vote is good to sign and sets the vote signature. It may need to set the timestamp
+  /// as well if the vote is otherwise the same as a previously signed vote (ie. we crashed after signing but before the
+  /// vote hit the WAL).
+  /// \param[in] vote
+  /// \return true on success, false otherwise
+  bool sign_vote_internal(noir::consensus::vote& vote);
+
+  /// \brief signProposal checks if the proposal is good to sign and sets the proposal signature.
+  /// It may need to set the timestamp as well if the proposal is otherwise the same as
+  /// a previously signed proposal ie. we crashed after signing but before the proposal hit the WAL).
+  /// \param[in] proposal
+  /// \return true on success, false otherwise
+  bool sign_proposal_internal(noir::consensus::proposal& proposal);
 };
 
 /// \}
