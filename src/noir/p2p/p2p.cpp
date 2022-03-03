@@ -748,7 +748,10 @@ void p2p::plugin_startup() {
   }
 }
 
-void p2p::plugin_shutdown() {}
+void p2p::plugin_shutdown() {
+  for (auto c : my->connections)
+    disconnect(c->peer_address());
+}
 
 std::string p2p::connect(const std::string& host) {
   std::lock_guard<std::shared_mutex> g(my->connections_mtx);
