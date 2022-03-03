@@ -11,21 +11,29 @@
 
 namespace fc {
 
+inline void to_variant(const int64_t& in, variant& out) {
+  out = in;
+}
+
+inline void to_variant(const uint64_t& in, variant& out) {
+  out = in;
+}
+
 template<noir::enumeration E>
 void to_variant(const E& in, variant& out) {
-  auto tmp = static_cast<std::underlying_type_t<E>>(in);
-  if constexpr (requires(const E& in) { variant(tmp); }) {
-    out = tmp;
-  } else {
-    to_variant(tmp, out);
-  }
+  to_variant(static_cast<std::underlying_type_t<E>>(in), out);
 }
 
 template<noir::reflection T>
 void to_variant(const T& in, variant& out) {
   mutable_variant_object obj;
   noir::refl::for_each_field(
-    [&](const auto& name, const auto& value) { obj.set(std::string(name), variant{value}); }, in);
+    [&](const auto& name, const auto& value) {
+      fc::variant var;
+      to_variant(value, var);
+      obj.set(std::string(name), var);
+    },
+    in);
   out = obj;
 }
 
