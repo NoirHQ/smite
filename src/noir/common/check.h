@@ -16,7 +16,7 @@ namespace noir {
 /// \param msg message passed to the exception
 /// \ingroup common
 template<typename Error = std::runtime_error>
-inline void check(bool pred, std::string_view msg) {
+constexpr void check(bool pred, std::string_view msg) {
   if (!pred) {
     throw Error(msg.data());
   }
@@ -28,7 +28,7 @@ inline void check(bool pred, std::string_view msg) {
 /// \param msg message passed to the exception
 /// \ingroup common
 template<typename Error = std::runtime_error>
-inline void check(bool pred, const char* msg = "") {
+constexpr void check(bool pred, const char* msg = "") {
   if (!pred) {
     throw Error(msg);
   }
@@ -41,7 +41,7 @@ inline void check(bool pred, const char* msg = "") {
 /// \param args variable arguments for formatted message
 /// \ingroup common
 template<typename Error = std::runtime_error, typename... Ts>
-inline void check(bool pred, const char* format_str, Ts... args) {
+constexpr void check(bool pred, const char* format_str, Ts... args) {
   if (!pred) {
     throw Error(fmt::format(fmt::runtime(format_str), args...));
   }
