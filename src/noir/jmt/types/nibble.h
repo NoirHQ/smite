@@ -21,11 +21,6 @@ namespace noir::jmt {
 extern size_t root_nibble_height;
 
 struct nibble {
-  constexpr nibble() = default;
-  constexpr nibble(const nibble&) = default;
-  constexpr nibble(nibble&&) = default;
-  constexpr nibble& operator=(const nibble&) = default;
-
   constexpr nibble(uint8_t v): value(v) {}
 
   nibble& operator=(uint8_t v) {
@@ -56,9 +51,6 @@ struct nibble {
 
 struct nibble_path {
   nibble_path() = default;
-  nibble_path(nibble_path&&) = default;
-  nibble_path(const nibble_path&) = default;
-  nibble_path& operator=(const nibble_path& path) = default;
 
   template<Byte T, size_t N = std::dynamic_extent>
   constexpr nibble_path(std::span<T, N> bytes, bool odd = false): bytes({bytes.begin(), bytes.end()}) {

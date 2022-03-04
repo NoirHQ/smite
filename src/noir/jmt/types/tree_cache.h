@@ -21,10 +21,6 @@ struct frozen_tree_cache {
 
 template<typename R, typename T = typename R::value_type>
 struct tree_cache {
-  // tree_cache(tree_cache&&) = default;
-  // tree_cache(const tree_cache&) = default;
-  // tree_cache& operator=(const tree_cache&) = default;
-
   tree_cache(R& reader, version next_version = 0): reader(reader), next_version(next_version) {
     if (!next_version) {
       auto pre_genesis_root_key = node_key{pre_genesis_version, {}};
