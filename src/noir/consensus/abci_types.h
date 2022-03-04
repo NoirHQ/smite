@@ -5,7 +5,6 @@
 //
 #pragma once
 #include <noir/consensus/types.h>
-#include <boost/asio.hpp>
 
 namespace noir::consensus {
 
@@ -51,27 +50,16 @@ template<typename T>
 struct req_res {
   std::mutex mutex;
   std::function<void(T&)> callback = nullptr;
-  std::shared_ptr<boost::asio::deadline_timer> callback_timer = nullptr;
   std::shared_ptr<T> res;
 
-  void set_callback(std::function<void(T&)> cb, boost::asio::io_context& io) {
+  void set_callback(std::function<void(T&)> cb) {
     std::lock_guard _(mutex);
-    callback_timer = std::make_shared<boost::asio::deadline_timer>(io);
     callback = std::move(cb);
-    callback_timer->expires_from_now(boost::posix_time::seconds(10));
-    callback_timer->async_wait([&](const boost::system::error_code& e) {
-      if (!e) {
-        std::lock_guard _(mutex);
-        callback = nullptr;
-        wlog(fmt::format("{} is expired.", boost::core::demangle(typeid(T).name())));
-      }
-    });
   }
 
   void invoke_callback() {
     std::lock_guard _(mutex);
-    if (callback && callback_timer) {
-      callback_timer->cancel();
+    if (callback) {
       callback(*res);
     }
   }
