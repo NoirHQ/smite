@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <cinttypes>
+#include <memory>
 #include <mutex>
 #include <vector>
 
