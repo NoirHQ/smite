@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <eth/common/types.h>
+#include <memory>
 
 namespace eth {
 
