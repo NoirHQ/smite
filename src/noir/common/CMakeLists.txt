@@ -7,7 +7,6 @@ target_sources(noir
     types.cpp
 )
 
-add_noir_test(common_test
-  test/bytes_test.cpp
-  test/check_test.cpp
-)
+add_noir_test(bytes_test test/bytes_test.cpp)
+add_noir_test(check_test test/check_test.cpp)
+add_noir_test(varint_test types/test/varint_test.cpp)

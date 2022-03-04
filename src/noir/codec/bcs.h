@@ -62,31 +62,13 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, E& v) {
 // ULEB128-Encoded Integers
 template<typename Stream, unsigned_integral T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const varint<T>& v) {
-  auto val = v.value;
-  for (auto i = 0; i < sizeof(T); ++i) {
-    uint8_t low_bits = val & 0x7f;
-    val >>= 7;
-    uint8_t more = val ? 0x80 : 0;
-    ds.put(low_bits | more);
-    if (!more)
-      break;
-  }
+  write_uleb128(ds, v);
   return ds;
 }
 
 template<typename Stream, unsigned_integral T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
-  T val = 0;
-  for (auto i = 0; i < sizeof(T) / 7; ++i) {
-    auto c = ds.get();
-    val |= T(uint8_t(c) & 0x7f) << (i * 7);
-    if (!(c & 0x80)) {
-      v = val;
-      return ds;
-    }
-  }
-  val |= T(ds.get()) << ((sizeof(T) / 7) * 7);
-  v = val;
+  read_uleb128(ds, v);
   return ds;
 }
 
