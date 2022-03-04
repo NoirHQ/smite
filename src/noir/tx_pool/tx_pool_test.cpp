@@ -25,8 +25,7 @@ static address_type str_to_addr(const std::string& str) {
 
 class test_application : public application::base_application {
   std::shared_mutex mutex_;
-  using response_check_tx_ptr = std::shared_ptr<response_check_tx>;
-  std::list<response_check_tx_ptr> responses_;
+  std::list<std::shared_ptr<req_res<response_check_tx>>> rrs_;
   uint64_t nonce_ = 0;
   uint64_t gas_wanted_ = 0;
 
@@ -51,15 +50,27 @@ public:
     thread_->stop();
   }
 
-  response_check_tx& check_tx() override {
+  req_res<response_check_tx>& new_rr() {
     std::lock_guard _(mutex_);
-    auto res = std::make_shared<response_check_tx>();
-    res->gas_wanted = gas_wanted_;
-    res->sender = str_to_addr("user");
-    res->nonce = nonce_++;
-    res->callback = nullptr;
-    responses_.push_back(res);
-    return *res;
+    response_check_tx res{
+      .gas_wanted = gas_wanted_,
+      .sender = str_to_addr("user"),
+      .nonce = nonce_++,
+    };
+
+    auto rr_ptr = std::make_shared<req_res<response_check_tx>>();
+    rr_ptr->res = std::make_shared<response_check_tx>(res);
+    rrs_.push_back(rr_ptr);
+
+    return *rr_ptr;
+  }
+
+  response_check_tx& check_tx_sync() override {
+    return *new_rr().res;
+  }
+
+  req_res<response_check_tx>& check_tx_async() override {
+    return new_rr();
   }
 
   void set_nonce(uint64_t nonce) {
@@ -73,26 +84,26 @@ public:
   }
 
   void handle_response() {
-    if (responses_.begin() != responses_.end()) {
-      auto res = responses_.front();
-      if (res->callback != nullptr) {
-        res->invoke_callback();
+    if (rrs_.begin() != rrs_.end()) {
+      auto& rr = rrs_.front();
+      if (rr->callback != nullptr) {
+        rr->invoke_callback();
         std::unique_lock _(mutex_);
-        responses_.pop_front();
+        rrs_.pop_front();
       }
     }
   }
 
   void reset() {
     std::unique_lock _(mutex_);
-    responses_.clear();
+    rrs_.clear();
     nonce_ = 0;
     gas_wanted_ = 0;
   }
 
   bool is_empty_response() {
     std::shared_lock _(mutex_);
-    return responses_.empty();
+    return rrs_.empty();
   }
 };
 

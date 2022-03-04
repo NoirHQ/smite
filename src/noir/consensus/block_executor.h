@@ -253,16 +253,17 @@ struct block_executor {
 
     // run txs of block
     for (const auto& tx : block_->data.txs) {
-      auto deliver_res = proxyAppConn->deliver_tx_async(request_deliver_tx{tx});
+      auto& deliver_res_req = proxyAppConn->deliver_tx_async(request_deliver_tx{tx});
       /* todo - verify if implementation is correct;
        *        basically removed the original callback func and directly applied it here */
-      if (deliver_res.code == code_type_ok) {
+      auto deliver_res = deliver_res_req.res;
+      if (deliver_res->code == code_type_ok) {
         valid_txs++;
       } else {
-        dlog(fmt::format("invalid tx: code=", deliver_res.code));
+        dlog(fmt::format("invalid tx: code=", deliver_res->code));
         invalid_txs++;
       }
-      abci_responses_->deliver_txs.push_back(deliver_res);
+      abci_responses_->deliver_txs.push_back(*deliver_res);
     }
 
     abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_->header.height});
