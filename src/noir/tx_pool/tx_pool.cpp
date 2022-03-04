@@ -133,7 +133,7 @@ bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx
   auto wtx = consensus::wrapped_tx{
     .sender = res.sender,
     ._id = tx_id,
-    .tx_data = tx,
+    .tx = tx,
     .gas = res.gas_wanted,
     .nonce = res.nonce,
     .height = block_height_,
@@ -171,7 +171,7 @@ std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, u
 
     bytes += tx_ptr->size();
     gas += tx_ptr->gas;
-    txs.push_back(tx_ptr->tx_data);
+    txs.push_back(tx_ptr->tx);
   }
 
   return txs;
@@ -186,7 +186,7 @@ std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
     if (txs.size() >= count) {
       break;
     }
-    txs.push_back(itr->tx_ptr->tx_data);
+    txs.push_back(itr->tx_ptr->tx);
   }
 
   return txs;
@@ -241,7 +241,7 @@ void tx_pool::update_recheck_txs() {
   for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
     auto tx_ptr = itr->tx_ptr;
     proxy_app_->check_tx_async(consensus::request_check_tx{
-      .tx = tx_ptr->tx_data,
+      .tx = tx_ptr->tx,
       .type = consensus::check_tx_type::recheck,
     });
     proxy_app_->flush_async();
