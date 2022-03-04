@@ -5,8 +5,7 @@
 //
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/vote.h>
-
-#include <noir/core/types.h>
+#include <noir/core/codec.h>
 
 namespace noir::consensus {
 
@@ -85,7 +84,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     elog("add_vote() failed: invalid validator address");
     return false;
   }
-  auto data_vote = core::codec::encode(vote_.value());
+  auto data_vote = encode(vote_.value());
   if (!val->pub_key_.verify_signature(data_vote, vote_->signature)) {
     elog("add_vote() failed: invalid signature");
     return false;

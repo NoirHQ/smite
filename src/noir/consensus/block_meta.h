@@ -5,8 +5,8 @@
 //
 #pragma once
 
-#include <noir/codec/scale.h>
 #include <noir/consensus/types.h>
+#include <noir/core/codec.h>
 
 namespace noir::consensus {
 
@@ -24,7 +24,7 @@ struct block_meta {
     auto parts_ = const_cast<part_set&>(bl_parts);
     return {
       .bl_id = noir::p2p::block_id{.hash{hash_}, .parts{parts_.header()}},
-      .bl_size = static_cast<int64_t>(noir::codec::scale::encode_size(bl_)),
+      .bl_size = static_cast<int64_t>(encode_size(bl_)),
       .header = bl_.header,
       .num_txs = static_cast<int64_t>(bl_.data.txs.size()),
     };

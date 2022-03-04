@@ -6,13 +6,11 @@
 #pragma once
 
 #include <noir/common/for_each.h>
-#include <noir/consensus/block.h>
-
-#include <noir/codec/scale.h>
-
 #include <noir/common/hex.h>
+#include <noir/consensus/block.h>
 #include <noir/consensus/block_meta.h>
 #include <noir/consensus/types.h>
+#include <noir/core/codec.h>
 #include <noir/db/rocks_session.h>
 #include <noir/db/session.h>
 
@@ -93,7 +91,7 @@ public:
       return false;
     }
     tmp_bytes = (*tmp_it).second.value();
-    bl_meta = noir::codec::scale::decode<block_meta>(bytes{tmp_bytes.begin(), tmp_bytes.end()});
+    bl_meta = decode<block_meta>(bytes{tmp_bytes.begin(), tmp_bytes.end()});
     return true;
   }
 
@@ -117,7 +115,7 @@ public:
       }
       data.insert(data.end(), part_.bytes_.begin(), part_.bytes_.end());
     }
-    bl = noir::codec::scale::decode<block>(data);
+    bl = decode<block>(data);
     return true;
   }
 
@@ -144,7 +142,7 @@ public:
     if ((!tmp.has_value()) || tmp.value().empty()) {
       return false;
     }
-    part_ = noir::codec::scale::decode<part>(tmp.value());
+    part_ = decode<part>(tmp.value());
     return true;
   }
 
@@ -157,7 +155,7 @@ public:
     if ((!tmp.has_value()) || tmp.value().empty()) {
       return false;
     }
-    block_meta_ = noir::codec::scale::decode<block_meta>(tmp.value());
+    block_meta_ = decode<block_meta>(tmp.value());
     return true;
   }
 
@@ -170,7 +168,7 @@ public:
     if ((!tmp.has_value()) || tmp.value().empty()) {
       return false;
     }
-    commit_ = noir::codec::scale::decode<commit>(tmp.value());
+    commit_ = decode<commit>(tmp.value());
     return true;
   }
 
@@ -184,7 +182,7 @@ public:
     if ((!tmp.has_value()) || tmp.value().empty()) {
       return false;
     }
-    commit_ = noir::codec::scale::decode<commit>(tmp.value());
+    commit_ = decode<commit>(tmp.value());
     return true;
   }
 
@@ -216,18 +214,18 @@ public:
 
     {
       block_meta bl_meta = block_meta::new_block_meta(bl, bl_parts);
-      auto buf = noir::codec::scale::encode(bl_meta);
+      auto buf = encode(bl_meta);
       db_session_->write_from_bytes(encode_key<prefix::block_meta>(height_), buf);
       db_session_->write_from_bytes(encode_key<prefix::block_hash>(hash_), encode_val(height_));
     }
     {
       commit commit_{}; // TODO: bl.last_commit
-      auto buf = noir::codec::scale::encode(commit_);
+      auto buf = encode(commit_);
       db_session_->write_from_bytes(encode_key<prefix::block_commit>(height_ - 1), buf);
     }
     // Save seen commit (seen +2/3 precommits for block)
     {
-      auto buf = noir::codec::scale::encode(seen_commit);
+      auto buf = encode(seen_commit);
       db_session_->write_from_bytes(encode_key<prefix::seen_commit>(), buf);
     }
     db_session_->commit();
@@ -239,7 +237,7 @@ public:
   /// \param[in] seen_commit commit object to save
   /// \return true on success, false otherwise
   bool save_seen_commit(int64_t height_, const commit& seen_commit) {
-    auto buf = noir::codec::scale::encode(seen_commit);
+    auto buf = encode(seen_commit);
     db_session_->write_from_bytes(encode_key<prefix::seen_commit>(), buf);
     db_session_->commit();
     return true;
@@ -267,10 +265,10 @@ public:
       .num_txs = -1,
     };
 
-    auto buf = noir::codec::scale::encode(bm);
+    auto buf = encode(bm);
     db_session_->write_from_bytes(encode_key<prefix::block_meta>(height_), buf);
 
-    buf = noir::codec::scale::encode(header.commit);
+    buf = encode(header.commit);
     db_session_->write_from_bytes(encode_key<prefix::block_commit>(height_), buf);
     db_session_->commit();
     return true;
@@ -294,7 +292,7 @@ public:
 
     auto remove_block_hash = [&](const auto& k, const auto& v) {
       block_meta bm{};
-      bm = noir::codec::scale::decode<block_meta>(v);
+      bm = decode<block_meta>(v);
       db_session_->erase_from_bytes(encode_key<prefix::block_meta>(bm.bl_id.hash));
       return true;
     };
@@ -389,7 +387,7 @@ private:
   }
 
   bool save_block_part(int64_t height_, int index_, const part& part_) {
-    auto buf = noir::codec::scale::encode(part_);
+    auto buf = encode(part_);
     db_session_->write_from_bytes(encode_key<prefix::block_part>(height_, index_), buf);
     return true;
   }

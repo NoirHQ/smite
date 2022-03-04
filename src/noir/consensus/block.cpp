@@ -6,9 +6,8 @@
 
 #include <noir/consensus/block.h>
 #include <noir/consensus/vote.h>
+#include <noir/core/codec.h>
 #include <fmt/format.h>
-
-#include <noir/codec/scale.h>
 
 namespace noir::consensus {
 
@@ -54,7 +53,7 @@ bytes commit::get_hash() {
   if (hash.empty()) {
     merkle::bytes_list items;
     for (const auto& sig : signatures) {
-      auto bz = codec::scale::encode(sig);
+      auto bz = encode(sig);
       items.push_back(bz);
     }
     hash = merkle::hash_from_bytes_list(items);
@@ -158,20 +157,20 @@ bytes block_header::get_hash() {
   // if (validators_hash.empty()) // TODO
   //   return {};
   merkle::bytes_list items;
-  // items.push_back(codec::scale::encode(version)); // TODO
-  // items.push_back(codec::scale::encode(chain_id)); // TODO
-  items.push_back(codec::scale::encode(height));
-  items.push_back(codec::scale::encode(time));
-  // items.push_back(codec::scale::encode(last_block_id));
-  items.push_back(codec::scale::encode(last_commit_hash));
-  items.push_back(codec::scale::encode(data_hash));
-  items.push_back(codec::scale::encode(validators_hash));
-  items.push_back(codec::scale::encode(next_validators_hash));
-  items.push_back(codec::scale::encode(consensus_hash));
-  items.push_back(codec::scale::encode(app_hash));
-  items.push_back(codec::scale::encode(last_results_hash));
-  // items.push_back(codec::scale::encode(evidence_hash));
-  items.push_back(codec::scale::encode(proposer_address));
+  // items.push_back(encode(version)); // TODO
+  // items.push_back(encode(chain_id)); // TODO
+  items.push_back(encode(height));
+  items.push_back(encode(time));
+  // items.push_back(encode(last_block_id));
+  items.push_back(encode(last_commit_hash));
+  items.push_back(encode(data_hash));
+  items.push_back(encode(validators_hash));
+  items.push_back(encode(next_validators_hash));
+  items.push_back(encode(consensus_hash));
+  items.push_back(encode(app_hash));
+  items.push_back(encode(last_results_hash));
+  // items.push_back(encode(evidence_hash));
+  items.push_back(encode(proposer_address));
   return merkle::hash_from_bytes_list(items);
 }
 
@@ -183,13 +182,13 @@ std::shared_ptr<block> block::new_block_from_part_set(const std::shared_ptr<part
   data.reserve(ps->byte_size);
   for (const auto& p : ps->parts)
     std::copy(p->bytes_.begin(), p->bytes_.end(), std::back_inserter(data));
-  auto block_ = codec::scale::decode<block>(data);
+  auto block_ = decode<block>(data);
   return std::make_shared<block>(block_);
 }
 
 std::shared_ptr<part_set> block::make_part_set(uint32_t part_size) {
   std::lock_guard<std::mutex> g(mtx);
-  auto bz = codec::scale::encode(*this);
+  auto bz = encode(*this);
   return part_set::new_part_set_from_data(bz, part_size);
 }
 

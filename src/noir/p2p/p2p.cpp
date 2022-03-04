@@ -1232,7 +1232,7 @@ void connection::start_read_message() {
 bool connection::process_next_message(uint32_t message_length) {
   try {
     latest_msg_time = get_time();
-    noir::core::codec::datastream<char> ds(pending_message_buffer.read_ptr(), message_length);
+    datastream<char> ds(pending_message_buffer.read_ptr(), message_length);
     net_message msg;
     ds >> msg;
     msg_handler m(shared_from_this());

@@ -5,7 +5,7 @@
 //
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/consensus_state.h>
-#include <noir/core/types.h>
+#include <noir/core/codec.h>
 
 #include <appbase/application.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -1017,7 +1017,7 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
   }
 
   // Verify signature
-  auto data_proposal = core::codec::encode(msg);
+  auto data_proposal = encode(msg);
   if (!rs.validators->get_proposer()->pub_key_.verify_signature(data_proposal, msg.signature)) {
     dlog("set_proposal; error invalid proposal signature");
     return;

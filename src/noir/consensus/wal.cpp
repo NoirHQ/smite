@@ -6,8 +6,7 @@
 
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/wal.h>
-
-#include <noir/codec/scale.h>
+#include <noir/core/codec.h>
 
 namespace noir::consensus {
 using ::fc::cfile;
@@ -37,7 +36,7 @@ wal_decoder::result wal_decoder::decode(timed_wal_message& msg) {
     {
       noir::bytes dat(len);
       file_->read(dat.data(), len);
-      msg = noir::codec::scale::decode<timed_wal_message>(dat);
+      msg = noir::decode<timed_wal_message>(dat);
     }
   } catch (...) {
     if (file_->eof()) {
@@ -73,7 +72,7 @@ bool wal_encoder::encode(const timed_wal_message& msg, size_t& size) {
     }
   });
 
-  auto dat = noir::codec::scale::encode(msg);
+  auto dat = noir::encode(msg);
   if (dat.size() > wal_file_manager::max_msg_size_bytes) { // TODO: handle error
     elog("msg is too big: ${length} bytes, max: ${maxMsgSizeBytes} bytes",
       ("length", dat.size())("maxMsgSizeBytes", wal_file_manager::max_msg_size_bytes));

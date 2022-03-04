@@ -5,7 +5,7 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/block.h>
-#include <noir/core/types.h>
+#include <noir/core/codec.h>
 //#include <noir/consensus/common_test.h>
 
 using namespace noir;
@@ -13,8 +13,8 @@ using namespace noir::consensus;
 
 TEST_CASE("Encode block", "[block]") {
   block org{block_header{}, block_data{.hash = {0, 1, 2}}, commit{}};
-  auto data = core::codec::encode(org);
-  auto decoded = core::codec::decode<block>(data);
+  auto data = encode(org);
+  auto decoded = decode<block>(data);
   CHECK(org.data.hash == decoded.data.hash);
 }
 

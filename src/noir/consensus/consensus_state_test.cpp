@@ -63,13 +63,13 @@ TEST_CASE("Verify proposal signature", "[consensus_state]") {
   proposal proposal_{};
   proposal_.timestamp = get_time();
 
-  auto data_proposal1 = codec::scale::encode((p2p::proposal_message)proposal_);
+  auto data_proposal1 = encode((p2p::proposal_message)proposal_);
   // std::cout << "data_proposal1=" << to_hex(data_proposal1) << std::endl;
   // std::cout << "digest1=" << fc::sha256::hash(data_proposal1).str() << std::endl;
   auto sig_org = local_priv_validator.sign_proposal(proposal_);
   // std::cout << "sig=" << std::string(proposal_.signature.begin(), proposal_.signature.end()) << std::endl;
 
-  auto data_proposal2 = codec::scale::encode((p2p::proposal_message)proposal_);
+  auto data_proposal2 = encode((p2p::proposal_message)proposal_);
   // std::cout << "data_proposal2=" << to_hex(data_proposal2) << std::endl;
   // std::cout << "digest2=" << fc::sha256::hash(data_proposal2).str() << std::endl;
   auto result = local_priv_validator.pub_key_.verify_signature(data_proposal2, proposal_.signature);
@@ -84,13 +84,13 @@ TEST_CASE("Verify vote signature", "[consensus_state]") {
   vote vote_{};
   vote_.timestamp = get_time();
 
-  auto data_vote1 = codec::scale::encode((p2p::vote_message)vote_);
+  auto data_vote1 = encode((p2p::vote_message)vote_);
   // std::cout << "data_vote1=" << to_hex(data_vote1) << std::endl;
   // std::cout << "digest1=" << fc::sha256::hash(data_vote1).str() << std::endl;
   auto sig_org = local_priv_validator.sign_vote(vote_);
   // std::cout << "sig=" << std::string(vote_.signature.begin(), vote_.signature.end()) << std::endl;
 
-  auto data_vote2 = codec::scale::encode((p2p::vote_message)vote_);
+  auto data_vote2 = encode((p2p::vote_message)vote_);
   // std::cout << "data_vote2=" << to_hex(data_vote2) << std::endl;
   // std::cout << "digest2=" << fc::sha256::hash(data_vote2).str() << std::endl;
   auto result = local_priv_validator.pub_key_.verify_signature(data_vote2, vote_.signature);

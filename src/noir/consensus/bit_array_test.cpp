@@ -6,37 +6,37 @@
 #include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
 #include <noir/consensus/bit_array.h>
-#include <noir/core/types.h>
+#include <noir/core/codec.h>
 
 using namespace noir;
 using namespace noir::consensus;
 
 TEST_CASE("Encode and decode bit_array", "[bit_array]") {
   auto bit_array_ = bit_array::new_bit_array(10);
-  auto data = core::codec::encode(*bit_array_);
+  auto data = encode(*bit_array_);
   // std::cout << "data=" << to_hex(data) << std::endl;
   // std::cout << "org = " << bit_array_->string() << std::endl;
-  auto decoded = core::codec::decode<bit_array>(data);
+  auto decoded = decode<bit_array>(data);
   // std::cout << "dec = " << decoded.string() << std::endl;
   CHECK(bit_array_->string() == decoded.string());
 
   bit_array_->set_index(0, true);
   bit_array_->set_index(2, true);
-  data = core::codec::encode(*bit_array_);
-  auto decoded2 = core::codec::decode<bit_array>(data);
+  data = encode(*bit_array_);
+  auto decoded2 = decode<bit_array>(data);
   CHECK(bit_array_->string() == decoded2.string());
 
   bit_array_->set_index(9, true);
-  data = core::codec::encode(*bit_array_);
-  auto decoded3 = core::codec::decode<bit_array>(data);
+  data = encode(*bit_array_);
+  auto decoded3 = decode<bit_array>(data);
   CHECK(bit_array_->string() == decoded3.string());
 
   int TEST_SIZE = 1000;
   auto sa = bit_array::new_bit_array(TEST_SIZE);
   for (auto i = 0; i < TEST_SIZE; i++) {
     sa->set_index(i, i % 3 != 0);
-    auto enc = core::codec::encode(*sa);
-    auto dec = core::codec::decode<bit_array>(enc);
+    auto enc = encode(*sa);
+    auto dec = decode<bit_array>(enc);
     CHECK(sa->string() == dec.string());
   }
 }
