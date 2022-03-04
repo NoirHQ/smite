@@ -7,7 +7,7 @@
 #include <noir/consensus/block.h>
 #include <noir/consensus/vote.h>
 #include <noir/core/codec.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 namespace noir::consensus {
 

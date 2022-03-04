@@ -12,7 +12,7 @@
 #include <noir/jmt/types/common.h>
 #include <noir/jmt/types/nibble.h>
 #include <noir/jmt/types/proof.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <bit>
 #include <map>
 #include <set>

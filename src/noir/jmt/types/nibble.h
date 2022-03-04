@@ -10,7 +10,7 @@
 #include <noir/common/hex.h>
 #include <noir/common/types/hash.h>
 #include <noir/crypto/hash/xxhash.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <optional>
 #include <span>
 #include <string>

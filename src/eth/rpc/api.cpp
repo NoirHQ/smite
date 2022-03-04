@@ -9,7 +9,7 @@
 #include <eth/common/block.h>
 #include <eth/common/receipt.h>
 #include <eth/rpc/api.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 namespace eth::api {
 
