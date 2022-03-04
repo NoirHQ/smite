@@ -46,7 +46,7 @@ struct validator_update {
   }
 };
 
-struct requst_begin_block {
+struct request_begin_block {
   bytes hash;
   block_header header_;
   last_commit_info last_commit_info_;
@@ -191,7 +191,7 @@ NOIR_REFLECT(noir::consensus::event, type, attributes)
 NOIR_REFLECT(noir::consensus::vote_info, validator_, signed_last_block)
 NOIR_REFLECT(noir::consensus::last_commit_info, round, votes)
 NOIR_REFLECT(noir::consensus::validator_update, power)
-NOIR_REFLECT(noir::consensus::requst_begin_block, hash, header_, last_commit_info_)
+NOIR_REFLECT(noir::consensus::request_begin_block, hash, header_, last_commit_info_)
 NOIR_REFLECT(noir::consensus::response_begin_block, events)
 NOIR_REFLECT(noir::consensus::request_end_block, height)
 NOIR_REFLECT(noir::consensus::response_end_block, validator_updates, consensus_param_updates, events)
