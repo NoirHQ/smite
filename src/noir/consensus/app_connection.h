@@ -29,7 +29,7 @@ struct app_connection {
     return res;
   }
 
-  response_begin_block& begin_block_sync(requst_begin_block req) {
+  response_begin_block& begin_block_sync(request_begin_block req) {
     std::lock_guard<std::mutex> g(mtx);
     auto& res = application->begin_block();
     return res;

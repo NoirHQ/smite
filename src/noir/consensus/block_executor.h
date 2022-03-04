@@ -249,7 +249,7 @@ struct block_executor {
 
     // begin block
     abci_responses_->begin_block =
-      proxyAppConn->begin_block_sync(requst_begin_block{block_->get_hash(), block_->header, commit_info});
+      proxyAppConn->begin_block_sync(request_begin_block{block_->get_hash(), block_->header, commit_info});
 
     // run txs of block
     for (const auto& tx : block_->data.txs) {
