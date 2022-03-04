@@ -27,8 +27,8 @@ struct unapplied_tx {
   const consensus::address_type sender() const {
     return tx_ptr->sender;
   }
-  const consensus::tx_id_type id() const {
-    return tx_ptr->id();
+  const std::string id() const {
+    return tx_ptr->id().to_string();
   }
   const uint64_t height() const {
     return tx_ptr->height;
@@ -58,9 +58,9 @@ private:
   typedef boost::multi_index::multi_index_container<
     unapplied_tx,
     boost::multi_index::indexed_by<
-      boost::multi_index::ordered_unique<
+      boost::multi_index::hashed_unique<
         boost::multi_index::tag<by_tx_id>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const consensus::tx_id_type, &unapplied_tx::id>
+        boost::multi_index::const_mem_fun<unapplied_tx, const std::string, &unapplied_tx::id>
       >,
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<by_gas>,
@@ -124,11 +124,11 @@ public:
   }
 
   bool has(const consensus::tx_id_type& id) const {
-    return queue_.get<by_tx_id>().find(id) != queue_.get<by_tx_id>().end();
+    return queue_.get<by_tx_id>().find(id.to_string()) != queue_.get<by_tx_id>().end();
   }
 
   std::optional<consensus::wrapped_tx_ptr> get_tx(const consensus::tx_id_type& id) const {
-    auto itr = queue_.get<by_tx_id>().find(id);
+    auto itr = queue_.get<by_tx_id>().find(id.to_string());
     if (itr == queue_.get<by_tx_id>().end()) {
       return std::nullopt;
     }
@@ -144,7 +144,7 @@ public:
   }
 
   bool add_tx(const consensus::wrapped_tx_ptr& tx_ptr) {
-    auto itr = queue_.get<by_tx_id>().find(tx_ptr->id());
+    auto itr = queue_.get<by_tx_id>().find(tx_ptr->id().to_string());
     if (itr != queue_.get<by_tx_id>().end()) {
       return false;
     }
@@ -227,10 +227,14 @@ public:
   }
 
   bool erase(const consensus::wrapped_tx_ptr& tx_ptr) {
-    return erase(tx_ptr->id());
+    return erase(tx_ptr->id().to_string());
   }
 
   bool erase(const consensus::tx_id_type& id) {
+    return erase(id.to_string());
+  }
+
+  bool erase(const std::string& id) {
     auto itr = queue_.get<by_tx_id>().find(id);
     if (itr == queue_.get<by_tx_id>().end()) {
       return false;
