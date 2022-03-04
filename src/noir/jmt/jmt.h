@@ -12,10 +12,6 @@ namespace noir::jmt {
 
 template<typename R, typename T = typename R::value_type>
 struct jellyfish_merkle_tree {
-  jellyfish_merkle_tree(jellyfish_merkle_tree&&) = default;
-  jellyfish_merkle_tree(const jellyfish_merkle_tree&) = default;
-  jellyfish_merkle_tree& operator=(const jellyfish_merkle_tree&) = default;
-
   jellyfish_merkle_tree(R& reader): reader(reader) {}
 
   static jmt::nibble nibble(const bytes32& bytes, size_t index) {
@@ -233,7 +229,7 @@ struct jellyfish_merkle_tree {
         children.insert_or_assign(existing_leaf_bucket, jmt::child{existing_leaf_node.hash(), version, leaf{}});
         return_if_error(tree_cache.put_node(existing_leaf_node_key, {existing_leaf_node}));
       }
-      auto new_internal_node = jmt::internal_node(children);
+      auto new_internal_node = jmt::internal_node(std::move(children));
       return_if_error(tree_cache.put_node(node_key, {new_internal_node}));
       return {{node_key, {new_internal_node}}};
     }
@@ -262,7 +258,7 @@ struct jellyfish_merkle_tree {
         children.insert_or_assign(child_index,
           jmt::child{get_hash(new_child_node_key, new_child_node, hash_cache), version, new_child_node.node_type()});
       }
-      auto new_internal_node = jmt::internal_node(children);
+      auto new_internal_node = jmt::internal_node(std::move(children));
       return_if_error(tree_cache.put_node(node_key, {new_internal_node}));
       return {{node_key, {new_internal_node}}};
     }
@@ -396,7 +392,7 @@ struct jellyfish_merkle_tree {
       node_key = jmt::node_key{version, common_nibble_path};
       jmt::children children;
       children.insert_or_assign(nibble, child{next_internal_node.hash(), version, next_internal_node.node_type()});
-      auto internal_node = jmt::internal_node(children);
+      auto internal_node = jmt::internal_node(std::move(children));
       next_internal_node = internal_node;
       return_if_error(tree_cache.put_node(node_key, {internal_node}));
     }
