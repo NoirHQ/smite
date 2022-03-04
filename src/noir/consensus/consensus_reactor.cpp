@@ -5,8 +5,7 @@
 //
 #include <noir/common/overloaded.h>
 #include <noir/consensus/consensus_reactor.h>
-
-#include <noir/core/types.h>
+#include <noir/core/codec.h>
 
 namespace noir::consensus {
 
@@ -56,7 +55,7 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
   }
   auto from = info->from;
 
-  noir::core::codec::datastream<char> ds(info->message.data(), info->message.size());
+  datastream<char> ds(info->message.data(), info->message.size());
   p2p::reactor_message msg;
   ds >> msg;
 
@@ -406,9 +405,9 @@ void consensus_reactor::transmit_new_envelope(
   new_env->to = to;
   new_env->broadcast = broadcast;
 
-  const uint32_t payload_size = noir::core::codec::encode_size(msg);
+  const uint32_t payload_size = encode_size(msg);
   new_env->message.resize(payload_size);
-  noir::core::codec::datastream<char> ds(new_env->message.data(), payload_size);
+  datastream<char> ds(new_env->message.data(), payload_size);
   ds << msg;
 
   xmt_mq_channel.publish(priority, new_env);

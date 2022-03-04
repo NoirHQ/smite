@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/codec/bcs.h>
 #include <noir/common/overloaded.h>
 #include <noir/common/types/bytes.h>
 #include <noir/common/types/hash.h>
+#include <noir/core/codec.h>
 #include <noir/crypto/hash/xxhash.h>
 #include <noir/jmt/types/common.h>
 #include <noir/jmt/types/nibble.h>
@@ -21,12 +21,12 @@ namespace noir::jmt {
 
 namespace detail {
   inline void serialize_u64_varint(uint64_t num, std::vector<uint8_t>& binary) {
-    auto encoded = codec::bcs::encode(varuint64(num));
+    auto encoded = noir::encode(varuint64(num));
     binary.insert(binary.end(), encoded.begin(), encoded.end());
   }
 
   inline uint64_t deserialize_u64_varint(std::span<const char> binary) {
-    codec::bcs::datastream<const char> ds(binary);
+    datastream<const char> ds(binary);
     varuint64 v;
     ds >> v;
     return v.value;
@@ -195,7 +195,7 @@ struct internal_node {
 
   // TODO: return type result
   static internal_node deserialize(std::span<const char> data) {
-    codec::bcs::datastream<const char> ds(data);
+    datastream<const char> ds(data);
     uint16_t existence_bitmap = 0;
     uint16_t leaf_bitmap = 0;
     ds >> existence_bitmap;
@@ -400,7 +400,7 @@ struct node {
       // TODO: metric
     } else if (std::holds_alternative<leaf_node<T>>(data)) {
       out.push_back(uint8_t(node_tag::leaf));
-      auto bytes = codec::bcs::encode(std::get<leaf_node<T>>(data));
+      auto bytes = noir::encode(std::get<leaf_node<T>>(data));
       out.insert(out.end(), bytes.begin(), bytes.end());
       // TODO: metric
     }
@@ -427,7 +427,7 @@ struct node {
       return node<T>{internal_node::deserialize({(const char*)val.data() + 1, val.size() - 1})};
     }
     case node_tag::leaf: {
-      return node<T>{codec::bcs::decode<leaf_node<T>>({(const char*)val.data() + 1, val.size() - 1})};
+      return node<T>{noir::decode<leaf_node<T>>({(const char*)val.data() + 1, val.size() - 1})};
     }
     }
     check(false, fmt::format("lead tag byte is unknown: {}", tag));

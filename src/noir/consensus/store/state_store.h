@@ -10,10 +10,9 @@
 #include <noir/common/hex.h>
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/state.h>
+#include <noir/core/codec.h>
 #include <noir/db/rocks_session.h>
 #include <noir/db/session.h>
-
-#include <noir/codec/scale.h>
 
 namespace noir::consensus {
 
@@ -87,16 +86,15 @@ private:
 
 public:
   explicit db_store(std::shared_ptr<db_session_type> session_)
-    : db_session_(std::move(session_)), state_key_(noir::codec::scale::encode(static_cast<char>(prefix::state))) {}
+    : db_session_(std::move(session_)), state_key_(encode(static_cast<char>(prefix::state))) {}
 
   db_store(db_store&& other) noexcept
-    : db_session_(std::move(other.db_session_)),
-      state_key_(noir::codec::scale::encode(static_cast<char>(prefix::state))) {
+    : db_session_(std::move(other.db_session_)), state_key_(encode(static_cast<char>(prefix::state))) {
     other.db_session_ = nullptr;
   }
 
   db_store(const db_store& other) noexcept
-    : db_session_(other.db_session_), state_key_(noir::codec::scale::encode(static_cast<char>(prefix::state))) {}
+    : db_session_(other.db_session_), state_key_(encode(static_cast<char>(prefix::state))) {}
 
   bool load(state& st) const override {
     return load_internal(st);
@@ -219,7 +217,7 @@ private:
       return false;
     }
 
-    db_session_->write_from_bytes(state_key_, noir::codec::scale::encode(st));
+    db_session_->write_from_bytes(state_key_, encode(st));
     db_session_->commit();
     return true;
   }
@@ -239,7 +237,7 @@ private:
     if (!save_consensus_params_info(height, st.last_height_consensus_params_changed, st.consensus_params_)) {
       return false;
     }
-    db_session_->write_from_bytes(state_key_, noir::codec::scale::encode(st));
+    db_session_->write_from_bytes(state_key_, encode(st));
     db_session_->commit();
     return true;
   }
@@ -249,7 +247,7 @@ private:
     if (ret == std::nullopt || ret->empty()) {
       return false;
     }
-    st = noir::codec::scale::decode<state>(ret.value());
+    st = decode<state>(ret.value());
     return true;
   }
 
@@ -263,7 +261,7 @@ private:
         ? std::optional<validator_set>(v_set)
         : std::nullopt,
     };
-    auto buf = noir::codec::scale::encode(v_info);
+    auto buf = encode(v_info);
     db_session_->write_from_bytes(encode_key<prefix::validators>(height), buf);
     return true;
   } // namespace noir::consensus
@@ -273,7 +271,7 @@ private:
     if (ret == std::nullopt || ret->empty()) {
       return false;
     }
-    v_info = noir::codec::scale::decode<validators_info>(ret.value());
+    v_info = decode<validators_info>(ret.value());
     return true;
   }
 
@@ -287,7 +285,7 @@ private:
       .last_height_changed = change_height,
       .cs_param = (change_height == next_height) ? std::optional<consensus_params>(cs_params) : std::nullopt,
     };
-    auto buf = noir::codec::scale::encode(cs_param_info);
+    auto buf = encode(cs_param_info);
     db_session_->write_from_bytes(encode_key<prefix::consensus_params>(next_height), buf);
     return true;
   }
@@ -297,12 +295,12 @@ private:
     if (ret == std::nullopt || ret->empty()) {
       return false;
     }
-    cs_param_info = noir::codec::scale::decode<consensus_params_info>(ret.value());
+    cs_param_info = decode<consensus_params_info>(ret.value());
     return true;
   }
 
   bool save_abci_responses_internal(int64_t height, const abci_responses& rsp) {
-    auto buf = noir::codec::scale::encode(rsp);
+    auto buf = encode(rsp);
     db_session_->write_from_bytes(encode_key<prefix::abci_response>(height), buf);
     return true;
   }
@@ -312,7 +310,7 @@ private:
     if (ret == std::nullopt || ret->empty()) {
       return false;
     }
-    rsp = noir::codec::scale::decode<abci_responses>(ret.value());
+    rsp = decode<abci_responses>(ret.value());
     return true;
   }
 
