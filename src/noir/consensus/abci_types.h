@@ -61,6 +61,7 @@ struct req_res {
     callback_timer->expires_from_now(boost::posix_time::seconds(10));
     callback_timer->async_wait([&](const boost::system::error_code& e) {
       if (!e) {
+        std::lock_guard _(mutex);
         callback = nullptr;
         wlog(fmt::format("{} is expired.", boost::core::demangle(typeid(T).name())));
       }
