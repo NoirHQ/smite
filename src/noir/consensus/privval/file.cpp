@@ -68,6 +68,12 @@ bool file_pv_last_sign_state::check_hrs(int64_t height_, int32_t round_, sign_st
 void file_pv_last_sign_state::save() {
   check(!file_path.empty(), "cannot save PrivValidator key: filePath not set");
 
+  // FIXME: temporary create lss path dir here
+  fs::path dir_path = fs::path{file_path}.remove_filename();
+  if (!fs::exists(dir_path)) {
+    fs::create_directories(dir_path);
+  }
+
   // TODO: save file in thread safe context (eg.tendermint tempfile)
   // https://pkg.go.dev/github.com/tendermint/tendermint/internal/libs/tempfile
   fc::variant vo;
