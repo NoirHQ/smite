@@ -98,7 +98,7 @@ bool tx_pool::check_tx_internal(const consensus::tx_id_type& tx_id, const consen
   if (tx_cache_.has(tx_id)) {
     // if tx already in pool, then just update cache
     tx_cache_.put(tx_id, tx);
-    check(!tx_queue_.has(tx_id), fmt::format("tx exists already in pool (tx_id: {})", tx_id.to_string()));
+    check(!tx_queue_.has(tx_id), fmt::format("tx already exists in pool (tx_id: {})", tx_id.to_string()));
   } else {
     tx_cache_.put(tx_id, tx);
   }
