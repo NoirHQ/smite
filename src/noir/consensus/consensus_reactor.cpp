@@ -66,100 +66,103 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
     return;
   }
 
-  std::visit(overloaded{///
-               /***************************************************************************************************/
-               ///< state messages: new_round_step, new_valid_block, has_vote, vote_set_maj23
-               [this, &ps](p2p::new_round_step_message& msg) {
-                 std::unique_lock<std::mutex> lock(cs_state->mtx);
-                 auto initial_height = cs_state->local_state.initial_height;
-                 lock.unlock();
-                 // msg.validate() // TODO
-                 ps->apply_new_round_step_message(msg);
-               },
-               [&ps](p2p::new_valid_block_message& msg) { ps->apply_new_valid_block_message(msg); },
-               [&ps](p2p::has_vote_message& msg) { ps->apply_has_vote_message(msg); },
-               [this, &ps, &from](p2p::vote_set_maj23_message& msg) {
-                 std::unique_lock<std::mutex> lock(cs_state->mtx);
-                 auto height = cs_state->rs.height;
-                 auto votes = cs_state->rs.votes;
-                 lock.unlock();
-                 if (height != msg.height)
-                   return;
+  std::visit(
+    overloaded{///
+      /***************************************************************************************************/
+      ///< state messages: new_round_step, new_valid_block, has_vote, vote_set_maj23
+      [this, &ps](p2p::new_round_step_message& msg) {
+        std::unique_lock<std::mutex> lock(cs_state->mtx);
+        auto initial_height = cs_state->local_state.initial_height;
+        lock.unlock();
+        // msg.validate() // TODO
+        ps->apply_new_round_step_message(msg);
+      },
+      [&ps](p2p::new_valid_block_message& msg) { ps->apply_new_valid_block_message(msg); },
+      [&ps](p2p::has_vote_message& msg) { ps->apply_has_vote_message(msg); },
+      [this, &ps, &from](p2p::vote_set_maj23_message& msg) {
+        std::unique_lock<std::mutex> lock(cs_state->mtx);
+        auto height = cs_state->rs.height;
+        auto votes = cs_state->rs.votes;
+        lock.unlock();
+        if (height != msg.height)
+          return;
 
-                 // Peer claims to have a maj23 for some block_id
-                 if (auto err = votes->set_peer_maj23(msg.round, msg.type, ps->peer_id, msg.block_id_);
-                     err.has_value()) {
-                   elog("${err}", ("err", err));
-                   return;
-                 }
+        // Peer claims to have a maj23 for some block_id
+        if (auto err = votes->set_peer_maj23(msg.round, msg.type, ps->peer_id, msg.block_id_); err.has_value()) {
+          elog("${err}", ("err", err));
+          return;
+        }
 
-                 // Respond with a vote_set_bits_message, include votes we have and don't have
-                 std::shared_ptr<bit_array> our_votes{};
-                 switch (msg.type) {
-                 case p2p::Prevote:
-                   our_votes = votes->prevotes(msg.round)->bit_array_by_block_id(msg.block_id_);
-                   break;
-                 case p2p::Precommit:
-                   our_votes = votes->precommits(msg.round)->bit_array_by_block_id(msg.block_id_);
-                   break;
-                 default:
-                   check(false, "bad VoteSetBitsMessage field type; forgot to add a check in ValidateBasic?");
-                 }
+        // Respond with a vote_set_bits_message, include votes we have and don't have
+        std::shared_ptr<bit_array> our_votes{};
+        switch (msg.type) {
+        case p2p::Prevote:
+          our_votes = votes->prevotes(msg.round)->bit_array_by_block_id(msg.block_id_);
+          break;
+        case p2p::Precommit:
+          our_votes = votes->precommits(msg.round)->bit_array_by_block_id(msg.block_id_);
+          break;
+        default:
+          check(false, "bad VoteSetBitsMessage field type; forgot to add a check in ValidateBasic?");
+        }
 
-                 auto response = p2p::vote_set_bits_message{msg.height, msg.round, msg.type, msg.block_id_, our_votes};
-                 transmit_new_envelope("", from, response);
-               },
-               /***************************************************************************************************/
-               ///< data messages: proposal, proposal_pol, block_part
-               [this, &ps, &from](p2p::proposal_message& msg) {
-                 ps->set_has_proposal(msg);
-                 transmit_new_envelope("", from, msg);
-               },
-               [&ps](p2p::proposal_pol_message& msg) { ps->apply_proposal_pol_message(msg); },
-               [this, &ps, &from](p2p::block_part_message& msg) {
-                 ps->set_has_proposal_block_part(msg.height, msg.round, msg.index);
-                 transmit_new_envelope("", from, msg);
-               },
-               /***************************************************************************************************/
-               ///< vote message: vote
-               [this, &ps, &from](p2p::vote_message& msg) {
-                 std::unique_lock<std::mutex> lock(cs_state->mtx);
-                 auto height = cs_state->rs.height;
-                 auto val_size = cs_state->rs.validators->size();
-                 auto last_commit_size = cs_state->rs.last_commit->get_size();
-                 lock.unlock();
+        auto response = p2p::vote_set_bits_message{msg.height, msg.round, msg.type, msg.block_id_, our_votes};
+        transmit_new_envelope("", from, response);
+      },
+      /***************************************************************************************************/
+      ///< data messages: proposal, proposal_pol, block_part
+      [this, &ps, &from](p2p::proposal_message& msg) {
+        ps->set_has_proposal(msg);
+        internal_mq_channel.publish(
+          appbase::priority::medium, std::make_shared<p2p::internal_msg_info>(p2p::internal_msg_info{msg, from}));
+      },
+      [&ps](p2p::proposal_pol_message& msg) { ps->apply_proposal_pol_message(msg); },
+      [this, &ps, &from](p2p::block_part_message& msg) {
+        ps->set_has_proposal_block_part(msg.height, msg.round, msg.index);
+        internal_mq_channel.publish(
+          appbase::priority::medium, std::make_shared<p2p::internal_msg_info>(p2p::internal_msg_info{msg, from}));
+      },
+      /***************************************************************************************************/
+      ///< vote message: vote
+      [this, &ps, &from](p2p::vote_message& msg) {
+        std::unique_lock<std::mutex> lock(cs_state->mtx);
+        auto height = cs_state->rs.height;
+        auto val_size = cs_state->rs.validators->size();
+        auto last_commit_size = cs_state->rs.last_commit->get_size();
+        lock.unlock();
 
-                 ps->ensure_vote_bit_arrays(height, val_size);
-                 ps->ensure_vote_bit_arrays(height - 1, last_commit_size);
-                 ps->set_has_vote(msg);
+        ps->ensure_vote_bit_arrays(height, val_size);
+        ps->ensure_vote_bit_arrays(height - 1, last_commit_size);
+        ps->set_has_vote(msg);
 
-                 transmit_new_envelope("", from, msg);
-               },
-               /***************************************************************************************************/
-               ///< vote_set_bits message: vote_set_bits
-               [this, &ps](p2p::vote_set_bits_message& msg) {
-                 std::unique_lock<std::mutex> lock(cs_state->mtx);
-                 auto height = cs_state->rs.height;
-                 auto votes = cs_state->rs.votes;
-                 lock.unlock();
+        internal_mq_channel.publish(
+          appbase::priority::medium, std::make_shared<p2p::internal_msg_info>(p2p::internal_msg_info{msg, from}));
+      },
+      /***************************************************************************************************/
+      ///< vote_set_bits message: vote_set_bits
+      [this, &ps](p2p::vote_set_bits_message& msg) {
+        std::unique_lock<std::mutex> lock(cs_state->mtx);
+        auto height = cs_state->rs.height;
+        auto votes = cs_state->rs.votes;
+        lock.unlock();
 
-                 if (height == msg.height) {
-                   std::shared_ptr<bit_array> our_votes{};
-                   switch (msg.type) {
-                   case p2p::Prevote:
-                     our_votes = votes->prevotes(msg.round)->bit_array_by_block_id(msg.block_id_);
-                     break;
-                   case p2p::Precommit:
-                     our_votes = votes->precommits(msg.round)->bit_array_by_block_id(msg.block_id_);
-                     break;
-                   default:
-                     check(false, "bad VoteSetBitsMessage field type; forgot to add a check in ValidateBasic?");
-                   }
-                   ps->apply_vote_set_bits_message(msg, our_votes);
-                 } else {
-                   ps->apply_vote_set_bits_message(msg, nullptr);
-                 }
-               }},
+        if (height == msg.height) {
+          std::shared_ptr<bit_array> our_votes{};
+          switch (msg.type) {
+          case p2p::Prevote:
+            our_votes = votes->prevotes(msg.round)->bit_array_by_block_id(msg.block_id_);
+            break;
+          case p2p::Precommit:
+            our_votes = votes->precommits(msg.round)->bit_array_by_block_id(msg.block_id_);
+            break;
+          default:
+            check(false, "bad VoteSetBitsMessage field type; forgot to add a check in ValidateBasic?");
+          }
+          ps->apply_vote_set_bits_message(msg, our_votes);
+        } else {
+          ps->apply_vote_set_bits_message(msg, nullptr);
+        }
+      }},
     msg);
 }
 

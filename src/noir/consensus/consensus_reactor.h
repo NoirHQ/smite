@@ -37,6 +37,10 @@ struct consensus_reactor {
   // Send an envelope to peers [via p2p]
   plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel;
 
+  // Send messages [block_part_message, vote_message] to consensus // TODO: check if this correct
+  plugin_interface::channels::internal_message_queue::channel_type& internal_mq_channel =
+    appbase::app().get_channel<plugin_interface::channels::internal_message_queue>();
+
   // Methods
   plugin_interface::methods::update_peer_status::method_type::handle update_peer_status_provider =
     appbase::app().get_method<plugin_interface::methods::update_peer_status>().register_provider(
