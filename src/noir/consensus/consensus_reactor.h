@@ -52,10 +52,6 @@ struct consensus_reactor {
     thread_pool.emplace("cs_reactor", thread_pool_size);
   }
 
-  virtual ~consensus_reactor() {
-    thread_pool->stop();
-  }
-
   static std::shared_ptr<consensus_reactor> new_consensus_reactor(
     std::shared_ptr<consensus_state>& new_cs_state, bool new_wait_sync) {
     auto consensus_reactor_ = std::make_shared<consensus_reactor>(new_cs_state, new_wait_sync);
@@ -66,7 +62,15 @@ struct consensus_reactor {
     cs_state->on_start();
   }
 
-  void on_stop() {}
+  void on_stop() {
+    ilog("stopping cs_reactor...");
+    for (auto peer : peers) {
+      ilog(fmt::format("closing peer={}", peer.first));
+      peer.second->is_running = false;
+    }
+    thread_pool->stop();
+    ilog("stopped cs_reactor");
+  }
 
   void process_event(const plugin_interface::event_info_ptr& info) {
     switch (info->event_) {
