@@ -37,6 +37,7 @@ public:
     config_->base.mode = Validator; // TODO: read from config or cli
     config_->base.root_dir = appbase::app().home_dir().string();
     config_->consensus.root_dir = config_->base.root_dir;
+    config_->priv_validator.root_dir = config_->base.root_dir;
 
     if (do_not_start_node) {
       // Do not start node, but create an instance of consensus_reactor so network messages can be processed

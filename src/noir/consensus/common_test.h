@@ -46,6 +46,7 @@ config config_setup() {
   config_.base.chain_id = "test_chain";
   config_.base.root_dir = "/tmp/test_consensus";
   config_.consensus.root_dir = config_.base.root_dir;
+  config_.priv_validator.root_dir = config_.base.root_dir;
   return config_;
 }
 

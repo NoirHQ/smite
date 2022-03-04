@@ -120,12 +120,48 @@ struct consensus_config {
   }
 };
 
+struct priv_validator_config {
+  std::string root_dir;
+  /// Path to the JSON file containing the private key to use as a validator in the consensus protocol
+  std::string key;
+  /// Path to the JSON file containing the last sign state of a validator
+  std::string state;
+  /// TCP or UNIX socket address for Tendermint to listen on for
+  /// connections from an external PrivValidator process
+  std::string listen_addr;
+
+  /// Client certificate generated while creating needed files for secure connection.
+  /// If a remote validator address is provided but no certificate, the connection will be insecure
+  std::string client_certificate;
+  /// Client key generated while creating certificates for secure connection
+  std::string client_key;
+  /// Path Root Certificate Authority used to sign both client and server certificates
+  std::string root_ca;
+
+  static priv_validator_config get_default() {
+    std::string default_priv_val_key_path =
+      std::string(default_config_dir) + "/" + std::string(default_priv_val_key_name);
+    std::string default_priv_val_state_path =
+      std::string(default_data_dir) + "/" + std::string(default_priv_val_state_name);
+    return {
+      .key = default_priv_val_key_path,
+      .state = default_priv_val_state_path,
+    };
+  }
+
+  static constexpr std::string_view default_config_dir = "config";
+  static constexpr std::string_view default_data_dir = "data";
+  static constexpr std::string_view default_priv_val_key_name = "priv_validator_key.json";
+  static constexpr std::string_view default_priv_val_state_name = "priv_validator_state.json";
+};
+
 struct config {
   base_config base;
   consensus_config consensus;
+  priv_validator_config priv_validator;
 
   static config get_default() {
-    return {base_config::get_default(), consensus_config::get_default()};
+    return {base_config::get_default(), consensus_config::get_default(), priv_validator_config::get_default()};
   }
 };
 
@@ -137,4 +173,4 @@ NOIR_REFLECT(noir::consensus::consensus_config, root_dir, wal_path, wal_file, ti
   timeout_prevote, timeout_prevote_delta, timeout_precommit, timeout_precommit_delta, timeout_commit,
   skip_timeout_commit, create_empty_blocks, create_empty_blocks_interval, peer_gossip_sleep_duration,
   peer_query_maj_23_sleep_duration, double_sign_check_height)
-NOIR_REFLECT(noir::consensus::config, base, consensus)
+NOIR_REFLECT(noir::consensus::config, base, consensus, priv_validator)
