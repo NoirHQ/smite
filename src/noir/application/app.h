@@ -9,6 +9,8 @@
 namespace noir::application {
 
 class base_application {
+
+  // TODO : these variables are temporary. need to change to queue and need to be moved to another class.
   consensus::response_init_chain response_init_chain_;
   consensus::response_prepare_proposal response_prepare_proposal_;
   consensus::response_begin_block response_begin_block_;
@@ -18,6 +20,9 @@ class base_application {
   consensus::response_commit response_commit_;
   consensus::response_extend_vote response_extend_vote_;
   consensus::response_verify_vote_extension response_verify_vote_extension_;
+
+  consensus::req_res<consensus::response_deliver_tx> req_res_deliver_tx_;
+  consensus::req_res<consensus::response_check_tx> req_res_check_tx_;
 
 public:
   virtual void info() {}
@@ -33,12 +38,15 @@ public:
     ilog("!!! BeginBlock !!!");
     return response_begin_block_;
   }
-  virtual consensus::response_deliver_tx& deliver_tx() {
+  virtual consensus::req_res<consensus::response_deliver_tx>& deliver_tx_async() {
     ilog("!!! DeliverTx !!!");
-    return response_deliver_tx_;
+    return req_res_deliver_tx_;
   }
-  virtual consensus::response_check_tx& check_tx() {
+  virtual consensus::response_check_tx& check_tx_sync() {
     return response_check_tx_;
+  }
+  virtual consensus::req_res<consensus::response_check_tx>& check_tx_async() {
+    return req_res_check_tx_;
   }
   virtual consensus::response_end_block& end_block() {
     ilog("!!! EndBlock !!!");

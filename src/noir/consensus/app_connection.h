@@ -35,21 +35,21 @@ struct app_connection {
     return res;
   }
 
-  response_deliver_tx& deliver_tx_async(request_deliver_tx req) {
+  auto& deliver_tx_async(request_deliver_tx req) {
     std::lock_guard<std::mutex> g(mtx);
-    auto& res = application->deliver_tx();
+    auto& res = application->deliver_tx_async();
     return res;
   }
 
   response_check_tx& check_tx_sync(request_check_tx req) {
     std::lock_guard<std::mutex> g(mtx);
-    auto& res = application->check_tx();
+    auto& res = application->check_tx_sync();
     return res;
   }
 
-  response_check_tx& check_tx_async(request_check_tx req) {
+  auto& check_tx_async(request_check_tx req) {
     std::lock_guard<std::mutex> g(mtx);
-    auto& res = application->check_tx();
+    auto& res = application->check_tx_async();
     return res;
   }
 

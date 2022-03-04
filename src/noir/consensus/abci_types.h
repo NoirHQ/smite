@@ -46,6 +46,36 @@ struct validator_update {
   }
 };
 
+// using this when async abci api is called
+template<typename T>
+struct req_res {
+  std::mutex mutex;
+  std::function<void(T&)> callback = nullptr;
+  std::shared_ptr<boost::asio::deadline_timer> callback_timer = nullptr;
+  std::shared_ptr<T> res;
+
+  void set_callback(std::function<void(T&)> cb, boost::asio::io_context& io) {
+    std::lock_guard _(mutex);
+    callback_timer = std::make_shared<boost::asio::deadline_timer>(io);
+    callback = std::move(cb);
+    callback_timer->expires_from_now(boost::posix_time::seconds(10));
+    callback_timer->async_wait([&](const boost::system::error_code& e) {
+      if (!e) {
+        callback = nullptr;
+        wlog(fmt::format("{} is expired.", boost::core::demangle(typeid(T).name())));
+      }
+    });
+  }
+
+  void invoke_callback() {
+    std::lock_guard _(mutex);
+    if (callback && callback_timer) {
+      callback_timer->cancel();
+      callback(*res);
+    }
+  }
+};
+
 struct request_begin_block {
   bytes hash;
   block_header header_;
@@ -157,31 +187,6 @@ struct response_check_tx {
   int64_t priority;
   std::string mempool_error;
   uint64_t nonce;
-
-  std::mutex mutex;
-  std::shared_ptr<boost::asio::deadline_timer> callback_timer = nullptr;
-  std::function<bool(response_check_tx&)> callback = nullptr;
-
-  void set_callback(std::function<bool(response_check_tx&)>&& cb, boost::asio::io_context& io) {
-    std::lock_guard _(mutex);
-    callback_timer = std::make_shared<boost::asio::deadline_timer>(io);
-    callback = std::move(cb);
-    callback_timer->expires_from_now(boost::posix_time::seconds(10));
-    callback_timer->async_wait([&](const boost::system::error_code& e) {
-      if (!e) {
-        callback = nullptr;
-        wlog(fmt::format("check_tx_async is expired. tx_id={}", get_tx_id(data).to_string()));
-      }
-    });
-  }
-
-  void invoke_callback() {
-    std::lock_guard _(mutex);
-    if (callback && callback_timer) {
-      callback_timer->cancel();
-      callback(*this);
-    }
-  }
 };
 
 } // namespace noir::consensus
@@ -210,4 +215,4 @@ NOIR_REFLECT(noir::consensus::response_deliver_tx, code, data, log, info, gas_wa
 NOIR_REFLECT(noir::consensus::abci_responses, deliver_txs, end_block, begin_block)
 NOIR_REFLECT(noir::consensus::request_check_tx, tx, type)
 NOIR_REFLECT(noir::consensus::response_check_tx, code, data, log, info, gas_wanted, gas_used, events, codespace, sender,
-  priority, mempool_error, nonce, mutex, callback_timer, callback)
+  priority, mempool_error, nonce)
