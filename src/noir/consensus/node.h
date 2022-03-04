@@ -9,6 +9,7 @@
 #include <noir/consensus/consensus_reactor.h>
 #include <noir/consensus/node_key.h>
 #include <noir/consensus/priv_validator.h>
+#include <noir/consensus/privval/file.h>
 #include <noir/consensus/state.h>
 
 namespace noir::consensus {
@@ -32,14 +33,15 @@ struct node {
     // Load or generate priv - todo
     std::vector<genesis_validator> validators;
     std::vector<std::shared_ptr<priv_validator>> priv_validators;
-    auto priv_val = mock_pv{};
-    fc::crypto::private_key new_key("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"); // TODO: read from a file
-    priv_val.priv_key_.key = fc::from_base58(new_key.to_string());
-    priv_val.pub_key_ = priv_val.priv_key_.get_pub_key();
+    std::filesystem::path pv_root_dir = new_config->priv_validator.root_dir;
+    auto priv_val = noir::consensus::privval::file_pv::load_or_gen_file_pv(
+      pv_root_dir / new_config->priv_validator.key, pv_root_dir / new_config->priv_validator.state);
+
     auto vote_power = 10;
-    auto val = validator{priv_val.pub_key_.address(), priv_val.pub_key_, vote_power, 0};
+    auto val = validator{priv_val->get_address(), priv_val->get_pub_key(), vote_power, 0};
     validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
-    priv_validators.push_back(std::make_shared<mock_pv>(priv_val));
+    priv_validators.push_back(std::move(priv_val));
+
     auto gen_doc = genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators};
 
     // Load or generate node_key - todo
