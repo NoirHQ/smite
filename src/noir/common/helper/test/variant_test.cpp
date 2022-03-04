@@ -111,17 +111,17 @@ struct complex_enumeration_type {
 };
 NOIR_REFLECT(complex_enumeration_type, a, b, c, d)
 
-struct complex_any_type {
+struct nested_complex_type {
   complex_integral_type a;
   complex_enumeration_type b;
   complex_integral_type c;
   complex_integral_type d;
 
-  bool operator==(const complex_any_type& o) const {
+  bool operator==(const nested_complex_type& o) const {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(complex_any_type, a, b, c, d)
+NOIR_REFLECT(nested_complex_type, a, b, c, d)
 
 struct vector_integral_type {
   std::vector<int8_t> a;
@@ -141,41 +141,41 @@ struct vector_integral_type {
 };
 NOIR_REFLECT(vector_integral_type, a, b, c, d);
 
-// struct vector_enumeration_type {
-//   std::vector<signed_enum_8> a;
-//   std::vector<signed_enum_16> b;
-//   std::vector<signed_enum_32> c;
-//   std::vector<signed_enum_64> d;
-//
-//   vector_enumeration_type() {
-//     a.resize(10);
-//     b.resize(10);
-//     c.resize(10);
-//     d.resize(10);
-//   }
-//   bool operator==(const vector_enumeration_type& o) const {
-//     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
-//   }
-// };
-// NOIR_REFLECT(vector_enumeration_type, a, b, c, d);
-//
-// struct complex_vector_type {
-//   std::vector<complex_integral_type> a;
-//   std::vector<complex_enumeration_type> b;
-//   std::vector<vector_integral_type> c;
-//   std::vector<vector_enumeration_type> d;
-//
-//   complex_vector_type() {
-//     a.resize(10);
-//     b.resize(10);
-//     c.resize(10);
-//     d.resize(10);
-//   }
-//   bool operator==(const complex_vector_type& o) const {
-//     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
-//   }
-// };
-// NOIR_REFLECT(complex_vector_type, a, b, c, d)
+struct vector_enumeration_type {
+  std::vector<signed_enum_8> a;
+  std::vector<signed_enum_16> b;
+  std::vector<signed_enum_32> c;
+  std::vector<signed_enum_64> d;
+
+  vector_enumeration_type() {
+    a.resize(10);
+    b.resize(10);
+    c.resize(10);
+    d.resize(10);
+  }
+  bool operator==(const vector_enumeration_type& o) const {
+    return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
+  }
+};
+NOIR_REFLECT(vector_enumeration_type, a, b, c, d);
+
+struct complex_vector_type {
+  std::vector<complex_integral_type> a;
+  std::vector<complex_enumeration_type> b;
+  std::vector<vector_integral_type> c;
+  std::vector<vector_enumeration_type> d;
+
+  complex_vector_type() {
+    a.resize(10);
+    b.resize(10);
+    c.resize(10);
+    d.resize(10);
+  }
+  bool operator==(const complex_vector_type& o) const {
+    return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
+  }
+};
+NOIR_REFLECT(complex_vector_type, a, b, c, d)
 
 #include <noir/common/helper/variant.h>
 
@@ -183,7 +183,7 @@ namespace {
 
 TEMPLATE_TEST_CASE("variant: to/from_variant", "[noir][common]", signed_integral_type, unsigned_integral_type,
   complex_integral_type, signed_enumeration_type, unsigned_enumeration_type, complex_enumeration_type,
-  complex_any_type /* , vector_enumeration_type, complex_vector_type */) {
+  nested_complex_type, vector_enumeration_type, complex_vector_type) {
 
   TestType exp{};
 
