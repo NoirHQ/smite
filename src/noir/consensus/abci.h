@@ -59,7 +59,8 @@ public:
   }
 
   void plugin_shutdown() {
-    node_->cs_reactor.reset();
+    ilog("shutting down abci");
+    node_->cs_reactor->on_stop();
   }
 
   std::unique_ptr<node> node_;
