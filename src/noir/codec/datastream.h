@@ -28,28 +28,28 @@ class basic_datastream {
 public:
   /// \brief constructs new datastream object
   /// \param s contiguous sequence of characters
-  basic_datastream(std::span<T> s): span(s), pos_(s.begin()) {}
+  basic_datastream(std::span<T> s): buf(s), pos(s.begin()) {}
 
   /// \brief constructs new datastream object
   /// \param s pointer to the first element of the sequence
   /// \param count number of elements in the sequence
-  basic_datastream(T* s, size_t count): span(s, count), pos_(span.begin()) {}
+  basic_datastream(T* s, size_t count): buf(s, count), pos(buf.begin()) {}
 
   /// \brief move forward the position indicator without extracting
   /// \param s offset from the current position
   /// \return `*this`
-  inline auto& skip(size_t s) {
-    pos_ += s;
+  auto& skip(size_t s) {
+    pos += s;
     return *this;
   }
 
   /// \brief extracts characters from stream
   /// \param reference to the range of characters to store the characters to
   /// \return `*this`
-  inline auto& read(std::span<char> s) {
+  auto& read(std::span<char> s) {
     check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to read past the end");
-    std::copy(pos_, pos_ + s.size(), s.begin());
-    pos_ += s.size();
+    std::copy(pos, pos + s.size(), s.begin());
+    pos += s.size();
     return *this;
   }
 
@@ -57,58 +57,58 @@ public:
   /// \param s pointer to the character array to store the characters to
   /// \param count  number of characters to read
   /// \return `*this`
-  inline auto& read(char* s, size_t count) {
+  auto& read(char* s, size_t count) {
     return read({s, count});
   }
 
   /// \brief extracts characters from stream in reverse order
   /// \param reference to the range of characters to store the characters to
   /// \return `*this`
-  inline auto& reverse_read(std::span<char> s) {
+  auto& reverse_read(std::span<char> s) {
     check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to read past the end");
-    std::reverse_copy(pos_, pos_ + s.size(), s.begin());
-    pos_ += s.size();
+    std::reverse_copy(pos, pos + s.size(), s.begin());
+    pos += s.size();
     return *this;
   }
 
   /// \brief reads the next character without extracting it
   /// \return the next character
-  inline int peek() {
+  int peek() {
     check<std::out_of_range>(remaining() >= 1, "datastream attempted to read past the end");
-    return *pos_;
+    return *pos;
   }
 
   /// \brief extracts a character
   /// \return the extracted character
-  inline int get() {
+  int get() {
     auto c = peek();
-    ++pos_;
+    ++pos;
     return c;
   }
 
   /// \brief extracts a character
   /// \param reference to the character to write the result to
   /// \return `*this`
-  inline auto& get(char& c) {
+  auto& get(char& c) {
     c = get();
     return *this;
   }
 
   /// \brief makes the most recently extracted character available again
   /// \return `*this`
-  inline auto& unget() {
+  auto& unget() {
     check<std::out_of_range>(tellp() >= 1, "datastream attempted to read past the beginning");
-    --pos_;
+    --pos;
     return *this;
   }
 
   /// \brief inserts characters to stream
   /// \param s contiguous sequence of characters
   /// \return `*this`
-  inline auto& write(std::span<const char> s) {
+  auto& write(std::span<const char> s) {
     check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to write past the end");
-    std::copy(s.begin(), s.end(), pos_);
-    pos_ += s.size();
+    std::copy(s.begin(), s.end(), pos);
+    pos += s.size();
     return *this;
   }
 
@@ -116,52 +116,52 @@ public:
   /// \param s pointer to the character string to write
   /// \param count number of characters to write
   /// \return `*this`
-  inline auto& write(const void* c, size_t count) {
+  auto& write(const void* c, size_t count) {
     return write({(const char*)c, count});
   }
 
   /// \brief inserts characters to stream in reverse order
   /// \param s contiguous sequence of characters
   /// \return `*this`
-  inline auto& reverse_write(std::span<const char> s) {
+  auto& reverse_write(std::span<const char> s) {
     check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to write past the end");
-    std::reverse_copy(s.begin(), s.end(), pos_);
-    pos_ += s.size();
+    std::reverse_copy(s.begin(), s.end(), pos);
+    pos += s.size();
     return *this;
   }
 
   /// \brief inserts a character
   /// \param c character to write
   /// \return `*this`
-  inline auto& put(char c) {
+  auto& put(char c) {
     check<std::out_of_range>(remaining() >= 1, "datastream attempted to write past the end");
-    *pos_++ = c;
+    *pos++ = c;
     return *this;
   }
 
   /// \brief sets the position indicator
   /// \param p offset from the first element of underlying buffer
   /// \return `*this`
-  inline auto& seekp(size_t p) {
-    pos_ = span.begin() + p;
+  auto& seekp(size_t p) {
+    pos = buf.begin() + p;
     return *this;
   }
 
   /// \brief returns the position indicator
   /// \return offset from the first element of underlying buffer
-  inline size_t tellp() const {
-    return std::distance(span.begin(), pos_);
+  size_t tellp() const {
+    return std::distance(buf.begin(), pos);
   }
 
   /// \brief returns the remaining size
   /// \return offset to the end of underlying buffer
-  inline size_t remaining() const {
-    return std::distance(pos_, span.end());
+  size_t remaining() const {
+    return std::distance(pos, buf.end());
   }
 
 private:
-  std::span<T> span;
-  typename std::span<T>::iterator pos_;
+  std::span<T> buf;
+  typename std::span<T>::iterator pos;
 };
 
 /// \brief calculates the size needed for serialization
