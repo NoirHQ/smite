@@ -577,8 +577,9 @@ void p2p_impl::transmit_message(const envelope_ptr& env) {
     // Unicast
     for_each_connection([env](auto& c) {
       if (c->socket_is_open() && (to_hex(c->conn_node_id) == env->to)) {
-        dlog(fmt::format("unicast to {}", to_hex(env->to)));
+        dlog(fmt::format("unicast to={} size={}", env->to, env->message.size()));
         c->strand.post([c, env]() { c->enqueue(*env); });
+        return false;
       }
       return true;
     });
@@ -749,8 +750,10 @@ void p2p::plugin_startup() {
 }
 
 void p2p::plugin_shutdown() {
-  for (auto c : my->connections)
-    disconnect(c->peer_address());
+  ilog("shutting down p2p");
+  my->thread_pool->stop();
+  my->thread_pool.reset();
+  my->in_shutdown = true;
 }
 
 std::string p2p::connect(const std::string& host) {
