@@ -21,7 +21,7 @@ static tx_id_type get_tx_id(const tx& tx) {
     return tx_id_type{};
   }
   crypto::sha3_256 hash;
-  return tx_id_type{hash.init().update(tx).final()}; // FIXME
+  return tx_id_type{hash(tx)}; // FIXME
 }
 
 struct wrapped_tx {
