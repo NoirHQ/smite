@@ -78,8 +78,7 @@ bool tx_pool::check_tx_async(const consensus::tx& tx) {
     auto tx_id = consensus::get_tx_id(tx);
     check_tx_internal(tx_id, tx);
     auto& req_res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
-    req_res.set_callback(
-      [&, tx_id, tx](consensus::response_check_tx& res) { add_tx(tx_id, tx, res); }, thread_->get_executor());
+    req_res.set_callback([&, tx_id, tx](consensus::response_check_tx& res) { add_tx(tx_id, tx, res); });
     return true;
   } catch (std::exception& e) {
     elog(fmt::format("{}", e.what()));

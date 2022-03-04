@@ -5,7 +5,6 @@
 //
 #pragma once
 
-#include <noir/common/thread_pool.h>
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/app_connection.h>
 #include <noir/consensus/tx.h>
@@ -20,7 +19,6 @@ struct config {
   std::string root_dir = "/";
   bool recheck = true;
   bool broadcast = true;
-  uint32_t thread_num = 5;
   uint64_t max_tx_bytes = 1024 * 1024;
   uint64_t max_txs_bytes = 1024 * 1024 * 1024;
   uint64_t max_batch_bytes;
@@ -48,8 +46,6 @@ private:
 
   precheck_func* precheck_ = nullptr;
   postcheck_func* postcheck_ = nullptr;
-
-  std::unique_ptr<named_thread_pool> thread_ = std::make_unique<named_thread_pool>("tx_pool_thread", 1);
 
 public:
   tx_pool();
