@@ -131,7 +131,7 @@ public:
     new_wrapped_tx.gas = rand_gas();
 
     std::lock_guard<std::mutex> lock(mutex_);
-    new_wrapped_tx.tx_data = codec::scale::encode(tx_id_++);
+    new_wrapped_tx.tx = codec::scale::encode(tx_id_++);
     new_wrapped_tx.nonce = nonce_++;
     new_wrapped_tx.height = height_++;
     return std::make_shared<wrapped_tx>(new_wrapped_tx);

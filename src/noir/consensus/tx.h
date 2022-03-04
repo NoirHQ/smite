@@ -28,7 +28,7 @@ struct wrapped_tx {
   address_type sender;
   std::optional<tx_id_type> _id;
 
-  tx tx_data;
+  consensus::tx tx;
   uint64_t gas;
   uint64_t nonce;
   uint64_t height;
@@ -36,13 +36,13 @@ struct wrapped_tx {
 
   tx_id_type id() {
     if (!_id.has_value()) {
-      _id = get_tx_id(tx_data);
+      _id = get_tx_id(tx);
     }
     return _id.value();
   }
 
   uint64_t size() const {
-    return sizeof(*this) + tx_data.size();
+    return sizeof(*this) + tx.size();
   }
 };
 
