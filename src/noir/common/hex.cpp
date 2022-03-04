@@ -5,7 +5,7 @@
 //
 #include <noir/common/check.h>
 #include <noir/common/hex.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 namespace noir {
 

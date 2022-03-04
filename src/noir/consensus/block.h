@@ -14,7 +14,7 @@
 #include <noir/crypto/rand.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include <utility>
 

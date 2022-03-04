@@ -6,7 +6,7 @@
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/wal.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 namespace noir::consensus {
 using namespace noir::p2p;
