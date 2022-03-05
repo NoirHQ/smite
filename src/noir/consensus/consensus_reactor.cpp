@@ -24,12 +24,12 @@ void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::pee
       it->second->is_running = true;
 
       // Start gossips for this peer
-      // gossip_data_routine(it->second); // TODO: uncomment
+      gossip_data_routine(it->second);
       // gossip_votes_routine(it->second); // TODO: uncomment
       // query_maj23_routine(it->second); // TODO: uncomment
 
-      // if (!wait_sync)
-      //  send_new_round_step_message(peer_id); // TODO: uncomment
+      if (!wait_sync)
+        send_new_round_step_message(peer_id);
     }
     break;
   }
@@ -169,74 +169,70 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
 void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
   // Check if cs_reactor is running // TODO
   ps->strand->post([this, ps{std::move(ps)}]() {
-    while (true) {
-      if (!ps->is_running)
-        return;
+    if (!ps->is_running)
+      return;
 
-      auto rs = cs_state->get_round_state();
-      auto prs = ps->get_round_state();
+    auto rs = cs_state->get_round_state();
+    auto prs = ps->get_round_state();
 
+    int index{};
+    bool ok{false};
+    if (rs->proposal_block_parts->has_header(prs->proposal_block_part_set_header))
+      std::tie(index, ok) =
+        rs->proposal_block_parts->get_bit_array()->sub(prs->proposal_block_parts->copy())->pick_random();
+    if (ok) {
       // Send proposal_block_parts
-      if (rs->proposal_block_parts->has_header(prs->proposal_block_part_set_header)) {
-        if (auto [index, ok] =
-              rs->proposal_block_parts->get_bit_array()->sub(prs->proposal_block_parts->copy())->pick_random();
-            ok) {
-          auto part = rs->proposal_block_parts->get_part(index);
-          dlog(fmt::format("sending block_part: height={} round={}", prs->height, prs->round));
-          transmit_new_envelope(
-            "", ps->peer_id, p2p::block_part_message{rs->height, rs->round, part->index, part->bytes_, part->proof_});
-          ps->set_has_proposal_block_part(prs->height, prs->round, index);
-          continue;
-        }
-      }
+      auto part = rs->proposal_block_parts->get_part(index);
+      dlog(fmt::format("sending block_part: height={} round={}", prs->height, prs->round));
+      transmit_new_envelope(
+        "", ps->peer_id, p2p::block_part_message{rs->height, rs->round, part->index, part->bytes_, part->proof_});
+      ps->set_has_proposal_block_part(prs->height, prs->round, index);
+      gossip_data_routine(ps);
 
+    } else if (auto block_store_base = cs_state->block_store_->base();
+               block_store_base > 0 && 0 < prs->height && prs->height < rs->height && prs->height >= block_store_base) {
       // If peer is on a previous height, help catching up
-      auto block_store_base = cs_state->block_store_->base();
-      if (block_store_base > 0 && 0 < prs->height && prs->height < rs->height && prs->height >= block_store_base) {
-        // If we never received commit_message from peer, block_parts will not be initialized
-        if (prs->proposal_block_parts == nullptr) {
-          block_meta block_meta_;
-          if (!cs_state->block_store_->load_block_meta(prs->height, block_meta_)) {
-            elog("failed to load block_meta");
-            std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
-          } else {
-            ps->init_proposal_block_parts(block_meta_.bl_id.parts);
-          }
-          continue;
+      // If we never received commit_message from peer, block_parts will not be initialized
+      if (prs->proposal_block_parts == nullptr) {
+        block_meta block_meta_;
+        if (!cs_state->block_store_->load_block_meta(prs->height, block_meta_)) {
+          elog("failed to load block_meta");
+          std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+        } else {
+          ps->init_proposal_block_parts(block_meta_.bl_id.parts);
         }
-        gossip_data_for_catchup(rs, prs, ps);
-        continue;
+      } else {
+        // gossip_data_for_catchup(rs, prs, ps); // TODO: uncomment; causes hang for some reason now
       }
+      gossip_data_routine(ps);
 
+    } else if (rs->height != prs->height || rs->round != prs->round) {
       // If height and round don't match
-      if (rs->height != prs->height || rs->round != prs->round) {
-        std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
-        continue;
-      }
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      gossip_data_routine(ps);
 
-      /* By here, height and round should match.
-       * Proposal block_parts were matched and sent if any were needed.
-       */
-
+    } else if (rs->proposal != nullptr && !prs->proposal) {
+      /// By here, height and round should match.
+      /// Proposal block_parts were matched and sent if any were needed.
       // Send proposal
-      if (rs->proposal != nullptr && !prs->proposal) {
-        // Proposal: share meta_data with peer
-        {
-          transmit_new_envelope("", ps->peer_id, p2p::proposal_message{*rs->proposal});
-          ps->set_has_proposal(*rs->proposal);
-        }
-
-        // Proposal_pol: allows peer to know which pol_votes we have. The peer must receive proposal first
-        if (0 <= rs->proposal->pol_round) {
-          auto p_pol = rs->votes->prevotes(rs->proposal->pol_round)->get_bit_array();
-          dlog(fmt::format("sending pol: height={} round={}", prs->height, prs->round));
-          transmit_new_envelope("", ps->peer_id, p2p::proposal_pol_message{rs->height, rs->proposal->pol_round, p_pol});
-        }
-        continue;
+      // Proposal: share meta_data with peer
+      {
+        transmit_new_envelope("", ps->peer_id, p2p::proposal_message{*rs->proposal});
+        ps->set_has_proposal(*rs->proposal);
       }
 
+      // Proposal_pol: allows peer to know which pol_votes we have. The peer must receive proposal first
+      if (0 <= rs->proposal->pol_round) {
+        auto p_pol = rs->votes->prevotes(rs->proposal->pol_round)->get_bit_array();
+        dlog(fmt::format("sending pol: height={} round={}", prs->height, prs->round));
+        transmit_new_envelope("", ps->peer_id, p2p::proposal_pol_message{rs->height, rs->proposal->pol_round, p_pol});
+      }
+      gossip_data_routine(ps);
+
+    } else {
       // Nothing to do, so just sleep for a while
       std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      gossip_data_routine(ps);
     }
   });
 }
