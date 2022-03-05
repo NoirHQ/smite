@@ -26,7 +26,7 @@ void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::pee
       // Start gossips for this peer
       gossip_data_routine(it->second);
       // gossip_votes_routine(it->second); // TODO: uncomment
-      // query_maj23_routine(it->second); // TODO: uncomment
+      query_maj23_routine(it->second);
 
       if (!wait_sync)
         send_new_round_step_message(peer_id);
@@ -36,7 +36,7 @@ void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::pee
   case p2p::peer_status::down: {
     auto it = peers.find(peer_id);
     if (it != peers.end() && it->second->is_running) {
-      it->second->is_running = false; // TODO: is this enough to stop all threads?
+      it->second->is_running = false;
       peers.erase(it);
     }
     break;
@@ -197,7 +197,7 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
         block_meta block_meta_;
         if (!cs_state->block_store_->load_block_meta(prs->height, block_meta_)) {
           elog("failed to load block_meta");
-          std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+          std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration);
         } else {
           ps->init_proposal_block_parts(block_meta_.bl_id.parts);
         }
@@ -208,7 +208,7 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
 
     } else if (rs->height != prs->height || rs->round != prs->round) {
       // If height and round don't match
-      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration);
       gossip_data_routine(ps);
 
     } else if (rs->proposal != nullptr && !prs->proposal) {
@@ -231,7 +231,7 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
 
     } else {
       // Nothing to do, so just sleep for a while
-      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration);
       gossip_data_routine(ps);
     }
   });
@@ -244,18 +244,18 @@ void consensus_reactor::gossip_data_for_catchup(const std::shared_ptr<round_stat
     block_meta block_meta_;
     if (!cs_state->block_store_->load_block_meta(prs->height, block_meta_)) {
       elog("failed to load block_meta");
-      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration);
       return;
     } else if (block_meta_.bl_id.parts != prs->proposal_block_part_set_header) {
       ilog("peer proposal_block_part_set_header mismatch");
-      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration);
       return;
     }
 
     part part_;
     if (!cs_state->block_store_->load_block_part(prs->height, index, part_)) {
       elog("failed to load block_part");
-      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration);
       return;
     }
 
@@ -264,48 +264,41 @@ void consensus_reactor::gossip_data_for_catchup(const std::shared_ptr<round_stat
       "", ps->peer_id, p2p::block_part_message{prs->height, prs->round, part_.index, part_.bytes_, part_.proof_});
     return;
   }
-  std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+  std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration);
 }
 
 void consensus_reactor::gossip_votes_routine(std::shared_ptr<peer_state> ps) {
   ps->strand->post([this, ps{std::move(ps)}]() {
-    while (true) {
-      if (!ps->is_running)
-        return;
+    if (!ps->is_running)
+      return;
 
-      auto rs = cs_state->get_round_state();
-      auto prs = ps->get_round_state();
+    auto rs = cs_state->get_round_state();
+    auto prs = ps->get_round_state();
+    commit commit_;
 
+    if (rs->height == prs->height && gossip_votes_for_height(rs, prs, ps)) {
       // If height matches, send last_commit, prevotes, precommits
-      if (rs->height == prs->height) {
-        if (gossip_votes_for_height(rs, prs, ps))
-          continue;
-      }
+      gossip_votes_routine(ps);
 
+    } else if ((prs->height != 0 && rs->height == prs->height + 1) && pick_send_vote(ps, *rs->last_commit)) {
       // Special catchup - if peer is lagged by 1, send last_commit
-      if (prs->height != 0 && rs->height == prs->height + 1) {
-        if (pick_send_vote(ps, *rs->last_commit)) {
-          dlog("picked last_commit to send");
-          continue;
-        }
-      }
+      dlog("picked last_commit to send");
+      gossip_votes_routine(ps);
 
+    } else if (auto block_store_base = cs_state->block_store_->base();
+               (block_store_base > 0 && prs->height != 0 && rs->height >= prs->height + 2 &&
+                 prs->height >= block_store_base) &&
+               cs_state->block_store_->load_block_commit(
+                 prs->height, commit_) /* && pick_send_vote(ps, commit_) // TODO: uncomment*/) {
       // Catchup logic - if peer is lagged by more than 1, send commit
-      auto block_store_base = cs_state->block_store_->base();
-      if (block_store_base > 0 && prs->height != 0 && rs->height >= prs->height + 2 &&
-        prs->height >= block_store_base) {
-        // Load block_commit for prs->height which contains precommit sig
-        commit commit_;
-        if (cs_state->block_store_->load_block_commit(prs->height, commit_)) {
-          // if (pick_send_vote(ps, commit_)) { // TODO: uncomment
-          //  dlog("picked catchup commit to send");
-          //  continue;
-          // }
-        }
-      }
+      // Load block_commit for prs->height which contains precommit sig
+      dlog("picked catchup commit to send");
+      gossip_votes_routine(ps);
 
+    } else {
       // Nothing to do, so just sleep for a while
-      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration); // TODO: check
+      std::this_thread::sleep_for(cs_state->cs_config.peer_gossip_sleep_duration);
+      gossip_votes_routine(ps);
     }
   });
 }
@@ -329,64 +322,63 @@ bool consensus_reactor::pick_send_vote(const std::shared_ptr<peer_state>& ps, co
 /// \brief detect and react when there is a signature DDoS attack in progress
 void consensus_reactor::query_maj23_routine(std::shared_ptr<peer_state> ps) {
   ps->strand->post([this, ps{std::move(ps)}]() {
-    while (true) {
-      if (!ps->is_running)
-        return;
+    if (!ps->is_running)
+      return;
 
-      // Send height/round/prevotes
-      {
-        auto rs = cs_state->get_round_state();
-        auto prs = ps->get_round_state();
-        if (rs->height == prs->height) {
-          if (auto maj23 = rs->votes->prevotes(prs->round)->two_thirds_majority(); maj23.has_value()) {
-            transmit_new_envelope(
-              "", ps->peer_id, p2p::vote_set_maj23_message{prs->height, prs->round, p2p::Prevote, maj23.value()});
-            std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
-          }
+    // Send height/round/prevotes
+    {
+      auto rs = cs_state->get_round_state();
+      auto prs = ps->get_round_state();
+      if (rs->height == prs->height) {
+        if (auto maj23 = rs->votes->prevotes(prs->round)->two_thirds_majority(); maj23.has_value()) {
+          transmit_new_envelope(
+            "", ps->peer_id, p2p::vote_set_maj23_message{prs->height, prs->round, p2p::Prevote, maj23.value()});
+          std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration);
         }
       }
-
-      // Send height/round/Precommits
-      {
-        auto rs = cs_state->get_round_state();
-        auto prs = ps->get_round_state();
-        if (rs->height == prs->height) {
-          if (auto maj23 = rs->votes->precommits(prs->round)->two_thirds_majority(); maj23.has_value()) {
-            transmit_new_envelope(
-              "", ps->peer_id, p2p::vote_set_maj23_message{prs->height, prs->round, p2p::Precommit, maj23.value()});
-            std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
-          }
-        }
-      }
-
-      // Send height/round/proposal_pol
-      {
-        auto rs = cs_state->get_round_state();
-        auto prs = ps->get_round_state();
-        if (rs->height == prs->height && prs->proposal_pol_round >= 0) {
-          if (auto maj23 = rs->votes->prevotes(prs->proposal_pol_round)->two_thirds_majority(); maj23.has_value()) {
-            transmit_new_envelope("", ps->peer_id,
-              p2p::vote_set_maj23_message{prs->height, prs->proposal_pol_round, p2p::Prevote, maj23.value()});
-            std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
-          }
-        }
-      }
-
-      // Send height/catchup_commit_round/catchup_commit
-      {
-        auto prs = ps->get_round_state();
-        if (prs->catchup_commit_round != -1 && prs->height > 0 && prs->height <= cs_state->block_store_->height() &&
-          prs->height >= cs_state->block_store_->base()) {
-          if (auto commit_ = cs_state->load_commit(prs->height); commit_ != nullptr) {
-            transmit_new_envelope("", ps->peer_id,
-              p2p::vote_set_maj23_message{prs->height, commit_->round, p2p::Precommit, commit_->my_block_id});
-            std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
-          }
-        }
-      }
-
-      std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration); // TODO: check
     }
+
+    // Send height/round/Precommits
+    {
+      auto rs = cs_state->get_round_state();
+      auto prs = ps->get_round_state();
+      if (rs->height == prs->height) {
+        if (auto maj23 = rs->votes->precommits(prs->round)->two_thirds_majority(); maj23.has_value()) {
+          transmit_new_envelope(
+            "", ps->peer_id, p2p::vote_set_maj23_message{prs->height, prs->round, p2p::Precommit, maj23.value()});
+          std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration);
+        }
+      }
+    }
+
+    // Send height/round/proposal_pol
+    {
+      auto rs = cs_state->get_round_state();
+      auto prs = ps->get_round_state();
+      if (rs->height == prs->height && prs->proposal_pol_round >= 0) {
+        if (auto maj23 = rs->votes->prevotes(prs->proposal_pol_round)->two_thirds_majority(); maj23.has_value()) {
+          transmit_new_envelope("", ps->peer_id,
+            p2p::vote_set_maj23_message{prs->height, prs->proposal_pol_round, p2p::Prevote, maj23.value()});
+          std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration);
+        }
+      }
+    }
+
+    // Send height/catchup_commit_round/catchup_commit
+    {
+      auto prs = ps->get_round_state();
+      if (prs->catchup_commit_round != -1 && prs->height > 0 && prs->height <= cs_state->block_store_->height() &&
+        prs->height >= cs_state->block_store_->base()) {
+        if (auto commit_ = cs_state->load_commit(prs->height); commit_ != nullptr) {
+          transmit_new_envelope("", ps->peer_id,
+            p2p::vote_set_maj23_message{prs->height, commit_->round, p2p::Precommit, commit_->my_block_id});
+          std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration);
+        }
+      }
+    }
+
+    std::this_thread::sleep_for(cs_state->cs_config.peer_query_maj_23_sleep_duration);
+    query_maj23_routine(ps);
   });
 }
 
