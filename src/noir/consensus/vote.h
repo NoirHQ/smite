@@ -231,6 +231,37 @@ struct nil_vote_set : vote_set {
   }
 };
 
+struct vote_set_reader {
+  int64_t height;
+  int32_t round;
+  std::shared_ptr<bit_array> bit_array_;
+  bool is_commit;
+  p2p::signed_msg_type type;
+
+  vote_set_reader() = delete;
+  vote_set_reader(const vote_set_reader&) = delete;
+  vote_set_reader(vote_set_reader&&) = default;
+  vote_set_reader& operator=(const vote_set_reader&) = delete;
+
+  explicit vote_set_reader(const commit& commit_) {
+    height = commit_.height;
+    round = commit_.round;
+    bit_array_ = commit_.bit_array_;
+    is_commit = commit_.signatures.size() != 0;
+    type = p2p::Precommit;
+  }
+  explicit vote_set_reader(const vote_set& vote_set_) {
+    height = vote_set_.height;
+    round = vote_set_.round;
+    bit_array_ = vote_set_.votes_bit_array;
+    if (vote_set_.signed_msg_type_ != p2p::Precommit)
+      is_commit = false;
+    else
+      is_commit = vote_set_.maj23.has_value();
+    type = vote_set_.signed_msg_type_;
+  }
+};
+
 } // namespace noir::consensus
 
 NOIR_REFLECT_DERIVED(noir::consensus::vote, noir::p2p::vote_message)
