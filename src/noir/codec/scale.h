@@ -62,8 +62,8 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, E& v) {
 }
 
 // Compact/general integers
-template<typename Stream>
-datastream<Stream>& operator<<(datastream<Stream>& ds, const unsigned_int& v) {
+template<typename Stream, unsigned_integral T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const varint<T>& v) {
   using noir::pown;
   if (v < pown(2u, 6)) {
     ds.put(v.value << 2);
@@ -73,6 +73,17 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const unsigned_int& v) {
   } else if (v < pown(2u, 30)) {
     uint32_t tmp = v.value << 2 | 0b10;
     ds.write((char*)&tmp, 4);
+  } else if (v <= std::numeric_limits<uint64_t>::max()) {
+    uint64_t tmp = v.value;
+    auto s = std::span((char*)&tmp, sizeof(tmp));
+    auto nonzero = std::find_if(s.rbegin(), s.rend(), [](const auto& c) {
+      if (c != 0)
+        return true;
+      return false;
+    });
+    auto trimmed = std::distance(nonzero, s.rend());
+    ds.put(((trimmed - 4) << 2) | 0b11);
+    ds.write({s.data(), (size_t)trimmed});
   } else {
     // TODO
     check(false, "not implemented");
@@ -80,8 +91,8 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const unsigned_int& v) {
   return ds;
 }
 
-template<typename Stream>
-datastream<Stream>& operator>>(datastream<Stream>& ds, unsigned_int& v) {
+template<typename Stream, unsigned_integral T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
   uint8_t tmp = ds.peek();
   switch (tmp & 0b11) {
   case 0b00: {
@@ -102,10 +113,13 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, unsigned_int& v) {
     val >>= 2;
     v = val;
   } break;
-  case 0b11:
-    // TODO
-    check(false, "not implemented");
-    break;
+  case 0b11: {
+    uint64_t val = 0;
+    auto size = uint8_t(ds.get()) >> 2;
+    check(size >= 0 && size <= 4, "not implemented");
+    ds.read((char*)&val, size + 4);
+    v = val;
+  } break;
   }
   return ds;
 }
