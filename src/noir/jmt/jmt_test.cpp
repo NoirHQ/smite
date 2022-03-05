@@ -29,7 +29,7 @@ auto update_nibble(bytes32& original_key, size_t n, uint8_t nibble) {
 
 using value_blob = std::vector<char>;
 
-TEST_CASE("[jmt] insert_to_empty_tree", "[jmt]") {
+TEST_CASE("jmt: insert_to_empty_tree", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
@@ -43,7 +43,7 @@ TEST_CASE("[jmt] insert_to_empty_tree", "[jmt]") {
   CHECK(**tree.get(key, 0) == value);
 }
 
-TEST_CASE("[jmt] insert_to_pre_genesis", "[jmt]") {
+TEST_CASE("jmt: insert_to_pre_genesis", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto key1 = bytes32();
   auto value1 = value_blob{1, 2};
@@ -66,7 +66,7 @@ TEST_CASE("[jmt] insert_to_pre_genesis", "[jmt]") {
   CHECK(**tree.get(key2, 0) == value2);
 }
 
-TEST_CASE("[jmt] insert_at_leaf_with_internal_created", "[jmt]") {
+TEST_CASE("jmt: insert_at_leaf_with_internal_created", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
@@ -105,7 +105,7 @@ TEST_CASE("[jmt] insert_at_leaf_with_internal_created", "[jmt]") {
   CHECK(db.get_node(internal_node_key) == internal);
 }
 
-TEST_CASE("[jmt] insert_at_leaf_with_multiple_internals_created", "[jmt]") {
+TEST_CASE("jmt: insert_at_leaf_with_multiple_internals_created", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
@@ -167,7 +167,7 @@ TEST_CASE("[jmt] insert_at_leaf_with_multiple_internals_created", "[jmt]") {
   CHECK(**tree.get(key2, 2) == value2_update);
 }
 
-TEST_CASE("[jmt] batch_insertion", "[jmt]") {
+TEST_CASE("jmt: batch_insertion", "[noir][jmt]") {
   auto key1 = bytes32();
   auto value1 = value_blob{1};
 
@@ -244,7 +244,7 @@ TEST_CASE("[jmt] batch_insertion", "[jmt]") {
   }
 }
 
-TEST_CASE("[jmt] non_existence", "[jmt]") {
+TEST_CASE("jmt: non_existence", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
@@ -284,14 +284,14 @@ TEST_CASE("[jmt] non_existence", "[jmt]") {
   }
 }
 
-TEST_CASE("[jmt] missing_root", "[jmt]") {
+TEST_CASE("jmt: missing_root", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
   auto err = tree.get_with_proof(random_bytes32(), 0).error();
   CHECK(err == "missing state root node at version 0, probably pruned");
 }
 
-TEST_CASE("[jmt] put_value_sets", "[jmt]") {
+TEST_CASE("jmt: put_value_sets", "[noir][jmt]") {
   auto keys = std::vector<bytes32>{};
   auto values = std::vector<value_blob>{};
   auto total_updates = 20;
@@ -373,7 +373,7 @@ void many_keys_get_proof_and_verify_tree_root(std::span<uint8_t> seed, size_t nu
   }
 }
 
-TEST_CASE("[jmt] 1000_keys", "[jmt]") {
+TEST_CASE("jmt: 1000_keys", "[noir][jmt]") {
   auto seed = std::to_array<uint8_t>({1, 2, 3, 4});
   many_keys_get_proof_and_verify_tree_root(seed, 1000);
 }
@@ -430,12 +430,12 @@ void many_versions_get_proof_and_verify_tree_root(std::span<uint8_t> seed, size_
   }
 }
 
-TEST_CASE("[jmt] 1000_versions", "[jmt]") {
+TEST_CASE("jmt: 1000_versions", "[noir][jmt]") {
   auto seed = std::to_array<uint8_t>({1, 2, 3, 4});
   many_keys_get_proof_and_verify_tree_root(seed, 1000);
 }
 
-TEST_CASE("[jmt] insert_at_leaf_with_multiple_internals_created - non batch version", "[jmt]") {
+TEST_CASE("jmt: insert_at_leaf_with_multiple_internals_created - non batch version", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 

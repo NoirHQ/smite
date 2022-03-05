@@ -10,7 +10,7 @@
 using namespace noir;
 using namespace noir::consensus::merkle;
 
-TEST_CASE("[tree] Find split point", "[tree]") {
+TEST_CASE("merkle_tree: Find split point", "[noir][consensus]") {
   auto tests = std::to_array<std::pair<size_t, size_t>>({
     {1, 0},
     {2, 1},
@@ -27,11 +27,11 @@ TEST_CASE("[tree] Find split point", "[tree]") {
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(get_split_point(t.first) == t.second); });
 }
 
-TEST_CASE("[tree] Compute empty hash", "[tree]") {
+TEST_CASE("merkle_tree: Compute empty hash", "[noir][consensus]") {
   CHECK(get_empty_hash() == from_hex("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
 }
 
-TEST_CASE("[tree] Verify hash inputs", "[tree]") {
+TEST_CASE("merkle_tree: Verify hash inputs", "[noir][consensus]") {
   auto tests = std::to_array<std::pair<bytes_list, std::string>>({
     {{}, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
     {{{}}, "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"},
@@ -45,7 +45,7 @@ TEST_CASE("[tree] Verify hash inputs", "[tree]") {
   });
 }
 
-TEST_CASE("[tree] Verify proof", "[tree]") {
+TEST_CASE("merkle_tree: Verify proof", "[noir][consensus]") {
   // Empty proof
   auto [root_hash, proofs] = proofs_from_bytes_list({});
   // std::cout << to_hex(root_hash) << std::endl;

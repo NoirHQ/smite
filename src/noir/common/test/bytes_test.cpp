@@ -9,12 +9,12 @@
 
 using namespace noir;
 
-TEST_CASE("[common][bytes] variable-length byte sequence", "[noir]") {
+TEST_CASE("bytes: variable-length byte sequence", "[noir][common]") {
   bytes data{1, 2};
   CHECK(to_string(data) == "0102");
 }
 
-TEST_CASE("[common][bytes] fixed-length byte sequence", "[noir]") {
+TEST_CASE("bytes: fixed-length byte sequence", "[noir][common]") {
   bytes32 hash{"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
 
   SECTION("construction & conversion") {

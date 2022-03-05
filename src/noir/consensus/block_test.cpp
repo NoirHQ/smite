@@ -11,14 +11,14 @@
 using namespace noir;
 using namespace noir::consensus;
 
-TEST_CASE("Encode block", "[block]") {
+TEST_CASE("block: Encode block", "[noir][consensus]") {
   block org{block_header{}, block_data{.hash = {0, 1, 2}}, commit{}};
   auto data = encode(org);
   auto decoded = decode<block>(data);
   CHECK(org.data.hash == decoded.data.hash);
 }
 
-TEST_CASE("Make part_set", "[block]") {
+TEST_CASE("block: Make part_set", "[noir][consensus]") {
   block org{block_header{}, block_data{.hash = {0, 1, 2, 3, 4, 5}}, commit{}};
   uint32_t part_size{block_part_size_bytes};
   // uint32_t part_size{3};

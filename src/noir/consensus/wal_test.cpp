@@ -23,7 +23,7 @@ int count_dir(const std::string& tmp_path) {
   return cnt;
 }
 
-TEST_CASE("simple encode/decode", "[wal_codec]") {
+TEST_CASE("wal_codec: simple encode/decode", "[noir][consensus]") {
   static constexpr size_t enc_size = 0x100;
   static constexpr size_t rotation_file_num = 5;
   auto [temp_dir, wal_manager_] = [](size_t enc_size) {
@@ -225,7 +225,7 @@ inline noir::bytes gen_random_bytes(size_t num) {
   return ret;
 }
 
-TEST_CASE("basic_wal test", "[basic_wal]") {
+TEST_CASE("basic_wal: basic_wal test", "[noir][consensus]") {
   static constexpr size_t enc_size = 4096;
   auto [temp_dir, wal_] = [](size_t enc_size) {
     static constexpr size_t rotation_file_num = 5;

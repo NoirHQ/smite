@@ -26,7 +26,7 @@ std::tuple<node_key, bytes32> gen_leaf_key(version ver, const nibble_path& path,
   return {node_key{ver, np}, account_key};
 }
 
-TEST_CASE("[node] encode/decode", "[jmt]") {
+TEST_CASE("node: encode/decode", "[noir][jmt]") {
   auto internal_node_key = random_63nibbles_node_key();
 
   auto leaf1_keys = gen_leaf_key(0, internal_node_key.nibble_path, 1);

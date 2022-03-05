@@ -35,7 +35,7 @@ static inline void comp_hdr(noir::consensus::block_header& ret_hdr, noir::consen
   CHECK(ret_hdr.get_hash() == exp_hdr.get_hash());
 };
 
-TEST_CASE("base/height", "[block_store]") {
+TEST_CASE("block_store: base/height", "[noir][consensus]") {
   noir::consensus::block_store bls(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   SECTION("initialize") {
@@ -44,7 +44,7 @@ TEST_CASE("base/height", "[block_store]") {
   }
 }
 
-TEST_CASE("save/load_block", "[block_store]") {
+TEST_CASE("block_store: save/load_block", "[noir][consensus]") {
   noir::consensus::block_store bls(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   auto genesis_state = make_genesis_state();
@@ -127,7 +127,7 @@ TEST_CASE("save/load_block", "[block_store]") {
   }
 }
 
-TEST_CASE("prune_block", "[block_store]") {
+TEST_CASE("block_store: prune_block", "[noir][consensus]") {
   noir::consensus::block_store bls(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   auto genesis_state = make_genesis_state();

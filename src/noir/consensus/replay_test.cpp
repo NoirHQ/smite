@@ -66,7 +66,7 @@ auto process_block_wal_msg = [](wal& wal_, int64_t height) {
   }
 };
 
-TEST_CASE("catchup_replay", "[consensus_state_wal]") {
+TEST_CASE("state_wal: catchup_replay", "[noir][consensus]") {
   struct test_case {
     std::string name;
     int64_t start_height;
@@ -112,7 +112,7 @@ auto corrupt_wal_file = [](const std::string& wal_path) {
   file_.write(corrupt_ptr, len);
 };
 
-TEST_CASE("repair_wal_file", "[consensus_state_wal]") {
+TEST_CASE("state_wal: repair_wal_file", "[noir][consensus]") {
   struct test_case {
     std::string name;
     int64_t start_height;

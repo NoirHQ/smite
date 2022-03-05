@@ -10,7 +10,7 @@
 using namespace noir;
 using namespace noir::crypto;
 
-TEST_CASE("[crypto][rand]", "[noir]") {
+TEST_CASE("rand", "[noir][crypto]") {
   std::vector<byte_type> out_vec(8);
   std::array<byte_type, 8> out_arr{};
 

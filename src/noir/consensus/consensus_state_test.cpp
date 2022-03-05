@@ -9,7 +9,7 @@
 using namespace noir;
 using namespace noir::consensus;
 
-TEST_CASE("Proposer Selection 0", "[consensus_state]") {
+TEST_CASE("consensus_state: Proposer Selection 0", "[noir][consensus]") {
   auto local_config = config_setup();
   auto [cs1, vss] = rand_cs(local_config, 1);
 
@@ -40,7 +40,7 @@ TEST_CASE("Proposer Selection 0", "[consensus_state]") {
   //  cs1->schedule_timeout(std::chrono::milliseconds{4000}, 1, 1, Propose);
 }
 
-TEST_CASE("No Priv Validator", "[consensus_state]") {
+TEST_CASE("consensus_state: No Priv Validator", "[noir][consensus]") {
   auto local_config = config_setup();
   auto [cs1, vss] = rand_cs(local_config, 1);
   cs1->local_priv_validator = {};
@@ -55,7 +55,7 @@ TEST_CASE("No Priv Validator", "[consensus_state]") {
   CHECK(!cs1->get_round_state()->proposal);
 }
 
-TEST_CASE("Verify proposal signature", "[consensus_state]") {
+TEST_CASE("consensus_state: Verify proposal signature", "[noir][consensus]") {
   auto local_config = config_setup();
   auto [cs1, vss] = rand_cs(local_config, 1);
   auto local_priv_validator = cs1->local_priv_validator.value();
@@ -76,7 +76,7 @@ TEST_CASE("Verify proposal signature", "[consensus_state]") {
   CHECK(result == true);
 }
 
-TEST_CASE("Verify vote signature", "[consensus_state]") {
+TEST_CASE("consensus_state: Verify vote signature", "[noir][consensus]") {
   auto local_config = config_setup();
   auto [cs1, vss] = rand_cs(local_config, 1);
   auto local_priv_validator = cs1->local_priv_validator.value();

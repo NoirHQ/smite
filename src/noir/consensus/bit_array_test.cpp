@@ -11,7 +11,7 @@
 using namespace noir;
 using namespace noir::consensus;
 
-TEST_CASE("Encode and decode bit_array", "[bit_array]") {
+TEST_CASE("bit_array: Encode and decode bit_array", "[noir][consensus]") {
   auto bit_array_ = bit_array::new_bit_array(10);
   auto data = encode(*bit_array_);
   // std::cout << "data=" << to_hex(data) << std::endl;
@@ -41,7 +41,7 @@ TEST_CASE("Encode and decode bit_array", "[bit_array]") {
   }
 }
 
-TEST_CASE("Check to_bytes", "[bit_array]") {
+TEST_CASE("bit_array: Check to_bytes", "[noir][consensus]") {
   auto ba = bit_array::new_bit_array(4);
   ba->set_index(3, true);
   CHECK(ba->get_bytes() == bytes({'\x10'}));
