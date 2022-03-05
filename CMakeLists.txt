@@ -5,7 +5,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 project(noir)
 
 include(CTest)
-include(libs/Catch2/extras/Catch.cmake)
+include(libs/cmake/Catch2/Catch.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
 
