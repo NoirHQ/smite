@@ -108,7 +108,7 @@ std::shared_ptr<part_set> part_set::new_part_set_from_data(const bytes& data, ui
 }
 
 bool part_set::add_part(std::shared_ptr<part> part_) {
-  // todo - lock mtx
+  std::lock_guard<std::mutex> g(mtx);
 
   if (part_->index >= total) {
     elog("error part set unexpected index");

@@ -241,7 +241,7 @@ NOIR_REFLECT(noir::p2p::new_round_step_message, height, round, step, seconds_sin
 NOIR_REFLECT(noir::p2p::new_valid_block_message, height, round, block_part_set_header, block_parts, is_commit)
 NOIR_REFLECT(noir::p2p::proposal_message, type, height, round, pol_round, timestamp)
 NOIR_REFLECT(noir::p2p::proposal_pol_message, height, proposal_pol_round, proposal_pol)
-NOIR_REFLECT(noir::p2p::block_part_message, height, round, index, bytes_ /* TODO: (proof) */)
+NOIR_REFLECT(noir::p2p::block_part_message, height, round, index, bytes_, proof)
 NOIR_REFLECT(noir::p2p::vote_message, type, height, round, timestamp /*, vote_extension_ */)
 NOIR_REFLECT(noir::p2p::has_vote_message, height, round, type, index)
 NOIR_REFLECT(noir::p2p::vote_set_maj23_message, height, round, type, block_id_)
