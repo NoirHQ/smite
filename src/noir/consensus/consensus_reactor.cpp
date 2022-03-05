@@ -280,7 +280,8 @@ void consensus_reactor::gossip_votes_routine(std::shared_ptr<peer_state> ps) {
       // If height matches, send last_commit, prevotes, precommits
       gossip_votes_routine(ps);
 
-    } else if ((prs->height != 0 && rs->height == prs->height + 1) && pick_send_vote(ps, *rs->last_commit)) {
+    } else if ((prs->height != 0 && rs->height == prs->height + 1) &&
+      pick_send_vote(ps, vote_set_reader(*rs->last_commit))) {
       // Special catchup - if peer is lagged by 1, send last_commit
       dlog("picked last_commit to send");
       gossip_votes_routine(ps);
@@ -288,8 +289,8 @@ void consensus_reactor::gossip_votes_routine(std::shared_ptr<peer_state> ps) {
     } else if (auto block_store_base = cs_state->block_store_->base();
                (block_store_base > 0 && prs->height != 0 && rs->height >= prs->height + 2 &&
                  prs->height >= block_store_base) &&
-               cs_state->block_store_->load_block_commit(
-                 prs->height, commit_) /* && pick_send_vote(ps, commit_) // TODO: uncomment*/) {
+               cs_state->block_store_->load_block_commit(prs->height, commit_) &&
+               pick_send_vote(ps, vote_set_reader(commit_))) {
       // Catchup logic - if peer is lagged by more than 1, send commit
       // Load block_commit for prs->height which contains precommit sig
       dlog("picked catchup commit to send");
@@ -307,15 +308,61 @@ bool consensus_reactor::gossip_votes_for_height(const std::shared_ptr<round_stat
   const std::shared_ptr<peer_round_state>& prs, const std::shared_ptr<peer_state>& ps) {
   // If there are last_commits to send
   if (prs->step == p2p::round_step_type::NewHeight) {
-    // if (pick_send_vote(ps, rs->last_commit)) {
-    //  dlog("picked last_commit to send");
-    //  return true;
-    // }
+    if (pick_send_vote(ps, vote_set_reader(*rs->last_commit))) {
+      dlog("picked last_commit to send");
+      return true;
+    }
   }
-  // TODO
+
+  // If there are pol_prevotes to send
+  if (prs->step <= p2p::round_step_type::Propose && prs->round != -1 && prs->round <= rs->round &&
+    prs->proposal_pol_round != -1) {
+    if (auto pol_prevotes = rs->votes->prevotes(prs->proposal_pol_round); pol_prevotes != nullptr) {
+      if (pick_send_vote(ps, vote_set_reader(*pol_prevotes))) {
+        dlog("picked prevotes(proposal_pol_round) to send");
+        return true;
+      }
+    }
+  }
+
+  // If there are prevotes to send
+  if (prs->step <= p2p::round_step_type::PrevoteWait && prs->round != -1 && prs->round <= rs->round) {
+    if (pick_send_vote(ps, vote_set_reader(*rs->votes->prevotes(prs->round)))) {
+      dlog("picked prevotes(round) to send");
+      return true;
+    }
+  }
+
+  // If there are precommits to send
+  if (prs->step <= p2p::round_step_type::PrecommitWait && prs->round != -1 && prs->round <= rs->round) {
+    if (pick_send_vote(ps, vote_set_reader(*rs->votes->precommits(prs->round)))) {
+      dlog("picked precommits(round) to send");
+      return true;
+    }
+  }
+
+  // If there are prevotes to send, b/c of valid_block
+  if (prs->round != -1 && prs->round <= rs->round) {
+    if (pick_send_vote(ps, vote_set_reader(*rs->votes->prevotes(prs->round)))) {
+      dlog("picked prevotes(round) to send");
+      return true;
+    }
+  }
+
+  // If there are pol_prevotes to send
+  if (prs->proposal_pol_round != -1) {
+    if (auto pol_prevotes = rs->votes->prevotes(prs->proposal_pol_round); pol_prevotes != nullptr) {
+      if (pick_send_vote(ps, vote_set_reader(*pol_prevotes))) {
+        dlog("picked prevotes(proposal_pol_round) to send");
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
-bool consensus_reactor::pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set& votes_) {
+bool consensus_reactor::pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set_reader& votes_) {
   // TODO : implement, requires votes_ to handle VoteSetReader
 }
 

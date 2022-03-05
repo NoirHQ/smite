@@ -100,7 +100,7 @@ struct consensus_reactor {
   bool gossip_votes_for_height(const std::shared_ptr<round_state>& rs, const std::shared_ptr<peer_round_state>& prs,
     const std::shared_ptr<peer_state>& ps);
 
-  bool pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set& votes_);
+  bool pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set_reader& votes_);
 
   void query_maj23_routine(std::shared_ptr<peer_state> ps);
 
