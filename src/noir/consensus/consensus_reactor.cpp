@@ -25,7 +25,7 @@ void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::pee
 
       // Start gossips for this peer
       gossip_data_routine(it->second);
-      // gossip_votes_routine(it->second); // TODO: uncomment
+      gossip_votes_routine(it->second);
       query_maj23_routine(it->second);
 
       if (!wait_sync)
@@ -363,7 +363,13 @@ bool consensus_reactor::gossip_votes_for_height(const std::shared_ptr<round_stat
 }
 
 bool consensus_reactor::pick_send_vote(const std::shared_ptr<peer_state>& ps, const vote_set_reader& votes_) {
-  // TODO : implement, requires votes_ to handle VoteSetReader
+  if (auto [vote_, ok] = ps->pick_vote_to_send(const_cast<vote_set_reader&>(votes_)); ok) {
+    dlog("cs_reactor: sending vote message");
+    transmit_new_envelope("", ps->peer_id, p2p::vote_message{*vote_});
+    ps->set_has_vote(*vote_);
+    return true;
+  }
+  return false;
 }
 
 /// \brief detect and react when there is a signature DDoS attack in progress

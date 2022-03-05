@@ -262,6 +262,46 @@ public:
     prs.proposal_block_part_set_header = part_set_header_;
     prs.proposal_block_parts = bit_array::new_bit_array(part_set_header_.total);
   }
+
+  void ensure_catchup_commit_round(int64_t height, int32_t round, int num_validators) {
+    if (prs.height != height)
+      return;
+    if (prs.catchup_commit_round == round)
+      return;
+
+    prs.catchup_commit_round = round;
+    if (round == prs.round)
+      prs.catchup_commit = prs.precommits;
+    else
+      prs.catchup_commit = bit_array::new_bit_array(num_validators);
+  }
+
+  std::tuple<std::shared_ptr<vote>, bool> pick_vote_to_send(vote_set_reader& votes) {
+    std::lock_guard<std::mutex> g(mtx);
+
+    if (votes.size == 0)
+      return {nullptr, false};
+
+    auto height = votes.height;
+    auto round = votes.round;
+    auto votes_type = votes.type;
+    auto size = votes.size;
+
+    // Set data
+    if (votes.is_commit)
+      ensure_catchup_commit_round(height, round, size);
+
+    ensure_vote_bit_arrays_(height, size);
+
+    auto ps_votes = get_vote_bit_array(height, round, votes_type);
+    if (!ps_votes)
+      return {nullptr, false};
+
+    if (auto [index, ok] = votes.bit_array_->sub(ps_votes)->pick_random(); ok)
+      return {votes.get_by_index(index), true};
+
+    return {nullptr, false};
+  }
 };
 
 } // namespace noir::consensus

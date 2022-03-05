@@ -237,6 +237,8 @@ struct vote_set_reader {
   std::shared_ptr<bit_array> bit_array_;
   bool is_commit;
   p2p::signed_msg_type type;
+  int size;
+  std::vector<vote> votes;
 
   vote_set_reader() = delete;
   vote_set_reader(const vote_set_reader&) = delete;
@@ -249,6 +251,12 @@ struct vote_set_reader {
     bit_array_ = commit_.bit_array_;
     is_commit = commit_.signatures.size() != 0;
     type = p2p::Precommit;
+    size = commit_.signatures.size();
+    int i{0};
+    for (auto sig : commit_.signatures) {
+      votes.push_back(vote{p2p::Precommit, commit_.height, commit_.round, sig.get_block_id(commit_.my_block_id),
+        sig.timestamp, sig.validator_address, i++, sig.signature});
+    }
   }
   explicit vote_set_reader(const vote_set& vote_set_) {
     height = vote_set_.height;
@@ -259,6 +267,16 @@ struct vote_set_reader {
     else
       is_commit = vote_set_.maj23.has_value();
     type = vote_set_.signed_msg_type_;
+    size = vote_set_.val_set.size();
+    votes = vote_set_.votes;
+  }
+
+  std::shared_ptr<vote> get_by_index(int32_t val_index) {
+    if (votes.empty())
+      return nullptr;
+    if (val_index >= votes.size())
+      return nullptr;
+    return std::make_shared<vote>(votes[val_index]);
   }
 };
 
