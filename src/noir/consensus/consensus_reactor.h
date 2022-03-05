@@ -81,7 +81,7 @@ struct consensus_reactor {
       broadcast_new_valid_block_message(std::get<round_state>(info->message_));
       break;
     case EventVote:
-      // broadcast_has_vote_message(std::get<p2p::vote_message>(info->message_)); // TODO: uncomment
+      broadcast_has_vote_message(std::get<p2p::vote_message>(info->message_));
       break;
     }
   }
