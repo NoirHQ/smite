@@ -183,8 +183,7 @@ public:
 private:
   void set_has_vote_(int64_t height, int32_t round, p2p::signed_msg_type vote_type, int32_t index) {
     dlog(fmt::format("set_has_vote: type={} index={}", (int)vote_type, index));
-    auto ps_votes = get_vote_bit_array(height, round, vote_type);
-    if (!ps_votes)
+    if (auto ps_votes = get_vote_bit_array(height, round, vote_type); ps_votes)
       ps_votes->set_index(index, true);
   }
 
