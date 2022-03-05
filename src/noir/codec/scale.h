@@ -116,7 +116,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
   case 0b11: {
     uint64_t val = 0;
     auto size = uint8_t(ds.get()) >> 2;
-    check(size >= 0 && size <= 4, "not implemented");
+    check(size <= 4, "not implemented");
     ds.read((char*)&val, size + 4);
     v = val;
   } break;
