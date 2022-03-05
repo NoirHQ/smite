@@ -135,11 +135,11 @@ struct part_set {
   uint32_t total{};
   bytes hash{};
 
-  //  std::mutex mtx;
   std::vector<std::shared_ptr<part>> parts{};
   std::shared_ptr<bit_array> parts_bit_array{};
   uint32_t count{};
   int64_t byte_size{};
+  std::mutex mtx;
 
   part_set() = default;
   part_set(const part_set& p)
@@ -167,12 +167,12 @@ struct part_set {
   }
 
   std::shared_ptr<part> get_part(int index) {
-    // todo - lock mtx
+    std::lock_guard<std::mutex> g(mtx);
     return parts[index]; // todo - check range?
   }
 
   std::shared_ptr<bit_array> get_bit_array() {
-    // todo - lock mtx
+    std::lock_guard<std::mutex> g(mtx);
     return parts_bit_array;
   }
 
