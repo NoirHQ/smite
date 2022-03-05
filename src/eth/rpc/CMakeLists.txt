@@ -4,4 +4,4 @@ target_sources(noir
     rpc.cpp
 )
 
-add_noir_test(eth_rpc_test api_test.cpp)
+add_noir_test(eth_rpc_test test/api_test.cpp)

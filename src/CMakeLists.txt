@@ -17,6 +17,7 @@ target_link_libraries(noir
   fc
   fixed_string
   fmt
+  range-v3
   rocksdb
   scope-lite
   softfloat
