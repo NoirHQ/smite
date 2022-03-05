@@ -3,4 +3,4 @@ target_sources(noir
   tx_pool.cpp
   )
 
-add_noir_test(tx_pool_test tx_pool_test.cpp)
+add_noir_test(tx_pool_test test/tx_pool_test.cpp)
