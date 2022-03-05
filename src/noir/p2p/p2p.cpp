@@ -751,9 +751,13 @@ void p2p::plugin_startup() {
 
 void p2p::plugin_shutdown() {
   ilog("shutting down p2p");
+  my->in_shutdown = true;
+  for_each_connection([](auto& c) {
+    c->close(false);
+    return true;
+  });
   my->thread_pool->stop();
   my->thread_pool.reset();
-  my->in_shutdown = true;
 }
 
 std::string p2p::connect(const std::string& host) {
