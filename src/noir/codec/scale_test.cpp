@@ -73,14 +73,17 @@ TEST_CASE("[scale] c-enum", "[codec]") {
 }
 
 TEST_CASE("[scale] Compact/general integers", "[codec]") {
-  auto tests = std::to_array<std::pair<unsigned_int, const char*>>({
-    {0, "00"}, {1, "04"}, {42, "a8"}, {69, "1501"}, {65535, "feff0300"},
+  auto tests = std::to_array<std::pair<varuint64, const char*>>({
+    {0, "00"}, {1, "04"}, {42, "a8"}, {69, "1501"}, {65535, "feff0300"}, {1'073'741'823, "feffffff"},
+    {1'073'741'824, "0300000040"}, {(1ull << 32) - 1, "03ffffffff"}, {1ull << 32, "070000000001"},
+    {1ull << 40, "0b000000000001"}, {1ull << 48, "0f00000000000001"}, {(1ull << 56) - 1, "0fffffffffffffff"},
+    {1ull << 56, "130000000000000001"}, {std::numeric_limits<uint64_t>::max(), "13ffffffffffffffff"},
     // TODO: BigInt(100000000000000)
   });
 
   std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
     CHECK(to_hex(encode(t.first)) == t.second);
-    CHECK(t.first == decode<unsigned_int>(from_hex(t.second)));
+    CHECK(t.first == decode<varuint64>(from_hex(t.second)));
   });
 }
 
