@@ -187,7 +187,7 @@ public:
 
 using namespace test_detail;
 
-TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
+TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   unapplied_tx_queue tx_queue;
 
@@ -248,7 +248,7 @@ TEST_CASE("Tx queue basic test", "[tx_pool][unapplied_tx_queue]") {
   }
 }
 
-TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
+TEST_CASE("unapplied_tx_queue: Fully add/erase tx", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   uint64_t tx_count = 10000;
   uint64_t queue_size = 0;
@@ -273,7 +273,7 @@ TEST_CASE("Fully add/erase tx", "[tx_pool][unapplied_tx_queue]") {
   CHECK(tx_queue->empty());
 }
 
-TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
+TEST_CASE("unapplied_tx_queue: Indexing", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   uint64_t tx_count = 10000;
   uint64_t user_count = tx_count / 100;
@@ -356,7 +356,7 @@ TEST_CASE("Indexing", "[tx_pool][unapplied_tx_queue]") {
   }
 }
 
-TEST_CASE("Add/Get tx", "[tx_pool]") {
+TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   auto test_app = std::make_shared<test_application>();
   auto& tp = test_helper->make_tx_pool(test_app);
@@ -489,7 +489,7 @@ TEST_CASE("Add/Get tx", "[tx_pool]") {
   }
 }
 
-TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
+TEST_CASE("tx_pool: Reap tx using max bytes & gas", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   auto& tp = test_helper->make_tx_pool();
 
@@ -511,7 +511,7 @@ TEST_CASE("Reap tx using max bytes & gas", "[tx_pool]") {
   }
 }
 
-TEST_CASE("Update", "[tx_pool]") {
+TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
 
   const uint64_t tx_count = 10;
@@ -569,7 +569,7 @@ TEST_CASE("Update", "[tx_pool]") {
   }
 }
 
-TEST_CASE("Nonce override", "[tx_pool]") {
+TEST_CASE("tx_pool: Nonce override", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   auto test_app = std::make_shared<test_application>();
   config config;
@@ -587,7 +587,7 @@ TEST_CASE("Nonce override", "[tx_pool]") {
   CHECK(tp.check_tx_sync(tx2));
 }
 
-TEST_CASE("Cache basic test", "[tx_pool][LRU_cache]") {
+TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   uint tx_count = 1000;
   uint cache_size = 1000;

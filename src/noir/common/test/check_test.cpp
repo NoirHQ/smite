@@ -10,7 +10,7 @@ using namespace noir;
 
 using Catch::Matchers::Message;
 
-TEST_CASE("[check]", "[common]") {
+TEST_CASE("check", "[noir][common]") {
   // (predicate == true), not throws
   CHECK((check(true, "always success"), true));
   // (predicate == false), throws std::runtime_error with message by default

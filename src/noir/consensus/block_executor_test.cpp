@@ -39,7 +39,7 @@ make_state(int n_vals, int height) {
   return {s, dbs, priv_vals, session};
 };
 
-TEST_CASE("Apply block", "[block_executor]") {
+TEST_CASE("block_executor: Apply block", "[noir][consensus]") {
   auto [state_, state_db, priv_vals, session] = make_state(1, 1);
 
   auto proxyApp = std::make_shared<app_connection>();

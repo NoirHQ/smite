@@ -9,7 +9,7 @@
 using namespace std;
 using namespace eth::api;
 
-TEST_CASE("[api] check_params_size", "[params]") {
+TEST_CASE("eth:params: check_params_size", "[eth][api]") {
   fc::variants vs;
   CHECK_THROWS_WITH(api::check_params_size(vs, 1), "missing value for required argument 0");
   vs = fc::variants({"0x1", "test"});
@@ -20,7 +20,7 @@ TEST_CASE("[api] check_params_size", "[params]") {
   CHECK_NOTHROW(api::check_params_size(vs, 1));
 }
 
-TEST_CASE("[api] send_raw_tx", "[params]") {
+TEST_CASE("eth:params: send_raw_tx", "[eth][api]") {
   fc::variant params;
   api a;
 

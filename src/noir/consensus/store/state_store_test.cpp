@@ -26,7 +26,7 @@ inline void check_state_equal(noir::consensus::state& lhs, noir::consensus::stat
   CHECK(lhs.app_hash == rhs.app_hash);
 }
 
-TEST_CASE("save/load validator_set", "[db_store]") {
+TEST_CASE("db_store: save/load validator_set", "[noir][consensus]") {
   noir::consensus::db_store dbs(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
 
@@ -49,7 +49,7 @@ TEST_CASE("save/load validator_set", "[db_store]") {
   CHECK(v_set.validators[0].proposer_priority == ret.validators[0].proposer_priority);
 }
 
-TEST_CASE("save/load consensus_param", "[db_store]") {
+TEST_CASE("db_store: save/load consensus_param", "[noir][consensus]") {
   noir::consensus::db_store dbs(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   noir::consensus::consensus_params cs_param{};
@@ -57,7 +57,7 @@ TEST_CASE("save/load consensus_param", "[db_store]") {
   CHECK_NOTHROW(dbs.load_consensus_params(0, cs_param));
 }
 
-TEST_CASE("save/load abci_response", "[db_store]") {
+TEST_CASE("db_store: save/load abci_response", "[noir][consensus]") {
   noir::consensus::db_store dbs(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   noir::consensus::abci_responses rsp{};
@@ -67,7 +67,7 @@ TEST_CASE("save/load abci_response", "[db_store]") {
   CHECK_NOTHROW(ret = dbs.load_abci_responses(0, rsp));
 }
 
-TEST_CASE("save/load state", "[db_store]") {
+TEST_CASE("db_store: save/load state", "[noir][consensus]") {
   noir::consensus::db_store dbs(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   noir::consensus::state st{};
@@ -79,7 +79,7 @@ TEST_CASE("save/load state", "[db_store]") {
   check_state_equal(st, ret);
 }
 
-TEST_CASE("bootstrap", "[db_store]") {
+TEST_CASE("db_store: bootstrap", "[noir][consensus]") {
   noir::consensus::db_store dbs(
     std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session()));
   noir::consensus::state st{};
@@ -93,7 +93,7 @@ TEST_CASE("bootstrap", "[db_store]") {
   check_state_equal(st, ret);
 }
 
-TEST_CASE("prune_state", "[db_store]") {
+TEST_CASE("db_store: prune_state", "[noir][consensus]") {
   struct test_case {
     std::string name;
     int64_t start_height;

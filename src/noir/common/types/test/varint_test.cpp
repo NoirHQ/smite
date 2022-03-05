@@ -11,7 +11,7 @@
 using namespace noir;
 using namespace noir::codec;
 
-TEST_CASE("[common][varint]", "[noir]") {
+TEST_CASE("varint", "[noir][common]") {
   std::array<char, 10> buffer;
 
   SECTION("leb128 - uint32_t") {

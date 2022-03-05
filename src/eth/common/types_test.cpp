@@ -9,7 +9,7 @@
 using namespace std;
 using namespace eth;
 
-TEST_CASE("[types] transaction", "[eth]") {
+TEST_CASE("eth:types: transaction", "[eth][common]") {
   transaction tx = {
     .gas_price = std::numeric_limits<uint256_t>::max(),
     .gas = 2,

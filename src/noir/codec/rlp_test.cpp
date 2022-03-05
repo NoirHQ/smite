@@ -11,7 +11,7 @@
 using namespace noir;
 using namespace noir::codec::rlp;
 
-TEST_CASE("[rlp] booleans", "[codec]") {
+TEST_CASE("rlp: booleans", "[noir][codec]") {
   auto tests = std::to_array<std::pair<bool, const char*>>({
     {true, "01"},
     {false, "80"},
@@ -23,7 +23,7 @@ TEST_CASE("[rlp] booleans", "[codec]") {
   });
 }
 
-TEST_CASE("[rlp] integers", "[codec]") {
+TEST_CASE("rlp: integers", "[noir][codec]") {
   SECTION("uint32_t") {
     auto tests = std::to_array<std::pair<uint32_t, const char*>>({
       {0, "80"},
@@ -57,7 +57,7 @@ TEST_CASE("[rlp] integers", "[codec]") {
   }
 }
 
-TEST_CASE("[rlp] strings", "[codec]") {
+TEST_CASE("rlp: strings", "[noir][codec]") {
   auto tests = std::to_array<std::pair<std::string, const char*>>({
     {"", "80"},
     {"\x7e", "7e"},
@@ -107,7 +107,7 @@ TEST_CASE("[rlp] strings", "[codec]") {
   });
 }
 
-TEST_CASE("[rlp] list", "[codec]") {
+TEST_CASE("rlp: list", "[noir][codec]") {
   SECTION("a list of uint32_t") {
     auto tests = std::to_array<std::pair<std::vector<uint32_t>, const char*>>({
       {{}, "c0"},
@@ -178,7 +178,7 @@ TEST_CASE("[rlp] list", "[codec]") {
   }
 }
 
-TEST_CASE("[rlp] structs", "[codec]") {
+TEST_CASE("rlp: structs", "[noir][codec]") {
   struct simplestruct {
     unsigned int A;
     std::string B;
@@ -234,7 +234,7 @@ TEST_CASE("[rlp] structs", "[codec]") {
   }
 }
 
-TEST_CASE("[rlp] big integer", "[codec]") {
+TEST_CASE("rlp: big integer", "[noir][codec]") {
   auto s = std::string{"0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
   auto v = uint256_t(s);
   auto data = encode(v);

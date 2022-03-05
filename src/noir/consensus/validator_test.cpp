@@ -17,7 +17,7 @@ void print_validator_set(validator_set& vals) {
               << std::endl;
 }
 
-TEST_CASE("Basic", "[validator_set]") {
+TEST_CASE("validator_set: Basic", "[noir][consensus]") {
   validator_set vals;
 
   SECTION("empty validator") {
@@ -39,7 +39,7 @@ TEST_CASE("Basic", "[validator_set]") {
   }
 }
 
-TEST_CASE("Proposer Selection 1", "[validator_set]") {
+TEST_CASE("validator_set: Proposer Selection 1", "[noir][consensus]") {
   validator_set vals;
   vals.validators.push_back(validator{from_hex("AAAA"), {}, 1000, 0});
   vals.validators.push_back(validator{from_hex("BBBB"), {}, 300, 0});
@@ -69,7 +69,7 @@ TEST_CASE("Proposer Selection 1", "[validator_set]") {
   CHECK((a == 61 && b == 18 && c == 20));
 }
 
-TEST_CASE("Apply update", "[validator_set]") {
+TEST_CASE("validator_set: Apply update", "[noir][consensus]") {
   std::vector<validator> start_vals;
   start_vals.push_back(validator{from_hex("0044"), {}, 44});
   start_vals.push_back(validator{from_hex("0066"), {}, 66});

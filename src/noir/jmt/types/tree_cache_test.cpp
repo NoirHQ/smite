@@ -32,7 +32,7 @@ auto random_leaf_with_key(version next_version) -> std::pair<node_, node_key> {
 
 using reader_type = mock_tree_store<std::vector<char>>;
 
-TEST_CASE("[tree_cache] get_node", "[jmt]") {
+TEST_CASE("tree_cache: get_node", "[noir][jmt]") {
   auto next_version = 0;
   auto db = reader_type();
   auto cache = tree_cache<reader_type, std::vector<char>>(db, next_version);
