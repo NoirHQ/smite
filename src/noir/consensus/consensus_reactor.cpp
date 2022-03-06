@@ -202,7 +202,7 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
           ps->init_proposal_block_parts(block_meta_.bl_id.parts);
         }
       } else {
-        // gossip_data_for_catchup(rs, prs, ps); // TODO: uncomment; causes hang for some reason now
+        gossip_data_for_catchup(rs, prs, ps);
       }
       gossip_data_routine(ps);
 
