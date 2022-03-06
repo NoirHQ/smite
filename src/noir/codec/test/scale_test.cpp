@@ -10,8 +10,8 @@
 using namespace noir;
 using namespace noir::codec::scale;
 
-TEMPLATE_TEST_CASE("scale: Fixed-width integers/Boolean", "[noir][codec]", bool, int8_t, uint8_t, int16_t, uint16_t,
-  int32_t, uint32_t, int64_t, uint64_t) {
+template<typename TestType>
+void test_fixed_width_integers() {
   TestType v = std::numeric_limits<TestType>::max();
   auto hex = to_hex({(const char*)&v, sizeof(v)});
   auto data = encode(v);
@@ -29,8 +29,20 @@ TEMPLATE_TEST_CASE("scale: Fixed-width integers/Boolean", "[noir][codec]", bool,
   CHECK(v == std::numeric_limits<TestType>::min());
 }
 
-TEMPLATE_TEST_CASE("scale: Enum class with Fixed-width underlying type", "[noir][codec]", bool, int8_t, uint8_t,
-  int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t) {
+TEST_CASE("scale: Fixed-width integers/Boolean", "[noir][codec]") {
+  test_fixed_width_integers<bool>();
+  test_fixed_width_integers<int8_t>();
+  test_fixed_width_integers<int16_t>();
+  test_fixed_width_integers<int32_t>();
+  test_fixed_width_integers<int64_t>();
+  test_fixed_width_integers<uint8_t>();
+  test_fixed_width_integers<uint16_t>();
+  test_fixed_width_integers<uint32_t>();
+  test_fixed_width_integers<uint64_t>();
+}
+
+template<typename TestType>
+void test_enum_class_with_fixed_width_underlying_type() {
   enum class num_in_enum : TestType {
     MIN = std::numeric_limits<TestType>::min(),
     MID1,
@@ -49,6 +61,18 @@ TEMPLATE_TEST_CASE("scale: Enum class with Fixed-width underlying type", "[noir]
     auto dec_ret = decode<num_in_enum>(enc_ret);
     CHECK(dec_ret == t);
   });
+}
+
+TEST_CASE("scale: Enum class with Fixed-width underlying type", "[noir][codec]") {
+  test_enum_class_with_fixed_width_underlying_type<bool>();
+  test_enum_class_with_fixed_width_underlying_type<int8_t>();
+  test_enum_class_with_fixed_width_underlying_type<int16_t>();
+  test_enum_class_with_fixed_width_underlying_type<int32_t>();
+  test_enum_class_with_fixed_width_underlying_type<int64_t>();
+  test_enum_class_with_fixed_width_underlying_type<uint8_t>();
+  test_enum_class_with_fixed_width_underlying_type<uint16_t>();
+  test_enum_class_with_fixed_width_underlying_type<uint32_t>();
+  test_enum_class_with_fixed_width_underlying_type<uint64_t>();
 }
 
 TEST_CASE("scale: c-enum", "[noir][codec]") {
