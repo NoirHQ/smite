@@ -423,22 +423,22 @@ struct node {
       data);
   }
 
-  static node<T> decode(std::span<uint8_t> val) {
-    check(!val.empty(), "missing tag due to empty input");
+  static result<node<T>> decode(std::span<uint8_t> val) {
+    if (val.empty()) {
+      return make_unexpected("missing tag due to empty input");
+    }
     auto tag = val[0];
     auto n_tag = node_tag(tag);
     switch (n_tag) {
     case node_tag::null:
       return node<T>();
-    case node_tag::internal: {
+    case node_tag::internal:
       return node<T>{internal_node::deserialize({(const char*)val.data() + 1, val.size() - 1})};
-    }
-    case node_tag::leaf: {
+    case node_tag::leaf:
       return node<T>{noir::decode<leaf_node<T>>({(const char*)val.data() + 1, val.size() - 1})};
+    default:
+      return make_unexpected(fmt::format("lead tag byte is unknown: {}", tag));
     }
-    }
-    check(false, fmt::format("lead tag byte is unknown: {}", tag));
-    return {}; // must not reach here
   }
 
   std::variant<null, internal_node, leaf_node<T>> data;
