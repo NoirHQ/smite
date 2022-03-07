@@ -1,6 +1,7 @@
 target_sources(noir
   PRIVATE
   block.cpp
+  block_sync/block_pool.cpp
   consensus_reactor.cpp
   consensus_state.cpp
   merkle/proof.cpp
