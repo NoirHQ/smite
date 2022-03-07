@@ -29,7 +29,7 @@ struct bp_requester;
 struct bp_peer;
 
 /// \brief keeps track of block sync peers, block requests and block responses
-struct block_pool {
+struct block_pool : std::enable_shared_from_this<block_pool> {
   p2p::tstamp last_advance;
 
   std::mutex mtx;
@@ -102,6 +102,10 @@ struct block_pool {
   void update_max_peer_height();
   std::shared_ptr<bp_peer> pick_incr_available_peer(int64_t height);
 
+  void add_block(std::string peer_id, std::shared_ptr<consensus::block> block_, int block_size);
+
+  void set_peer_range(std::string peer_id, int64_t base, int64_t height);
+
   void make_next_requester() {
     // TODO
   }
@@ -110,7 +114,7 @@ struct block_pool {
     // TODO
   }
 
-  void send_error() {
+  void send_error(std::string err) {
     // TODO
   }
 };
@@ -122,7 +126,7 @@ struct bp_requester {
 
   std::mutex mtx;
   std::string peer_id;
-  std::shared_ptr<block> block_;
+  std::shared_ptr<consensus::block> block_;
 
   std::string get_peer_id() {
     std::lock_guard<std::mutex> g(mtx);
@@ -131,6 +135,17 @@ struct bp_requester {
 
   void redo(std::string peer_id) {
     // TODO: publish to redo_ch
+  }
+
+  bool set_block(std::shared_ptr<block> blk_, std::string peer_id_) {
+    std::lock_guard<std::mutex> g(mtx);
+    if (blk_ != nullptr || peer_id != peer_id_)
+      return false;
+    block_ = blk_;
+
+    // got_block_cha <- struct{} // TODO
+
+    return true;
   }
 };
 
@@ -164,7 +179,7 @@ struct bp_peer {
   void on_timeout() {
     std::lock_guard<std::mutex> g(pool->mtx);
     std::string err("peer did not send us anything for a while");
-    pool->send_error(); // TODO
+    pool->send_error(err); // TODO
     elog("send_timeout: reason=${reason}", ("reason", err));
     did_timeout = true;
   }
