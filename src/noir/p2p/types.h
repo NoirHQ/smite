@@ -93,14 +93,20 @@ constexpr auto peer_status_to_str(peer_status status) {
   }
 }
 
+enum reactor_id {
+  Consensus = 1,
+  BlockSync
+};
+
 struct envelope {
   std::string from;
   std::string to;
   bool broadcast;
   bytes message; ///< one of reactor_messages, serialized
+  reactor_id id;
 };
 using envelope_ptr = std::shared_ptr<envelope>;
 
 } // namespace noir::p2p
 
-NOIR_REFLECT(noir::p2p::envelope, from, to, broadcast, message)
+NOIR_REFLECT(noir::p2p::envelope, from, to, broadcast, message, id)

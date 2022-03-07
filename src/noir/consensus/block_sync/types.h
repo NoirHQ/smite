@@ -4,6 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/refl.h>
+#include <noir/common/types/bytes.h>
 #include <cinttypes>
 
 namespace noir::consensus {
@@ -13,7 +15,7 @@ struct block_request {
 };
 
 struct block_response {
-  // std::shared_ptr<block> block_; TODO
+  bytes block_; // use serialized block in order to avoid include conflicts
 };
 
 struct status_request {};
@@ -28,3 +30,9 @@ struct no_block_response {
 };
 
 } // namespace noir::consensus
+
+NOIR_REFLECT(noir::consensus::block_request, height)
+NOIR_REFLECT(noir::consensus::block_response, block_)
+NOIR_REFLECT(noir::consensus::status_request, )
+NOIR_REFLECT(noir::consensus::status_response, height, base)
+NOIR_REFLECT(noir::consensus::no_block_response, height)

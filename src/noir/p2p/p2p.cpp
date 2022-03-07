@@ -290,8 +290,11 @@ public:
   consensus::abci* abci_plug{nullptr};
 
   // Channels
-  plugin_interface::incoming::channels::receive_message_queue::channel_type& recv_mq_channel =
-    appbase::app().get_channel<plugin_interface::incoming::channels::receive_message_queue>();
+  plugin_interface::incoming::channels::cs_reactor_message_queue::channel_type& cs_reactor_mq_channel =
+    appbase::app().get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>();
+  plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type& bs_reactor_mq_channel =
+    appbase::app().get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>();
+
   plugin_interface::egress::channels::transmit_message_queue::channel_type::handle xmt_mq_subscription =
     appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
       std::bind(&p2p_impl::transmit_message, this, std::placeholders::_1));
@@ -836,8 +839,18 @@ struct msg_handler {
       dlog("abci is not connected; discard envelope");
       return;
     }
-    my_impl->recv_mq_channel.publish( ///< notify consensus_reactor to take additional actions
-      appbase::priority::medium, std::make_shared<envelope>(msg));
+    switch (msg.id) {
+    case Consensus:
+      my_impl->cs_reactor_mq_channel.publish( ///< notify consensus reactor to take additional actions
+        appbase::priority::medium, std::make_shared<envelope>(msg));
+      break;
+    case BlockSync:
+      my_impl->bs_reactor_mq_channel.publish( ///< notify block_sync reactor to take additional actions
+        appbase::priority::medium, std::make_shared<envelope>(msg));
+      break;
+    default:
+      elog(fmt::format("unsupported reactor_id"));
+    }
   }
 };
 

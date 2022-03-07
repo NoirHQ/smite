@@ -30,8 +30,8 @@ struct consensus_reactor {
       std::bind(&consensus_reactor::process_event, this, std::placeholders::_1));
 
   // Receive an envelope from peers [via p2p]
-  plugin_interface::incoming::channels::receive_message_queue::channel_type::handle recv_mq_subscription =
-    appbase::app().get_channel<plugin_interface::incoming::channels::receive_message_queue>().subscribe(
+  plugin_interface::incoming::channels::cs_reactor_message_queue::channel_type::handle cs_reactor_mq_subscription =
+    appbase::app().get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>().subscribe(
       std::bind(&consensus_reactor::process_peer_msg, this, std::placeholders::_1));
 
   // Send an envelope to peers [via p2p]
@@ -134,8 +134,8 @@ struct consensus_reactor {
 
   void send_new_round_step_message(std::string peer_id);
 
-  void transmit_new_envelope(std::string from, std::string to, const p2p::reactor_message& msg, bool broadcast = false,
-    int priority = appbase::priority::medium);
+  void transmit_new_envelope(std::string from, std::string to, const p2p::cs_reactor_message& msg,
+    bool broadcast = false, int priority = appbase::priority::medium);
 };
 
 } // namespace noir::consensus
