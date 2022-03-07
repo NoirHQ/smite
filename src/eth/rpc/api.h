@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/tx_pool/tx_pool.h>
 #include <eth/common/types.h>
 #include <fc/variant.hpp>
 
@@ -38,9 +39,15 @@ public:
     this->allow_unprotected_txs = allow_unprotected_txs;
   }
 
+  void set_tx_pool_ptr(noir::tx_pool::tx_pool* tx_pool_ptr) {
+    this->tx_pool_ptr = tx_pool_ptr;
+  }
+
 private:
   uint256_t tx_fee_cap;
   bool allow_unprotected_txs;
+
+  noir::tx_pool::tx_pool* tx_pool_ptr;
 };
 
 } // namespace eth::api

@@ -34,6 +34,9 @@ void rpc::plugin_initialize(const CLI::App& config) {
 
   api->set_tx_fee_cap(tx_fee_cap);
   api->set_allow_unprotected_txs(allow_unprotected_txs);
+
+  auto tx_poor_ptr = app().find_plugin<tx_pool::tx_pool>();
+  api->set_tx_pool_ptr(tx_poor_ptr);
 }
 
 void rpc::plugin_startup() {
