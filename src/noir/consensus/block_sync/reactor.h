@@ -39,6 +39,10 @@ struct reactor {
     appbase::app().get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>().subscribe(
       std::bind(&reactor::process_peer_msg, this, std::placeholders::_1));
 
+  // Send an envelope to peers [via p2p]
+  plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel =
+    appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>();
+
   static std::shared_ptr<reactor> new_reactor(state& state_, const std::shared_ptr<block_executor>& block_exec_,
     const std::shared_ptr<block_store>& new_block_store, bool block_sync_) {
 
@@ -78,25 +82,13 @@ struct reactor {
     // TODO: close channel reads
   }
 
-  void process_peer_msg(p2p::envelope_ptr info) {
-#if 0
-std::visit(
-    overloaded{///
-/***************************************************************************************************/
-      ///< block_sync reactor messages:
-      ///< block_request, block_response, status_request, status_response, no_block_response
-      [this, &ps](block_request& msg) {}, [this, &ps](block_response& msg) {}, [this, &ps](status_request& msg) {},
-      [this, &ps](status_response& msg) {}, [this, &ps](no_block_response& msg) {}},
-    msg);
-
-#endif
-  }
+  void process_peer_msg(p2p::envelope_ptr info);
 
   void process_block_sync_ch() {}
 
   void process_peer_updates() {}
 
-  void respond_to_peer(std::shared_ptr<block_request> msg, std::string peer_id) {
+  void respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id) {
     block block_;
     if (store->load_block(msg->height, block_)) {
       // TODO: send to peer [via p2p]
@@ -142,6 +134,9 @@ std::visit(
     // TODO
     return std::chrono::seconds(10);
   }
+
+  void transmit_new_envelope(const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg,
+    bool broadcast = false, int priority = appbase::priority::medium);
 };
 
 } // namespace noir::consensus::block_sync
