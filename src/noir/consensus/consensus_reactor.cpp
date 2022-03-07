@@ -56,7 +56,7 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
   auto from = info->from;
 
   datastream<char> ds(info->message.data(), info->message.size());
-  p2p::reactor_message msg;
+  p2p::cs_reactor_message msg;
   ds >> msg;
 
   dlog(fmt::format("received message={} from='{}'", msg.index(), from));
@@ -442,12 +442,13 @@ void consensus_reactor::send_new_round_step_message(std::string peer_id) {
 }
 
 void consensus_reactor::transmit_new_envelope(
-  std::string from, std::string to, const p2p::reactor_message& msg, bool broadcast, int priority) {
+  std::string from, std::string to, const p2p::cs_reactor_message& msg, bool broadcast, int priority) {
   dlog(fmt::format("transmitting a new envelope: to={}, msg_type={}, broadcast={}", to, msg.index(), broadcast));
   auto new_env = std::make_shared<p2p::envelope>();
   new_env->from = from;
   new_env->to = to;
   new_env->broadcast = broadcast;
+  new_env->id = p2p::Consensus;
 
   const uint32_t payload_size = encode_size(msg);
   new_env->message.resize(payload_size);

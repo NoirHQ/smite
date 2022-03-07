@@ -34,8 +34,9 @@ namespace methods {
 
 namespace incoming {
   namespace channels {
-    using receive_message_queue = appbase::channel_decl<struct receive_message_queue_tag, p2p::envelope_ptr>;
-  }
+    using cs_reactor_message_queue = appbase::channel_decl<struct cs_reactor_message_queue_tag, p2p::envelope_ptr>;
+    using bs_reactor_message_queue = appbase::channel_decl<struct bs_reactor_message_queue_tag, p2p::envelope_ptr>;
+  } // namespace channels
 } // namespace incoming
 
 namespace egress {
