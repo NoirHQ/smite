@@ -55,7 +55,7 @@ fc::variant api::send_raw_tx(const fc::variant& req) {
 
   // TODO: add tx pool and return tx_hash
   consensus::tx tx(from_hex(rlp));
-  tx_pool_ptr->check_tx_async(tx);
+  tx_pool_ptr->check_tx_sync(tx);
   auto tx_hash = noir::consensus::get_tx_id(tx);
   return fc::variant(tx_hash.to_string());
 }
