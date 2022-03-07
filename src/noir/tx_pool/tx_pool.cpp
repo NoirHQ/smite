@@ -9,7 +9,7 @@
 namespace noir::tx_pool {
 
 tx_pool::tx_pool()
-  : config_(config{}), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num) {}
+  : config_(config{}), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num), proxy_app_(std::make_shared<consensus::app_connection>()) {}
 
 tx_pool::tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxy_app, uint64_t block_height)
   : config_(cfg), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
@@ -146,6 +146,7 @@ bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx
     dlog(fmt::format("add tx fail (tx_id: {})", tx_id.to_string()));
     return false;
   }
+  dlog(fmt::format("tx_id({}) is accepted.", tx_id.to_string()));
   return true;
 }
 
