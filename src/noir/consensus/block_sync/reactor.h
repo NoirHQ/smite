@@ -17,18 +17,12 @@ constexpr auto switch_to_consensus_interval{std::chrono::seconds(1)};
 constexpr auto sync_timeout{std::chrono::seconds(60)};
 
 struct reactor {
-
   // Immutable
   consensus::state initial_state;
 
   std::shared_ptr<consensus::block_executor> block_exec;
   std::shared_ptr<consensus::block_store> store;
   std::shared_ptr<block_pool> pool;
-
-  // consensus_reactor cs_reactor; // TODO: remove
-  ///< noir will not store cs_reactor here, but instead use method to switch_to_consensus
-  ///  and cs_reactor will contain this block_sync reactor and all messages from peers will go through
-  ///  consensus_reactor first than distributed to others
 
   std::atomic_bool block_sync;
 
@@ -88,18 +82,7 @@ struct reactor {
 
   void process_peer_updates() {}
 
-  void respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id) {
-    block block_;
-    if (store->load_block(msg->height, block_)) {
-      // TODO: send to peer [via p2p]
-      return;
-    }
-    ilog("peer requested a block we do not have: peer=${peer_id} height=${h}", ("peer_id", peer_id)("h", msg->height));
-    // TODO: send to peer [via p2p]
-  }
-
-  // void handle_block_sync_message() // TODO: implement inside consensus_reactor
-  // void process_peer_update() // TODO: implement inside consensus_reactor
+  void respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id);
 
   std::optional<std::string> switch_to_block_sync(const state& state_) {
     block_sync.store(true);
