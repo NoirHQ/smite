@@ -43,6 +43,7 @@ public:
     return req_res_deliver_tx_;
   }
   virtual consensus::response_check_tx& check_tx_sync() {
+    response_check_tx_.nonce++; // temp
     return response_check_tx_;
   }
   virtual consensus::req_res<consensus::response_check_tx>& check_tx_async() {
