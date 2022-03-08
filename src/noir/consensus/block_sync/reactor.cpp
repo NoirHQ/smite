@@ -56,10 +56,10 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
     msg);
 }
 
+/// \brief periodically request for status from all peers
 void reactor::request_routine() {
-  ///< error_ch [done]
-  ///< request_ch TODO: should be simple
-
+  ///< request_ch [done; noir does not need one]
+  ///< error_ch [done; use of a channel is not required]
   pool->strand->post([this]() {
     if (!pool->is_running)
       return;
@@ -71,7 +71,8 @@ void reactor::request_routine() {
   });
 }
 
-void reactor::pool_routine() {
+/// \brief handles messages from block_pool
+void reactor::pool_routine(bool state_synced) {
   request_routine();
 }
 
