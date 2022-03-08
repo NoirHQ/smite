@@ -101,6 +101,17 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
     return {height, num_pending, requesters.size()};
   }
 
+  bool is_caught_up() {
+    std::lock_guard<std::mutex> g(mtx);
+    if (peers.empty())
+      return false;
+    return height >= (max_peer_height - 1);
+  }
+
+  std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> peek_two_blocks();
+
+  void pop_request();
+
   std::vector<std::string> get_peer_ids() {
     std::lock_guard<std::mutex> g(mtx);
     std::vector<std::string> ret(peers.size());

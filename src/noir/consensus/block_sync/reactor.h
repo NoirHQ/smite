@@ -82,6 +82,8 @@ struct reactor {
   void request_routine();
 
   void pool_routine(bool state_synced);
+  void try_sync_ticker();
+  void switch_to_consensus_ticker();
 
   void respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id);
 
