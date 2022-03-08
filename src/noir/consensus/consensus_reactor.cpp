@@ -9,16 +9,16 @@
 
 namespace noir::consensus {
 
-void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::peer_status status) {
-  dlog(fmt::format("peer update: peer_id={}, status={}", peer_id, p2p::peer_status_to_str(status)));
+void consensus_reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
+  dlog(fmt::format("peer update: peer_id={}, status={}", info->peer_id, p2p::peer_status_to_str(info->status)));
   std::lock_guard<std::mutex> g(mtx);
-  switch (status) {
+  switch (info->status) {
   case p2p::peer_status::up: {
-    auto it = peers.find(peer_id);
+    auto it = peers.find(info->peer_id);
     if (it == peers.end()) {
-      auto ps = peer_state::new_peer_state(peer_id, thread_pool->get_executor());
-      peers[peer_id] = ps;
-      it = peers.find(peer_id);
+      auto ps = peer_state::new_peer_state(info->peer_id, thread_pool->get_executor());
+      peers[info->peer_id] = ps;
+      it = peers.find(info->peer_id);
     }
     if (!it->second->is_running) {
       it->second->is_running = true;
@@ -29,12 +29,12 @@ void consensus_reactor::process_peer_update(const std::string& peer_id, p2p::pee
       query_maj23_routine(it->second);
 
       if (!wait_sync)
-        send_new_round_step_message(peer_id);
+        send_new_round_step_message(info->peer_id);
     }
     break;
   }
   case p2p::peer_status::down: {
-    auto it = peers.find(peer_id);
+    auto it = peers.find(info->peer_id);
     if (it != peers.end() && it->second->is_running) {
       it->second->is_running = false;
       peers.erase(it);

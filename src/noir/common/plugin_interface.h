@@ -20,16 +20,21 @@ struct event_info {
 };
 using event_info_ptr = std::shared_ptr<event_info>;
 
+struct peer_status_info {
+  std::string peer_id;
+  p2p::peer_status status;
+};
+using peer_status_info_ptr = std::shared_ptr<peer_status_info>;
+
 struct noir_plugin_interface;
 
 namespace channels {
   using timeout_ticker = appbase::channel_decl<struct timeout_ticker_tag, consensus::timeout_info_ptr>;
   using internal_message_queue = appbase::channel_decl<struct internal_message_queue_tag, p2p::internal_msg_info_ptr>;
+  using update_peer_status = appbase::channel_decl<struct update_peer_status_tag, peer_status_info_ptr>;
 } // namespace channels
 
 namespace methods {
-  using update_peer_status = appbase::method_decl<noir_plugin_interface, void(const std::string&, p2p::peer_status),
-    appbase::first_provider_policy>;
   using send_error_to_peer = appbase::method_decl<noir_plugin_interface,
     void(const std::string&, std::span<const char>), appbase::first_provider_policy>;
 } // namespace methods

@@ -29,6 +29,11 @@ struct consensus_reactor {
     appbase::app().get_channel<plugin_interface::egress::channels::event_switch_message_queue>().subscribe(
       std::bind(&consensus_reactor::process_event, this, std::placeholders::_1));
 
+  // Receive peer_status update from p2p
+  plugin_interface::channels::update_peer_status::channel_type::handle update_peer_status_subscription =
+    appbase::app().get_channel<plugin_interface::channels::update_peer_status>().subscribe(
+      std::bind(&consensus_reactor::process_peer_update, this, std::placeholders::_1));
+
   // Receive an envelope from peers [via p2p]
   plugin_interface::incoming::channels::cs_reactor_message_queue::channel_type::handle cs_reactor_mq_subscription =
     appbase::app().get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>().subscribe(
@@ -40,11 +45,6 @@ struct consensus_reactor {
   // Send messages [block_part_message, vote_message] to consensus // TODO: check if this correct
   plugin_interface::channels::internal_message_queue::channel_type& internal_mq_channel =
     appbase::app().get_channel<plugin_interface::channels::internal_message_queue>();
-
-  // Methods
-  plugin_interface::methods::update_peer_status::method_type::handle update_peer_status_provider =
-    appbase::app().get_method<plugin_interface::methods::update_peer_status>().register_provider(
-      [this](const std::string& peer_id, p2p::peer_status status) -> void { process_peer_update(peer_id, status); });
 
   consensus_reactor(std::shared_ptr<consensus_state> new_cs_state, bool new_wait_sync)
     : cs_state(std::move(new_cs_state)), wait_sync(new_wait_sync),
@@ -86,7 +86,7 @@ struct consensus_reactor {
     }
   }
 
-  void process_peer_update(const std::string& peer_id, p2p::peer_status status);
+  void process_peer_update(plugin_interface::peer_status_info_ptr info);
 
   void process_peer_msg(p2p::envelope_ptr info);
 

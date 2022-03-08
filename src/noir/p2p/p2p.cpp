@@ -293,6 +293,8 @@ public:
     appbase::app().get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>();
   plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type& bs_reactor_mq_channel =
     appbase::app().get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>();
+  plugin_interface::channels::update_peer_status::channel_type& update_peer_status_channel =
+    appbase::app().get_channel<plugin_interface::channels::update_peer_status>();
 
   plugin_interface::egress::channels::transmit_message_queue::channel_type::handle xmt_mq_subscription =
     appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
@@ -1260,8 +1262,9 @@ void connection::start_read_message() {
             elog("Closing connection to: ${p}", ("p", conn->peer_name()));
             conn->close();
             ///< notify consensus of peer down
-            appbase::app().get_method<plugin_interface::methods::update_peer_status>()(
-              to_hex(conn->conn_node_id), peer_status::down);
+            my_impl->update_peer_status_channel.publish(appbase::priority::medium,
+              std::make_shared<plugin_interface::peer_status_info>(
+                plugin_interface::peer_status_info{to_hex(conn->conn_node_id), peer_status::down}));
           }
         }));
   } catch (...) {
@@ -1500,7 +1503,9 @@ void connection::handle_message(const handshake_message& msg) {
   g_conn.unlock();
 
   ///< notify consensus of peer up
-  appbase::app().get_method<plugin_interface::methods::update_peer_status>()(to_hex(conn_node_id), peer_status::up);
+  my_impl->update_peer_status_channel.publish(appbase::priority::medium,
+    std::make_shared<plugin_interface::peer_status_info>(
+      plugin_interface::peer_status_info{to_hex(conn_node_id), peer_status::up}));
 }
 
 void connection::handle_message(const go_away_message& msg) {
