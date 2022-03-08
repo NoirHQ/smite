@@ -33,9 +33,10 @@ struct reactor {
     appbase::app().get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>().subscribe(
       std::bind(&reactor::process_peer_msg, this, std::placeholders::_1));
 
-  // Send an envelope to peers [via p2p]
-  plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel =
-    appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>();
+  // Receive peer_status update from p2p
+  plugin_interface::channels::update_peer_status::channel_type::handle update_peer_status_subscription =
+    appbase::app().get_channel<plugin_interface::channels::update_peer_status>().subscribe(
+      std::bind(&reactor::process_peer_update, this, std::placeholders::_1));
 
   static std::shared_ptr<reactor> new_reactor(state& state_, const std::shared_ptr<block_executor>& block_exec_,
     const std::shared_ptr<block_store>& new_block_store, bool block_sync_) {
@@ -66,21 +67,24 @@ struct reactor {
       // pool_routine // TODO
     }
     process_block_sync_ch();
-    process_peer_updates();
   }
 
   void on_stop() {
     if (block_sync.load()) {
       pool->on_stop();
     }
-    // TODO: close channel reads
+    pool->is_running = false; // TODO: is this enough? any other threads to close?
   }
+
+  void process_peer_update(plugin_interface::peer_status_info_ptr info);
 
   void process_peer_msg(p2p::envelope_ptr info);
 
   void process_block_sync_ch() {}
 
-  void process_peer_updates() {}
+  void request_routine();
+
+  void pool_routine();
 
   void respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id);
 
@@ -98,12 +102,6 @@ struct reactor {
     return {};
   }
 
-  // void request_routine() // TODO
-
-  void pool_routine() {
-    // TODO
-  }
-
   int64_t get_max_peer_block_height() {
     return pool->max_peer_height;
   }
@@ -117,9 +115,6 @@ struct reactor {
     // TODO
     return std::chrono::seconds(10);
   }
-
-  void transmit_new_envelope(const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg,
-    bool broadcast = false, int priority = appbase::priority::medium);
 };
 
 } // namespace noir::consensus::block_sync

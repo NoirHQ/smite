@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/consensus/block_sync/block_pool.h>
+#include <noir/core/codec.h>
 
 namespace noir::consensus::block_sync {
 
@@ -71,7 +72,7 @@ void block_pool::add_block(std::string peer_id, std::shared_ptr<consensus::block
     if (diff < 0)
       diff *= -1;
     if (diff > max_diff_btn_curr_and_recv_block_height)
-      send_error("peer sent us a block we didn't expect with a height too far ahead");
+      send_error("peer sent us a block we didn't expect with a height too far ahead", peer_id);
     return;
   }
   if (requester->second->set_block(block_, peer_id)) {
@@ -80,8 +81,9 @@ void block_pool::add_block(std::string peer_id, std::shared_ptr<consensus::block
     if (peer != peers.end())
       peer->second->decr_pending(block_size);
   } else {
-    elog("requester is different or block already exists");
-    send_error("requester is different or block already exists");
+    std::string err("requester is different or block already exists");
+    elog(err);
+    send_error(err, peer_id);
   }
 }
 
@@ -97,6 +99,35 @@ void block_pool::set_peer_range(std::string peer_id, int64_t base, int64_t heigh
   }
   if (height > max_peer_height)
     max_peer_height = height;
+}
+
+void block_pool::send_request(int64_t height, std::string peer_id) {
+  if (!is_running)
+    return;
+  transmit_new_envelope("", peer_id, noir::consensus::block_request{height});
+}
+
+void block_pool::send_error(std::string err, std::string peer_id) {
+  if (!is_running)
+    return;
+  appbase::app().get_method<plugin_interface::methods::send_error_to_peer>()(peer_id, err);
+}
+
+void block_pool::transmit_new_envelope(
+  const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg, bool broadcast, int priority) {
+  dlog(fmt::format("transmitting a new envelope: id=BlockSync, to={}, msg_type={}", to, msg.index(), broadcast));
+  auto new_env = std::make_shared<p2p::envelope>();
+  new_env->from = from;
+  new_env->to = to;
+  new_env->broadcast = false; // always false for block_sync
+  new_env->id = p2p::BlockSync;
+
+  const uint32_t payload_size = encode_size(msg);
+  new_env->message.resize(payload_size);
+  datastream<char> ds(new_env->message.data(), payload_size);
+  ds << msg;
+
+  xmt_mq_channel.publish(priority, new_env);
 }
 
 } // namespace noir::consensus::block_sync
