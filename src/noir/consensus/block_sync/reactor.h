@@ -64,9 +64,8 @@ struct reactor {
   void on_start() {
     if (block_sync.load()) {
       pool->on_start();
-      // pool_routine // TODO
+      pool_routine(false);
     }
-    process_block_sync_ch();
   }
 
   void on_stop() {
@@ -80,11 +79,9 @@ struct reactor {
 
   void process_peer_msg(p2p::envelope_ptr info);
 
-  void process_block_sync_ch() {}
-
   void request_routine();
 
-  void pool_routine();
+  void pool_routine(bool state_synced);
 
   void respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id);
 
@@ -97,12 +94,12 @@ struct reactor {
 
     sync_start_time = get_time();
 
-    pool_routine();
+    pool_routine(true);
 
     return {};
   }
 
-  int64_t get_max_peer_block_height() {
+  int64_t get_max_peer_block_height() const {
     return pool->max_peer_height;
   }
 
