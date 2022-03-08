@@ -5,11 +5,26 @@
 //
 #include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/reactor.h>
-#include <noir/core/codec.h>
 
 #include <utility>
 
 namespace noir::consensus::block_sync {
+
+void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
+  dlog(fmt::format(
+    "[bs_reactor] peer update: peer_id={}, status={}", info->peer_id, p2p::peer_status_to_str(info->status)));
+  switch (info->status) {
+  case p2p::peer_status::up: {
+    pool->transmit_new_envelope("", info->peer_id, status_response{store->height(), store->base()});
+    break;
+  }
+  case p2p::peer_status::down: {
+    pool->remove_peer(info->peer_id);
+  }
+  default:
+    break;
+  }
+}
 
 void reactor::process_peer_msg(p2p::envelope_ptr info) {
   auto from = info->from;
@@ -32,7 +47,7 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
         pool->add_block(from, block_, msg.block_.size());
       },
       [this, &from](consensus::status_request& msg) {
-        transmit_new_envelope("", from, status_response{store->height(), store->base()});
+        pool->transmit_new_envelope("", from, status_response{store->height(), store->base()});
       },
       [this, &from](consensus::status_response& msg) { pool->set_peer_range(from, msg.base, msg.height); },
       [](consensus::no_block_response& msg) {
@@ -41,33 +56,35 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
     msg);
 }
 
+void reactor::request_routine() {
+  ///< error_ch [done]
+  ///< request_ch TODO: should be simple
+
+  pool->strand->post([this]() {
+    if (!pool->is_running)
+      return;
+    auto peer_ids = pool->get_peer_ids();
+    for (const auto& peer_id : peer_ids)
+      pool->transmit_new_envelope("", peer_id, status_request{});
+    std::this_thread::sleep_for(status_update_interval);
+    request_routine();
+  });
+}
+
+void reactor::pool_routine() {
+  request_routine();
+}
+
 void reactor::respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id) {
   block block_;
   if (store->load_block(msg->height, block_)) {
     auto response = block_response{};
     response.block_ = encode(block_); // block is serialized when put into a response
-    transmit_new_envelope("", peer_id, response);
+    pool->transmit_new_envelope("", peer_id, response);
     return;
   }
   ilog("peer requested a block we do not have: peer=${peer_id} height=${h}", ("peer_id", peer_id)("h", msg->height));
-  transmit_new_envelope("", peer_id, no_block_response{msg->height});
-}
-
-void reactor::transmit_new_envelope(
-  const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg, bool broadcast, int priority) {
-  dlog(fmt::format("transmitting a new envelope: id=BlockSync, to={}, msg_type={}", to, msg.index(), broadcast));
-  auto new_env = std::make_shared<p2p::envelope>();
-  new_env->from = from;
-  new_env->to = to;
-  new_env->broadcast = false; // always false for block_sync
-  new_env->id = p2p::BlockSync;
-
-  const uint32_t payload_size = encode_size(msg);
-  new_env->message.resize(payload_size);
-  datastream<char> ds(new_env->message.data(), payload_size);
-  ds << msg;
-
-  xmt_mq_channel.publish(priority, new_env);
+  pool->transmit_new_envelope("", peer_id, no_block_response{msg->height});
 }
 
 } // namespace noir::consensus::block_sync

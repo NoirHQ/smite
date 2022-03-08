@@ -48,6 +48,10 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   std::optional<named_thread_pool> thread_pool;
   std::shared_ptr<boost::asio::io_context::strand> strand;
 
+  // Send an envelope to peers [via p2p]
+  plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel =
+    appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>();
+
   block_pool() {
     thread_pool.emplace("cs_reactor", thread_pool_size);
     strand = std::make_shared<boost::asio::io_context::strand>(thread_pool->get_executor());
@@ -97,6 +101,14 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
     return {height, num_pending, requesters.size()};
   }
 
+  std::vector<std::string> get_peer_ids() {
+    std::lock_guard<std::mutex> g(mtx);
+    std::vector<std::string> ret(peers.size());
+    for (const auto& pair : peers)
+      ret.push_back(pair.first);
+    return ret;
+  }
+
   void remove_timed_out_peers();
   void remove_peer(std::string peer_id);
   void update_max_peer_height();
@@ -110,13 +122,12 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
     // TODO
   }
 
-  void send_request() {
-    // TODO
-  }
+  void send_request(int64_t height, std::string peer_id);
 
-  void send_error(std::string err) {
-    // TODO
-  }
+  void send_error(std::string err, std::string peer_id);
+
+  void transmit_new_envelope(const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg,
+    bool broadcast = false, int priority = appbase::priority::medium);
 };
 
 struct bp_requester {
@@ -179,7 +190,7 @@ struct bp_peer {
   void on_timeout() {
     std::lock_guard<std::mutex> g(pool->mtx);
     std::string err("peer did not send us anything for a while");
-    pool->send_error(err); // TODO
+    pool->send_error(err, id);
     elog("send_timeout: reason=${reason}", ("reason", err));
     did_timeout = true;
   }
