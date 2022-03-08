@@ -93,17 +93,18 @@ constexpr auto peer_status_to_str(peer_status status) {
   }
 }
 
-enum reactor_id {
+enum channel_id {
   Consensus = 1,
-  BlockSync
+  BlockSync,
+  PeerError
 };
 
 struct envelope {
   std::string from;
   std::string to;
   bool broadcast;
-  bytes message; ///< one of reactor_messages, serialized
-  reactor_id id;
+  bytes message; ///< one of reactor_messages or peer_error, serialized
+  channel_id id;
 };
 using envelope_ptr = std::shared_ptr<envelope>;
 
