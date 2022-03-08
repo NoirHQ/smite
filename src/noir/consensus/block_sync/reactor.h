@@ -106,12 +106,16 @@ struct reactor {
   }
 
   boost::asio::steady_timer::duration get_total_synced_time() {
-    // TODO
-    return std::chrono::seconds(10);
+    if (block_sync.load() != true || sync_start_time == 0)
+      return std::chrono::seconds(0);
+    std::chrono::microseconds s(get_time() - sync_start_time);
+    return std::chrono::duration_cast<std::chrono::seconds>(s);
   }
 
   boost::asio::steady_timer::duration get_remaining_sync_time() {
-    // TODO
+    if (block_sync.load() != true)
+      return std::chrono::seconds(0);
+    // auto target_syncs = pool->target_sync_block(); // TODO: implement later; it's not used for now
     return std::chrono::seconds(10);
   }
 };
