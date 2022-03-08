@@ -14,10 +14,10 @@ std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> block_pool::peek_two_
   std::shared_ptr<block> second(nullptr);
   auto r1 = requesters.find(height);
   if (r1 != requesters.end())
-    first = r1->second->block_;
+    first = r1->second->get_block();
   auto r2 = requesters.find(height + 1);
   if (r2 != requesters.end())
-    second = r2->second->block_;
+    second = r2->second->get_block();
   return {first, second};
 }
 
@@ -127,6 +127,19 @@ void block_pool::set_peer_range(std::string peer_id, int64_t base, int64_t heigh
     max_peer_height = height;
 }
 
+void block_pool::make_next_requester() {
+  std::lock_guard<std::mutex> g(mtx);
+  auto next_height = height + requesters.size();
+  if (next_height > max_peer_height)
+    return;
+
+  auto request = bp_requester::new_bp_requester(shared_from_this(), next_height);
+  requesters[next_height] = request;
+  num_pending += 1;
+
+  request->on_start();
+}
+
 void block_pool::send_request(int64_t height, std::string peer_id) {
   if (!is_running)
     return;
@@ -154,6 +167,52 @@ void block_pool::transmit_new_envelope(
   ds << msg;
 
   xmt_mq_channel.publish(priority, new_env);
+}
+
+//------------------------------------------------------------------------
+// bp_requester
+//------------------------------------------------------------------------
+/// \brief returns true if peer_id matches and blk_ does not already exist
+bool bp_requester::set_block(std::shared_ptr<block> blk_, std::string peer_id_) {
+  std::lock_guard<std::mutex> g(mtx);
+  if (blk_ != nullptr || peer_id != peer_id_)
+    return false;
+  block_ = blk_;
+
+  // At the point, we have sent a request and received a response
+  on_stop();
+  return true;
+}
+
+/// \brief picks another peer and try sending a request and waiting for a response again
+void bp_requester::redo(std::string peer_id) {
+  if (!is_running || pool->is_running)
+    return;
+  if (peer_id == "")
+    return;
+  reset();
+  request_routine(); // TODO: check if these sequence of actions are correct
+}
+
+/// \brief send a request and wait for a response
+/// returns only when a block is found (add_block() is called --> set_block() is called)
+void bp_requester::request_routine() {
+  strand->post([this]() {
+    if (!is_running || pool->is_running)
+      return;
+    auto peer = pool->pick_incr_available_peer(height);
+    if (peer) {
+      std::unique_lock<std::mutex> lock(mtx);
+      peer_id = peer->id;
+      lock.unlock();
+
+      // Send request
+      pool->send_request(height, peer->id);
+      return;
+    }
+    std::this_thread::sleep_for(request_interval);
+    request_routine();
+  });
 }
 
 } // namespace noir::consensus::block_sync
