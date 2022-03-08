@@ -53,7 +53,7 @@ public:
     auto tmp = begin_it.key();
     bytes key_{tmp.begin(), tmp.end()};
     int64_t height_;
-    assert(decode_block_meta_key(key_, height_)); // TODO: handle panic in consensus
+    check(decode_block_meta_key(key_, height_)); // TODO: handle panic in consensus
     return height_;
   }
 
@@ -68,7 +68,7 @@ public:
     auto tmp = (--end_it).key();
     bytes key_{tmp.begin(), tmp.end()};
     int64_t height_;
-    assert(decode_block_meta_key(key_, height_)); // TODO: handle panic in consensus
+    check(decode_block_meta_key(key_, height_)); // TODO: handle panic in consensus
     return height_;
   }
 
@@ -200,8 +200,12 @@ public:
     auto height_ = bl.header.height;
     auto hash_ = const_cast<block&>(bl).get_hash();
     auto parts_ = const_cast<part_set&>(bl_parts);
-    assert((base() == 0) || (height_ == height() + 1)); // TODO: handle panic in consensus
-    assert(parts_.is_complete()); // TODO: handle panic in consensus
+
+    // TODO: handle panic in consensus
+    auto expected_height = height() + 1;
+    check((base() == 0) || (height_ == expected_height),
+      "BlockStore can only save contiguous blocks. Wanted %{}, got %{}", expected_height, height_);
+    check(parts_.is_complete(), "BlockStore can only save complete block part sets");
 
     // Save block parts. This must be done before the block meta, since callers
     // typically load the block meta first as an indication that the block exists
@@ -303,13 +307,13 @@ public:
           encode_key<prefix::block_part>(0, 0), encode_key<prefix::block_part>(height_, 0), std::nullopt, tmp)) {
       return false;
     }
-    // assert(pruned == tmp);
+    // check(pruned == tmp);
     tmp = 0;
     if (!prune_range(
           encode_key<prefix::block_commit>(0), encode_key<prefix::block_commit>(height_), std::nullopt, tmp)) {
       return false;
     }
-    // assert(pruned == tmp);
+    // check(pruned == tmp);
 
     return true;
   }
