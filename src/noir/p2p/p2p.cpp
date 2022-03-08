@@ -6,7 +6,6 @@
 #include <noir/common/log.h>
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/abci.h>
-#include <noir/consensus/block.h>
 #include <noir/consensus/tx.h>
 #include <noir/p2p/buffer_factory.h>
 #include <noir/p2p/p2p.h>
@@ -298,6 +297,14 @@ public:
   plugin_interface::egress::channels::transmit_message_queue::channel_type::handle xmt_mq_subscription =
     appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
       std::bind(&p2p_impl::transmit_message, this, std::placeholders::_1));
+
+  // Methods
+  plugin_interface::methods::send_error_to_peer::method_type::handle send_error_to_peer_provider =
+    appbase::app().get_method<plugin_interface::methods::send_error_to_peer>().register_provider(
+      [this](const std::string& peer_id, std::span<const char> msg) -> void {
+        send_peer_error(peer_id, msg);
+        disconnect(peer_id);
+      });
   /** @} */
 
   mutable std::shared_mutex connections_mtx;
@@ -327,33 +334,17 @@ private:
 
 public:
   void update_chain_info();
-
   std::tuple<uint32_t, uint32_t, block_id_type, block_id_type> get_chain_info() const;
-
   void start_listen_loop();
-
-  void on_accepted_block(const consensus::block_ptr& bs);
-  //  void on_pre_accepted_block(const signed_block_ptr &bs);
-  //  void transaction_ack(const std::pair<fc::exception_ptr, transaction_metadata_ptr> &);
-  //  void on_irreversible_block(const block_state_ptr &blk);
-
   void start_conn_timer(boost::asio::steady_timer::duration du, std::weak_ptr<connection> from_connection);
-  void start_expire_timer();
   void start_monitors();
-
-  void expire();
   void connection_monitor(std::weak_ptr<connection> from_connection, bool reschedule);
-  /** \name Peer Timestamps
-   *  Time message handling
-   *  @{
-   */
-  /** \brief Peer heartbeat ticker.
-   */
   void ticker();
-
   connection_ptr find_connection(const std::string& host) const; // must call with held mutex
 
   void transmit_message(const envelope_ptr& env);
+  void send_peer_error(const std::string& peer_id, std::span<const char> msg);
+  void disconnect(const std::string& peer_id);
 };
 
 static p2p_impl* my_impl;
@@ -372,12 +363,7 @@ void p2p_impl::start_monitors() {
     std::lock_guard<std::mutex> g(connector_check_timer_mtx);
     connector_check_timer.reset(new boost::asio::steady_timer(my_impl->thread_pool->get_executor()));
   }
-  //  {
-  //    std::lock_guard<std::mutex> g( expire_timer_mtx );
-  //    expire_timer.reset( new boost::asio::steady_timer( my_impl->thread_pool->get_executor() ) );
-  //  }
   start_conn_timer(connector_period, std::weak_ptr<connection>());
-  //  start_expire_timer(); // todo - we only check connection expiration for now
 }
 
 void p2p_impl::start_conn_timer(boost::asio::steady_timer::duration du, std::weak_ptr<connection> from_connection) {
@@ -587,6 +573,34 @@ void p2p_impl::transmit_message(const envelope_ptr& env) {
       return true;
     });
   }
+}
+
+void p2p_impl::send_peer_error(const std::string& peer_id, std::span<const char> msg) {
+  for_each_connection([peer_id, msg](auto& c) {
+    if (c->socket_is_open() && (to_hex(c->conn_node_id) == peer_id)) {
+      std::string str_msg(msg.begin(), msg.end());
+      dlog(fmt::format("send peer_error to={} msg={}", peer_id, str_msg));
+      envelope_ptr env = std::make_shared<envelope>();
+      env->from = "";
+      env->to = peer_id;
+      env->broadcast = false;
+      env->id = PeerError;
+      env->message = from_hex(str_msg);
+      c->strand.post([c, env]() { c->enqueue(*env); });
+      return false;
+    }
+    return true;
+  });
+}
+
+void p2p_impl::disconnect(const std::string& peer_id) {
+  for_each_connection([peer_id](auto& c) {
+    if (c->socket_is_open() && (to_hex(c->conn_node_id) == peer_id)) {
+      c->close(false);
+      return false;
+    }
+    return true;
+  });
 }
 
 //------------------------------------------------------------------------
@@ -848,8 +862,12 @@ struct msg_handler {
       my_impl->bs_reactor_mq_channel.publish( ///< notify block_sync reactor to take additional actions
         appbase::priority::medium, std::make_shared<envelope>(msg));
       break;
+    case PeerError:
+      elog(fmt::format("received peer_error from={} error={}", msg.from, to_hex(msg.message)));
+      my_impl->disconnect(msg.from);
+      break;
     default:
-      elog(fmt::format("unsupported reactor_id"));
+      elog(fmt::format("unsupported channel_id={}", static_cast<int>(msg.id)));
     }
   }
 };
