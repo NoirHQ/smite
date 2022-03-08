@@ -8,6 +8,32 @@
 
 namespace noir::consensus::block_sync {
 
+std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> block_pool::peek_two_blocks() {
+  std::lock_guard<std::mutex> g(mtx);
+  std::shared_ptr<block> first(nullptr);
+  std::shared_ptr<block> second(nullptr);
+  auto r1 = requesters.find(height);
+  if (r1 != requesters.end())
+    first = r1->second->block_;
+  auto r2 = requesters.find(height + 1);
+  if (r2 != requesters.end())
+    second = r2->second->block_;
+  return {first, second};
+}
+
+/// \brief pops first block at pool->height
+/// It must has been validated by second commit in peek_two_block()
+void block_pool::pop_request() {
+  std::lock_guard<std::mutex> g(mtx);
+
+  auto r = requesters.find(height);
+  if (r != requesters.end()) {
+    // r->second->stop // TODO
+  } else {
+    check(false, fmt::format("Panic: expected requester to pop, but got nothing at height={}", height));
+  }
+}
+
 void block_pool::remove_timed_out_peers() {
   std::lock_guard<std::mutex> g(mtx);
 

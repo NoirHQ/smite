@@ -74,6 +74,83 @@ void reactor::request_routine() {
 /// \brief handles messages from block_pool
 void reactor::pool_routine(bool state_synced) {
   request_routine();
+  try_sync_ticker();
+  switch_to_consensus_ticker();
+}
+void reactor::try_sync_ticker() {
+  pool->strand->post([this]() {
+    auto chain_id = initial_state.chain_id;
+    auto state_ = initial_state;
+    uint64_t blocks_synced{0};
+
+    while (true) {
+      if (!pool->is_running)
+        return;
+
+      std::this_thread::sleep_for(try_sync_interval);
+      auto [first, second] = pool->peek_two_blocks();
+      if (!first || !second) {
+        continue;
+      }
+
+      auto first_parts = first->make_part_set(block_part_size_bytes);
+      auto first_part_set_header = first_parts->header();
+      auto first_id = p2p::block_id{first->get_hash(), first_part_set_header};
+
+      // Verify the first block using the second's commit
+      // auto err = state_.validators->verify_commit_light(chain_id, first_id, first->header.height,
+      // second->last_commit); // TODO
+      if (false) {
+        // TODO
+      } else {
+        pool->pop_request(); // TODO
+
+        store->save_block(*first, *first_parts, second->last_commit);
+
+        auto new_state = block_exec->apply_block(state_, first_id, first);
+        if (!new_state.has_value()) {
+          check(false, fmt::format("Panic: failed to process committed block: height={}", first->header.height));
+        }
+        state_ = new_state.value();
+
+        blocks_synced++;
+      }
+    }
+  });
+}
+void reactor::switch_to_consensus_ticker() {
+  pool->strand->post([this]() {
+    while (true) {
+      auto [height, num_pending, len_requesters] = pool->get_status();
+      auto last_advance = pool->last_advance;
+      dlog(fmt::format("consensus_ticker: num_pending={} total={} height={}", num_pending, len_requesters, height));
+
+      if (pool->is_caught_up()) {
+        ilog(fmt::format("switching to consensus reactor: height={}", height));
+      } else if ((get_time() - last_advance) > sync_timeout.count()) { // TODO: check if this is right
+        elog(fmt::format("no progress since last advance: last_advance={}", last_advance));
+      } else {
+        ilog(fmt::format("not caught up yet: height={} max_peer_height={} timeout_in={}", height, pool->max_peer_height,
+          sync_timeout.count() - (get_time() - last_advance)));
+        std::this_thread::sleep_for(switch_to_consensus_interval);
+        continue;
+      }
+      break;
+    }
+
+    /// Let's switch to consensus
+
+    pool->on_stop();
+
+    block_sync.store(false);
+
+    // TODO: how to do this? Need a way to notify cs_reactor (use a channel?)
+    // if (r.consReactor != nil) {
+    //  r.consReactor.SwitchToConsensus(state, blocksSynced > 0 || stateSynced)
+    // }
+
+    ilog("EXITING switch_to_consensus_ticker");
+  });
 }
 
 void reactor::respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id) {
