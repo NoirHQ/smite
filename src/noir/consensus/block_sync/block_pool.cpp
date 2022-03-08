@@ -28,7 +28,21 @@ void block_pool::pop_request() {
 
   auto r = requesters.find(height);
   if (r != requesters.end()) {
-    // r->second->stop // TODO
+    r->second->on_stop(); // TODO: check if this is correct
+    requesters.erase(r);
+    height++;
+    last_advance = get_time();
+
+    // last_sync_rate will be updated every 100 blocks
+    if ((height - start_height) % 100 == 0) {
+      std::chrono::microseconds s(get_time() - last_hundred_block_timestamp); // TODO: check time precision
+      auto new_sync_rate = 100 / std::chrono::duration_cast<std::chrono::seconds>(s).count(); // TODO: check
+      if (last_sync_rate == 0)
+        last_sync_rate = new_sync_rate;
+      else
+        last_sync_rate = 0.9 * last_sync_rate + 0.1 * new_sync_rate;
+      last_hundred_block_timestamp = get_time();
+    }
   } else {
     check(false, fmt::format("Panic: expected requester to pop, but got nothing at height={}", height));
   }
