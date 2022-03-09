@@ -5,6 +5,7 @@
 //
 #include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/reactor.h>
+#include <noir/consensus/validation.h>
 
 #include <utility>
 
@@ -77,6 +78,7 @@ void reactor::pool_routine(bool state_synced) {
   try_sync_ticker();
   switch_to_consensus_ticker();
 }
+
 void reactor::try_sync_ticker() {
   pool->strand->post([this]() {
     auto chain_id = initial_state.chain_id;
@@ -98,12 +100,18 @@ void reactor::try_sync_ticker() {
       auto first_id = p2p::block_id{first->get_hash(), first_part_set_header};
 
       // Verify the first block using the second's commit
-      // auto err = state_.validators->verify_commit_light(chain_id, first_id, first->header.height,
-      // second->last_commit); // TODO
-      if (false) {
-        // TODO
+      if (auto err = verify_commit_light(chain_id, std::make_shared<validator_set>(state_.validators), first_id,
+            first->header.height, std::make_shared<commit>(second->last_commit));
+          err.has_value()) {
+        elog(fmt::format("invalid last commit: height={} err={}", first->header.height, err.value()));
+
+        // We already removed peer request, but we need to clean up the rest
+        auto peer_id1 = pool->redo_request(first->header.height);
+        pool->send_error(err.value(), peer_id1);
+        auto peer_id2 = pool->redo_request(second->header.height);
+        pool->send_error(err.value(), peer_id2);
       } else {
-        pool->pop_request(); // TODO
+        pool->pop_request();
 
         store->save_block(*first, *first_parts, second->last_commit);
 
@@ -118,6 +126,7 @@ void reactor::try_sync_ticker() {
     }
   });
 }
+
 void reactor::switch_to_consensus_ticker() {
   pool->strand->post([this]() {
     while (true) {

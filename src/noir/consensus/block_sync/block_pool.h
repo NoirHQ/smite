@@ -110,10 +110,6 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
     return height >= (max_peer_height - 1);
   }
 
-  std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> peek_two_blocks();
-
-  void pop_request();
-
   std::vector<std::string> get_peer_ids() {
     std::lock_guard<std::mutex> g(mtx);
     std::vector<std::string> ret(peers.size());
@@ -122,10 +118,16 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
     return ret;
   }
 
+  std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> peek_two_blocks();
+
+  void pop_request();
+
   void remove_timed_out_peers();
   void remove_peer(std::string peer_id);
   void update_max_peer_height();
   std::shared_ptr<bp_peer> pick_incr_available_peer(int64_t height);
+
+  std::string redo_request(int64_t height);
 
   void add_block(std::string peer_id, std::shared_ptr<consensus::block> block_, int block_size);
 
