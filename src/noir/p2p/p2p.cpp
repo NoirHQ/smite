@@ -587,7 +587,7 @@ void p2p_impl::send_peer_error(const std::string& peer_id, std::span<const char>
       env->to = peer_id;
       env->broadcast = false;
       env->id = PeerError;
-      env->message = from_hex(str_msg);
+      env->message = bytes(str_msg.begin(), str_msg.end());
       c->strand.post([c, env]() { c->enqueue(*env); });
       return false;
     }
@@ -865,7 +865,8 @@ struct msg_handler {
         appbase::priority::medium, std::make_shared<envelope>(msg));
       break;
     case PeerError:
-      elog(fmt::format("received peer_error from={} error={}", msg.from, to_hex(msg.message)));
+      elog(fmt::format(
+        "received peer_error from={} error={}", msg.from, std::string(msg.message.begin(), msg.message.end())));
       my_impl->disconnect(msg.from);
       break;
     default:
