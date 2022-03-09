@@ -76,11 +76,9 @@ struct reactor {
   }
 
   void process_peer_update(plugin_interface::peer_status_info_ptr info);
-
   void process_peer_msg(p2p::envelope_ptr info);
 
   void request_routine();
-
   void pool_routine(bool state_synced);
   void try_sync_ticker();
   void switch_to_consensus_ticker();

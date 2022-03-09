@@ -103,6 +103,17 @@ std::shared_ptr<bp_peer> block_pool::pick_incr_available_peer(int64_t height) {
   return {};
 }
 
+std::string block_pool::redo_request(int64_t height) {
+  std::lock_guard<std::mutex> g(mtx);
+  auto it = requesters.find(height);
+  if (it == requesters.end())
+    return "";
+  auto peer_id = it->second->get_peer_id();
+  if (peer_id != "")
+    remove_peer(peer_id);
+  return peer_id;
+}
+
 void block_pool::add_block(std::string peer_id, std::shared_ptr<consensus::block> block_, int block_size) {
   std::lock_guard<std::mutex> g(mtx);
   auto requester = requesters.find(block_->header.height);
