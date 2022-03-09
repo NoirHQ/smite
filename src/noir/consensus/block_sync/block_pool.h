@@ -20,12 +20,7 @@ constexpr int max_pending_requests_per_peer{20};
 constexpr int min_recv_rate{7680};
 constexpr int max_diff_btn_curr_and_recv_block_height{100};
 
-auto peer_timeout{std::chrono::seconds(15)}; // non-const because it may be changed during tests
-
-// struct block_request {// TODO: remove as not needed for noir; noir can just use block_request in types.h w/o peer_id
-//  int64_t height;
-//  std::string peer_id;
-// };
+constexpr auto peer_timeout{std::chrono::seconds(15)};
 
 struct bp_requester;
 struct bp_peer;
@@ -221,6 +216,7 @@ struct bp_peer {
     peer->base = base_;
     peer->height = height_;
     peer->timeout.reset(new boost::asio::steady_timer(ioc));
+    peer->reset_timeout();
     peer->timeout->async_wait([peer](boost::system::error_code ec) {
       if (ec)
         return;
@@ -233,7 +229,7 @@ struct bp_peer {
     std::lock_guard<std::mutex> g(pool->mtx);
     std::string err("peer did not send us anything for a while");
     pool->send_error(err, id);
-    elog("send_timeout: reason=${reason}", ("reason", err));
+    elog("send_timeout: reason=${reason} sender=${sender}", ("reason", err)("sender", id));
     did_timeout = true;
   }
 
