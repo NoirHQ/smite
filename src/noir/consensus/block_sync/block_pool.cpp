@@ -138,18 +138,18 @@ void block_pool::add_block(std::string peer_id, std::shared_ptr<consensus::block
   }
 }
 
-void block_pool::set_peer_range(std::string peer_id, int64_t base, int64_t height) {
+void block_pool::set_peer_range(std::string peer_id_, int64_t base, int64_t height_) {
   std::lock_guard<std::mutex> g(mtx);
-  auto peer = peers.find(peer_id);
+  auto peer = peers.find(peer_id_);
   if (peer != peers.end()) {
     peer->second->base = base;
-    peer->second->height = height;
+    peer->second->height = height_;
   } else {
-    auto new_peer = bp_peer::new_bp_peer(shared_from_this(), peer_id, base, height, thread_pool->get_executor());
-    peers[peer_id] = new_peer;
+    auto new_peer = bp_peer::new_bp_peer(shared_from_this(), peer_id_, base, height_, thread_pool->get_executor());
+    peers[peer_id_] = new_peer;
   }
-  if (height > max_peer_height)
-    max_peer_height = height;
+  if (height_ > max_peer_height)
+    max_peer_height = height_;
 }
 
 void block_pool::make_next_requester() {
@@ -179,7 +179,7 @@ void block_pool::send_error(std::string err, std::string peer_id) {
 
 void block_pool::transmit_new_envelope(
   const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg, bool broadcast, int priority) {
-  dlog(fmt::format("transmitting a new envelope: id=BlockSync, to={}, msg_type={}", to, msg.index(), broadcast));
+  dlog(fmt::format("transmitting a new envelope: id=BlockSync, to={}, msg_type={}", to, msg.index()));
   auto new_env = std::make_shared<p2p::envelope>();
   new_env->from = from;
   new_env->to = to;

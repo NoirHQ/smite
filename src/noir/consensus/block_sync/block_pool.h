@@ -41,7 +41,7 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   double last_sync_rate;
 
   bool is_running{}; ///< used to end active jobs on_stop
-  uint16_t thread_pool_size = 5;
+  uint16_t thread_pool_size = 15;
   std::optional<named_thread_pool> thread_pool;
   std::shared_ptr<boost::asio::io_context::strand> strand;
 
@@ -107,7 +107,7 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
 
   std::vector<std::string> get_peer_ids() {
     std::lock_guard<std::mutex> g(mtx);
-    std::vector<std::string> ret(peers.size());
+    std::vector<std::string> ret;
     for (const auto& pair : peers)
       ret.push_back(pair.first);
     return ret;
@@ -126,7 +126,7 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
 
   void add_block(std::string peer_id, std::shared_ptr<consensus::block> block_, int block_size);
 
-  void set_peer_range(std::string peer_id, int64_t base, int64_t height);
+  void set_peer_range(std::string peer_id_, int64_t base, int64_t height_);
 
   void make_next_requester();
 
@@ -163,6 +163,7 @@ struct bp_requester {
   }
 
   void on_start() {
+    is_running = true;
     request_routine();
   }
 

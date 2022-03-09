@@ -21,6 +21,7 @@ void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
   }
   case p2p::peer_status::down: {
     pool->remove_peer(info->peer_id);
+    break;
   }
   default:
     break;
@@ -61,14 +62,15 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
 void reactor::request_routine() {
   ///< request_ch [done; noir does not need one]
   ///< error_ch [done; use of a channel is not required]
-  pool->strand->post([this]() {
-    if (!pool->is_running)
-      return;
-    auto peer_ids = pool->get_peer_ids();
-    for (const auto& peer_id : peer_ids)
-      pool->transmit_new_envelope("", peer_id, status_request{});
-    std::this_thread::sleep_for(status_update_interval);
-    request_routine();
+  pool->thread_pool->get_executor().post([this]() {
+    while (true) {
+      if (!pool->is_running)
+        return;
+      auto peer_ids = pool->get_peer_ids();
+      for (const auto& peer_id : peer_ids)
+        pool->transmit_new_envelope("", peer_id, status_request{});
+      std::this_thread::sleep_for(status_update_interval);
+    }
   });
 }
 
@@ -80,7 +82,7 @@ void reactor::pool_routine(bool state_synced) {
 }
 
 void reactor::try_sync_ticker() {
-  pool->strand->post([this]() {
+  pool->thread_pool->get_executor().post([this]() {
     auto chain_id = initial_state.chain_id;
     auto state_ = initial_state;
     uint64_t blocks_synced{0};
@@ -128,7 +130,7 @@ void reactor::try_sync_ticker() {
 }
 
 void reactor::switch_to_consensus_ticker() {
-  pool->strand->post([this]() {
+  pool->thread_pool->get_executor().post([this]() {
     while (true) {
       auto [height, num_pending, len_requesters] = pool->get_status();
       auto last_advance = pool->last_advance;
@@ -136,7 +138,8 @@ void reactor::switch_to_consensus_ticker() {
 
       if (pool->is_caught_up()) {
         ilog(fmt::format("switching to consensus reactor: height={}", height));
-      } else if ((get_time() - last_advance) > sync_timeout.count()) { // TODO: check if this is right
+      } else if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::microseconds(
+                   (get_time() - last_advance))) > sync_timeout) { // TODO: check if this is right
         elog(fmt::format("no progress since last advance: last_advance={}", last_advance));
       } else {
         ilog(fmt::format("not caught up yet: height={} max_peer_height={} timeout_in={}", height, pool->max_peer_height,
