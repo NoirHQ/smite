@@ -9,6 +9,7 @@ target_sources(noir
   merkle/tree.cpp
   priv_validator.cpp
   replay.cpp
+  validation.cpp
   validator.cpp
   vote.cpp
   wal.cpp)
