@@ -110,6 +110,7 @@ fc::variant api::get_tx_count(const fc::variant& req) {
 fc::variant api::block_number(const fc::variant& req) {
   check(req.is_array() || req.is_null(), "invalid json request");
   // TODO: block number
+  auto block_number = block_store_ptr->height();
   return fc::variant("0x0");
 }
 
@@ -148,7 +149,9 @@ fc::variant api::get_block_by_number(const fc::variant& req) {
     "invalid argument 0: json: cannot unmarshal hex string without 0x prefix");
   check(params[1].is_bool(), "invalid argument 1: json: cannot unmarshal into bool");
   auto full_tx = params[1].as_bool();
-
+  auto height = std::strtoll(block_number.c_str(), nullptr, 16);
+  consensus::block cb;
+  block_store_ptr->load_block(height, cb);
   // TODO: get block by number
   block b;
   return fc::variant(nullptr);
@@ -163,6 +166,8 @@ fc::variant api::get_block_by_hash(const fc::variant& req) {
   check_hash(hash, 0);
   check(params[1].is_bool(), "invalid argument 1: json: cannot unmarshal into bool");
   auto full_tx = params[1].as_bool();
+  consensus::block cb;
+  block_store_ptr->load_block_by_hash(from_hex(hash), cb);
 
   // TODO: get block by hash
   block b;

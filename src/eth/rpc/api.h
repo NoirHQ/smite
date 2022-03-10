@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/consensus/abci.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <eth/common/types.h>
 #include <fc/variant.hpp>
@@ -43,11 +44,16 @@ public:
     this->tx_pool_ptr = tx_pool_ptr;
   }
 
+  void set_block_store(const std::shared_ptr<noir::consensus::block_store>& block_store_ptr) {
+    this->block_store_ptr = block_store_ptr;
+  }
+
 private:
   uint256_t tx_fee_cap;
   bool allow_unprotected_txs;
 
   noir::tx_pool::tx_pool* tx_pool_ptr;
+  std::shared_ptr<noir::consensus::block_store> block_store_ptr;
 };
 
 } // namespace eth::api
