@@ -53,6 +53,12 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
      * if already seen one, discard
      */
   }
+
+  if (wait_sync) {
+    ilog("ignore messages received during sync");
+    return;
+  }
+
   auto from = info->from;
 
   datastream<char> ds(info->message.data(), info->message.size());

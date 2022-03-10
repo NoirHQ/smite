@@ -18,7 +18,8 @@ std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> block_pool::peek_two_
   auto r2 = requesters.find(height + 1);
   if (r2 != requesters.end())
     second = r2->second->get_block();
-  wlog(fmt::format(" ---- peek : height={}, first={}, second={}, requesters_size={}", height, first == nullptr, second == nullptr, requesters.size()));
+  wlog(fmt::format(" ---- peek : height={}, first={}, second={}, requesters_size={}", height, first == nullptr,
+    second == nullptr, requesters.size()));
   return {first, second};
 }
 

@@ -97,7 +97,7 @@ void reactor::try_sync_ticker() {
       std::this_thread::sleep_for(try_sync_interval);
       auto [first, second] = pool->peek_two_blocks();
       if (!first || !second) {
-        //std::this_thread::sleep_for(std::chrono::milliseconds(3000)); // manually inserted extra time TODO : remove
+        // std::this_thread::sleep_for(std::chrono::milliseconds(3000)); // manually inserted extra time TODO : remove
         continue;
       }
 
