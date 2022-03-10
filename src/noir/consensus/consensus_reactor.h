@@ -64,9 +64,9 @@ struct consensus_reactor {
 
   void on_stop() {
     ilog("stopping cs_reactor...");
-    for (auto peer : peers) {
-      ilog(fmt::format("closing peer={}", peer.first));
-      peer.second->is_running = false;
+    for (auto const& peer : peers) {
+      if (peer.second->is_running)
+        peer.second->is_running = false;
     }
     thread_pool->stop();
     ilog("stopped cs_reactor");
