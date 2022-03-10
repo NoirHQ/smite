@@ -24,7 +24,7 @@ auto prepare_consensus = [](auto num_validators) { // copy and modification of r
   auto tmp_path = temp_dir->path().string();
   auto db_dir = temp_dir->path() / "db";
   auto session =
-    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir.string()));
+    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(true, db_dir.string()));
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);

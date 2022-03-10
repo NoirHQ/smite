@@ -47,6 +47,15 @@ config config_setup() {
   config_.base.root_dir = "/tmp/test_consensus";
   config_.consensus.root_dir = config_.base.root_dir;
   config_.priv_validator.root_dir = config_.base.root_dir;
+
+  // create consensus.root_dir if not exist
+  try {
+    if (!std::filesystem::exists(config_.consensus.root_dir)) {
+      std::filesystem::create_directories(config_.consensus.root_dir);
+    }
+  } catch (...) {
+    check(false, "unable to create root_dir", config_.consensus.root_dir);
+  }
   return config_;
 }
 
@@ -90,9 +99,8 @@ std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config
 
   validator_stub_list vss;
 
-  auto db_dir = appbase::app().home_dir() / "db";
-  auto session =
-    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
+  auto db_dir = std::filesystem::path{config_.consensus.root_dir} / "testdb";
+  auto session = std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(true, db_dir));
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
