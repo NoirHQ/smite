@@ -177,9 +177,10 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
 
     int index{};
     bool ok{false};
-    if (rs->proposal_block_parts->has_header(prs->proposal_block_part_set_header))
+    if (rs->proposal_block_parts->has_header(prs->proposal_block_part_set_header)) {
       std::tie(index, ok) =
         rs->proposal_block_parts->get_bit_array()->sub(prs->proposal_block_parts->copy())->pick_random();
+    }
     if (ok) {
       // Send proposal_block_parts
       auto part = rs->proposal_block_parts->get_part(index);
