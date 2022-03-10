@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/log.h>
 #include <noir/consensus/block_executor.h>
+#include <noir/consensus/block_sync/reactor.h>
 #include <noir/consensus/consensus_reactor.h>
 #include <noir/consensus/node_key.h>
 #include <noir/consensus/priv_validator.h>
@@ -28,6 +29,7 @@ struct node {
   bool state_sync_on{};
 
   std::shared_ptr<consensus_reactor> cs_reactor{};
+  std::shared_ptr<block_sync::reactor> bs_reactor{};
 
   static std::unique_ptr<node> new_default_node(const std::shared_ptr<config>& new_config) {
     // Load or generate priv - todo
@@ -73,16 +75,18 @@ struct node {
       // todo - check error
     }
 
-    // Setup state sync
-    bool new_state_sync_on = false; // todo
+    // Setup state_sync [use snapshots to replicate states]
+    bool new_state_sync_on = false; ///< noir will not implement state_sync
 
-    // Setup block sync
-    bool block_sync = false; // todo
+    // Setup block_sync
+    bool block_sync = true; // TODO: read from config or config file?
 
     log_node_startup_info(state_, pub_key_, new_config->base.mode);
 
+    auto new_bs_reactor = create_block_sync_reactor(state_, block_exec, bls, block_sync);
+
     auto [new_cs_reactor, new_cs_state] = create_consensus_reactor(
-      new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, new_state_sync_on);
+      new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, block_sync);
 
     auto node_ = std::make_unique<node>();
     node_->config_ = new_config;
@@ -92,6 +96,7 @@ struct node {
     node_->store_ = dbs;
     node_->block_store_ = bls;
     node_->state_sync_on = new_state_sync_on;
+    node_->bs_reactor = new_bs_reactor;
     node_->cs_reactor = new_cs_reactor;
     return node_;
   }
@@ -129,6 +134,13 @@ struct node {
     }
   }
 
+  static std::shared_ptr<block_sync::reactor> create_block_sync_reactor(state& state_,
+    const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store,
+    bool block_sync_) {
+    auto bs_reactor = block_sync::reactor::new_reactor(state_, block_exec_, new_block_store, block_sync_);
+    return bs_reactor;
+  }
+
   static std::tuple<std::shared_ptr<consensus_reactor>, std::shared_ptr<consensus_state>> create_consensus_reactor(
     const std::shared_ptr<config>& config_, const std::shared_ptr<state>& state_,
     const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& block_store_,
@@ -144,12 +156,14 @@ struct node {
   }
 
   void on_start() {
-    // Check genesis time and sleep until time is ready // todo
+    // Check genesis time and sleep until time is ready // TODO
 
-    cs_reactor->on_start(); // TODO: cs_reactor->start();
+    cs_reactor->on_start();
     auto height = cs_reactor->cs_state->rs.height;
     auto round = cs_reactor->cs_state->rs.round;
     cs_reactor->cs_state->enter_new_round(height, round);
+
+    bs_reactor->on_start(); // TODO: is this right place to start block_sync?
   }
 
   void on_stop() {}

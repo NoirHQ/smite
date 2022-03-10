@@ -52,6 +52,15 @@ public:
     }
 
     node_ = node::new_default_node(config_);
+
+    ///< TEMPORARY
+    // Do not start block_sync reactor when we are single node validator (test env)
+    if (config_->base.mode == Validator) {
+      // TODO: remove later; temporary workaround to prevent validator from starting bs_reactor
+      node_->bs_reactor->block_sync = false;
+      node_->cs_reactor->wait_sync = false;
+    }
+    ///< TEMPORARY ENDS
   }
 
   void plugin_startup() {
@@ -64,6 +73,7 @@ public:
   void plugin_shutdown() {
     ilog("shutting down abci");
     node_->cs_reactor->on_stop();
+    node_->bs_reactor->on_stop();
   }
 
   std::unique_ptr<node> node_;
