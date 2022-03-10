@@ -111,7 +111,7 @@ fc::variant api::block_number(const fc::variant& req) {
   check(req.is_array() || req.is_null(), "invalid json request");
   // TODO: block number
   auto block_number = block_store_ptr->height();
-  return fc::variant("0x0");
+  return fc::variant(fmt::format("{0:#x}", block_number));
 }
 
 fc::variant api::gas_price(const fc::variant& req) {
