@@ -50,12 +50,14 @@ void block_pool::pop_request() {
 
 void block_pool::remove_timed_out_peers() {
   std::lock_guard<std::mutex> g(mtx);
-
-  for (auto const& [k, peer] : peers) {
-    // Check if peer timed out
-    if (!peer->did_timeout && peer->num_pending > 0) {
-      // auto cur_rate = peer->recv_monitor // TODO : how to measure receive rate (apply limit rate?)
-    }
+  auto it = peers.begin();
+  while (it != peers.end()) {
+    std::shared_ptr<bp_peer>& peer = it->second;
+    // Check if peer timed out // TODO : how to measure receive rate (apply limit rate?)
+    // if (!peer->did_timeout && peer->num_pending > 0) {
+    //   auto cur_rate = peer->recv_monitor
+    // }
+    it++; // move to next item as remove_peer() below may delete current item
     if (peer->did_timeout)
       remove_peer(peer->id);
   }
@@ -223,7 +225,7 @@ void bp_requester::redo(std::string peer_id) {
 /// returns only when a block is found (add_block() is called --> set_block() is called)
 void bp_requester::request_routine() {
   strand->post([this]() {
-    if (!is_running || pool->is_running)
+    if (!is_running || !pool->is_running)
       return;
     auto peer = pool->pick_incr_available_peer(height);
     if (peer) {
