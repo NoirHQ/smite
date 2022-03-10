@@ -13,7 +13,7 @@
 namespace noir::consensus::block_sync {
 
 constexpr auto request_interval{std::chrono::milliseconds(2)};
-constexpr int max_total_requesters{600};
+constexpr int max_total_requesters{30}; // default = 600
 constexpr int max_peer_err_buffer{1000};
 constexpr int max_pending_requests{max_total_requesters};
 constexpr int max_pending_requests_per_peer{20};

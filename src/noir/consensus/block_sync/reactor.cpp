@@ -43,10 +43,13 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
       [this, &from](
         consensus::block_request& msg) { respond_to_peer(std::make_shared<consensus::block_request>(msg), from); },
       [this, &from](consensus::block_response& msg) {
-        auto block_ = std::make_shared<consensus::block>();
-        datastream<char> ds_block(msg.block_.data(), msg.block_.size());
-        ds_block >> block_;
-        pool->add_block(from, block_, msg.block_.size());
+        try {
+          auto block_ = std::make_shared<consensus::block>();
+          *block_ = decode<block>(msg.block_);
+          pool->add_block(from, block_, msg.block_.size());
+        } catch (std::exception&) {
+          wlog(fmt::format("unable to parse received block_response: size={}", msg.block_.size()));
+        }
       },
       [this, &from](consensus::status_request& msg) {
         pool->transmit_new_envelope("", from, status_response{store->height(), store->base()});
@@ -94,6 +97,7 @@ void reactor::try_sync_ticker() {
       std::this_thread::sleep_for(try_sync_interval);
       auto [first, second] = pool->peek_two_blocks();
       if (!first || !second) {
+        //std::this_thread::sleep_for(std::chrono::milliseconds(3000)); // manually inserted extra time TODO : remove
         continue;
       }
 

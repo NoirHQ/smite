@@ -18,6 +18,7 @@ std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> block_pool::peek_two_
   auto r2 = requesters.find(height + 1);
   if (r2 != requesters.end())
     second = r2->second->get_block();
+  wlog(fmt::format(" ---- peek : height={}, first={}, second={}, requesters_size={}", height, first == nullptr, second == nullptr, requesters.size()));
   return {first, second};
 }
 
@@ -202,9 +203,10 @@ void block_pool::transmit_new_envelope(
 /// \brief returns true if peer_id matches and blk_ does not already exist
 bool bp_requester::set_block(std::shared_ptr<block> blk_, std::string peer_id_) {
   std::lock_guard<std::mutex> g(mtx);
-  if (blk_ != nullptr || peer_id != peer_id_)
+  if (block_ != nullptr || peer_id != peer_id_)
     return false;
   block_ = blk_;
+  wlog(fmt::format(" ---- GOT NEW BLOCK : height={}, block_height={}", height, block_->header.height));
 
   // At the point, we have sent a request and received a response
   on_stop();
@@ -235,6 +237,7 @@ void bp_requester::request_routine() {
 
       // Send request
       pool->send_request(height, peer->id);
+      wlog(fmt::format(" *** Terminate requester height={}", height));
       return;
     }
     std::this_thread::sleep_for(request_interval);
