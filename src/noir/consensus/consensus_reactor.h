@@ -59,7 +59,9 @@ struct consensus_reactor {
   }
 
   void on_start() {
-    cs_state->on_start();
+    ilog(fmt::format("starting cs_reactor... wait_sync={}", wait_sync));
+    if (!wait_sync)
+      cs_state->on_start();
   }
 
   void on_stop() {
@@ -70,6 +72,22 @@ struct consensus_reactor {
     }
     thread_pool->stop();
     ilog("stopped cs_reactor");
+  }
+
+  void switch_to_consensus(state& state_, bool skip_wal) {
+    ilog("switching to consensus");
+
+    if (state_.last_block_height > 0)
+      cs_state->reconstruct_last_commit(state_);
+
+    cs_state->update_to_state(state_);
+
+    wait_sync = false;
+
+    if (skip_wal)
+      cs_state->do_wal_catchup = false;
+
+    cs_state->on_start();
   }
 
   void process_event(const plugin_interface::event_info_ptr& info) {

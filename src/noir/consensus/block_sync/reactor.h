@@ -75,6 +75,16 @@ struct reactor {
     pool->is_running = false; // TODO: is this enough? any other threads to close?
   }
 
+  void switch_to_block_sync(state& state_) {
+    block_sync.store(true);
+    initial_state = state_;
+    pool->height = state_.last_block_height + 1;
+
+    pool->on_start();
+    sync_start_time = get_time();
+    pool_routine(true);
+  }
+
   void process_peer_update(plugin_interface::peer_status_info_ptr info);
   void process_peer_msg(p2p::envelope_ptr info);
 
