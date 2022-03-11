@@ -116,9 +116,8 @@ bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
-  auto old = tx_queue_.get_tx(res.sender, res.nonce);
-  if (old.has_value()) {
-    auto old_tx = old.value();
+  auto old_tx = tx_queue_.get_tx(res.sender, res.nonce);
+  if (old_tx) {
     if (res.gas_wanted < old_tx->gas + config_.gas_price_bump) {
       if (!config_.keep_invalid_txs_in_cache) {
         tx_cache_.del(tx_id);

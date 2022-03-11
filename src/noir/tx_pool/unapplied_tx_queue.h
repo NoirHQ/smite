@@ -127,18 +127,18 @@ public:
     return queue_.get<by_tx_id>().find(id.to_string()) != queue_.get<by_tx_id>().end();
   }
 
-  std::optional<consensus::wrapped_tx_ptr> get_tx(const consensus::tx_id_type& id) const {
+  consensus::wrapped_tx_ptr get_tx(const consensus::tx_id_type& id) const {
     auto itr = queue_.get<by_tx_id>().find(id.to_string());
     if (itr == queue_.get<by_tx_id>().end()) {
-      return std::nullopt;
+      return {};
     }
     return itr->tx_ptr;
   }
 
-  std::optional<consensus::wrapped_tx_ptr> get_tx(const consensus::address_type& sender, uint64_t nonce) const {
+  consensus::wrapped_tx_ptr get_tx(const consensus::address_type& sender, uint64_t nonce) const {
     auto itr = queue_.get<by_nonce>().find(std::make_tuple(sender, nonce));
     if (itr == queue_.get<by_nonce>().end()) {
-      return std::nullopt;
+      return {};
     }
     return itr->tx_ptr;
   }

@@ -219,7 +219,7 @@ TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
 
   SECTION("Get") {
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.get_tx(wtx->id()).has_value());
+      CHECK(tx_queue.get_tx(wtx->id()));
     }
   }
 
@@ -289,8 +289,8 @@ TEST_CASE("unapplied_tx_queue: Indexing", "[noir][tx_pool]") {
     auto tx = test_helper->make_random_wrapped_tx("Alice");
     tx_queue->add_tx(tx);
     auto tx_ptr = tx_queue->get_tx(tx->sender, tx->nonce);
-    CHECKED_IF(!tx_ptr.has_value()) {
-      CHECK(tx_ptr.value()->nonce == tx->nonce);
+    CHECKED_IF(tx_ptr) {
+      CHECK(tx_ptr->nonce == tx->nonce);
     }
   }
 
