@@ -35,6 +35,8 @@ public:
     auto config_ = std::make_shared<config>(config::get_default());
     config_->base.chain_id = "test_chain";
     config_->base.mode = Validator; // TODO: read from config or cli
+    config_->base.root_dir = appbase::app().home_dir().string();
+    config_->consensus.root_dir = config_->base.root_dir;
 
     if (do_not_start_node) {
       // Do not start node, but create an instance of consensus_reactor so network messages can be processed
