@@ -19,6 +19,8 @@ constexpr auto sync_timeout{std::chrono::seconds(60)};
 struct reactor {
   // Immutable
   consensus::state initial_state;
+  consensus::state latest_state;
+  uint64_t blocks_synced{};
 
   std::shared_ptr<consensus::block_executor> block_exec;
   std::shared_ptr<consensus::block_store> store;
@@ -27,6 +29,8 @@ struct reactor {
   std::atomic_bool block_sync;
 
   p2p::tstamp sync_start_time;
+
+  std::function<void(state&, bool)> callback_switch_to_cs_sync{};
 
   // Receive an envelope from peers [via p2p]
   plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type::handle bs_reactor_mq_subscription =
@@ -85,6 +89,10 @@ struct reactor {
     pool_routine(true);
   }
 
+  void set_callback_switch_to_cs_sync(std::function<void(state&, bool)> cb) {
+    callback_switch_to_cs_sync = std::move(cb);
+  }
+
   void process_peer_update(plugin_interface::peer_status_info_ptr info);
   void process_peer_msg(p2p::envelope_ptr info);
 
@@ -94,20 +102,6 @@ struct reactor {
   void switch_to_consensus_ticker();
 
   void respond_to_peer(std::shared_ptr<consensus::block_request> msg, const std::string& peer_id);
-
-  std::optional<std::string> switch_to_block_sync(const state& state_) {
-    block_sync.store(true);
-    initial_state = state_;
-    pool->height = state_.last_block_height + 1;
-
-    pool->on_start();
-
-    sync_start_time = get_time();
-
-    pool_routine(true);
-
-    return {};
-  }
 
   int64_t get_max_peer_block_height() const {
     return pool->max_peer_height;

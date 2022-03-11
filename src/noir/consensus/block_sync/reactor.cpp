@@ -87,8 +87,8 @@ void reactor::pool_routine(bool state_synced) {
 void reactor::try_sync_ticker() {
   pool->thread_pool->get_executor().post([this]() {
     auto chain_id = initial_state.chain_id;
-    auto state_ = initial_state;
-    uint64_t blocks_synced{0};
+    latest_state = initial_state;
+    blocks_synced = 0;
 
     while (true) {
       if (!pool->is_running)
@@ -106,7 +106,7 @@ void reactor::try_sync_ticker() {
       auto first_id = p2p::block_id{first->get_hash(), first_part_set_header};
 
       // Verify the first block using the second's commit
-      if (auto err = verify_commit_light(chain_id, std::make_shared<validator_set>(state_.validators), first_id,
+      if (auto err = verify_commit_light(chain_id, std::make_shared<validator_set>(latest_state.validators), first_id,
             first->header.height, std::make_shared<commit>(second->last_commit));
           err.has_value()) {
         elog(fmt::format("invalid last commit: height={} err={}", first->header.height, err.value()));
@@ -121,11 +121,11 @@ void reactor::try_sync_ticker() {
 
         store->save_block(*first, *first_parts, second->last_commit);
 
-        auto new_state = block_exec->apply_block(state_, first_id, first);
+        auto new_state = block_exec->apply_block(latest_state, first_id, first);
         if (!new_state.has_value()) {
           check(false, fmt::format("Panic: failed to process committed block: height={}", first->header.height));
         }
-        state_ = new_state.value();
+        latest_state = new_state.value();
 
         blocks_synced++;
       }
@@ -160,10 +160,8 @@ void reactor::switch_to_consensus_ticker() {
 
     block_sync.store(false);
 
-    // TODO: how to do this? Need a way to notify cs_reactor (use a channel?)
-    // if (r.consReactor != nil) {
-    //  r.consReactor.SwitchToConsensus(state, blocksSynced > 0 || stateSynced)
-    // }
+    if (callback_switch_to_cs_sync)
+      callback_switch_to_cs_sync(latest_state, blocks_synced > 0);
 
     ilog("EXITING switch_to_consensus_ticker");
   });
