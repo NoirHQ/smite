@@ -23,6 +23,14 @@ static address_type str_to_addr(const std::string& str) {
   return addr;
 }
 
+std::random_device random_device_;
+std::mt19937 generator{random_device_()};
+
+uint64_t rand_gas(uint64_t max = 0xFFFF, uint64_t min = 0) {
+  std::uniform_int_distribution<uint64_t> dist_gas{min, max};
+  return dist_gas(generator);
+}
+
 class test_application : public application::base_application {
   std::shared_mutex mutex_;
   std::list<std::shared_ptr<req_res<response_check_tx>>> rrs_;
@@ -115,9 +123,6 @@ private:
 
   std::mutex mutex_;
 
-  std::random_device random_device_;
-  std::mt19937 generator{random_device_()};
-
   std::shared_ptr<class tx_pool> tp_ = nullptr;
 
   std::shared_ptr<test_application> test_app_ = nullptr;
@@ -154,10 +159,6 @@ public:
     tx_id_ = 0;
   }
 
-  uint64_t rand_gas(uint64_t max = 0xFFFF, uint64_t min = 0) {
-    std::uniform_int_distribution<uint64_t> dist_gas{min, max};
-    return dist_gas(generator);
-  }
 
   class tx_pool& make_tx_pool() {
     config cfg{};
@@ -493,17 +494,19 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
 
 TEST_CASE("tx_pool: Reap tx using max bytes & gas", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  auto& tp = test_helper->make_tx_pool();
+  auto test_app = std::make_shared<test_application>();
+  auto& tp = test_helper->make_tx_pool(test_app);
 
   const uint64_t tx_count = 10000;
   for (auto i = 0; i < tx_count; i++) {
+    test_app->set_gas(test_detail::rand_gas());
     CHECK(tp.check_tx_sync(test_helper->new_tx()));
   }
 
   uint tc = 100;
   for (uint i = 0; i < tc; i++) {
     uint64_t max_bytes = 1000;
-    uint64_t max_gas = test_helper->rand_gas(1000000, 100000);
+    uint64_t max_gas = test_detail::rand_gas(1000000, 100000);
     auto txs = tp.reap_max_bytes_max_gas(max_bytes, max_gas);
     uint64_t total_bytes = 0;
     for (auto& tx : txs) {
