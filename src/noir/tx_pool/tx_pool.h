@@ -39,7 +39,7 @@ private:
   std::mutex mutex_;
   config config_;
   unapplied_tx_queue tx_queue_;
-  LRU_cache<consensus::tx_id_type, consensus::tx> tx_cache_;
+  LRU_cache<consensus::tx_hash, consensus::tx> tx_cache_;
 
   std::shared_ptr<consensus::app_connection> proxy_app_;
 
@@ -79,8 +79,8 @@ public:
   void flush_app_conn();
 
 private:
-  void check_tx_internal(const consensus::tx_id_type& tx_id, const consensus::tx& tx);
-  void add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
+  void check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx& tx);
+  void add_tx(const consensus::tx_hash& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
   void update_recheck_txs();
 };
 

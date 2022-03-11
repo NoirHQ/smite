@@ -159,7 +159,6 @@ public:
     tx_id_ = 0;
   }
 
-
   class tx_pool& make_tx_pool() {
     config cfg{};
     test_app_ = std::make_shared<test_application>();
@@ -206,41 +205,41 @@ TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
   }
   CHECK(tx_queue.size() == tx_count);
 
-  SECTION("Add same tx id") { // fail case
+  SECTION("Add same tx hash") { // fail case
     auto wtx = wtxs[0];
     wtx->nonce = wtxs[tx_count - 1]->nonce + 1;
     CHECK(tx_queue.add_tx(wtx));
     CHECK(tx_queue.size() == tx_count);
-    CHECK(tx_queue.get_tx(wtxs[0]->id()));
+    CHECK(tx_queue.get_tx(wtxs[0]->hash()));
   }
 
   SECTION("Has") {
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.has(wtx->id()));
+      CHECK(tx_queue.has(wtx->hash()));
     }
   }
 
   SECTION("Get") {
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.get_tx(wtx->id()));
+      CHECK(tx_queue.get_tx(wtx->hash()));
     }
   }
 
   SECTION("Erase tx") {
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.erase(wtx->id()));
+      CHECK(tx_queue.erase(wtx->hash()));
     }
     CHECK(tx_queue.empty());
 
     // fail case
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.erase(wtx->id()) == false);
+      CHECK(tx_queue.erase(wtx->hash()) == false);
     }
     CHECK(tx_queue.empty());
   }
 
   SECTION("Erase tx by iterator") {
-    std::for_each(tx_queue.begin(), tx_queue.end(), [&](auto& itr) { CHECK(tx_queue.erase(itr.id())); });
+    std::for_each(tx_queue.begin(), tx_queue.end(), [&](auto& itr) { CHECK(tx_queue.erase(itr.hash())); });
     CHECK(tx_queue.empty());
   }
 
@@ -271,7 +270,7 @@ TEST_CASE("unapplied_tx_queue: Fully add/erase tx", "[noir][tx_pool]") {
   CHECK(tx_queue->size() == tx_count);
 
   for (auto& wtx : wtxs) {
-    CHECK(tx_queue->erase(wtx->id()));
+    CHECK(tx_queue->erase(wtx->hash()));
   }
   CHECK(tx_queue->empty());
 }
@@ -595,11 +594,11 @@ TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
   uint tx_count = 1000;
   uint cache_size = 1000;
 
-  LRU_cache<tx_id_type, consensus::tx> c{cache_size};
+  LRU_cache<tx_hash, consensus::tx> c{cache_size};
 
   struct test_tx {
     consensus::tx tx;
-    tx_id_type id;
+    tx_hash hash;
   };
   std::vector<test_tx> txs;
   txs.reserve(tx_count);
@@ -607,51 +606,51 @@ TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
   for (uint64_t i = 0; i < tx_count; i++) {
     test_tx test_tx;
     test_tx.tx = test_helper->new_tx();
-    test_tx.id = get_tx_id(test_tx.tx);
-    c.put(test_tx.id, test_tx.tx);
+    test_tx.hash = get_tx_hash(test_tx.tx);
+    c.put(test_tx.hash, test_tx.tx);
     txs.push_back(test_tx);
   }
 
   SECTION("put") {
     CHECK(c.size() == tx_count);
     for (auto& tx : txs) {
-      CHECK(c.has(tx.id));
+      CHECK(c.has(tx.hash));
     }
 
     // new tx, replace the oldest tx in cache
     auto tx = test_helper->new_tx();
-    c.put(get_tx_id(tx), tx); // tx0 is replaced by new one
+    c.put(get_tx_hash(tx), tx); // tx0 is replaced by new one
     CHECK(c.size() == tx_count);
-    CHECK(c.has(get_tx_id(tx)));
-    CHECK(!c.has(txs[0].id));
+    CHECK(c.has(get_tx_hash(tx)));
+    CHECK(!c.has(txs[0].hash));
 
     // put again tx1
-    c.put(txs[1].id, txs[1].tx);
+    c.put(txs[1].hash, txs[1].tx);
     tx = test_helper->new_tx();
-    c.put(get_tx_id(tx), tx); // tx2 is replaced by new one
-    CHECK(c.has(get_tx_id(tx)));
-    CHECK(c.has(txs[1].id));
-    CHECK(!c.has(txs[2].id));
+    c.put(get_tx_hash(tx), tx); // tx2 is replaced by new one
+    CHECK(c.has(get_tx_hash(tx)));
+    CHECK(c.has(txs[1].hash));
+    CHECK(!c.has(txs[2].hash));
   }
 
   SECTION("invalid") {
     auto wrapped_tx = test_helper->make_random_wrapped_tx("user");
-    auto item = c.get(wrapped_tx->id());
+    auto item = c.get(wrapped_tx->hash());
     CHECK(!item.has_value());
   }
 
   SECTION("del") {
-    CHECK(c.has(txs[3].id));
-    c.del(txs[3].id);
-    CHECK(!c.has(txs[3].id));
+    CHECK(c.has(txs[3].hash));
+    c.del(txs[3].hash);
+    CHECK(!c.has(txs[3].hash));
     CHECK(c.size() == tx_count - 1);
   }
 
   SECTION("get") {
     for (auto& tx : txs) {
-      auto res = c.get(tx.id);
+      auto res = c.get(tx.hash);
       CHECKED_IF(res.has_value()) {
-        CHECK(to_string(tx.id) == to_string(get_tx_id(res.value())));
+        CHECK(to_string(tx.hash) == to_string(get_tx_hash(res.value())));
       }
     }
   }
