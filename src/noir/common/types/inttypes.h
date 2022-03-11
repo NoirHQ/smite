@@ -10,6 +10,18 @@
 
 namespace noir {
 
+#if defined(__SIZEOF_INT128__)
+using int128_t = __int128;
+using uint128_t = unsigned __int128;
+#else
+using int128_t = boost::multiprecision::int128_t;
+using uint128_t = boost::multiprecision::uint128_t;
+template<>
+struct is_foreachable<int128_t> : std::false_type {};
+template<>
+struct is_foreachable<uint128_t> : std::false_type {};
+#endif
+
 using int256_t = boost::multiprecision::int256_t;
 
 template<>
