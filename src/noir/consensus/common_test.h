@@ -25,11 +25,11 @@ struct validator_stub {
   int32_t index;
   int64_t height;
   int32_t round;
-  priv_validator priv_val;
+  std::shared_ptr<priv_validator> priv_val;
   int64_t voting_power;
   vote last_vote;
 
-  static validator_stub new_validator_stub(priv_validator priv_val_, int32_t val_index) {
+  static validator_stub new_validator_stub(std::shared_ptr<priv_validator> priv_val_, int32_t val_index) {
     return validator_stub{val_index, 0, 0, priv_val_, test_min_power};
   }
 };
@@ -49,28 +49,26 @@ config config_setup() {
   return config_;
 }
 
-std::tuple<validator, priv_validator> rand_validator(bool rand_power, int64_t min_power) {
+std::tuple<validator, std::shared_ptr<priv_validator>> rand_validator(bool rand_power, int64_t min_power) {
   static int i = 0;
-
-  auto priv_val = priv_validator{};
-  priv_val.type = MockSignerClient;
+  auto priv_val = std::make_shared<mock_pv>();
 
   // Randomly generate a private key // TODO: use a different PKI algorithm
   // auto new_key = fc::crypto::private_key::generate<fc::ecc::private_key_shim>(); // randomly generate a private key
   fc::crypto::private_key new_key("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"); // TODO: read from a file
-  priv_val.priv_key_.key = fc::from_base58(new_key.to_string());
-  priv_val.pub_key_ = priv_val.priv_key_.get_pub_key();
+  priv_val->priv_key_.key = fc::from_base58(new_key.to_string());
+  priv_val->pub_key_ = priv_val->priv_key_.get_pub_key();
 
   auto vote_power = min_power;
   if (rand_power)
     vote_power += std::rand();
-  return {validator{priv_val.pub_key_.address(), priv_val.pub_key_, vote_power, 0}, priv_val};
+  return {validator{priv_val->pub_key_.address(), priv_val->pub_key_, vote_power, 0}, priv_val};
 }
 
-std::tuple<genesis_doc, std::vector<priv_validator>> rand_genesis_doc(
+std::tuple<genesis_doc, std::vector<std::shared_ptr<priv_validator>>> rand_genesis_doc(
   const config& config_, int num_validators, bool rand_power, int64_t min_power) {
   std::vector<genesis_validator> validators;
-  std::vector<priv_validator> priv_validators;
+  std::vector<std::shared_ptr<priv_validator>> priv_validators;
   for (auto i = 0; i < num_validators; i++) {
     auto [val, priv_val] = rand_validator(rand_power, min_power);
     validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
@@ -79,7 +77,7 @@ std::tuple<genesis_doc, std::vector<priv_validator>> rand_genesis_doc(
   return {genesis_doc{get_time(), config_.base.chain_id, 1, {}, validators}, priv_validators};
 }
 
-std::tuple<state, std::vector<priv_validator>> rand_genesis_state(
+std::tuple<state, std::vector<std::shared_ptr<priv_validator>>> rand_genesis_state(
   config& config_, int num_validators, bool rand_power, int64_t min_power) {
   auto [gen_doc, priv_vals] = rand_genesis_doc(config_, num_validators, rand_power, min_power);
   auto state_ = state::make_genesis_state(gen_doc);

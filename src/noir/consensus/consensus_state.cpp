@@ -104,14 +104,11 @@ round_state::event_data consensus_state::get_round_state_event() {
   return rs.new_event_data();
 }
 
-void consensus_state::set_priv_validator(const priv_validator& priv) {
+void consensus_state::set_priv_validator(const std::shared_ptr<priv_validator>& priv) {
   std::lock_guard<std::mutex> g(mtx);
 
   local_priv_validator = priv;
-
-  //  switch(priv.type) {
-  //  }
-  local_priv_validator_type = FileSignerClient; // todo - implement FilePV
+  local_priv_validator_type = priv->get_type(); // todo - implement FilePV
 
   update_priv_validator_pub_key();
 }
@@ -120,7 +117,7 @@ void consensus_state::set_priv_validator(const priv_validator& priv) {
  * get private validator public key and memoizes it
  */
 void consensus_state::update_priv_validator_pub_key() {
-  if (!local_priv_validator.has_value())
+  if (!local_priv_validator)
     return;
 
   std::chrono::system_clock::duration timeout = cs_config.timeout_prevote;
@@ -128,11 +125,10 @@ void consensus_state::update_priv_validator_pub_key() {
     timeout = cs_config.timeout_precommit;
 
   // no GetPubKey retry beyond the proposal/voting in RetrySignerClient
-  if (rs.step >= round_step_type::Precommit && local_priv_validator_type == RetrySignerClient)
+  if (rs.step >= round_step_type::Precommit && local_priv_validator_type == RetrySignerClient) {
     timeout = std::chrono::system_clock::duration::zero();
-
-  auto key = local_priv_validator->get_pub_key();
-  local_priv_validator_pub_key = pub_key{key};
+  }
+  local_priv_validator_pub_key = local_priv_validator->get_pub_key();
 }
 
 void consensus_state::reconstruct_last_commit(state& state_) {
@@ -558,7 +554,7 @@ void consensus_state::enter_propose(int64_t height, int32_t round) {
   schedule_timeout(cs_config.propose(round), height, round, round_step_type::Propose);
 
   // Nothing more to do if we are not a validator
-  if (!local_priv_validator.has_value()) {
+  if (!local_priv_validator) {
     dlog("node is not a validator");
     return;
   }
@@ -616,7 +612,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
   } else {
     // Create a new proposal block from state/txs from the mempool
     //    block_ = create_proposal_block();
-    if (!local_priv_validator.has_value())
+    if (!local_priv_validator)
       throw std::runtime_error("attempted to create proposal block with empty priv_validator");
 
     commit commit_;
@@ -1334,7 +1330,7 @@ p2p::tstamp consensus_state::vote_time() {
  * sign vote and publish on internal_msg_channel
  */
 vote consensus_state::sign_add_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header) {
-  if (!local_priv_validator.has_value())
+  if (!local_priv_validator)
     return {};
 
   if (local_priv_validator_pub_key.empty()) {

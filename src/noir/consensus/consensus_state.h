@@ -33,7 +33,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   state get_state();
   int64_t get_last_height();
   std::shared_ptr<round_state> get_round_state();
-  void set_priv_validator(const priv_validator& priv);
+  void set_priv_validator(const std::shared_ptr<priv_validator>& priv);
   void update_priv_validator_pub_key();
   void reconstruct_last_commit(state& state_);
 
@@ -95,7 +95,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   //  privValidator     types.PrivValidator // for signing votes
   //  privValidatorType types.PrivValidatorType
-  std::optional<priv_validator> local_priv_validator;
+  std::shared_ptr<priv_validator> local_priv_validator;
   priv_validator_type local_priv_validator_type;
 
   //  // store blocks and commits
