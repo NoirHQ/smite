@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/common/bit.h>
 #include <noir/common/check.h>
 #include <noir/common/hex.h>
 #include <fmt/core.h>
@@ -20,7 +21,40 @@ std::string to_hex(std::span<const char> s) {
   return r;
 }
 
-uint8_t from_hex(char c) {
+std::string to_hex(uint8_t v) {
+  return fmt::format("{:02x}", v);
+}
+
+std::string to_hex(uint16_t v) {
+  return fmt::format("{:04x}", v);
+}
+
+std::string to_hex(uint32_t v) {
+  return fmt::format("{:08x}", v);
+}
+
+std::string to_hex(uint64_t v) {
+  return fmt::format("{:016x}", v);
+}
+
+std::string to_hex(uint128_t v) {
+  std::string s;
+  s += to_hex(uint64_t(v >> 64));
+  s += to_hex(uint64_t(v));
+  return s;
+}
+
+std::string to_hex(uint256_t v) {
+  uint64_t data[4] = {0};
+  boost::multiprecision::export_bits(v, std::begin(data), 64, false);
+  std::string s;
+  std::for_each(std::rbegin(data), std::rend(data), [&](auto v) {
+    s += to_hex(v);
+  });
+  return s;
+}
+
+constexpr uint8_t from_hex(char c) {
   if (c >= '0' && c <= '9')
     return c - '0';
   if (c >= 'a' && c <= 'f')
@@ -45,6 +79,48 @@ size_t from_hex(std::string_view s, std::span<char> out) {
     require_pad = false;
   }
   return size;
+}
+
+void from_hex(std::string_view s, uint8_t& v) {
+  from_hex(s.substr(0, s.size() > 2 ? 2 : s.size()), std::span((char*)&v, 1));
+}
+
+void from_hex(std::string_view s, uint16_t& v) {
+  from_hex(s.substr(0, s.size() > 4 ? 4 : s.size()), std::span((char*)&v, 2));
+  v = byteswap(v);
+}
+
+void from_hex(std::string_view s, uint32_t& v) {
+  from_hex(s.substr(0, s.size() > 8 ? 8 : s.size()), std::span((char*)&v, 4));
+  v = byteswap(v);
+}
+
+void from_hex(std::string_view s, uint64_t& v) {
+  from_hex(s.substr(0, s.size() > 16 ? 16 : s.size()), std::span((char*)&v, 8));
+  v = byteswap(v);
+}
+
+void from_hex(std::string_view s, uint128_t& v) {
+#if defined(__SIZEOF_INT128__)
+  if (s.size() > 16) {
+    uint64_t upper = 0;
+    uint64_t lower = 0;
+    from_hex(s.substr(0, s.size() - 16), upper);
+    v = (uint128_t)upper << 64;
+    from_hex(s.substr(s.size() - 16), lower);
+    v |= lower;
+  } else {
+    uint64_t val = 0;
+    from_hex(s, val);
+    v = val;
+  }
+#else
+  v = std::move(uint128_t(s));
+#endif
+}
+
+void from_hex(std::string_view s, uint256_t& v) {
+  v = std::move(uint256_t(s));
 }
 
 std::vector<char> from_hex(std::string_view s) {
