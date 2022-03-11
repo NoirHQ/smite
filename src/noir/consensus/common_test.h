@@ -44,6 +44,8 @@ void increment_height(validator_stub_list& vss, size_t begin_at) {
 config config_setup() {
   auto config_ = config::get_default();
   config_.base.chain_id = "test_chain";
+  config_.base.root_dir = "/tmp/test_consensus";
+  config_.consensus.root_dir = config_.base.root_dir;
   return config_;
 }
 

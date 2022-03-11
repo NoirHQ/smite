@@ -83,7 +83,6 @@ struct consensus_config {
 
   static consensus_config get_default() {
     consensus_config cfg;
-    cfg.root_dir = appbase::app().home_dir().string();
     cfg.wal_path = "cs.wal";
     cfg.timeout_propose = std::chrono::milliseconds{3000};
     cfg.timeout_propose_delta = std::chrono::milliseconds{500};
