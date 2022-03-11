@@ -75,7 +75,7 @@ struct consensus_reactor {
   }
 
   void switch_to_consensus(state& state_, bool skip_wal) {
-    ilog("switching to consensus");
+    ilog("switched to consensus");
 
     if (state_.last_block_height > 0)
       cs_state->reconstruct_last_commit(state_);
