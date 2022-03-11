@@ -62,56 +62,43 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
   postcheck_ = postcheck;
 }
 
-bool tx_pool::check_tx_sync(const consensus::tx& tx) {
-  try {
-    auto tx_id = consensus::get_tx_id(tx);
-    auto& res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = tx});
-    check_tx_internal(tx_id, tx);
-    return add_tx(tx_id, tx, res);
-  } catch (std::exception& e) {
-    elog(fmt::format("{}", e.what()));
-    return false;
+void tx_pool::check_tx_sync(const consensus::tx& tx) {
+  auto tx_id = consensus::get_tx_id(tx);
+  check_tx_internal(tx_id, tx);
+  auto& res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = tx});
+  add_tx(tx_id, tx, res);
+}
+
+void tx_pool::check_tx_async(const consensus::tx& tx) {
+  auto tx_id = consensus::get_tx_id(tx);
+  check_tx_internal(tx_id, tx);
+  auto& req_res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
+  req_res.set_callback([&, tx_id, tx](consensus::response_check_tx& res) { add_tx(tx_id, tx, res); });
+}
+
+void tx_pool::check_tx_internal(const consensus::tx_id_type& tx_id, const consensus::tx& tx) {
+  if (tx.size() > config_.max_tx_bytes) {
+    FC_THROW_EXCEPTION(fc::tx_size_exception,
+      fmt::format("tx size {} bigger than {} (tx_id: {})", tx_id.to_string(), tx.size(), config_.max_tx_bytes));
+  }
+
+  if (precheck_ && !precheck_(tx)) {
+    FC_THROW_EXCEPTION(fc::bad_trasaction_exception, fmt::format("tx failed precheck (tx_id: {})", tx_id.to_string()));
+  }
+
+  tx_cache_.put(tx_id, tx);
+  if (tx_queue_.has(tx_id)) {
+    FC_THROW_EXCEPTION(
+      fc::existed_tx_exception, fmt::format("tx already exists in pool (tx_id: {})", tx_id.to_string()));
   }
 }
 
-bool tx_pool::check_tx_async(const consensus::tx& tx) {
-  try {
-    auto tx_id = consensus::get_tx_id(tx);
-    check_tx_internal(tx_id, tx);
-    auto& req_res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
-    req_res.set_callback([&, tx_id, tx](consensus::response_check_tx& res) { add_tx(tx_id, tx, res); });
-    return true;
-  } catch (std::exception& e) {
-    elog(fmt::format("{}", e.what()));
-    return false;
-  }
-}
-
-bool tx_pool::check_tx_internal(const consensus::tx_id_type& tx_id, const consensus::tx& tx) {
-  check(tx.size() < config_.max_tx_bytes,
-    fmt::format("tx size {} bigger than {} (tx_id: {})", tx_id.to_string(), tx.size(), config_.max_tx_bytes));
-
-  if (precheck_) {
-    check(precheck_(tx), fmt::format("tx failed precheck (tx_id: {})", tx_id.to_string()));
-  }
-
-  if (tx_cache_.has(tx_id)) {
-    // if tx already in pool, then just update cache
-    tx_cache_.put(tx_id, tx);
-    check(!tx_queue_.has(tx_id), fmt::format("tx already exists in pool (tx_id: {})", tx_id.to_string()));
-  } else {
-    tx_cache_.put(tx_id, tx);
-  }
-
-  return true;
-}
-
-bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res) {
+void tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res) {
   if (postcheck_ && !postcheck_(tx, res)) {
     if (res.code != consensus::code_type_ok) {
       tx_cache_.del(tx_id);
-      dlog(fmt::format("reject bad transaction (tx_id: {})", tx_id.to_string()));
-      return false;
+      FC_THROW_EXCEPTION(
+        fc::bad_trasaction_exception, fmt::format("reject bad transaction (tx_id: {})", tx_id.to_string()));
     }
   }
 
@@ -122,9 +109,8 @@ bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx
       if (!config_.keep_invalid_txs_in_cache) {
         tx_cache_.del(tx_id);
       }
-      dlog(
+      FC_THROW_EXCEPTION(fc::override_fail_exception,
         fmt::format("gas price is not enough for nonce override (tx_id: {}, nonce: {})", tx_id.to_string(), res.nonce));
-      return false;
     }
     tx_queue_.erase(old_tx);
   }
@@ -143,11 +129,10 @@ bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx
     if (!config_.keep_invalid_txs_in_cache) {
       tx_cache_.del(tx_id);
     }
-    dlog(fmt::format("add tx fail (tx_id: {})", tx_id.to_string()));
-    return false;
+    FC_THROW_EXCEPTION(fc::full_pool_exception, fmt::format("Tx pool is full"));
   }
+
   dlog(fmt::format("tx_id({}) is accepted.", tx_id.to_string()));
-  return true;
 }
 
 std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
@@ -193,7 +178,7 @@ std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
   return txs;
 }
 
-bool tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
+void tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
   std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
   std::lock_guard<std::mutex> lock(mutex_);
   block_height_ = block_height;
@@ -234,8 +219,6 @@ bool tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& bl
   if (config_.recheck) {
     update_recheck_txs();
   }
-
-  return true;
 }
 
 void tx_pool::update_recheck_txs() {

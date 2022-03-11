@@ -144,11 +144,6 @@ public:
   }
 
   bool add_tx(const consensus::wrapped_tx_ptr& tx_ptr) {
-    auto itr = queue_.get<by_tx_id>().find(tx_ptr->id().to_string());
-    if (itr != queue_.get<by_tx_id>().end()) {
-      return false;
-    }
-
     auto size = bytes_size(tx_ptr);
     if (size_in_bytes_ + size > max_tx_queue_bytes_size_) {
       return false;
@@ -160,7 +155,7 @@ public:
       incoming_count_++;
     }
 
-    return res.second;
+    return true;
   }
 
   template<typename Tag>
