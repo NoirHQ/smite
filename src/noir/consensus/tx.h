@@ -14,19 +14,19 @@ using tx = bytes;
 using tx_ptr = std::shared_ptr<tx>;
 
 using address_type = bytes;
-using tx_id_type = bytes32;
+using tx_hash = bytes32;
 
-static tx_id_type get_tx_id(const tx& tx) {
+static tx_hash get_tx_hash(const tx& tx) {
   if (tx.size() == 0) {
-    return tx_id_type{};
+    return tx_hash{};
   }
   crypto::sha3_256 hash;
-  return tx_id_type{hash(tx)}; // FIXME
+  return tx_hash{hash(tx)}; // FIXME
 }
 
 struct wrapped_tx {
   address_type sender;
-  std::optional<tx_id_type> _id;
+  std::optional<tx_hash> _hash;
 
   consensus::tx tx;
   uint64_t gas;
@@ -34,11 +34,11 @@ struct wrapped_tx {
   uint64_t height;
   p2p::tstamp time_stamp;
 
-  tx_id_type id() {
-    if (!_id.has_value()) {
-      _id = get_tx_id(tx);
+  tx_hash hash() {
+    if (!_hash.has_value()) {
+      _hash = get_tx_hash(tx);
     }
-    return _id.value();
+    return _hash.value();
   }
 
   uint64_t size() const {

@@ -27,8 +27,8 @@ struct unapplied_tx {
   const consensus::address_type sender() const {
     return tx_ptr->sender;
   }
-  const std::string id() const {
-    return tx_ptr->id().to_string();
+  const std::string hash() const {
+    return tx_ptr->hash().to_string();
   }
   const uint64_t height() const {
     return tx_ptr->height;
@@ -46,7 +46,7 @@ struct unapplied_tx {
 
 class unapplied_tx_queue {
 public:
-  struct by_tx_id;
+  struct by_hash;
   struct by_gas;
   struct by_sender;
   struct by_nonce;
@@ -59,8 +59,8 @@ private:
     unapplied_tx,
     boost::multi_index::indexed_by<
       boost::multi_index::hashed_unique<
-        boost::multi_index::tag<by_tx_id>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const std::string, &unapplied_tx::id>
+        boost::multi_index::tag<by_hash>,
+        boost::multi_index::const_mem_fun<unapplied_tx, const std::string, &unapplied_tx::hash>
       >,
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<by_gas>,
@@ -123,13 +123,13 @@ public:
     return incoming_count_;
   }
 
-  bool has(const consensus::tx_id_type& id) const {
-    return queue_.get<by_tx_id>().find(id.to_string()) != queue_.get<by_tx_id>().end();
+  bool has(const consensus::tx_hash& tx_hash) const {
+    return queue_.get<by_hash>().find(tx_hash.to_string()) != queue_.get<by_hash>().end();
   }
 
-  consensus::wrapped_tx_ptr get_tx(const consensus::tx_id_type& id) const {
-    auto itr = queue_.get<by_tx_id>().find(id.to_string());
-    if (itr == queue_.get<by_tx_id>().end()) {
+  consensus::wrapped_tx_ptr get_tx(const consensus::tx_hash& tx_hash) const {
+    auto itr = queue_.get<by_hash>().find(tx_hash.to_string());
+    if (itr == queue_.get<by_hash>().end()) {
       return {};
     }
     return itr->tx_ptr;
@@ -222,22 +222,22 @@ public:
   }
 
   bool erase(const consensus::wrapped_tx_ptr& tx_ptr) {
-    return erase(tx_ptr->id().to_string());
+    return erase(tx_ptr->hash().to_string());
   }
 
-  bool erase(const consensus::tx_id_type& id) {
-    return erase(id.to_string());
+  bool erase(const consensus::tx_hash& tx_hash) {
+    return erase(tx_hash.to_string());
   }
 
-  bool erase(const std::string& id) {
-    auto itr = queue_.get<by_tx_id>().find(id);
-    if (itr == queue_.get<by_tx_id>().end()) {
+  bool erase(const std::string& tx_hash) {
+    auto itr = queue_.get<by_hash>().find(tx_hash);
+    if (itr == queue_.get<by_hash>().end()) {
       return false;
     }
 
     incoming_count_--;
     size_in_bytes_ -= bytes_size(itr->tx_ptr);
-    queue_.get<by_tx_id>().erase(itr);
+    queue_.get<by_hash>().erase(itr);
     return true;
   }
 

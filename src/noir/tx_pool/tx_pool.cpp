@@ -63,42 +63,43 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
 }
 
 void tx_pool::check_tx_sync(const consensus::tx& tx) {
-  auto tx_id = consensus::get_tx_id(tx);
-  check_tx_internal(tx_id, tx);
+  auto tx_hash = consensus::get_tx_hash(tx);
+  check_tx_internal(tx_hash, tx);
   auto& res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = tx});
-  add_tx(tx_id, tx, res);
+  add_tx(tx_hash, tx, res);
 }
 
 void tx_pool::check_tx_async(const consensus::tx& tx) {
-  auto tx_id = consensus::get_tx_id(tx);
-  check_tx_internal(tx_id, tx);
+  auto tx_hash = consensus::get_tx_hash(tx);
+  check_tx_internal(tx_hash, tx);
   auto& req_res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
-  req_res.set_callback([&, tx_id, tx](consensus::response_check_tx& res) { add_tx(tx_id, tx, res); });
+  req_res.set_callback([&, tx_hash, tx](consensus::response_check_tx& res) { add_tx(tx_hash, tx, res); });
 }
 
-void tx_pool::check_tx_internal(const consensus::tx_id_type& tx_id, const consensus::tx& tx) {
+void tx_pool::check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx& tx) {
   if (tx.size() > config_.max_tx_bytes) {
     FC_THROW_EXCEPTION(fc::tx_size_exception,
-      fmt::format("tx size {} bigger than {} (tx_id: {})", tx_id.to_string(), tx.size(), config_.max_tx_bytes));
+      fmt::format("tx size {} bigger than {} (tx_hash: {})", tx_hash.to_string(), tx.size(), config_.max_tx_bytes));
   }
 
   if (precheck_ && !precheck_(tx)) {
-    FC_THROW_EXCEPTION(fc::bad_trasaction_exception, fmt::format("tx failed precheck (tx_id: {})", tx_id.to_string()));
+    FC_THROW_EXCEPTION(
+      fc::bad_trasaction_exception, fmt::format("tx failed precheck (tx_hash: {})", tx_hash.to_string()));
   }
 
-  tx_cache_.put(tx_id, tx);
-  if (tx_queue_.has(tx_id)) {
+  tx_cache_.put(tx_hash, tx);
+  if (tx_queue_.has(tx_hash)) {
     FC_THROW_EXCEPTION(
-      fc::existed_tx_exception, fmt::format("tx already exists in pool (tx_id: {})", tx_id.to_string()));
+      fc::existed_tx_exception, fmt::format("tx already exists in pool (tx_hash: {})", tx_hash.to_string()));
   }
 }
 
-void tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res) {
+void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx, consensus::response_check_tx& res) {
   if (postcheck_ && !postcheck_(tx, res)) {
     if (res.code != consensus::code_type_ok) {
-      tx_cache_.del(tx_id);
+      tx_cache_.del(tx_hash);
       FC_THROW_EXCEPTION(
-        fc::bad_trasaction_exception, fmt::format("reject bad transaction (tx_id: {})", tx_id.to_string()));
+        fc::bad_trasaction_exception, fmt::format("reject bad transaction (tx_hash: {})", tx_hash.to_string()));
     }
   }
 
@@ -107,17 +108,18 @@ void tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx
   if (old_tx) {
     if (res.gas_wanted < old_tx->gas + config_.gas_price_bump) {
       if (!config_.keep_invalid_txs_in_cache) {
-        tx_cache_.del(tx_id);
+        tx_cache_.del(tx_hash);
       }
       FC_THROW_EXCEPTION(fc::override_fail_exception,
-        fmt::format("gas price is not enough for nonce override (tx_id: {}, nonce: {})", tx_id.to_string(), res.nonce));
+        fmt::format(
+          "gas price is not enough for nonce override (tx_hash: {}, nonce: {})", tx_hash.to_string(), res.nonce));
     }
     tx_queue_.erase(old_tx);
   }
 
   auto wtx = consensus::wrapped_tx{
     .sender = res.sender,
-    ._id = tx_id,
+    ._hash = tx_hash,
     .tx = tx,
     .gas = res.gas_wanted,
     .nonce = res.nonce,
@@ -127,12 +129,12 @@ void tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx
 
   if (!tx_queue_.add_tx(std::make_shared<consensus::wrapped_tx>(wtx))) {
     if (!config_.keep_invalid_txs_in_cache) {
-      tx_cache_.del(tx_id);
+      tx_cache_.del(tx_hash);
     }
     FC_THROW_EXCEPTION(fc::full_pool_exception, fmt::format("Tx pool is full"));
   }
 
-  dlog(fmt::format("tx_id({}) is accepted.", tx_id.to_string()));
+  dlog(fmt::format("tx_hash({}) is accepted.", tx_hash.to_string()));
 }
 
 std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
@@ -193,27 +195,28 @@ void tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& bl
 
   size_t size = std::min(block_txs.size(), responses.size());
   for (auto i = 0; i < size; i++) {
-    auto tx_id = consensus::get_tx_id(block_txs[i]);
+    auto tx_hash = consensus::get_tx_hash(block_txs[i]);
     if (responses[i].code == consensus::code_type_ok) {
-      tx_cache_.put(tx_id, block_txs[i]);
+      tx_cache_.put(tx_hash, block_txs[i]);
     } else if (!config_.keep_invalid_txs_in_cache) {
-      tx_cache_.del(tx_id);
+      tx_cache_.del(tx_hash);
     }
 
-    tx_queue_.erase(tx_id);
+    tx_queue_.erase(tx_hash);
   }
 
   if (config_.ttl_num_blocks > 0) {
     uint64_t expired_block_height = block_height_ > config_.ttl_num_blocks ? block_height_ - config_.ttl_num_blocks : 0;
     std::for_each(tx_queue_.begin<unapplied_tx_queue::by_height>(0),
       tx_queue_.end<unapplied_tx_queue::by_height>(expired_block_height),
-      [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->id()); });
+      [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->hash()); });
   }
 
   if (config_.ttl_duration > 0) {
     auto expired_time = consensus::get_time() - config_.ttl_duration;
     std::for_each(tx_queue_.begin<unapplied_tx_queue::by_time>(0),
-      tx_queue_.end<unapplied_tx_queue::by_time>(expired_time), [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->id()); });
+      tx_queue_.end<unapplied_tx_queue::by_time>(expired_time),
+      [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->hash()); });
   }
 
   if (config_.recheck) {
