@@ -55,13 +55,9 @@ fc::variant api::send_raw_tx(const fc::variant& req) {
 
   // TODO: add tx pool and return tx_hash
   consensus::tx tx(from_hex(rlp));
-  auto result = tx_pool_ptr->check_tx_sync(tx);
-  if (result) {
-    auto tx_hash = noir::consensus::get_tx_id(tx);
-    return fc::variant(fmt::format("0x{}", tx_hash.to_string()));
-  } else {
-    throw std::runtime_error("already known");
-  }
+  tx_pool_ptr->check_tx_sync(tx);
+  auto tx_hash = noir::consensus::get_tx_id(tx);
+  return fc::variant(fmt::format("0x{}", tx_hash.to_string()));
 }
 
 fc::variant api::chain_id(const fc::variant& req) {

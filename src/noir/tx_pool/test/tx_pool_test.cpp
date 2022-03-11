@@ -209,7 +209,7 @@ TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
   SECTION("Add same tx id") { // fail case
     auto wtx = wtxs[0];
     wtx->nonce = wtxs[tx_count - 1]->nonce + 1;
-    CHECK(tx_queue.add_tx(wtx) == false);
+    CHECK(tx_queue.add_tx(wtx));
     CHECK(tx_queue.size() == tx_count);
     CHECK(tx_queue.get_tx(wtxs[0]->id()));
   }
@@ -369,12 +369,12 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
     auto txs = test_helper->new_txs(tx_count);
 
     for (auto& tx : txs) {
-      CHECK(tp.check_tx_sync(tx));
+      CHECK_NOTHROW(tp.check_tx_sync(tx));
     }
 
     // fail case : same txs
     for (auto& tx : txs) {
-      CHECK(!tp.check_tx_sync(tx));
+      CHECK_THROWS_AS(tp.check_tx_sync(tx), fc::existed_tx_exception);
     }
 
     CHECK(txs.size() == tx_count);
@@ -395,7 +395,7 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
           while (token.load(std::memory_order_seq_cst)) {
           } // wait other thread
           for (auto& tx : txs) {
-            CHECK(tp.check_tx_async(tx));
+            CHECK_NOTHROW(tp.check_tx_async(tx));
           }
         });
       }
@@ -418,7 +418,7 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
         for (auto& tx : txs) {
-          CHECK(tp.check_tx_async(tx));
+          CHECK_NOTHROW(tp.check_tx_async(tx));
         }
       });
 
@@ -457,7 +457,7 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
           while (token.load(std::memory_order_seq_cst)) {
           } // wait other thread
           for (auto& tx : txs) {
-            CHECK(tp.check_tx_async(tx));
+            CHECK_NOTHROW(tp.check_tx_async(tx));
           }
         });
       }
@@ -500,7 +500,7 @@ TEST_CASE("tx_pool: Reap tx using max bytes & gas", "[noir][tx_pool]") {
   const uint64_t tx_count = 10000;
   for (auto i = 0; i < tx_count; i++) {
     test_app->set_gas(test_detail::rand_gas());
-    CHECK(tp.check_tx_sync(test_helper->new_tx()));
+    CHECK_NOTHROW(tp.check_tx_sync(test_helper->new_tx()));
   }
 
   uint tc = 100;
@@ -522,7 +522,7 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
   const uint64_t tx_count = 10;
   auto put_tx = [&](class tx_pool& tp, std::vector<tx>& txs) {
     for (auto& tx : txs) {
-      CHECK(tp.check_tx_sync(tx));
+      CHECK_NOTHROW(tp.check_tx_sync(tx));
     }
   };
 
@@ -532,7 +532,7 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
     put_tx(tp, txs);
     std::vector<consensus::response_deliver_tx> res;
     res.resize(tx_count);
-    CHECK(tp.update(0, txs, res));
+    tp.update(0, txs, res);
     CHECK(tp.empty());
   }
 
@@ -544,13 +544,13 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
     std::vector<consensus::response_deliver_tx> res;
     std::vector<tx> empty_txs;
     for (uint64_t i = 0; i < tx_count; i++) {
-      CHECK(tp.update(i, empty_txs, res));
+      tp.update(i, empty_txs, res);
       auto txs = test_helper->new_txs(1);
       put_tx(tp, txs);
     }
 
     for (uint64_t i = 0; i < tx_count; i++) {
-      CHECK(tp.update(config.ttl_num_blocks + i, empty_txs, res));
+      tp.update(config.ttl_num_blocks + i, empty_txs, res);
       CHECK(tp.size() == tx_count - i - 1);
     }
     CHECK(tp.empty());
@@ -567,7 +567,7 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
     std::vector<consensus::tx> empty_txs;
 
     usleep(100000LL); // sleep 100 msec
-    CHECK(tp.update(0, empty_txs, res));
+    tp.update(0, empty_txs, res);
     CHECK(tp.empty());
   }
 }
@@ -579,15 +579,15 @@ TEST_CASE("tx_pool: Nonce override", "[noir][tx_pool]") {
   auto& tp = test_helper->make_tx_pool(config, test_app);
 
   auto tx1 = test_helper->new_tx();
-  CHECK(tp.check_tx_sync(tx1));
+  CHECK_NOTHROW(tp.check_tx_sync(tx1));
 
   auto tx2 = test_helper->new_tx();
   test_app->set_nonce(0);
-  CHECK(!tp.check_tx_sync(tx2));
+  CHECK_THROWS_AS(tp.check_tx_sync(tx2), fc::override_fail_exception);
 
   test_app->set_nonce(0);
   test_app->set_gas(config.gas_price_bump);
-  CHECK(tp.check_tx_sync(tx2));
+  CHECK_NOTHROW(tp.check_tx_sync(tx2));
 }
 
 TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {

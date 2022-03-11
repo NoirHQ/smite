@@ -11,6 +11,7 @@
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/unapplied_tx_queue.h>
 #include <appbase/application.hpp>
+#include <fc/exception/exception.hpp>
 
 namespace noir::tx_pool {
 
@@ -63,12 +64,12 @@ public:
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
 
-  bool check_tx_sync(const consensus::tx& tx);
-  bool check_tx_async(const consensus::tx& tx);
+  void check_tx_sync(const consensus::tx& tx);
+  void check_tx_async(const consensus::tx& tx);
 
   std::vector<consensus::tx> reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
   std::vector<consensus::tx> reap_max_txs(uint64_t tx_count);
-  bool update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
+  void update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
     std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck = nullptr,
     postcheck_func* new_postcheck = nullptr);
 
@@ -78,9 +79,25 @@ public:
   void flush_app_conn();
 
 private:
-  bool check_tx_internal(const consensus::tx_id_type& tx_id, const consensus::tx& tx);
-  bool add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
+  void check_tx_internal(const consensus::tx_id_type& tx_id, const consensus::tx& tx);
+  void add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
   void update_recheck_txs();
 };
 
+enum tx_pool_exception {
+  existed_tx_code = 0,
+  tx_size_error_code = 1,
+  bad_transaction_code = 2,
+  override_fail_code = 3,
+  full_pool_code = 4,
+};
+
 } // namespace noir::tx_pool
+
+namespace fc {
+FC_DECLARE_EXCEPTION(existed_tx_exception, noir::tx_pool::existed_tx_code, "Existed tx");
+FC_DECLARE_EXCEPTION(tx_size_exception, noir::tx_pool::tx_size_error_code, "Tx size error");
+FC_DECLARE_EXCEPTION(bad_trasaction_exception, noir::tx_pool::bad_transaction_code, "Bad transaction");
+FC_DECLARE_EXCEPTION(override_fail_exception, noir::tx_pool::override_fail_code, "Nonce override fail");
+FC_DECLARE_EXCEPTION(full_pool_exception, noir::tx_pool::full_pool_code, "Pool is full");
+} // namespace fc
