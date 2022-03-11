@@ -58,10 +58,10 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
 
   auto write_tree_update_batch(const tree_update_batch<T>& batch) -> result<void> {
     for (const auto& [k, v] : batch.node_batch) {
-      return_if_error(put_node(k, v));
+      ok(put_node(k, v));
     }
     for (const auto& i : batch.stale_node_index_batch) {
-      return_if_error(put_stale_node_index(i));
+      ok(put_stale_node_index(i));
     }
     return {};
   }
