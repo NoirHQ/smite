@@ -8,12 +8,13 @@
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/block.h>
 
+#include <memory>
 #include <utility>
 
 namespace noir::consensus::block_sync {
 
-constexpr auto request_interval{std::chrono::milliseconds(2)};
-constexpr int max_total_requesters{30}; // default = 600
+constexpr auto request_interval{std::chrono::milliseconds(2)}; // default = 2
+constexpr int max_total_requesters{5}; // default = 600
 constexpr int max_peer_err_buffer{1000};
 constexpr int max_pending_requests{max_total_requesters};
 constexpr int max_pending_requests_per_peer{20};
@@ -27,23 +28,22 @@ struct bp_peer;
 
 /// \brief keeps track of block sync peers, block requests and block responses
 struct block_pool : std::enable_shared_from_this<block_pool> {
-  p2p::tstamp last_advance;
+  p2p::tstamp last_advance{};
 
   std::mutex mtx;
   std::map<int64_t, std::shared_ptr<bp_requester>> requesters;
-  int64_t height;
   std::map<std::string, std::shared_ptr<bp_peer>> peers;
-  int64_t max_peer_height;
+  int64_t height{};
+  int64_t max_peer_height{};
 
-  int32_t num_pending;
-  int64_t start_height;
-  p2p::tstamp last_hundred_block_timestamp;
-  double last_sync_rate;
+  int32_t num_pending{};
+  int64_t start_height{};
+  p2p::tstamp last_hundred_block_timestamp{};
+  double last_sync_rate{};
 
   bool is_running{}; ///< used to end active jobs on_stop
   uint16_t thread_pool_size = 15;
   std::optional<named_thread_pool> thread_pool;
-  std::shared_ptr<boost::asio::io_context::strand> strand;
 
   // Send an envelope to peers [via p2p]
   plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel =
@@ -51,7 +51,6 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
 
   block_pool() {
     thread_pool.emplace("cs_reactor", thread_pool_size);
-    strand = std::make_shared<boost::asio::io_context::strand>(thread_pool->get_executor());
   }
 
   static std::shared_ptr<block_pool> new_block_pool(int64_t start) {
@@ -75,21 +74,18 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   }
 
   void make_requester_routine() {
-    strand->post([this]() {
-      if (!is_running)
-        return;
-
-      auto [h, num_pending_, num_requesters_] = get_status();
-      if (num_pending_ >= max_pending_requests) {
-        std::this_thread::sleep_for(request_interval);
-        remove_timed_out_peers();
-      } else if (num_requesters_ >= max_total_requesters) {
-        std::this_thread::sleep_for(request_interval);
-        remove_timed_out_peers();
-      } else {
-        make_next_requester();
+    thread_pool->get_executor().post([this]() {
+      while (true) {
+        if (!is_running)
+          return;
+        auto [h, num_pending_, num_requesters_] = get_status();
+        if (num_pending_ >= max_pending_requests || num_requesters_ >= max_total_requesters) {
+          std::this_thread::sleep_for(request_interval);
+          remove_timed_out_peers();
+        } else {
+          make_next_requester();
+        }
       }
-      make_requester_routine();
     });
   }
 
@@ -120,19 +116,19 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   void remove_timed_out_peers();
   void remove_peer(std::string peer_id);
   void update_max_peer_height();
-  std::shared_ptr<bp_peer> pick_incr_available_peer(int64_t height);
+  std::shared_ptr<bp_peer> pick_incr_available_peer(int64_t height_);
 
-  std::string redo_request(int64_t height);
+  std::string redo_request(int64_t height_);
 
-  void add_block(std::string peer_id, std::shared_ptr<consensus::block> block_, int block_size);
+  void add_block(std::string peer_id_, std::shared_ptr<consensus::block> block_, int block_size);
 
   void set_peer_range(std::string peer_id_, int64_t base, int64_t height_);
 
   void make_next_requester();
 
-  void send_request(int64_t height, std::string peer_id);
+  void send_request(int64_t height_, std::string peer_id_);
 
-  void send_error(std::string err, std::string peer_id);
+  void send_error(std::string err, std::string peer_id_);
 
   void transmit_new_envelope(const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg,
     bool broadcast = false, int priority = appbase::priority::medium);
@@ -148,28 +144,21 @@ struct bp_requester {
   std::string peer_id;
   std::shared_ptr<consensus::block> block_;
 
-  bool is_running{}; ///< used to end active jobs on_stop
-  std::shared_ptr<boost::asio::io_context::strand> strand;
-
   static std::shared_ptr<bp_requester> new_bp_requester(std::shared_ptr<block_pool> new_pool_, int64_t height_) {
     auto bpr = std::make_shared<bp_requester>();
     bpr->pool = std::move(new_pool_);
     bpr->height = height_;
     bpr->peer_id = "";
     bpr->block_ = nullptr;
-    assert(bpr->pool);
-    bpr->strand = std::make_shared<boost::asio::io_context::strand>(bpr->pool->thread_pool->get_executor());
+    check(bpr->pool != nullptr, "bp_requester must be given non-null pool");
     return bpr;
   }
 
   void on_start() {
-    is_running = true;
     request_routine();
   }
 
-  void on_stop() {
-    is_running = false; // TODO: is this enough?
-  }
+  void on_stop() {}
 
   bool set_block(std::shared_ptr<block> blk_, std::string peer_id_);
 
@@ -199,25 +188,28 @@ struct bp_requester {
 /// \brief keeps monitoring a peer
 /// remove a peer from a list of peers when it doesn't send us anything for a while
 struct bp_peer {
-  bool did_timeout;
-  int32_t num_pending;
-  int64_t height;
-  int64_t base;
-  std::shared_ptr<block_pool> pool;
+  bool did_timeout{};
+  int32_t num_pending{};
+  int64_t height{};
+  int64_t base{};
+  std::shared_ptr<block_pool> pool{};
   std::string id;
-  // recv_monitor // TODO: maybe not needed?
 
+  std::shared_ptr<boost::asio::io_context::strand> strand;
   std::shared_ptr<boost::asio::steady_timer> timeout;
 
-  static std::shared_ptr<bp_peer> new_bp_peer(std::shared_ptr<block_pool> pool_, std::string peer_id, int64_t base_,
-    int64_t height_, boost::asio::io_context& ioc) {
+  static std::shared_ptr<bp_peer> new_bp_peer(
+    const std::shared_ptr<block_pool>& pool_, const std::string& peer_id_, int64_t base_, int64_t height_) {
     auto peer = std::make_shared<bp_peer>();
     peer->pool = pool_;
-    peer->id = peer_id;
+    peer->id = peer_id_;
     peer->base = base_;
     peer->height = height_;
-    peer->timeout.reset(new boost::asio::steady_timer(ioc));
-    peer->reset_timeout();
+
+    check(pool_ != nullptr, "bp_peer must be given non-null pool");
+    peer->strand = std::make_shared<boost::asio::io_context::strand>(pool_->thread_pool->get_executor());
+    peer->timeout = std::make_shared<boost::asio::steady_timer>(
+      peer->strand->context(), std::chrono::steady_clock::now() + peer_timeout);
     peer->timeout->async_wait([peer](boost::system::error_code ec) {
       if (ec)
         return;
@@ -227,7 +219,6 @@ struct bp_peer {
   }
 
   void on_timeout() {
-    std::lock_guard<std::mutex> g(pool->mtx);
     std::string err("peer did not send us anything for a while");
     pool->send_error(err, id);
     elog("send_timeout: reason=${reason} sender=${sender}", ("reason", err)("sender", id));
@@ -236,7 +227,6 @@ struct bp_peer {
 
   void incr_pending() {
     if (num_pending == 0) {
-      // reset_monitor(); // TODO: maybe not needed?
       reset_timeout();
     }
     num_pending++;
@@ -247,14 +237,12 @@ struct bp_peer {
     if (num_pending == 0) {
       if (timeout)
         timeout->cancel();
-      on_timeout(); // manually call here, as cancelling timeout does not invoke it
     } else {
-      // recv_monitor.update(recv_size); // TODO: maybe not needed?
       reset_timeout();
     }
   }
 
-  void reset_timeout() {
+  void reset_timeout() const {
     if (timeout) {
       timeout->expires_from_now(peer_timeout);
     }
