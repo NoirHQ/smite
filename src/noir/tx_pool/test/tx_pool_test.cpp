@@ -130,6 +130,7 @@ public:
 
   auto new_txs(uint count) {
     std::vector<consensus::tx> txs;
+    txs.reserve(count);
     for (uint i = 0; i < count; i++) {
       txs.push_back(new_tx());
     }
@@ -193,6 +194,7 @@ TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
 
   const uint64_t tx_count = 10;
   wrapped_tx_ptrs wtxs;
+  wtxs.reserve(tx_count);
   for (auto i = 0; i < tx_count; i++) {
     wtxs.push_back(test_helper->make_random_wrapped_tx("user"));
   }
@@ -243,7 +245,6 @@ TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
 
   SECTION("Flush") {
     tx_queue.clear();
-    CHECK(tx_queue.size() == 0);
     CHECK(tx_queue.empty());
   }
 }
@@ -253,6 +254,7 @@ TEST_CASE("unapplied_tx_queue: Fully add/erase tx", "[noir][tx_pool]") {
   uint64_t tx_count = 10000;
   uint64_t queue_size = 0;
   wrapped_tx_ptrs wtxs;
+  wtxs.reserve(tx_count);
   for (uint64_t i = 0; i < tx_count; i++) {
     wtxs.push_back(test_helper->make_random_wrapped_tx("user"));
   }
@@ -537,7 +539,6 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
     };
     auto& tp = test_helper->make_tx_pool(config);
     std::vector<consensus::response_deliver_tx> res;
-    res.resize(tx_count);
     std::vector<tx> empty_txs;
     for (uint64_t i = 0; i < tx_count; i++) {
       CHECK(tp.update(i, empty_txs, res));
@@ -560,7 +561,6 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
     auto txs = test_helper->new_txs(tx_count);
     put_tx(tp, txs);
     std::vector<consensus::response_deliver_tx> res;
-    res.resize(tx_count);
     std::vector<consensus::tx> empty_txs;
 
     usleep(100000LL); // sleep 100 msec
@@ -599,6 +599,7 @@ TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
     tx_id_type id;
   };
   std::vector<test_tx> txs;
+  txs.reserve(tx_count);
 
   for (uint64_t i = 0; i < tx_count; i++) {
     test_tx test_tx;
