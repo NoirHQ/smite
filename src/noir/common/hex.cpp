@@ -48,9 +48,7 @@ std::string to_hex(uint256_t v) {
   uint64_t data[4] = {0};
   boost::multiprecision::export_bits(v, std::begin(data), 64, false);
   std::string s;
-  std::for_each(std::rbegin(data), std::rend(data), [&](auto v) {
-    s += to_hex(v);
-  });
+  std::for_each(std::rbegin(data), std::rend(data), [&](auto v) { s += to_hex(v); });
   return s;
 }
 
@@ -82,27 +80,37 @@ size_t from_hex(std::string_view s, std::span<char> out) {
 }
 
 void from_hex(std::string_view s, uint8_t& v) {
-  from_hex(s.substr(0, s.size() > 2 ? 2 : s.size()), std::span((char*)&v, 1));
+  auto has_prefix = s.starts_with("0x");
+  auto size = 2 + has_prefix * 2;
+  from_hex(s.substr(0, s.size() > size ? size : s.size()), std::span((char*)&v, 1));
 }
 
 void from_hex(std::string_view s, uint16_t& v) {
-  from_hex(s.substr(0, s.size() > 4 ? 4 : s.size()), std::span((char*)&v, 2));
+  auto has_prefix = s.starts_with("0x");
+  auto size = 4 + has_prefix * 2;
+  from_hex(s.substr(0, s.size() > size ? size : s.size()), std::span((char*)&v, 2));
   v = byteswap(v);
 }
 
 void from_hex(std::string_view s, uint32_t& v) {
-  from_hex(s.substr(0, s.size() > 8 ? 8 : s.size()), std::span((char*)&v, 4));
+  auto has_prefix = s.starts_with("0x");
+  auto size = 8 + has_prefix * 2;
+  from_hex(s.substr(0, s.size() > size ? size : s.size()), std::span((char*)&v, 4));
   v = byteswap(v);
 }
 
 void from_hex(std::string_view s, uint64_t& v) {
-  from_hex(s.substr(0, s.size() > 16 ? 16 : s.size()), std::span((char*)&v, 8));
+  auto has_prefix = s.starts_with("0x");
+  auto size = 16 + has_prefix * 2;
+  from_hex(s.substr(0, s.size() > size ? size : s.size()), std::span((char*)&v, 8));
   v = byteswap(v);
 }
 
 void from_hex(std::string_view s, uint128_t& v) {
 #if defined(__SIZEOF_INT128__)
-  if (s.size() > 16) {
+  auto has_prefix = s.starts_with("0x");
+  auto size = 16 + has_prefix * 2;
+  if (s.size() > size) {
     uint64_t upper = 0;
     uint64_t lower = 0;
     from_hex(s.substr(0, s.size() - 16), upper);
