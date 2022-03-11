@@ -152,7 +152,6 @@ bool tx_pool::add_tx(const consensus::tx_id_type& tx_id, const consensus::tx& tx
 
 std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
   std::lock_guard<std::mutex> lock(mutex_);
-
   std::vector<consensus::tx> txs;
   auto rbegin = tx_queue_.rbegin<unapplied_tx_queue::by_gas>(max_gas);
   auto rend = tx_queue_.rend<unapplied_tx_queue::by_gas>(0);
@@ -160,18 +159,19 @@ std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, u
   uint64_t bytes = 0;
   uint64_t gas = 0;
   for (auto itr = rbegin; itr != rend; itr++) {
-    auto tx_ptr = itr->tx_ptr;
-    if (gas + tx_ptr->gas > max_gas) {
+    auto wtx = itr->tx_ptr;
+    auto tx = wtx->tx;
+    if (gas + wtx->gas > max_gas) {
       continue;
     }
 
-    if (bytes + tx_ptr->size() > max_bytes) {
+    if (bytes + tx.size() > max_bytes) {
       break;
     }
 
-    bytes += tx_ptr->size();
-    gas += tx_ptr->gas;
-    txs.push_back(tx_ptr->tx);
+    bytes += tx.size();
+    gas += wtx->gas;
+    txs.push_back(tx);
   }
 
   return txs;
