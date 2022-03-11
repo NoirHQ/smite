@@ -17,7 +17,7 @@ struct node {
 
   std::shared_ptr<config> config_{};
   std::shared_ptr<genesis_doc> genesis_doc_{};
-  priv_validator priv_validator_{};
+  std::shared_ptr<priv_validator> priv_validator_{};
 
   node_key node_key_{};
   bool is_listening{};
@@ -31,16 +31,15 @@ struct node {
   static std::unique_ptr<node> new_default_node(const std::shared_ptr<config>& new_config) {
     // Load or generate priv - todo
     std::vector<genesis_validator> validators;
-    std::vector<priv_validator> priv_validators;
-    auto priv_val = priv_validator{};
-    priv_val.type = MockSignerClient;
+    std::vector<std::shared_ptr<priv_validator>> priv_validators;
+    auto priv_val = mock_pv{};
     fc::crypto::private_key new_key("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"); // TODO: read from a file
     priv_val.priv_key_.key = fc::from_base58(new_key.to_string());
     priv_val.pub_key_ = priv_val.priv_key_.get_pub_key();
     auto vote_power = 10;
     auto val = validator{priv_val.pub_key_.address(), priv_val.pub_key_, vote_power, 0};
     validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
-    priv_validators.push_back(priv_val);
+    priv_validators.push_back(std::make_shared<mock_pv>(priv_val));
     auto gen_doc = genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators};
 
     // Load or generate node_key - todo
@@ -54,7 +53,7 @@ struct node {
   }
 
   static std::unique_ptr<node> make_node(const std::shared_ptr<config>& new_config,
-    const priv_validator& new_priv_validator, const node_key& new_node_key,
+    const std::shared_ptr<priv_validator>& new_priv_validator, const node_key& new_node_key,
     const std::shared_ptr<genesis_doc>& new_genesis_doc,
     const std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>& session) {
 
@@ -68,7 +67,7 @@ struct node {
     // Setup pub_key_
     pub_key pub_key_;
     if (new_config->base.mode == Validator) {
-      pub_key_ = new_priv_validator.pub_key_;
+      pub_key_ = new_priv_validator->get_pub_key();
       // todo - check error
     }
 
@@ -131,7 +130,7 @@ struct node {
   static std::tuple<std::shared_ptr<consensus_reactor>, std::shared_ptr<consensus_state>> create_consensus_reactor(
     const std::shared_ptr<config>& config_, const std::shared_ptr<state>& state_,
     const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& block_store_,
-    const priv_validator& priv_validator_, bool wait_sync) {
+    const std::shared_ptr<priv_validator>& priv_validator_, bool wait_sync) {
     auto cs_state = consensus_state::new_state(config_->consensus, *state_, block_exec_, block_store_);
 
     if (config_->base.mode == Validator)

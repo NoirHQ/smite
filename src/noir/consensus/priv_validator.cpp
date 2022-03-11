@@ -8,7 +8,7 @@
 
 namespace noir::consensus {
 
-std::optional<std::string> priv_validator::sign_vote(vote& vote_) {
+std::optional<std::string> mock_pv::sign_vote(vote& vote_) {
   // TODO: add some validation checks
 
   auto bz = encode(vote_);
@@ -18,7 +18,7 @@ std::optional<std::string> priv_validator::sign_vote(vote& vote_) {
   return {};
 }
 
-std::optional<std::string> priv_validator::sign_proposal(proposal& proposal_) {
+std::optional<std::string> mock_pv::sign_proposal(proposal& proposal_) {
   // TODO: add some validation checks
 
   auto bz = encode(proposal_);
