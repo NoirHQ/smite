@@ -156,7 +156,7 @@ std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, u
   std::vector<consensus::tx> txs;
   auto rbegin = tx_queue_.rbegin<unapplied_tx_queue::by_gas>(max_gas);
   auto rend = tx_queue_.rend<unapplied_tx_queue::by_gas>(0);
-
+  txs.reserve(max_gas / rbegin->gas());
   uint64_t bytes = 0;
   uint64_t gas = 0;
   for (auto itr = rbegin; itr != rend; itr++) {
@@ -182,6 +182,7 @@ std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
   uint64_t count = std::min<uint64_t>(tx_count, tx_queue_.size());
 
   std::vector<consensus::tx> txs;
+  txs.reserve(count);
   for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
     if (txs.size() >= count) {
       break;
