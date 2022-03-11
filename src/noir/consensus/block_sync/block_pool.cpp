@@ -18,8 +18,6 @@ std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> block_pool::peek_two_
   auto r2 = requesters.find(height + 1);
   if (r2 != requesters.end())
     second = r2->second->get_block();
-  wlog(fmt::format(" ---- peek : height={}, first={}, second={}, requesters_size={}", height, first == nullptr,
-    second == nullptr, requesters.size()));
   return {first, second};
 }
 
@@ -90,7 +88,7 @@ void block_pool::update_max_peer_height() {
   max_peer_height = max;
 }
 
-std::shared_ptr<bp_peer> block_pool::pick_incr_available_peer(int64_t height) {
+std::shared_ptr<bp_peer> block_pool::pick_incr_available_peer(int64_t height_) {
   std::lock_guard<std::mutex> g(mtx);
   for (auto const& [k, peer] : peers) {
     if (peer->did_timeout) {
@@ -99,7 +97,7 @@ std::shared_ptr<bp_peer> block_pool::pick_incr_available_peer(int64_t height) {
     }
     if (peer->num_pending >= max_pending_requests_per_peer)
       continue;
-    if (height < peer->base || height > peer->height)
+    if (height_ < peer->base || height_ > peer->height)
       continue;
     peer->incr_pending();
     return peer;
@@ -107,9 +105,9 @@ std::shared_ptr<bp_peer> block_pool::pick_incr_available_peer(int64_t height) {
   return {};
 }
 
-std::string block_pool::redo_request(int64_t height) {
+std::string block_pool::redo_request(int64_t height_) {
   std::lock_guard<std::mutex> g(mtx);
-  auto it = requesters.find(height);
+  auto it = requesters.find(height_);
   if (it == requesters.end())
     return "";
   auto peer_id = it->second->get_peer_id();
@@ -118,7 +116,7 @@ std::string block_pool::redo_request(int64_t height) {
   return peer_id;
 }
 
-void block_pool::add_block(std::string peer_id, std::shared_ptr<consensus::block> block_, int block_size) {
+void block_pool::add_block(std::string peer_id_, std::shared_ptr<consensus::block> block_, int block_size) {
   std::lock_guard<std::mutex> g(mtx);
   auto requester = requesters.find(block_->header.height);
   if (requester == requesters.end()) {
@@ -127,18 +125,18 @@ void block_pool::add_block(std::string peer_id, std::shared_ptr<consensus::block
     if (diff < 0)
       diff *= -1;
     if (diff > max_diff_btn_curr_and_recv_block_height)
-      send_error("peer sent us a block we didn't expect with a height too far ahead", peer_id);
+      send_error("peer sent us a block we didn't expect with a height too far ahead", peer_id_);
     return;
   }
-  if (requester->second->set_block(block_, peer_id)) {
+  if (requester->second->set_block(block_, peer_id_)) {
     num_pending -= 1;
-    auto peer = peers.find(peer_id);
+    auto peer = peers.find(peer_id_);
     if (peer != peers.end())
       peer->second->decr_pending(block_size);
   } else {
     std::string err("requester is different or block already exists");
     elog(err);
-    send_error(err, peer_id);
+    send_error(err, peer_id_);
   }
 }
 
@@ -149,7 +147,7 @@ void block_pool::set_peer_range(std::string peer_id_, int64_t base, int64_t heig
     peer->second->base = base;
     peer->second->height = height_;
   } else {
-    auto new_peer = bp_peer::new_bp_peer(shared_from_this(), peer_id_, base, height_, thread_pool->get_executor());
+    auto new_peer = bp_peer::new_bp_peer(shared_from_this(), peer_id_, base, height_);
     peers[peer_id_] = new_peer;
   }
   if (height_ > max_peer_height)
@@ -157,28 +155,27 @@ void block_pool::set_peer_range(std::string peer_id_, int64_t base, int64_t heig
 }
 
 void block_pool::make_next_requester() {
-  std::lock_guard<std::mutex> g(mtx);
-  auto next_height = height + requesters.size();
+  std::unique_lock<std::mutex> g(mtx);
+  int64_t next_height = height + requesters.size();
   if (next_height > max_peer_height)
     return;
-
   auto request = bp_requester::new_bp_requester(shared_from_this(), next_height);
   requesters[next_height] = request;
   num_pending += 1;
-
+  g.unlock();
   request->on_start();
 }
 
-void block_pool::send_request(int64_t height, std::string peer_id) {
+void block_pool::send_request(int64_t height_, std::string peer_id_) {
   if (!is_running)
     return;
-  transmit_new_envelope("", peer_id, noir::consensus::block_request{height});
+  transmit_new_envelope("", peer_id_, noir::consensus::block_request{height_});
 }
 
-void block_pool::send_error(std::string err, std::string peer_id) {
+void block_pool::send_error(std::string err, std::string peer_id_) {
   if (!is_running)
     return;
-  appbase::app().get_method<plugin_interface::methods::send_error_to_peer>()(peer_id, err);
+  appbase::app().get_method<plugin_interface::methods::send_error_to_peer>()(peer_id_, err);
 }
 
 void block_pool::transmit_new_envelope(
@@ -215,10 +212,10 @@ bool bp_requester::set_block(std::shared_ptr<block> blk_, std::string peer_id_) 
 }
 
 /// \brief picks another peer and try sending a request and waiting for a response again
-void bp_requester::redo(std::string peer_id) {
-  if (!is_running || pool->is_running)
+void bp_requester::redo(std::string peer_id_) {
+  if (!pool->is_running)
     return;
-  if (peer_id == "")
+  if (peer_id_ == "")
     return;
   reset();
   request_routine(); // TODO: check if these sequence of actions are correct
@@ -227,23 +224,20 @@ void bp_requester::redo(std::string peer_id) {
 /// \brief send a request and wait for a response
 /// returns only when a block is found (add_block() is called --> set_block() is called)
 void bp_requester::request_routine() {
-  strand->post([this]() {
-    if (!is_running || !pool->is_running)
-      return;
-    auto peer = pool->pick_incr_available_peer(height);
-    if (peer) {
-      std::unique_lock<std::mutex> lock(mtx);
-      peer_id = peer->id;
-      lock.unlock();
+  if (!pool->is_running)
+    return;
+  auto peer = pool->pick_incr_available_peer(height);
+  if (peer) {
+    std::unique_lock<std::mutex> lock(mtx);
+    peer_id = peer->id;
+    lock.unlock();
 
-      // Send request
-      pool->send_request(height, peer->id);
-      wlog(fmt::format(" *** Terminate requester height={}", height));
-      return;
-    }
-    std::this_thread::sleep_for(request_interval);
-    request_routine();
-  });
+    // Send request
+    pool->send_request(height, peer->id);
+    wlog(fmt::format(" *** Requested for a block height={}", height));
+  } else {
+    wlog(fmt::format("bp_requester failed: unable to find a peer, height={}", height));
+  }
 }
 
 } // namespace noir::consensus::block_sync
