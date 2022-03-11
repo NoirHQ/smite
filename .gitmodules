@@ -6,7 +6,7 @@
 	url = https://github.com/catchorg/Catch2
 [submodule "libs/expected"]
 	path = libs/expected
-	url = https://github.com/TartanLlama/expected
+	url = https://github.com/noir-protocol/expected
 [submodule "libs/fc"]
 	path = libs/fc
 	url = https://github.com/noir-protocol/fc

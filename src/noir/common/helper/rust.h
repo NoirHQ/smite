@@ -4,7 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/check.h>
 #include <noir/common/expected.h>
+#include <optional>
 #include <string>
 
 namespace noir {
@@ -16,27 +18,34 @@ using error = std::string;
 template<typename T, typename E = error>
 using result = expected<T, E>;
 
+template<typename T, typename... Ts>
+auto expect(std::optional<T>&& v, Ts... msg) {
+  check(v.has_value(), msg...);
+  return v.value();
+}
+
 } // namespace noir
 
 /// \brief [rust] analogous to ? operator that returns early when error occurs
 /// \ingroup common
-#define return_if_error(expr) \
-  do { \
+#define ok(expr) \
+  ({ \
     auto _ = expr; \
     if (!_) { \
-      return make_unexpected(_.error()); \
+      return noir::make_unexpected(_.error()); \
     } \
-  } while (0)
+    _.value(); \
+  })
 
 /// \brief [rust] analogous to ensure! macro of anyhow crate
 /// \ingroup common
 #define ensure(pred, ...) \
   do { \
     if (!(pred)) { \
-      return make_unexpected(fmt::format(__VA_ARGS__)); \
+      return noir::make_unexpected(fmt::format(__VA_ARGS__)); \
     } \
   } while (0)
 
 /// \brief [rust] analogous to bail! macro of anyhow crate
 /// \ingroup common
-#define bail(...) return make_unexpected(fmt::format(__VA_ARGS__))
+#define bail(...) return noir::make_unexpected(fmt::format(__VA_ARGS__))
