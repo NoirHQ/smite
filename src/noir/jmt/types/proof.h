@@ -61,8 +61,8 @@ struct sparse_merkle_proof {
     if (element_value) {
       auto& value = *element_value;
       if (leaf) {
-        noir_ensure(element_key == leaf->key, "keys do not match. key in proof: {}, expected: {}", leaf->key.to_string(),
-          element_key.to_string());
+        noir_ensure(element_key == leaf->key, "keys do not match. key in proof: {}, expected: {}",
+          leaf->key.to_string(), element_key.to_string());
         bytes32 hash;
         default_hasher{}(value, hash);
         noir_ensure(hash == leaf->value_hash, "value hashes do not match. value hash in proof: {}, expected: {}",
