@@ -3,7 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/common/scope_exit.h>
+#include <noir/common/helper/go.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/wal.h>
 #include <fmt/core.h>
@@ -16,7 +16,7 @@ using namespace noir::p2p;
 bool consensus_state::catchup_replay(int64_t cs_height) {
   // Set replayMode to true so we don't log signing errors.
   replay_mode = true;
-  auto defer = make_scope_exit([this]() { replay_mode = false; });
+  noir_defer([this]() { replay_mode = false; });
 
   // Ensure that #ENDHEIGHT for this height doesn't exist.
   // NOTE: This is just a sanity check. As far as we know things work fine

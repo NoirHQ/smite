@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 
-#include <noir/common/scope_exit.h>
+#include <noir/common/helper/go.h>
 #include <noir/consensus/wal.h>
 #include <noir/core/codec.h>
 
@@ -66,7 +66,7 @@ bool wal_encoder::encode(const timed_wal_message& msg, size_t& size) {
       return false; // TODO: handle error
     }
   }
-  auto defer = make_scope_exit([&file_ = file_, is_closed]() {
+  noir_defer([&file_ = file_, is_closed]() {
     if (is_closed) {
       file_->close();
     }
