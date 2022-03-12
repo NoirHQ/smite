@@ -44,7 +44,7 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
 
   auto put_node(const jmt::node_key& node_key, const jmt::node<T>& node) -> result<void> {
     std::unique_lock _{data.lock};
-    ensure(!data._0.contains(node_key), "key {} exists", node_key.to_string());
+    noir_ensure(!data._0.contains(node_key), "key {} exists", node_key.to_string());
     data._0.insert({node_key, node});
     return {};
   }
@@ -58,10 +58,10 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
 
   auto write_tree_update_batch(const tree_update_batch<T>& batch) -> result<void> {
     for (const auto& [k, v] : batch.node_batch) {
-      ok(put_node(k, v));
+      noir_ok(put_node(k, v));
     }
     for (const auto& i : batch.stale_node_index_batch) {
-      ok(put_stale_node_index(i));
+      noir_ok(put_stale_node_index(i));
     }
     return {};
   }
@@ -78,7 +78,7 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
     for (const auto& log : to_prune) {
       auto removed = data._0.contains(log.node_key);
       data._0.erase(log.node_key);
-      ensure(removed, "stale node index refers to non-existent node");
+      noir_ensure(removed, "stale node index refers to non-existent node");
       data._1.erase(log);
     }
     return {};

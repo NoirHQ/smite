@@ -28,7 +28,7 @@ auto expect(std::optional<T>&& v, Ts... msg) {
 
 /// \brief [rust] analogous to ? operator that returns early when error occurs
 /// \ingroup common
-#define ok(expr) \
+#define noir_ok(expr) \
   ({ \
     auto _ = expr; \
     if (!_) { \
@@ -39,7 +39,7 @@ auto expect(std::optional<T>&& v, Ts... msg) {
 
 /// \brief [rust] analogous to ensure! macro of anyhow crate
 /// \ingroup common
-#define ensure(pred, ...) \
+#define noir_ensure(pred, ...) \
   do { \
     if (!(pred)) { \
       return noir::make_unexpected(fmt::format(__VA_ARGS__)); \
@@ -48,4 +48,4 @@ auto expect(std::optional<T>&& v, Ts... msg) {
 
 /// \brief [rust] analogous to bail! macro of anyhow crate
 /// \ingroup common
-#define bail(...) return noir::make_unexpected(fmt::format(__VA_ARGS__))
+#define noir_bail(...) return noir::make_unexpected(fmt::format(__VA_ARGS__))

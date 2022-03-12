@@ -57,23 +57,23 @@ template<typename T>
 struct sparse_merkle_proof {
   auto verify(const bytes32& expected_root_hash, const bytes32& element_key,
     std::optional<std::remove_reference_t<T>> element_value) -> result<void> {
-    ensure(siblings.size() <= 256, "sparse merkle tree proof has more than 256 ({}) siblings", siblings.size());
+    noir_ensure(siblings.size() <= 256, "sparse merkle tree proof has more than 256 ({}) siblings", siblings.size());
     if (element_value) {
       auto& value = *element_value;
       if (leaf) {
-        ensure(element_key == leaf->key, "keys do not match. key in proof: {}, expected: {}", leaf->key.to_string(),
+        noir_ensure(element_key == leaf->key, "keys do not match. key in proof: {}, expected: {}", leaf->key.to_string(),
           element_key.to_string());
         bytes32 hash;
         default_hasher{}(value, hash);
-        ensure(hash == leaf->value_hash, "value hashes do not match. value hash in proof: {}, expected: {}",
+        noir_ensure(hash == leaf->value_hash, "value hashes do not match. value hash in proof: {}, expected: {}",
           leaf->value_hash.to_string(), hash.to_string());
       } else {
-        bail("expected inclusion proof. found non-inclusion proof");
+        noir_bail("expected inclusion proof. found non-inclusion proof");
       }
     } else {
       if (leaf) {
-        ensure(element_key != leaf->key, "expected non-inclusion proof, but key exists in proof");
-        ensure(common_prefix_bits_len(element_key, leaf->key) >= siblings.size(),
+        noir_ensure(element_key != leaf->key, "expected non-inclusion proof, but key exists in proof");
+        noir_ensure(common_prefix_bits_len(element_key, leaf->key) >= siblings.size(),
           "key would not have ended up in the subtree where the provided key in proof "
           "is the only existing key, if it existed. so this is not a valid "
           "non-includsion proof");
@@ -97,7 +97,7 @@ struct sparse_merkle_proof {
       }
       return hash;
     }();
-    ensure(actual_root_hash == expected_root_hash, "root hashes do not match. actual root hash: {}, expected: {}",
+    noir_ensure(actual_root_hash == expected_root_hash, "root hashes do not match. actual root hash: {}, expected: {}",
       actual_root_hash.to_string(), expected_root_hash.to_string());
     return {};
   }
