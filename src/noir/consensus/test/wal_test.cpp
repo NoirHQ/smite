@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/common/scope_exit.h>
+#include <noir/common/helper/go.h>
 #include <noir/consensus/wal.h>
 #include <filesystem>
 
@@ -242,7 +242,7 @@ TEST_CASE("basic_wal: basic_wal test", "[noir][consensus]") {
       std::move(temp_dir), std::move(wal_));
   }(enc_size);
   auto tmp_path = temp_dir->path().string();
-  auto defer = noir::make_scope_exit([&wal_ = wal_]() { wal_->on_stop(); });
+  noir_defer([&wal_ = wal_]() { wal_->on_stop(); });
 
   SECTION("WAL write") {
     noir::p2p::block_part_message bp_msg{

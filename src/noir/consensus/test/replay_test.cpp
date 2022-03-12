@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/common/scope_exit.h>
+#include <noir/common/helper/go.h>
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/wal.h>
@@ -87,7 +87,7 @@ TEST_CASE("state_wal: catchup_replay", "[noir][consensus]") {
   });
 
   auto [temp_dir, cs] = prepare_consensus(1);
-  auto defer = noir::make_scope_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
+  noir_defer([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
   auto& wal_ = cs->wal_;
 
   std::for_each(tests.begin(), tests.end(), [&, &cs = cs](const test_case& t) {
@@ -127,7 +127,7 @@ TEST_CASE("state_wal: repair_wal_file", "[noir][consensus]") {
 
   auto [temp_dir, cs] = prepare_consensus(1);
   auto wal_path = fs::path{(temp_dir->path() / cs->cs_config.wal_path / cs->wal_head_name).string()};
-  auto defer = noir::make_scope_exit([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
+  noir_defer([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
 
   std::for_each(tests.begin(), tests.end(), [&, &cs = cs](const test_case& t) {
     SECTION(t.name) {
