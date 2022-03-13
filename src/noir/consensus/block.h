@@ -303,6 +303,8 @@ struct block {
   std::shared_ptr<part_set> make_part_set(uint32_t part_size);
 
   bytes get_hash() {
+    if (this == nullptr)
+      return {};
     std::lock_guard<std::mutex> g(mtx);
     // todo - implement
     return header.get_hash();

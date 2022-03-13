@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/consensus/block.h>
+#include <noir/consensus/types/canonical.h>
 #include <noir/consensus/validation.h>
 #include <noir/consensus/vote.h>
 #include <noir/core/codec.h>
@@ -58,7 +59,8 @@ std::optional<std::string> verify_commit_single(std::string chain_id_, std::shar
     }
 
     auto vote_ = commit_->get_vote(i);
-    vote_sign_bytes = encode(*vote_); // TODO: check if this is correct
+    vote_->block_id_ = commit_->my_block_id; // TODO: is this right? [Sam: added 20220313]
+    vote_sign_bytes = encode(canonical::canonicalize_vote(*vote_));
     if (!val.pub_key_.verify_signature(vote_sign_bytes, commit_sig_.signature))
       return fmt::format("verification failed: wrong signature - index={}", i);
 

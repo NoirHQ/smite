@@ -44,6 +44,7 @@ std::shared_ptr<vote_set> commit_to_vote_set(
     if (vote_) {
       opt_ = {*std::move(vote_)};
     }
+    opt_->block_id_ = commit_.my_block_id; // TODO: is this right? [Sam: added 20220313]
     check(vote_set_->add_vote(opt_), "Failed to reconstruct LastCommit");
   }
   return std::move(vote_set_);

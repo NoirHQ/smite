@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/consensus/bit_array.h>
+#include <noir/consensus/types/canonical.h>
 #include <noir/consensus/vote.h>
 #include <noir/core/codec.h>
 
@@ -84,8 +85,8 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     elog("add_vote() failed: invalid validator address");
     return false;
   }
-  auto data_vote = encode(vote_.value());
-  if (!val->pub_key_.verify_signature(data_vote, vote_->signature)) {
+  auto vote_sign_bytes = encode(canonical::canonicalize_vote(vote_.value()));
+  if (!val->pub_key_.verify_signature(vote_sign_bytes, vote_->signature)) {
     elog("add_vote() failed: invalid signature");
     return false;
   }

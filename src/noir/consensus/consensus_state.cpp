@@ -5,6 +5,7 @@
 //
 #include <noir/common/helper/go.h>
 #include <noir/consensus/consensus_state.h>
+#include <noir/consensus/types/canonical.h>
 #include <noir/core/codec.h>
 
 #include <appbase/application.hpp>
@@ -1013,8 +1014,8 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
   }
 
   // Verify signature
-  auto data_proposal = encode(msg);
-  if (!rs.validators->get_proposer()->pub_key_.verify_signature(data_proposal, msg.signature)) {
+  auto proposal_sign_bytes = encode(canonical::canonicalize_proposal(msg));
+  if (!rs.validators->get_proposer()->pub_key_.verify_signature(proposal_sign_bytes, msg.signature)) {
     dlog("set_proposal; error invalid proposal signature");
     return;
   }
