@@ -26,7 +26,7 @@ void consensus_reactor::process_peer_update(plugin_interface::peer_status_info_p
       // Start gossips for this peer
       gossip_data_routine(it->second);
       gossip_votes_routine(it->second);
-      query_maj23_routine(it->second);
+      // query_maj23_routine(it->second);
 
       if (!wait_sync)
         send_new_round_step_message(info->peer_id);
