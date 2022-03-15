@@ -48,6 +48,7 @@ public:
     if (start_non_validator_node) {
       // Start non-validator node; aka full node (but not seed node) TODO: do we need to support seed nodes?
       appbase::app().set_home_dir("/tmp");
+      config_->consensus.root_dir = "/tmp";
       config_->base.mode = Full;
     }
 
