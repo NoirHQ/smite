@@ -59,7 +59,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   std::shared_ptr<bit_array> sub(std::shared_ptr<bit_array> o) {
-    if (o == nullptr)
+    if (this == nullptr || o == nullptr)
       return nullptr;
     std::lock_guard<std::mutex> g(mtx);
     std::lock_guard<std::mutex> g2(o->mtx);
@@ -149,7 +149,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
 
   /// \brief returns a random index for a bit. If there is no value, returns 0, false
   std::tuple<int, bool> pick_random() {
-    if (elem.empty())
+    if (this == nullptr || elem.empty())
       return {0, false};
     std::lock_guard<std::mutex> g(mtx);
     auto true_indices = get_true_indices();

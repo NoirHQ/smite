@@ -57,11 +57,11 @@ struct commit_sig {
   p2p::block_id get_block_id(p2p::block_id commit_block_id) {
     switch (flag) {
     case block_id_flag::FlagCommit: {
-      return p2p::block_id{};
+      return commit_block_id;
     }
     case block_id_flag::FlagAbsent:
     case block_id_flag::FlagNil: {
-      return commit_block_id;
+      return p2p::block_id{};
     }
     default: {
       check(false, fmt::format("Unknown BlockIDFlag: {}", flag));
