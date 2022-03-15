@@ -80,7 +80,7 @@ struct block_id {
   std::string key() {
     // returns a machine-readable string representation of the block_id
     // todo
-    return to_hex(hash);
+    return to_hex(hash) + to_hex(parts.hash) + std::to_string(parts.total);
   }
 };
 
