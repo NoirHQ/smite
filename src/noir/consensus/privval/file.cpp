@@ -7,6 +7,7 @@
 #include <noir/common/check.h>
 #include <noir/common/hex.h>
 #include <noir/consensus/privval/file.h>
+#include <noir/consensus/types/canonical.h>
 #include <fc/variant_object.hpp>
 
 #include <noir/common/helper/variant.h>
@@ -157,14 +158,13 @@ bool check_only_differ_by_timestamp(
 }
 
 template<typename T>
-bool sign_internal(T& obj, file_pv& pv, sign_step step) {
+bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step) {
   auto& key = pv.key;
   auto& lss = pv.last_sign_state;
   auto height = obj.height;
   auto round = obj.round;
 
   auto same_hrs = lss.check_hrs(height, round, step); // throw exception if error
-  auto sign_bytes = encode<T>(obj);
   p2p::tstamp timestamp;
 
   // We might crash before writing to the wal,
@@ -193,11 +193,13 @@ bool sign_internal(T& obj, file_pv& pv, sign_step step) {
 }
 
 bool file_pv::sign_vote_internal(noir::consensus::vote& vote) {
-  return sign_internal<noir::consensus::vote>(vote, *this, vote_to_step(vote));
+  return sign_internal<noir::consensus::vote>(
+    vote, encode(canonical::canonicalize_vote(vote)), *this, vote_to_step(vote));
 }
 
 bool file_pv::sign_proposal_internal(noir::consensus::proposal& proposal) {
-  return sign_internal<noir::consensus::proposal>(proposal, *this, sign_step::propose);
+  return sign_internal<noir::consensus::proposal>(
+    proposal, encode(canonical::canonicalize_proposal(proposal)), *this, sign_step::propose);
 }
 
 void file_pv::save_signed(int64_t height, int32_t round, sign_step step, const bytes& sign_bytes, const bytes& sig) {
