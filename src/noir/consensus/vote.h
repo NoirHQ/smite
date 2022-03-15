@@ -251,7 +251,7 @@ struct vote_set_reader {
     bit_array_ = commit_.bit_array_;
     if (!bit_array_) {
       bit_array_ = bit_array::new_bit_array(commit_.signatures.size());
-      for (auto i=0; i<commit_.signatures.size(); i++)
+      for (auto i = 0; i < commit_.signatures.size(); i++)
         bit_array_->set_index(i, commit_.signatures[i].flag != FlagAbsent);
     }
     is_commit = commit_.signatures.size() != 0;

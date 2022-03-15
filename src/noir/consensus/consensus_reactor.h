@@ -22,7 +22,8 @@ struct consensus_reactor {
   std::mutex mtx;
 
   uint16_t thread_pool_size = 5;
-  std::optional<named_thread_pool> thread_pool;
+  std::optional<named_thread_pool> thread_pool_gossip;
+  std::optional<named_thread_pool> thread_pool_query_maj23;
 
   // Receive an event from consensus_state
   plugin_interface::egress::channels::event_switch_message_queue::channel_type::handle event_switch_mq_subscription =
@@ -49,7 +50,8 @@ struct consensus_reactor {
   consensus_reactor(std::shared_ptr<consensus_state> new_cs_state, bool new_wait_sync)
     : cs_state(std::move(new_cs_state)), wait_sync(new_wait_sync),
       xmt_mq_channel(appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {
-    thread_pool.emplace("cs_reactor", thread_pool_size);
+    thread_pool_gossip.emplace("gossip", thread_pool_size);
+    thread_pool_query_maj23.emplace("query_maj23", thread_pool_size);
   }
 
   static std::shared_ptr<consensus_reactor> new_consensus_reactor(
@@ -70,7 +72,8 @@ struct consensus_reactor {
       if (peer.second->is_running)
         peer.second->is_running = false;
     }
-    thread_pool->stop();
+    thread_pool_gossip->stop();
+    thread_pool_query_maj23->stop();
     ilog("stopped cs_reactor");
   }
 
