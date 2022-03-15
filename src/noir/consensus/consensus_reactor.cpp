@@ -16,7 +16,7 @@ void consensus_reactor::process_peer_update(plugin_interface::peer_status_info_p
   case p2p::peer_status::up: {
     auto it = peers.find(info->peer_id);
     if (it == peers.end()) {
-      auto ps = peer_state::new_peer_state(info->peer_id, thread_pool->get_executor());
+      auto ps = peer_state::new_peer_state(info->peer_id, thread_pool_gossip->get_executor());
       peers[info->peer_id] = ps;
       it = peers.find(info->peer_id);
     }
@@ -297,7 +297,7 @@ void consensus_reactor::gossip_votes_routine(std::shared_ptr<peer_state> ps) {
     } else if (auto block_store_base = cs_state->block_store_->base();
                (block_store_base > 0 && prs->height != 0 && rs->height >= prs->height + 2 &&
                  prs->height >= block_store_base) &&
-               cs_state->block_store_->load_block(prs->height+1, blk_next) &&
+               cs_state->block_store_->load_block(prs->height + 1, blk_next) &&
                pick_send_vote(ps, vote_set_reader(blk_next.last_commit))) {
       // Catchup logic - if peer is lagged by more than 1, send commit
       // Load block_commit for prs->height which contains precommit sig
@@ -382,7 +382,7 @@ bool consensus_reactor::pick_send_vote(const std::shared_ptr<peer_state>& ps, co
 
 /// \brief detect and react when there is a signature DDoS attack in progress
 void consensus_reactor::query_maj23_routine(std::shared_ptr<peer_state> ps) {
-  ps->strand->post([this, ps{std::move(ps)}]() {
+  thread_pool_query_maj23->get_executor().post([this, ps{std::move(ps)}]() {
     if (!ps->is_running)
       return;
 

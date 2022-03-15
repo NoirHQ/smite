@@ -54,7 +54,11 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
       [this, &from](consensus::status_request& msg) {
         pool->transmit_new_envelope("", from, status_response{store->height(), store->base()});
       },
-      [this, &from](consensus::status_response& msg) { pool->set_peer_range(from, msg.base, msg.height); },
+      [this, &from](consensus::status_response& msg) {
+        if (!block_sync)
+          return;
+        pool->set_peer_range(from, msg.base, msg.height);
+      },
       [](consensus::no_block_response& msg) {
         dlog(fmt::format("peer does not have the requested block: height={}", msg.height));
       }},
