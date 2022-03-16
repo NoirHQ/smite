@@ -17,7 +17,6 @@ constexpr auto switch_to_consensus_interval{std::chrono::seconds(1)};
 constexpr auto sync_timeout{std::chrono::seconds(60)};
 
 struct reactor {
-  // Immutable
   consensus::state initial_state;
   consensus::state latest_state;
   uint64_t blocks_synced{};
@@ -76,7 +75,7 @@ struct reactor {
     if (block_sync.load()) {
       pool->on_stop();
     }
-    pool->is_running = false; // TODO: is this enough? any other threads to close?
+    pool->is_running = false;
   }
 
   void switch_to_block_sync(state& state_) {
@@ -96,8 +95,12 @@ struct reactor {
   void process_peer_update(plugin_interface::peer_status_info_ptr info);
   void process_peer_msg(p2p::envelope_ptr info);
 
+  /// \brief periodically request for status from all peers
   void request_routine();
+
+  /// \brief handles messages from block_pool
   void pool_routine(bool state_synced);
+
   void try_sync_ticker();
   void switch_to_consensus_ticker();
 
@@ -117,7 +120,7 @@ struct reactor {
   boost::asio::steady_timer::duration get_remaining_sync_time() {
     if (block_sync.load() != true)
       return std::chrono::seconds(0);
-    // auto target_syncs = pool->target_sync_block(); // TODO: implement later; it's not used for now
+    // auto target_syncs = pool->target_sync_block(); // Note: optional to implement; it's not used for now
     return std::chrono::seconds(10);
   }
 };

@@ -15,7 +15,7 @@ struct block_request {
 };
 
 struct block_response {
-  bytes block_; // use serialized block in order to avoid include conflicts
+  bytes block_; // use serialized block (in order to avoid include conflicts)
 };
 
 struct status_request {};

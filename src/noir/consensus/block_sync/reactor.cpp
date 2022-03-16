@@ -65,10 +65,7 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
     msg);
 }
 
-/// \brief periodically request for status from all peers
 void reactor::request_routine() {
-  ///< request_ch [done; noir does not need one]
-  ///< error_ch [done; use of a channel is not required]
   pool->thread_pool->get_executor().post([this]() {
     while (true) {
       if (!pool->is_running)
@@ -81,7 +78,6 @@ void reactor::request_routine() {
   });
 }
 
-/// \brief handles messages from block_pool
 void reactor::pool_routine(bool state_synced) {
   request_routine();
   try_sync_ticker();
@@ -100,10 +96,8 @@ void reactor::try_sync_ticker() {
 
       std::this_thread::sleep_for(try_sync_interval);
       auto [first, second] = pool->peek_two_blocks();
-      if (!first || !second) {
-        // std::this_thread::sleep_for(std::chrono::milliseconds(3000)); // manually inserted extra time TODO : remove
+      if (!first || !second)
         continue;
-      }
 
       auto first_parts = first->make_part_set(block_part_size_bytes);
       auto first_part_set_header = first_parts->header();
