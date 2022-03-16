@@ -52,6 +52,21 @@ TEST_CASE("hex", "[noir][common]") {
     });
 
     test_hex_conversion(tests);
+
+    {
+      auto tests = std::to_array<std::pair<uint16_t, const char*>>({
+        {0, "0x"},
+        {0, "0x0"},
+        {1, "0x1"},
+        {61439, "0x1efff"},
+      });
+
+      std::for_each(tests.begin(), tests.end(), [&](const auto& t) {
+        uint16_t v = 0;
+        CHECK_NOTHROW(from_hex(t.second, v));
+        CHECK(v == t.first);
+      });
+    }
   }
 
   SECTION("uint32_t") {

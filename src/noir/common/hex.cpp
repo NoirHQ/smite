@@ -5,6 +5,7 @@
 //
 #include <noir/common/bit.h>
 #include <noir/common/check.h>
+#include <noir/common/concepts.h>
 #include <noir/common/hex.h>
 #include <fmt/core.h>
 
@@ -79,30 +80,41 @@ size_t from_hex(std::string_view s, std::span<char> out) {
   return size;
 }
 
+template<integral T>
+void _from_hex(std::string_view s, T& v) {
+  constexpr auto max_strlen = sizeof(T) * 2;
+  v = 0;
+  if (s.starts_with("0x")) {
+    s = s.substr(2);
+  }
+  size_t byte_offset = 0;
+  auto size = s.size() / 2 + s.size() % 2;
+  if (size < sizeof(T)) {
+    byte_offset = sizeof(T) - size;
+  }
+  size_t str_offset = 0;
+  if (s.size() > max_strlen) {
+    str_offset = s.size() - max_strlen;
+  }
+  from_hex(s.substr(str_offset), std::span((char*)&v + byte_offset, sizeof(T) - byte_offset));
+}
+
 void from_hex(std::string_view s, uint8_t& v) {
-  auto has_prefix = s.starts_with("0x");
-  auto size = 2 + has_prefix * 2;
-  from_hex(s.substr(0, s.size() > size ? size : s.size()), std::span((char*)&v, 1));
+  _from_hex(s, v);
 }
 
 void from_hex(std::string_view s, uint16_t& v) {
-  auto has_prefix = s.starts_with("0x");
-  auto size = 4 + has_prefix * 2;
-  from_hex(s.substr(0, s.size() > size ? size : s.size()), std::span((char*)&v, 2));
+  _from_hex(s, v);
   v = byteswap(v);
 }
 
 void from_hex(std::string_view s, uint32_t& v) {
-  auto has_prefix = s.starts_with("0x");
-  auto size = 8 + has_prefix * 2;
-  from_hex(s.substr(0, s.size() > size ? size : s.size()), std::span((char*)&v, 4));
+  _from_hex(s, v);
   v = byteswap(v);
 }
 
 void from_hex(std::string_view s, uint64_t& v) {
-  auto has_prefix = s.starts_with("0x");
-  auto size = 16 + has_prefix * 2;
-  from_hex(s.substr(0, s.size() > size ? size : s.size()), std::span((char*)&v, 8));
+  _from_hex(s, v);
   v = byteswap(v);
 }
 
