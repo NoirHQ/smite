@@ -13,7 +13,7 @@
 
 namespace noir::consensus::block_sync {
 
-constexpr auto request_interval{std::chrono::milliseconds(2)}; // default = 2
+constexpr auto request_interval{std::chrono::milliseconds(2)};
 constexpr int max_total_requesters{5}; // default = 600
 constexpr int max_peer_err_buffer{1000};
 constexpr int max_pending_requests{max_total_requesters};
@@ -41,7 +41,7 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   p2p::tstamp last_hundred_block_timestamp{};
   double last_sync_rate{};
 
-  bool is_running{}; ///< used to end active jobs on_stop
+  bool is_running{};
   uint16_t thread_pool_size = 15;
   std::optional<named_thread_pool> thread_pool;
 
@@ -69,7 +69,6 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
     make_requester_routine();
   }
   void on_stop() {
-    // TODO: any other clean up to do?
     is_running = false;
   }
 
@@ -111,6 +110,8 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
 
   std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> peek_two_blocks();
 
+  /// \brief pops first block at pool->height
+  /// It must has been validated by second commit in peek_two_block()
   void pop_request();
 
   void remove_timed_out_peers();
@@ -160,6 +161,7 @@ struct bp_requester {
 
   void on_stop() {}
 
+  /// \brief returns true if peer_id matches and blk_ does not already exist
   bool set_block(std::shared_ptr<block> blk_, std::string peer_id_);
 
   std::shared_ptr<block> get_block() {
@@ -180,8 +182,11 @@ struct bp_requester {
     block_ = nullptr;
   }
 
+  /// \brief picks another peer and try sending a request and waiting for a response again
   void redo(std::string peer_id);
 
+  /// \brief send a request and wait for a response
+  /// returns only when a block is found (add_block() is called --> set_block() is called)
   void request_routine();
 };
 

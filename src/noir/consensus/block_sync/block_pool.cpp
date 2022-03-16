@@ -21,8 +21,6 @@ std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> block_pool::peek_two_
   return {first, second};
 }
 
-/// \brief pops first block at pool->height
-/// It must has been validated by second commit in peek_two_block()
 void block_pool::pop_request() {
   std::lock_guard<std::mutex> g(mtx);
 
@@ -57,13 +55,14 @@ void block_pool::remove_timed_out_peers() {
     // if (!peer->did_timeout && peer->num_pending > 0) {
     //   auto cur_rate = peer->recv_monitor
     // }
-    it++; // move to next item as remove_peer() below may delete current item
+    it++; // advance to next item here, as remove_peer() below may delete current item
     if (peer->did_timeout)
       remove_peer(peer->id);
   }
 }
 
 void block_pool::remove_peer(std::string peer_id) {
+  // Note: caller must have a lock on mtx
   for (auto const& [k, requester] : requesters) {
     if (requester->get_peer_id() == peer_id)
       requester->redo(peer_id);
@@ -198,20 +197,17 @@ void block_pool::transmit_new_envelope(
 //------------------------------------------------------------------------
 // bp_requester
 //------------------------------------------------------------------------
-/// \brief returns true if peer_id matches and blk_ does not already exist
 bool bp_requester::set_block(std::shared_ptr<block> blk_, std::string peer_id_) {
   std::lock_guard<std::mutex> g(mtx);
   if (block_ != nullptr || peer_id != peer_id_)
     return false;
   block_ = blk_;
-  wlog(fmt::format(" ---- GOT NEW BLOCK : height={}, block_height={}", height, block_->header.height));
 
   // At the point, we have sent a request and received a response
   on_stop();
   return true;
 }
 
-/// \brief picks another peer and try sending a request and waiting for a response again
 void bp_requester::redo(std::string peer_id_) {
   if (!pool->is_running)
     return;
@@ -221,8 +217,6 @@ void bp_requester::redo(std::string peer_id_) {
   request_routine(); // TODO: check if these sequence of actions are correct
 }
 
-/// \brief send a request and wait for a response
-/// returns only when a block is found (add_block() is called --> set_block() is called)
 void bp_requester::request_routine() {
   if (!pool->is_running)
     return;
@@ -234,7 +228,6 @@ void bp_requester::request_routine() {
 
     // Send request
     pool->send_request(height, peer->id);
-    wlog(fmt::format(" *** Requested for a block height={}", height));
   } else {
     wlog(fmt::format("bp_requester failed: unable to find a peer, height={}", height));
   }
