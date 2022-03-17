@@ -111,7 +111,7 @@ fc::variant api::block_number(const fc::variant& req) {
   check(req.is_array() || req.is_null(), "invalid json request");
   // TODO: block number
   auto block_number = block_store_ptr->height();
-  return fc::variant(fmt::format("0x{}", to_hex((uint64_t) block_number)));
+  return fc::variant(fmt::format("0x{}", to_hex((uint64_t)block_number)));
 }
 
 fc::variant api::gas_price(const fc::variant& req) {
@@ -152,10 +152,13 @@ fc::variant api::get_block_by_number(const fc::variant& req) {
   uint64_t height;
   from_hex(block_number, height);
   consensus::block cb;
-  block_store_ptr->load_block((int64_t) height, cb);
-  // TODO: get block by number
-  block b;
-  return fc::variant(nullptr);
+  if (block_store_ptr->load_block((int64_t)height, cb)) {
+    // TODO: get block by number
+    block b(cb);
+    return fc::variant(b.to_json());
+  } else {
+    return fc::variant(nullptr);
+  }
 }
 
 fc::variant api::get_block_by_hash(const fc::variant& req) {
@@ -168,11 +171,13 @@ fc::variant api::get_block_by_hash(const fc::variant& req) {
   check(params[1].is_bool(), "invalid argument 1: json: cannot unmarshal into bool");
   auto full_tx = params[1].as_bool();
   consensus::block cb;
-  block_store_ptr->load_block_by_hash(from_hex(hash), cb);
-
-  // TODO: get block by hash
-  block b;
-  return fc::variant(nullptr);
+  if (block_store_ptr->load_block_by_hash(from_hex(hash), cb)) {
+    // TODO: get block by hash
+    block b(cb);
+    return fc::variant(b.to_json());
+  } else {
+    return fc::variant(nullptr);
+  }
 }
 
 fc::variant api::get_tx_receipt(const fc::variant& req) {
