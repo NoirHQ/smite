@@ -82,8 +82,13 @@ void file_pv_last_sign_state::save() {
 }
 
 bool file_pv_last_sign_state::load(const fs::path& state_file_path, file_pv_last_sign_state& lss) {
-  fc::variant obj = fc::json::from_file(state_file_path.string());
-  fc::from_variant(obj, lss);
+  try {
+    fc::variant obj = fc::json::from_file(state_file_path.string());
+    fc::from_variant(obj, lss);
+  } catch (...) {
+    elog(fmt::format("error reading PrivValidator state from {}", state_file_path.string()));
+    return false;
+  }
   lss.file_path = state_file_path.string();
   return true;
 }
