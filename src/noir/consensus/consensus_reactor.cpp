@@ -282,7 +282,6 @@ void consensus_reactor::gossip_votes_routine(std::shared_ptr<peer_state> ps) {
     auto rs = cs_state->get_round_state();
     auto prs = ps->get_round_state();
     commit commit_;
-    block blk_next;
 
     if (rs->height == prs->height && gossip_votes_for_height(rs, prs, ps)) {
       // If height matches, send last_commit, prevotes, precommits
@@ -297,8 +296,8 @@ void consensus_reactor::gossip_votes_routine(std::shared_ptr<peer_state> ps) {
     } else if (auto block_store_base = cs_state->block_store_->base();
                (block_store_base > 0 && prs->height != 0 && rs->height >= prs->height + 2 &&
                  prs->height >= block_store_base) &&
-               cs_state->block_store_->load_block(prs->height + 1, blk_next) &&
-               pick_send_vote(ps, vote_set_reader(blk_next.last_commit))) {
+               cs_state->block_store_->load_block_commit(prs->height, commit_) &&
+               pick_send_vote(ps, vote_set_reader(commit_))) {
       // Catchup logic - if peer is lagged by more than 1, send commit
       // Load block_commit for prs->height which contains precommit sig
       dlog("picked catchup commit to send");
