@@ -38,8 +38,8 @@ void rpc::plugin_initialize(const CLI::App& config) {
   auto tx_poor_ptr = app().find_plugin<tx_pool::tx_pool>();
   api->set_tx_pool_ptr(tx_poor_ptr);
 
-  auto& block_store_ptr = app().get_plugin<consensus::abci>();
-  api->set_block_store(block_store_ptr.node_->block_store_);
+  auto& block_store_ptr = app().get_plugin<consensus::abci>().node_->block_store_;
+  api->set_block_store(block_store_ptr);
 }
 
 void rpc::plugin_startup() {
