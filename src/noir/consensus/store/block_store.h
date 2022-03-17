@@ -219,8 +219,7 @@ public:
       db_session_->write_from_bytes(encode_key<prefix::block_hash>(hash_), encode_val(height_));
     }
     {
-      commit commit_{}; // TODO: bl.last_commit
-      auto buf = encode(commit_);
+      auto buf = encode(bl.last_commit);
       db_session_->write_from_bytes(encode_key<prefix::block_commit>(height_ - 1), buf);
     }
     // Save seen commit (seen +2/3 precommits for block)
