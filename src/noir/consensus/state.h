@@ -51,7 +51,7 @@ struct state {
     } else {
       std::vector<validator> validators;
       for (const auto& val : gen_doc.validators) {
-        validators.push_back(validator{val.address, val.pub_key_, val.power, 0});
+        validators.push_back(validator{val.address, val.pub_key, val.power, 0});
       }
       val_set = validator_set::new_validator_set(validators);
       next_val_set = validator_set::new_validator_set(validators).copy_increment_proposer_priority(1);

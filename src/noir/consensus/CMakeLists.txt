@@ -9,6 +9,7 @@ add_library(noir_consensus STATIC
   priv_validator.cpp
   privval/file.cpp
   replay.cpp
+  types/genesis.cpp
   validation.cpp
   validator.cpp
   vote.cpp

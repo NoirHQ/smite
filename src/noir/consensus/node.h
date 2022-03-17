@@ -12,6 +12,7 @@
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/state.h>
+#include <noir/consensus/types/genesis.h>
 
 namespace noir::consensus {
 
@@ -32,7 +33,7 @@ struct node {
   std::shared_ptr<block_sync::reactor> bs_reactor{};
 
   static std::unique_ptr<node> new_default_node(appbase::application& app, const std::shared_ptr<config>& new_config) {
-    // Load or generate priv - todo
+    // Load or generate priv
     std::vector<genesis_validator> validators;
     std::vector<std::shared_ptr<priv_validator>> priv_validators;
     std::filesystem::path pv_root_dir = new_config->priv_validator.root_dir;
@@ -44,7 +45,11 @@ struct node {
     validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
     priv_validators.push_back(std::move(priv_val));
 
-    auto gen_doc = genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators};
+    auto gen_doc = genesis_doc::genesis_doc_from_file(new_config->consensus.root_dir + "/config/genesis.json");
+    if (!gen_doc) {
+      wlog("Unable to load genesis from json.file. Will load default genesis.");
+      *gen_doc = genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators};
+    }
 
     // Load or generate node_key - todo
     auto node_key_ = node_key::gen_node_key();
@@ -53,7 +58,7 @@ struct node {
     auto session =
       std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
 
-    return make_node(app, new_config, priv_validators[0], node_key_, std::make_shared<genesis_doc>(gen_doc), session);
+    return make_node(app, new_config, priv_validators[0], node_key_, gen_doc, session);
   }
 
   static std::unique_ptr<node> make_node(appbase::application& app, const std::shared_ptr<config>& new_config,
