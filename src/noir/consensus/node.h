@@ -161,7 +161,13 @@ struct node {
   }
 
   void on_start() {
-    // Check genesis time and sleep until time is ready // TODO
+    // Check genesis time and sleep until time is ready
+    auto initial_sleep_duration = std::chrono::microseconds(genesis_doc_->genesis_time - get_time());
+    if (initial_sleep_duration.count() > 0) {
+      ilog(fmt::format("Genesis time is in the future. Will sleep for {} seconds",
+        std::chrono::duration_cast<std::chrono::seconds>(initial_sleep_duration).count()));
+      std::this_thread::sleep_for(initial_sleep_duration);
+    }
 
     cs_reactor->on_start();
     auto height = cs_reactor->cs_state->rs.height;

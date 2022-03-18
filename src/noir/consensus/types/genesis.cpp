@@ -5,10 +5,12 @@
 //
 #include <noir/common/helper/variant.h>
 #include <noir/consensus/types/genesis.h>
+
 #include <fc/io/json.hpp>
 #include <fc/variant_object.hpp>
-
 #include <fmt/core.h>
+
+#include <ctime>
 
 namespace noir::consensus {
 
@@ -17,6 +19,17 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
   try {
     fc::variant obj = fc::json::from_file(gen_doc_file);
     fc::from_variant(obj, *gen_doc);
+    std::string dt;
+    fc::from_variant(obj["genesis_time"], dt);
+    struct tm tm_info {};
+    if (strptime(dt.c_str(), "%Y-%m-%dT%H:%M:%S", &tm_info)) {
+      std::time_t tt = std::mktime(&tm_info);
+      std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t(tt);
+      gen_doc->genesis_time = tp.time_since_epoch().count();
+    } else {
+      elog(fmt::format("error reading genesis from {}: unable to parse genesis_time", gen_doc_file));
+      return {};
+    }
   } catch (std::exception const& ex) {
     elog(fmt::format("error reading genesis from {}: {}", gen_doc_file, ex.what()));
     return {};
