@@ -151,7 +151,9 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
       maj23 = maj23_block_id;
       // And also copy votes over to voteSet.votes
       for (auto i = 0; const auto& v : new_votes_by_block.votes) {
-        votes[i++] = v;
+        if (v.has_value()) {
+          votes[i++] = v.value();
+        }
       }
     }
   }
