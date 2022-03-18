@@ -39,5 +39,4 @@ struct genesis_doc {
 } // namespace noir::consensus
 
 NOIR_REFLECT(noir::consensus::genesis_validator, address, pub_key, power, name)
-NOIR_REFLECT(noir::consensus::genesis_doc, /*genesis_time, */ chain_id, initial_height, /*cs_params, */ validators,
-  app_hash, app_state)
+NOIR_REFLECT(noir::consensus::genesis_doc, chain_id, initial_height, /*cs_params, */ validators, app_hash, app_state)
