@@ -35,7 +35,7 @@ struct vote : p2p::vote_message {
 struct block_votes {
   bool peer_maj23{};
   std::shared_ptr<bit_array> bit_array_;
-  std::vector<vote> votes;
+  std::vector<std::optional<vote>> votes;
   int64_t sum{};
 
   static block_votes new_block_votes(bool peer_maj23_, int num_validators) {
@@ -47,7 +47,7 @@ struct block_votes {
 
   void add_verified_vote(const vote& vote_, int64_t voting_power) {
     auto val_index = vote_.validator_index;
-    if (!votes.empty() && votes.size() >= val_index) {
+    if (!votes.empty() && votes.size() > val_index) {
       auto existing = votes[val_index];
       bit_array_->set_index(val_index, true);
       votes[val_index] = vote_;
@@ -56,7 +56,7 @@ struct block_votes {
   }
 
   std::optional<vote> get_by_index(int32_t index) {
-    if (!votes.empty() && votes.size() >= index)
+    if (!votes.empty() && votes.size() > index)
       return votes[index];
     return {};
   }
@@ -123,7 +123,7 @@ struct vote_set {
   bool add_vote(std::optional<vote> vote_);
 
   std::optional<vote> get_vote(int32_t val_index, const std::string& block_key) {
-    if (votes.size() > 0 && votes.size() >= val_index) {
+    if (votes.size() > 0 && votes.size() > val_index) {
       auto existing = votes[val_index];
       if (existing.block_id_.key() == block_key)
         return existing;
