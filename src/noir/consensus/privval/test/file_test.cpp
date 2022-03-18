@@ -8,11 +8,15 @@
 #include <noir/common/hex.h>
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/privval/file.h>
+#include <noir/consensus/types.h>
+#include <noir/consensus/types/canonical.h>
+#include <noir/core/codec.h>
 #include <noir/crypto/rand.h>
 #include <filesystem>
 
 namespace {
 using namespace noir::consensus::privval;
+using namespace noir::consensus;
 namespace fs = std::filesystem;
 
 auto prepare_test_dir = []() {
@@ -155,6 +159,61 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
           compare_file_pv_key(ret->key, file_pv_ptr->key);
           compare_file_pv_last_sign_state(ret->last_sign_state, file_pv_ptr->last_sign_state);
         }
+      }
+
+      SECTION("Verify proposal signature") {
+        // Copy of consensus_state_test
+        proposal proposal_{};
+        proposal_.timestamp = get_time();
+
+        auto data_proposal1 = noir::encode(canonical::canonicalize_proposal(proposal_));
+        // std::cout << "data_proposal1=" << to_hex(data_proposal1) << std::endl;
+        // std::cout << "digest1=" << fc::sha256::hash(data_proposal1).str() << std::endl;
+        auto sig_org = file_pv_ptr->sign_proposal(proposal_);
+        // std::cout << "sig=" << std::string(proposal_.signature.begin(), proposal_.signature.end()) << std::endl;
+
+        auto data_proposal2 = noir::encode(canonical::canonicalize_proposal(proposal_));
+        // std::cout << "data_proposal2=" << to_hex(data_proposal2) << std::endl;
+        // std::cout << "digest2=" << fc::sha256::hash(data_proposal2).str() << std::endl;
+        auto result = file_pv_ptr->get_pub_key().verify_signature(data_proposal2, proposal_.signature);
+        CHECK(result == true);
+      }
+
+      SECTION("Verify vote signature") {
+        // Copy of consensus_state_test
+        vote vote_{};
+        vote_.timestamp = get_time();
+
+        struct signature_test_case {
+          noir::p2p::signed_msg_type type;
+          bool expect_throw;
+        };
+        auto signature_tests =
+          std::to_array<signature_test_case>({signature_test_case{noir::p2p::signed_msg_type::Precommit, false},
+            signature_test_case{noir::p2p::signed_msg_type::Prevote, false},
+            signature_test_case{noir::p2p::signed_msg_type::Proposal, true},
+            signature_test_case{noir::p2p::signed_msg_type::Unknown, true}});
+
+        std::for_each(signature_tests.begin(), signature_tests.end(), [&](const signature_test_case& st) {
+          vote_.type = st.type;
+          ++vote_.height;
+          auto data_vote1 = noir::encode(canonical::canonicalize_vote(vote_));
+          // std::cout << "data_vote1=" << to_hex(data_vote1) << std::endl;
+          // std::cout << "digest1=" << fc::sha256::hash(data_vote1).str() << std::endl;
+          std::optional<std::string> sig_org;
+          if (st.expect_throw) {
+            CHECK_THROWS(file_pv_ptr->sign_vote(vote_));
+          } else {
+            CHECK_NOTHROW(sig_org = file_pv_ptr->sign_vote(vote_));
+            // std::cout << "sig=" << std::string(vote_.signature.begin(), vote_.signature.end()) << std::endl;
+
+            auto data_vote2 = noir::encode(canonical::canonicalize_vote(vote_));
+            // std::cout << "data_vote2=" << to_hex(data_vote2) << std::endl;
+            // std::cout << "digest2=" << fc::sha256::hash(data_vote2).str() << std::endl;
+            auto result = file_pv_ptr->get_pub_key().verify_signature(data_vote2, vote_.signature);
+            CHECK(result == true);
+          }
+        });
       }
     }
   });
