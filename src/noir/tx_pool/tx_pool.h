@@ -10,6 +10,7 @@
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/unapplied_tx_queue.h>
+#include <noir/common/plugin_interface.h>
 #include <appbase/application.hpp>
 #include <fc/exception/exception.hpp>
 
@@ -48,6 +49,8 @@ private:
   precheck_func* precheck_ = nullptr;
   postcheck_func* postcheck_ = nullptr;
 
+  plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel_;
+
 public:
   tx_pool(appbase::application& app);
   tx_pool(appbase::application& app, const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxyApp,
@@ -84,6 +87,7 @@ private:
   void check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx& tx);
   void add_tx(const consensus::tx_hash& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
   void update_recheck_txs();
+  void broadcast_tx(const consensus::tx& tx);
 };
 
 enum tx_pool_exception {
