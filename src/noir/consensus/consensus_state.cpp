@@ -846,7 +846,7 @@ void consensus_state::enter_precommit_wait(int64_t height, int32_t round) {
     return;
   }
 
-  if (rs.votes->precommits(round)->has_two_thirds_any()) {
+  if (!rs.votes->precommits(round)->has_two_thirds_any()) {
     throw std::runtime_error(
       fmt::format("entering precommit_wait step ({}/{}), but prevotes does not have any 2/3+ votes", height, round));
   }
