@@ -5,6 +5,7 @@
 //
 #pragma once
 
+#include <noir/common/plugin_interface.h>
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/app_connection.h>
 #include <noir/consensus/tx.h>
@@ -48,6 +49,8 @@ private:
   precheck_func* precheck_ = nullptr;
   postcheck_func* postcheck_ = nullptr;
 
+  plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel_;
+
 public:
   tx_pool(appbase::application& app);
   tx_pool(appbase::application& app,
@@ -88,6 +91,7 @@ private:
   void check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx& tx);
   void add_tx(const consensus::tx_hash& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
   void update_recheck_txs();
+  void broadcast_tx(const consensus::tx& tx);
 };
 
 enum tx_pool_exception {

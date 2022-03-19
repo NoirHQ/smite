@@ -93,6 +93,7 @@ constexpr auto peer_status_to_str(peer_status status) {
 enum channel_id {
   Consensus = 1,
   BlockSync,
+  Transaction,
   Evidence = 0x38,
   PeerError
 };
