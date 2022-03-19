@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/core/codec.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <algorithm>
 
@@ -13,7 +14,8 @@ tx_pool::tx_pool(appbase::application& app)
     config_(config{}),
     tx_queue_(config_.max_tx_num * config_.max_tx_bytes),
     tx_cache_(config_.max_tx_num),
-    proxy_app_(std::make_shared<consensus::app_connection>()) {}
+    proxy_app_(std::make_shared<consensus::app_connection>()),
+    xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
 
 tx_pool::tx_pool(appbase::application& app,
   const config& cfg,
@@ -24,7 +26,8 @@ tx_pool::tx_pool(appbase::application& app,
     tx_queue_(config_.max_tx_num * config_.max_tx_bytes),
     tx_cache_(config_.max_tx_num),
     proxy_app_(new_proxy_app),
-    block_height_(block_height) {}
+    block_height_(block_height),
+    xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
 
 void tx_pool::set_program_options(CLI::App& cfg) {
   auto tx_pool_options = cfg.add_section("tx_pool",
@@ -146,6 +149,9 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
     FC_THROW_EXCEPTION(fc::full_pool_exception, fmt::format("Tx pool is full"));
   }
 
+  if (config_.broadcast) {
+    broadcast_tx(tx);
+  }
   dlog(fmt::format("tx_hash({}) is accepted.", tx_hash.to_string()));
 }
 
@@ -276,6 +282,22 @@ void tx_pool::flush() {
 
 void tx_pool::flush_app_conn() {
   proxy_app_->flush_sync();
+}
+
+void tx_pool::broadcast_tx(const consensus::tx& tx) {
+  dlog(fmt::format("broadcast tx (tx_hash: {})", consensus::get_tx_hash(tx).to_string()));
+  auto new_env = std::make_shared<p2p::envelope>();
+  new_env->from = "";
+  new_env->to = "";
+  new_env->broadcast = true;
+  new_env->id = p2p::Transaction;
+
+  const uint32_t payload_size = encode_size(tx);
+  new_env->message.resize(payload_size);
+  datastream<char> ds(new_env->message.data(), payload_size);
+  ds << tx;
+
+  xmt_mq_channel_.publish(appbase::priority::medium, new_env);
 }
 
 } // namespace noir::tx_pool
