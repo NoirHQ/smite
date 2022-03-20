@@ -32,7 +32,7 @@ std::shared_ptr<bit_array> vote_set::get_bit_array() {
 }
 
 bool vote_set::add_vote(std::optional<vote> vote_) {
-  if (!vote_.has_value())
+  if (!vote_)
     throw std::runtime_error("add_vote() on empty vote_set");
 
   std::scoped_lock g(mtx);
@@ -60,7 +60,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
 
   // Ensure that signer is a validator
   auto val = val_set.get_by_index(val_index);
-  if (!val.has_value()) {
+  if (!val) {
     elog(fmt::format("cannot find validator {} in val_set of size {}", val_index, val_set.validators.size()));
     return false;
   }
@@ -72,7 +72,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   }
 
   // Check if the same vote exists
-  if (auto existing = get_vote(val_index, block_key); existing.has_value()) {
+  if (auto existing = get_vote(val_index, block_key); existing) {
     if (existing->signature == vote_->signature) {
       // duplicate
       return false;
@@ -86,7 +86,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     elog("add_vote() failed: invalid validator address");
     return false;
   }
-  auto vote_sign_bytes = encode(canonical::canonicalize_vote(vote_.value()));
+  auto vote_sign_bytes = encode(canonical::canonicalize_vote(*vote_));
   if (!val->pub_key_.verify_signature(vote_sign_bytes, vote_->signature)) {
     elog("add_vote() failed: invalid signature");
     return false;
@@ -106,13 +106,13 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     }
     // Replace vote if block_key matches vote_set.maj23
     if (maj23.has_value() && maj23.value().key() == block_key) {
-      votes[val_index] = vote_.value();
+      votes[val_index] = vote_;
       votes_bit_array->set_index(val_index, true);
     }
     // Otherwise, don't add to vote_set.votes
   } else {
     // Add to vote_set.votes and increase sum
-    votes[val_index] = vote_.value();
+    votes[val_index] = vote_;
     votes_bit_array->set_index(val_index, true);
     sum += voting_power;
   }
@@ -120,13 +120,13 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   block_votes new_votes_by_block;
   if (votes_by_block.contains(block_key)) {
     new_votes_by_block = votes_by_block[block_key];
-    if (conflicting.has_value() && votes_by_block[block_key].peer_maj23) {
+    if (conflicting && votes_by_block[block_key].peer_maj23) {
       // There's a conflict and no peer claims that this block is special.
       return false;
     }
     // We'll add the vote in a bit.
   } else {
-    if (conflicting.has_value()) {
+    if (conflicting) {
       // there's a conflicting vote.
       // We're not even tracking this blockKey, so just forget it.
       return false;
@@ -148,7 +148,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   if (orig_sum < quorum && quorum <= new_votes_by_block.sum) {
     // Only consider the first quorum reached
     if (!maj23.has_value()) {
-      auto maj23_block_id = vote_.value().block_id_;
+      auto maj23_block_id = vote_->block_id_;
       maj23 = maj23_block_id;
       // And also copy votes over to voteSet.votes
       votes = new_votes_by_block.votes;
