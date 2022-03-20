@@ -12,7 +12,7 @@
 namespace noir::consensus {
 
 std::shared_ptr<vote> commit::get_vote(int32_t val_idx) {
-  auto commit_sig = signatures[val_idx];
+  auto& commit_sig = signatures[val_idx];
   auto ret = std::make_shared<vote>();
   ret->type = noir::p2p::signed_msg_type::Precommit;
   ret->height = height;
