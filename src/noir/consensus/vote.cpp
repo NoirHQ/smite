@@ -98,7 +98,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
 
   // Already exists in vote_set.votes?
   if (votes.size() > 0 && votes.size() >= val_index && votes[val_index]) {
-    auto existing = votes[val_index];
+    auto& existing = votes[val_index];
     if (existing->block_id_ == vote_->block_id_) {
       throw std::runtime_error("add_vote() does not expect duplicate votes");
     } else {
