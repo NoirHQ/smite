@@ -617,7 +617,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
       throw std::runtime_error("attempted to create proposal block with empty priv_validator");
 
     commit commit_;
-    std::vector<vote> votes_;
+    std::vector<std::optional<vote>> votes_;
     if (rs.height == local_state.initial_height) {
       // We are creating a proposal for the first block
       std::vector<commit_sig> commit_sigs;

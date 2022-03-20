@@ -105,7 +105,7 @@ struct vote_set {
 
   std::mutex mtx;
   std::shared_ptr<bit_array> votes_bit_array{};
-  std::vector<vote> votes;
+  std::vector<std::optional<vote>> votes;
   int64_t sum;
   std::optional<p2p::block_id> maj23;
   std::map<std::string, block_votes> votes_by_block;
@@ -123,9 +123,9 @@ struct vote_set {
   bool add_vote(std::optional<vote> vote_);
 
   std::optional<vote> get_vote(int32_t val_index, const std::string& block_key) {
-    if (votes.size() > 0 && votes.size() > val_index) {
+    if (votes.size() > 0 && votes.size() > val_index && votes[val_index]) {
       auto existing = votes[val_index];
-      if (existing.block_id_.key() == block_key)
+      if (existing->block_id_.key() == block_key)
         return existing;
     }
     if (votes_by_block.contains(block_key)) {
@@ -208,13 +208,14 @@ struct vote_set {
       throw std::runtime_error("cannot make_comit() unless a block has 2/3+");
     // For every validator, get the precommit
     std::vector<commit_sig> commit_sigs;
-    for (auto& vote : votes) {
-      auto commit_sig_ = vote.to_commit_sig();
+    commit_sigs.resize(votes.size());
+    for (auto i = 0; auto& vote : votes) {
+      auto commit_sig_ = (vote) ? vote->to_commit_sig() : commit_sig::new_commit_sig_absent();
       // If block_id exists but does not match, exclude sig
-      if (commit_sig_.for_block() && (vote.block_id_ != maj23)) {
+      if (commit_sig_.for_block() && (vote->block_id_ != maj23)) {
         commit_sig_ = commit_sig::new_commit_sig_absent();
       }
-      commit_sigs.push_back(commit_sig_);
+      commit_sigs[i++] = commit_sig_;
     }
     return commit::new_commit(height, round, maj23.value(), commit_sigs);
   }
@@ -238,7 +239,7 @@ struct vote_set_reader {
   bool is_commit;
   p2p::signed_msg_type type;
   int size;
-  std::vector<vote> votes;
+  std::vector<std::optional<vote>> votes;
 
   vote_set_reader() = delete;
   vote_set_reader(const vote_set_reader&) = delete;
@@ -279,9 +280,9 @@ struct vote_set_reader {
   std::shared_ptr<vote> get_by_index(int32_t val_index) {
     if (votes.empty())
       return nullptr;
-    if (val_index >= votes.size())
+    if (val_index >= votes.size() || votes[val_index])
       return nullptr;
-    return std::make_shared<vote>(votes[val_index]);
+    return std::make_shared<vote>(*votes[val_index]);
   }
 };
 

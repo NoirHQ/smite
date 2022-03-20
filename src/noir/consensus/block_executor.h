@@ -42,7 +42,7 @@ struct block_executor {
   }
 
   std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> create_proposal_block(
-    int64_t height, state& state_, commit& commit_, bytes& proposer_addr, std::vector<vote>& votes) {
+    int64_t height, state& state_, commit& commit_, bytes& proposer_addr, std::vector<std::optional<vote>>& votes) {
     auto max_bytes = state_.consensus_params_.block.max_bytes;
     auto max_gas = state_.consensus_params_.block.max_gas;
 
