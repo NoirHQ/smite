@@ -21,6 +21,7 @@ std::shared_ptr<vote_set> vote_set::new_vote_set(std::string& chain_id_, int64_t
   ret->signed_msg_type_ = signed_msg_type;
   ret->val_set = val_set_;
   ret->votes_bit_array = bit_array::new_bit_array(val_set_.size());
+  ret->votes.resize(val_set_.size());
   ret->sum = 0;
   return ret;
 }
@@ -96,9 +97,9 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   std::optional<vote> conflicting;
 
   // Already exists in vote_set.votes?
-  if (votes.size() > 0 && votes.size() >= val_index) {
+  if (votes.size() > 0 && votes.size() >= val_index && votes[val_index]) {
     auto existing = votes[val_index];
-    if (existing.block_id_ == vote_->block_id_) {
+    if (existing->block_id_ == vote_->block_id_) {
       throw std::runtime_error("add_vote() does not expect duplicate votes");
     } else {
       conflicting = existing;
@@ -111,7 +112,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     // Otherwise, don't add to vote_set.votes
   } else {
     // Add to vote_set.votes and increase sum
-    votes.push_back(vote_.value());
+    votes[val_index] = vote_.value();
     votes_bit_array->set_index(val_index, true);
     sum += voting_power;
   }
@@ -150,11 +151,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
       auto maj23_block_id = vote_.value().block_id_;
       maj23 = maj23_block_id;
       // And also copy votes over to voteSet.votes
-      for (auto i = 0; const auto& v : new_votes_by_block.votes) {
-        if (v.has_value()) {
-          votes[i++] = v.value();
-        }
-      }
+      votes = new_votes_by_block.votes;
     }
   }
 
