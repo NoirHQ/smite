@@ -1997,23 +1997,23 @@ class Message final :
       ::tendermint::consensus::Vote* vote);
   ::tendermint::consensus::Vote* unsafe_arena_release_vote();
 
-  // .tendermint.consensus.HasVote has_vote = 7;
-  bool has_has_vote() const;
+  // .tendermint.consensus.HasVote has_vote_ = 7;
+  bool has_has_vote_() const;
   private:
-  bool _internal_has_has_vote() const;
+  bool _internal_has_has_vote_() const;
   public:
-  void clear_has_vote();
-  const ::tendermint::consensus::HasVote& has_vote() const;
-  PROTOBUF_NODISCARD ::tendermint::consensus::HasVote* release_has_vote();
-  ::tendermint::consensus::HasVote* mutable_has_vote();
-  void set_allocated_has_vote(::tendermint::consensus::HasVote* has_vote);
+  void clear_has_vote_();
+  const ::tendermint::consensus::HasVote& has_vote_() const;
+  PROTOBUF_NODISCARD ::tendermint::consensus::HasVote* release_has_vote_();
+  ::tendermint::consensus::HasVote* mutable_has_vote_();
+  void set_allocated_has_vote_(::tendermint::consensus::HasVote* has_vote_);
   private:
-  const ::tendermint::consensus::HasVote& _internal_has_vote() const;
-  ::tendermint::consensus::HasVote* _internal_mutable_has_vote();
+  const ::tendermint::consensus::HasVote& _internal_has_vote_() const;
+  ::tendermint::consensus::HasVote* _internal_mutable_has_vote_();
   public:
-  void unsafe_arena_set_allocated_has_vote(
-      ::tendermint::consensus::HasVote* has_vote);
-  ::tendermint::consensus::HasVote* unsafe_arena_release_has_vote();
+  void unsafe_arena_set_allocated_has_vote_(
+      ::tendermint::consensus::HasVote* has_vote_);
+  ::tendermint::consensus::HasVote* unsafe_arena_release_has_vote_();
 
   // .tendermint.consensus.VoteSetMaj23 vote_set_maj23 = 8;
   bool has_vote_set_maj23() const;
@@ -2062,7 +2062,7 @@ class Message final :
   void set_has_proposal_pol();
   void set_has_block_part();
   void set_has_vote();
-  void set_has_has_vote();
+  void set_has_has_vote_();
   void set_has_vote_set_maj23();
   void set_has_vote_set_bits();
 
@@ -2081,7 +2081,7 @@ class Message final :
     ::tendermint::consensus::ProposalPOL* proposal_pol_;
     ::tendermint::consensus::BlockPart* block_part_;
     ::tendermint::consensus::Vote* vote_;
-    ::tendermint::consensus::HasVote* has_vote_;
+    ::tendermint::consensus::HasVote* has_vote__;
     ::tendermint::consensus::VoteSetMaj23* vote_set_maj23_;
     ::tendermint::consensus::VoteSetBits* vote_set_bits_;
   } sum_;
@@ -3795,77 +3795,77 @@ inline ::tendermint::consensus::Vote* Message::mutable_vote() {
   return _msg;
 }
 
-// .tendermint.consensus.HasVote has_vote = 7;
-inline bool Message::_internal_has_has_vote() const {
+// .tendermint.consensus.HasVote has_vote_ = 7;
+inline bool Message::_internal_has_has_vote_() const {
   return sum_case() == kHasVote;
 }
-inline bool Message::has_has_vote() const {
-  return _internal_has_has_vote();
+inline bool Message::has_has_vote_() const {
+  return _internal_has_has_vote_();
 }
-inline void Message::set_has_has_vote() {
+inline void Message::set_has_has_vote_() {
   _oneof_case_[0] = kHasVote;
 }
-inline void Message::clear_has_vote() {
-  if (_internal_has_has_vote()) {
+inline void Message::clear_has_vote_() {
+  if (_internal_has_has_vote_()) {
     if (GetArenaForAllocation() == nullptr) {
-      delete sum_.has_vote_;
+      delete sum_.has_vote__;
     }
     clear_has_sum();
   }
 }
-inline ::tendermint::consensus::HasVote* Message::release_has_vote() {
-  // @@protoc_insertion_point(field_release:tendermint.consensus.Message.has_vote)
-  if (_internal_has_has_vote()) {
+inline ::tendermint::consensus::HasVote* Message::release_has_vote_() {
+  // @@protoc_insertion_point(field_release:tendermint.consensus.Message.has_vote_)
+  if (_internal_has_has_vote_()) {
     clear_has_sum();
-      ::tendermint::consensus::HasVote* temp = sum_.has_vote_;
+      ::tendermint::consensus::HasVote* temp = sum_.has_vote__;
     if (GetArenaForAllocation() != nullptr) {
       temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
     }
-    sum_.has_vote_ = nullptr;
+    sum_.has_vote__ = nullptr;
     return temp;
   } else {
     return nullptr;
   }
 }
-inline const ::tendermint::consensus::HasVote& Message::_internal_has_vote() const {
-  return _internal_has_has_vote()
-      ? *sum_.has_vote_
+inline const ::tendermint::consensus::HasVote& Message::_internal_has_vote_() const {
+  return _internal_has_has_vote_()
+      ? *sum_.has_vote__
       : reinterpret_cast< ::tendermint::consensus::HasVote&>(::tendermint::consensus::_HasVote_default_instance_);
 }
-inline const ::tendermint::consensus::HasVote& Message::has_vote() const {
-  // @@protoc_insertion_point(field_get:tendermint.consensus.Message.has_vote)
-  return _internal_has_vote();
+inline const ::tendermint::consensus::HasVote& Message::has_vote_() const {
+  // @@protoc_insertion_point(field_get:tendermint.consensus.Message.has_vote_)
+  return _internal_has_vote_();
 }
-inline ::tendermint::consensus::HasVote* Message::unsafe_arena_release_has_vote() {
-  // @@protoc_insertion_point(field_unsafe_arena_release:tendermint.consensus.Message.has_vote)
-  if (_internal_has_has_vote()) {
+inline ::tendermint::consensus::HasVote* Message::unsafe_arena_release_has_vote_() {
+  // @@protoc_insertion_point(field_unsafe_arena_release:tendermint.consensus.Message.has_vote_)
+  if (_internal_has_has_vote_()) {
     clear_has_sum();
-    ::tendermint::consensus::HasVote* temp = sum_.has_vote_;
-    sum_.has_vote_ = nullptr;
+    ::tendermint::consensus::HasVote* temp = sum_.has_vote__;
+    sum_.has_vote__ = nullptr;
     return temp;
   } else {
     return nullptr;
   }
 }
-inline void Message::unsafe_arena_set_allocated_has_vote(::tendermint::consensus::HasVote* has_vote) {
+inline void Message::unsafe_arena_set_allocated_has_vote_(::tendermint::consensus::HasVote* has_vote_) {
   clear_sum();
-  if (has_vote) {
-    set_has_has_vote();
-    sum_.has_vote_ = has_vote;
+  if (has_vote_) {
+    set_has_has_vote_();
+    sum_.has_vote__ = has_vote_;
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tendermint.consensus.Message.has_vote)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:tendermint.consensus.Message.has_vote_)
 }
-inline ::tendermint::consensus::HasVote* Message::_internal_mutable_has_vote() {
-  if (!_internal_has_has_vote()) {
+inline ::tendermint::consensus::HasVote* Message::_internal_mutable_has_vote_() {
+  if (!_internal_has_has_vote_()) {
     clear_sum();
-    set_has_has_vote();
-    sum_.has_vote_ = CreateMaybeMessage< ::tendermint::consensus::HasVote >(GetArenaForAllocation());
+    set_has_has_vote_();
+    sum_.has_vote__ = CreateMaybeMessage< ::tendermint::consensus::HasVote >(GetArenaForAllocation());
   }
-  return sum_.has_vote_;
+  return sum_.has_vote__;
 }
-inline ::tendermint::consensus::HasVote* Message::mutable_has_vote() {
-  ::tendermint::consensus::HasVote* _msg = _internal_mutable_has_vote();
-  // @@protoc_insertion_point(field_mutable:tendermint.consensus.Message.has_vote)
+inline ::tendermint::consensus::HasVote* Message::mutable_has_vote_() {
+  ::tendermint::consensus::HasVote* _msg = _internal_mutable_has_vote_();
+  // @@protoc_insertion_point(field_mutable:tendermint.consensus.Message.has_vote_)
   return _msg;
 }
 

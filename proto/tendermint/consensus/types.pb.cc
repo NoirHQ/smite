@@ -330,7 +330,7 @@ const char descriptor_table_protodef_tendermint_2fconsensus_2ftypes_2eproto[] PR
   "MsgType\022<\n\010block_id\030\004 \001(\0132\031.tendermint.t"
   "ypes.BlockIDB\017\342\336\037\007BlockID\310\336\037\000\0223\n\005votes\030\005"
   " \001(\0132\036.tendermint.libs.bits.BitArrayB\004\310\336"
-  "\037\000\"\215\004\n\007Message\022<\n\016new_round_step\030\001 \001(\0132\""
+  "\037\000\"\216\004\n\007Message\022<\n\016new_round_step\030\001 \001(\0132\""
   ".tendermint.consensus.NewRoundStepH\000\022>\n\017"
   "new_valid_block\030\002 \001(\0132#.tendermint.conse"
   "nsus.NewValidBlockH\000\0222\n\010proposal\030\003 \001(\0132\036"
@@ -338,14 +338,14 @@ const char descriptor_table_protodef_tendermint_2fconsensus_2ftypes_2eproto[] PR
   "osal_pol\030\004 \001(\0132!.tendermint.consensus.Pr"
   "oposalPOLH\000\0225\n\nblock_part\030\005 \001(\0132\037.tender"
   "mint.consensus.BlockPartH\000\022*\n\004vote\030\006 \001(\013"
-  "2\032.tendermint.consensus.VoteH\000\0221\n\010has_vo"
-  "te\030\007 \001(\0132\035.tendermint.consensus.HasVoteH"
-  "\000\022<\n\016vote_set_maj23\030\010 \001(\0132\".tendermint.c"
-  "onsensus.VoteSetMaj23H\000\022:\n\rvote_set_bits"
-  "\030\t \001(\0132!.tendermint.consensus.VoteSetBit"
-  "sH\000B\005\n\003sumB=Z;github.com/tendermint/tend"
-  "ermint/proto/tendermint/consensusb\006proto"
-  "3"
+  "2\032.tendermint.consensus.VoteH\000\0222\n\thas_vo"
+  "te_\030\007 \001(\0132\035.tendermint.consensus.HasVote"
+  "H\000\022<\n\016vote_set_maj23\030\010 \001(\0132\".tendermint."
+  "consensus.VoteSetMaj23H\000\022:\n\rvote_set_bit"
+  "s\030\t \001(\0132!.tendermint.consensus.VoteSetBi"
+  "tsH\000B\005\n\003sumB=Z;github.com/tendermint/ten"
+  "dermint/proto/tendermint/consensusb\006prot"
+  "o3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_tendermint_2fconsensus_2ftypes_2eproto_deps[3] = {
   &::descriptor_table_gogoproto_2fgogo_2eproto,
@@ -354,7 +354,7 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_tendermint_2fconsensus_2ftypes_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_tendermint_2fconsensus_2ftypes_2eproto = {
-  false, false, 1841, descriptor_table_protodef_tendermint_2fconsensus_2ftypes_2eproto, "tendermint/consensus/types.proto", 
+  false, false, 1842, descriptor_table_protodef_tendermint_2fconsensus_2ftypes_2eproto, "tendermint/consensus/types.proto", 
   &descriptor_table_tendermint_2fconsensus_2ftypes_2eproto_once, descriptor_table_tendermint_2fconsensus_2ftypes_2eproto_deps, 3, 10,
   schemas, file_default_instances, TableStruct_tendermint_2fconsensus_2ftypes_2eproto::offsets,
   file_level_metadata_tendermint_2fconsensus_2ftypes_2eproto, file_level_enum_descriptors_tendermint_2fconsensus_2ftypes_2eproto, file_level_service_descriptors_tendermint_2fconsensus_2ftypes_2eproto,
@@ -2778,7 +2778,7 @@ class Message::_Internal {
   static const ::tendermint::consensus::ProposalPOL& proposal_pol(const Message* msg);
   static const ::tendermint::consensus::BlockPart& block_part(const Message* msg);
   static const ::tendermint::consensus::Vote& vote(const Message* msg);
-  static const ::tendermint::consensus::HasVote& has_vote(const Message* msg);
+  static const ::tendermint::consensus::HasVote& has_vote_(const Message* msg);
   static const ::tendermint::consensus::VoteSetMaj23& vote_set_maj23(const Message* msg);
   static const ::tendermint::consensus::VoteSetBits& vote_set_bits(const Message* msg);
 };
@@ -2808,8 +2808,8 @@ Message::_Internal::vote(const Message* msg) {
   return *msg->sum_.vote_;
 }
 const ::tendermint::consensus::HasVote&
-Message::_Internal::has_vote(const Message* msg) {
-  return *msg->sum_.has_vote_;
+Message::_Internal::has_vote_(const Message* msg) {
+  return *msg->sum_.has_vote__;
 }
 const ::tendermint::consensus::VoteSetMaj23&
 Message::_Internal::vote_set_maj23(const Message* msg) {
@@ -2909,20 +2909,20 @@ void Message::set_allocated_vote(::tendermint::consensus::Vote* vote) {
   }
   // @@protoc_insertion_point(field_set_allocated:tendermint.consensus.Message.vote)
 }
-void Message::set_allocated_has_vote(::tendermint::consensus::HasVote* has_vote) {
+void Message::set_allocated_has_vote_(::tendermint::consensus::HasVote* has_vote_) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   clear_sum();
-  if (has_vote) {
+  if (has_vote_) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-      ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper<::tendermint::consensus::HasVote>::GetOwningArena(has_vote);
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper<::tendermint::consensus::HasVote>::GetOwningArena(has_vote_);
     if (message_arena != submessage_arena) {
-      has_vote = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, has_vote, submessage_arena);
+      has_vote_ = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, has_vote_, submessage_arena);
     }
-    set_has_has_vote();
-    sum_.has_vote_ = has_vote;
+    set_has_has_vote_();
+    sum_.has_vote__ = has_vote_;
   }
-  // @@protoc_insertion_point(field_set_allocated:tendermint.consensus.Message.has_vote)
+  // @@protoc_insertion_point(field_set_allocated:tendermint.consensus.Message.has_vote_)
 }
 void Message::set_allocated_vote_set_maj23(::tendermint::consensus::VoteSetMaj23* vote_set_maj23) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
@@ -2993,7 +2993,7 @@ Message::Message(const Message& from)
       break;
     }
     case kHasVote: {
-      _internal_mutable_has_vote()->::tendermint::consensus::HasVote::MergeFrom(from._internal_has_vote());
+      _internal_mutable_has_vote_()->::tendermint::consensus::HasVote::MergeFrom(from._internal_has_vote_());
       break;
     }
     case kVoteSetMaj23: {
@@ -3080,7 +3080,7 @@ void Message::clear_sum() {
     }
     case kHasVote: {
       if (GetArenaForAllocation() == nullptr) {
-        delete sum_.has_vote_;
+        delete sum_.has_vote__;
       }
       break;
     }
@@ -3168,10 +3168,10 @@ const char* Message::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::in
         } else
           goto handle_unusual;
         continue;
-      // .tendermint.consensus.HasVote has_vote = 7;
+      // .tendermint.consensus.HasVote has_vote_ = 7;
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
-          ptr = ctx->ParseMessage(_internal_mutable_has_vote(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_has_vote_(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -3269,12 +3269,12 @@ uint8_t* Message::_InternalSerialize(
         6, _Internal::vote(this), target, stream);
   }
 
-  // .tendermint.consensus.HasVote has_vote = 7;
-  if (_internal_has_has_vote()) {
+  // .tendermint.consensus.HasVote has_vote_ = 7;
+  if (_internal_has_has_vote_()) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(
-        7, _Internal::has_vote(this), target, stream);
+        7, _Internal::has_vote_(this), target, stream);
   }
 
   // .tendermint.consensus.VoteSetMaj23 vote_set_maj23 = 8;
@@ -3352,11 +3352,11 @@ size_t Message::ByteSizeLong() const {
           *sum_.vote_);
       break;
     }
-    // .tendermint.consensus.HasVote has_vote = 7;
+    // .tendermint.consensus.HasVote has_vote_ = 7;
     case kHasVote: {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-          *sum_.has_vote_);
+          *sum_.has_vote__);
       break;
     }
     // .tendermint.consensus.VoteSetMaj23 vote_set_maj23 = 8;
@@ -3425,7 +3425,7 @@ void Message::MergeFrom(const Message& from) {
       break;
     }
     case kHasVote: {
-      _internal_mutable_has_vote()->::tendermint::consensus::HasVote::MergeFrom(from._internal_has_vote());
+      _internal_mutable_has_vote_()->::tendermint::consensus::HasVote::MergeFrom(from._internal_has_vote_());
       break;
     }
     case kVoteSetMaj23: {

@@ -9,7 +9,12 @@ endfunction()
 set(NOIR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(noir STATIC)
-target_include_directories(noir PUBLIC ${NOIR_SOURCE_DIR} ${CMAKE_BINARY_DIR}/include)
+target_include_directories(noir
+  PUBLIC
+    ${NOIR_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../proto
+)
 target_link_libraries(noir
   appbase
   b2
