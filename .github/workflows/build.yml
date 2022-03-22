@@ -29,7 +29,7 @@ jobs:
           platform_version: 20.04
           boost_install_dir: /opt
       # setup build dependencies
-      - run: sudo apt install -y libb2-dev libgflags-dev xsltproc
+      - run: sudo apt install -y libb2-dev libgflags-dev libprotobuf-dev xsltproc
       # checkout
       - uses: actions/checkout@v2
         with:
@@ -74,7 +74,7 @@ jobs:
     runs-on: macos-latest
     steps:
       # setup build dependencies
-      - run: brew install boost gflags libb2 rocksdb
+      - run: brew install boost gflags libb2 protobuf rocksdb
       # checkout
       - uses: actions/checkout@v2
         with:
