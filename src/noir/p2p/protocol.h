@@ -244,7 +244,7 @@ NOIR_REFLECT(noir::p2p::go_away_message, reason, node_id)
 NOIR_REFLECT(noir::p2p::time_message, org, rec, xmt, dst)
 NOIR_REFLECT(noir::p2p::new_round_step_message, height, round, step, seconds_since_start_time, last_commit_round)
 NOIR_REFLECT(noir::p2p::new_valid_block_message, height, round, block_part_set_header, block_parts, is_commit)
-NOIR_REFLECT(noir::p2p::proposal_message, type, height, round, pol_round, block_id_, timestamp)
+NOIR_REFLECT(noir::p2p::proposal_message, type, height, round, pol_round, block_id_, timestamp, signature)
 NOIR_REFLECT(noir::p2p::proposal_pol_message, height, proposal_pol_round, proposal_pol)
 NOIR_REFLECT(noir::p2p::block_part_message, height, round, index, bytes_, proof)
 NOIR_REFLECT(noir::p2p::vote_message, type, height, round, block_id_, timestamp, validator_address, validator_index,
