@@ -6,6 +6,8 @@ function(add_noir_test TARGET)
   endif()
 endfunction()
 
+find_package(Protobuf)
+
 set(NOIR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(noir STATIC)
@@ -22,6 +24,7 @@ target_link_libraries(noir
   fc
   fixed_string
   fmt
+  protobuf::libprotobuf
   range-v3
   rocksdb
   scope-lite
