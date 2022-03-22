@@ -1,28 +1,41 @@
-target_sources(noir
-  PRIVATE
-    gogoproto/gogo.pb.cc
-    tendermint/abci/types.pb.cc
-    tendermint/blockchain/types.pb.cc
-    tendermint/consensus/types.pb.cc
-    tendermint/consensus/wal.pb.cc
-    tendermint/crypto/keys.pb.cc
-    tendermint/crypto/proof.pb.cc
-    tendermint/libs/bits/types.pb.cc
-    tendermint/mempool/types.pb.cc
-    tendermint/p2p/conn.pb.cc
-    tendermint/p2p/pex.pb.cc
-    tendermint/p2p/types.pb.cc
-    tendermint/privval/types.pb.cc
-    tendermint/rpc/grpc/types.pb.cc
-    tendermint/state/types.pb.cc
-    tendermint/statesync/types.pb.cc
-    tendermint/store/types.pb.cc
-    tendermint/types/block.pb.cc
-    tendermint/types/canonical.pb.cc
-    tendermint/types/events.pb.cc
-    tendermint/types/evidence.pb.cc
-    tendermint/types/params.pb.cc
-    tendermint/types/types.pb.cc
-    tendermint/types/validator.pb.cc
-    tendermint/version/types.pb.cc
+list(APPEND PROTO_SOURCES
+  gogoproto/gogo.proto
+  tendermint/statesync/types.proto
+  tendermint/consensus/types.proto
+  tendermint/consensus/wal.proto
+  tendermint/crypto/proof.proto
+  tendermint/crypto/keys.proto
+  tendermint/abci/types.proto
+  tendermint/types/evidence.proto
+  tendermint/types/events.proto
+  tendermint/types/canonical.proto
+  tendermint/types/types.proto
+  tendermint/types/validator.proto
+  tendermint/types/block.proto
+  tendermint/types/params.proto
+  tendermint/privval/types.proto
+  tendermint/state/types.proto
+  tendermint/libs/bits/types.proto
+  tendermint/blockchain/types.proto
+  tendermint/version/types.proto
+  tendermint/p2p/types.proto
+  tendermint/p2p/conn.proto
+  tendermint/p2p/pex.proto
+  tendermint/mempool/types.proto
+  tendermint/rpc/grpc/types.proto
+  tendermint/store/types.proto
 )
+
+set(PROTO_PATH ${PROJECT_SOURCE_DIR}/proto)
+foreach(PROTO ${PROTO_SOURCES})
+  set(PROTO_OUTPUT ${PROTO})
+  string(REPLACE "\\.proto" ".pb.cc" PROTO_OUTPUT ${PROTO_OUTPUT})
+  if(NOT EXISTS ${PROTO_OUTPUT})
+    execute_process(
+      COMMAND protoc --proto_path=${PROTO_PATH} --cpp_out=${PROTO_PATH} ${PROTO_PATH}/${PROTO}
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+    list(APPEND PROTO_GENERATED ${PROTO_OUTPUT})
+  endif()
+endforeach()
+
+target_sources(noir PRIVATE ${PROTO_GENERATED})
