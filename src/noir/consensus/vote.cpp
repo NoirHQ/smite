@@ -117,10 +117,10 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     sum += voting_power;
   }
 
-  block_votes new_votes_by_block;
+  std::shared_ptr<block_votes> new_votes_by_block;
   if (votes_by_block.contains(block_key)) {
     new_votes_by_block = votes_by_block[block_key];
-    if (conflicting && votes_by_block[block_key].peer_maj23) {
+    if (conflicting && votes_by_block[block_key]->peer_maj23) {
       // There's a conflict and no peer claims that this block is special.
       return false;
     }
@@ -138,20 +138,20 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   }
 
   // Before adding to votesByBlock, see if we'll exceed quorum
-  auto orig_sum = new_votes_by_block.sum;
+  auto orig_sum = new_votes_by_block->sum;
   auto quorum = val_set.get_total_voting_power() * 2 / 3 + 1;
 
   // Add vote to votesByBlock
-  new_votes_by_block.add_verified_vote(vote_.value(), voting_power);
+  new_votes_by_block->add_verified_vote(vote_.value(), voting_power);
 
   // If we just crossed the quorum threshold and have 2/3 majority...
-  if (orig_sum < quorum && quorum <= new_votes_by_block.sum) {
+  if (orig_sum < quorum && quorum <= new_votes_by_block->sum) {
     // Only consider the first quorum reached
     if (!maj23.has_value()) {
       auto maj23_block_id = vote_->block_id_;
       maj23 = maj23_block_id;
       // And also copy votes over to voteSet.votes
-      votes = new_votes_by_block.votes;
+      votes = new_votes_by_block->votes;
     }
   }
 

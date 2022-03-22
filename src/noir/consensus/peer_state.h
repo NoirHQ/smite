@@ -296,8 +296,11 @@ public:
     if (!ps_votes)
       return {nullptr, false};
 
-    if (auto [index, ok] = votes.bit_array_->sub(ps_votes)->pick_random(); ok)
+    if (auto [index, ok] = votes.bit_array_->sub(ps_votes)->pick_random(); ok) {
+      if (!votes.get_by_index(index))
+        return {nullptr, false};
       return {votes.get_by_index(index), true};
+    }
 
     return {nullptr, false};
   }
