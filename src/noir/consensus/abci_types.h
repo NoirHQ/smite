@@ -178,10 +178,18 @@ struct response_check_tx {
   uint64_t nonce;
 };
 
+struct tx_result {
+  int64_t height;
+  uint32_t index;
+  bytes tx;
+  response_deliver_tx result;
+};
+
 } // namespace noir::consensus
 
 NOIR_REFLECT(noir::consensus::event_attribute, key, value, index)
 NOIR_REFLECT(noir::consensus::event, type, attributes)
+NOIR_REFLECT(noir::consensus::tx_result, height, index, tx, result)
 NOIR_REFLECT(noir::consensus::vote_info, validator_, signed_last_block)
 NOIR_REFLECT(noir::consensus::last_commit_info, round, votes)
 NOIR_REFLECT(noir::consensus::validator_update, power)
