@@ -1,0 +1,28 @@
+target_sources(noir
+  PRIVATE
+    gogoproto/gogo.pb.cc
+    tendermint/abci/types.pb.cc
+    tendermint/blockchain/types.pb.cc
+    tendermint/consensus/types.pb.cc
+    tendermint/consensus/wal.pb.cc
+    tendermint/crypto/keys.pb.cc
+    tendermint/crypto/proof.pb.cc
+    tendermint/libs/bits/types.pb.cc
+    tendermint/mempool/types.pb.cc
+    tendermint/p2p/conn.pb.cc
+    tendermint/p2p/pex.pb.cc
+    tendermint/p2p/types.pb.cc
+    tendermint/privval/types.pb.cc
+    tendermint/rpc/grpc/types.pb.cc
+    tendermint/state/types.pb.cc
+    tendermint/statesync/types.pb.cc
+    tendermint/store/types.pb.cc
+    tendermint/types/block.pb.cc
+    tendermint/types/canonical.pb.cc
+    tendermint/types/events.pb.cc
+    tendermint/types/evidence.pb.cc
+    tendermint/types/params.pb.cc
+    tendermint/types/types.pb.cc
+    tendermint/types/validator.pb.cc
+    tendermint/version/types.pb.cc
+)
