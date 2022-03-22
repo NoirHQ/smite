@@ -55,3 +55,7 @@ compile_commands.json
 
 # Doxygen
 html
+
+# Protobuf
+*.pb.h
+*.pb.cc
