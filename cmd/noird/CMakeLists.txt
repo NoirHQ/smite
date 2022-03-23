@@ -5,7 +5,6 @@ add_executable(noird
   noir/commands/debug.cpp
   noir/commands/init.cpp
   noir/commands/node_test.cpp
-  noir/commands/p2p_test.cpp
   noir/commands/start.cpp
   noir/commands/version.cpp
 )
