@@ -14,4 +14,10 @@ bool lexical_conversion<noir::uint256_t, noir::uint256_t>(
   return true;
 }
 
+template<>
+bool lexical_conversion<noir::bytes32, noir::bytes32>(const std::vector<std::string>& strings, noir::bytes32& output) {
+  output = noir::bytes32(strings[0]);
+  return true;
+}
+
 } // namespace CLI::detail
