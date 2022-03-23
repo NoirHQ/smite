@@ -140,11 +140,10 @@ std::string file_pv::string() const {
     last_sign_state.round, static_cast<int8_t>(last_sign_state.step));
 }
 
-template<typename T>
-bool check_only_differ_by_timestamp(
-  const bytes& last_sign_bytes, const bytes& new_sign_bytes, noir::p2p::tstamp& timestamp) {
-  auto last_vote = decode<T>(last_sign_bytes);
-  auto new_vote = decode<T>(new_sign_bytes);
+bool check_only_differ_by_timestamp(const noir::consensus::vote& obj, const bytes& last_sign_bytes,
+  const bytes& new_sign_bytes, noir::p2p::tstamp& timestamp) {
+  auto last_vote = decode<canonical_vote>(last_sign_bytes);
+  auto new_vote = decode<canonical_vote>(new_sign_bytes);
   timestamp = last_vote.timestamp;
   // set the times to the same value and check equality
   auto now = get_time();
@@ -152,8 +151,24 @@ bool check_only_differ_by_timestamp(
   new_vote.timestamp = now;
 
   // FIXME: compare reflected value before encoding
-  auto lhs = encode<T>(last_vote);
-  auto rhs = encode<T>(new_vote);
+  auto lhs = encode<canonical_vote>(last_vote);
+  auto rhs = encode<canonical_vote>(new_vote);
+  return lhs == rhs;
+}
+
+bool check_only_differ_by_timestamp(const noir::consensus::proposal& obj, const bytes& last_sign_bytes,
+  const bytes& new_sign_bytes, noir::p2p::tstamp& timestamp) {
+  auto last_vote = decode<canonical_proposal>(last_sign_bytes);
+  auto new_vote = decode<canonical_proposal>(new_sign_bytes);
+  timestamp = last_vote.timestamp;
+  // set the times to the same value and check equality
+  auto now = get_time();
+  last_vote.timestamp = now;
+  new_vote.timestamp = now;
+
+  // FIXME: compare reflected value before encoding
+  auto lhs = encode<canonical_proposal>(last_vote);
+  auto rhs = encode<canonical_proposal>(new_vote);
   return lhs == rhs;
 }
 
@@ -175,7 +190,7 @@ bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step)
   if (same_hrs) {
     if (sign_bytes == lss.sign_bytes) {
       obj.signature = lss.signature;
-    } else if (check_only_differ_by_timestamp<T>(lss.sign_bytes, sign_bytes, timestamp)) {
+    } else if (check_only_differ_by_timestamp(obj, lss.sign_bytes, sign_bytes, timestamp)) {
       obj.timestamp = timestamp;
       obj.signature = lss.signature;
     } else {
