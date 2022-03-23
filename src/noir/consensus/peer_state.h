@@ -32,7 +32,7 @@ struct peer_state {
   }
 
   void apply_new_round_step_message(const p2p::new_round_step_message& msg) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
 
     // Ignore duplicates or decreased values
     bool passed_checks{false};
@@ -91,7 +91,7 @@ struct peer_state {
   }
 
   void apply_new_valid_block_message(const p2p::new_valid_block_message& msg) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (prs.height != msg.height)
       return;
     if (prs.round != msg.round && !msg.is_commit)
@@ -101,7 +101,7 @@ struct peer_state {
   }
 
   void apply_proposal_pol_message(const p2p::proposal_pol_message& msg) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (prs.height != msg.height)
       return;
     if (prs.proposal_pol_round != msg.proposal_pol_round)
@@ -110,14 +110,14 @@ struct peer_state {
   }
 
   void apply_has_vote_message(const p2p::has_vote_message& msg) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (prs.height != msg.height)
       return;
     set_has_vote_(msg.height, msg.round, msg.type, msg.index);
   }
 
   void apply_vote_set_bits_message(const p2p::vote_set_bits_message& msg, std::shared_ptr<bit_array> our_votes) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     auto votes = get_vote_bit_array(msg.height, msg.round, msg.type);
     if (!votes) {
       if (our_votes == nullptr) {
@@ -131,7 +131,7 @@ struct peer_state {
   }
 
   void set_has_proposal(const p2p::proposal_message& msg) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (prs.height != msg.height || prs.round != msg.round)
       return;
     if (prs.proposal)
@@ -146,7 +146,7 @@ struct peer_state {
   }
 
   void set_has_proposal_block_part(int64_t height, int32_t round, int index) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (prs.height != height || prs.round != round)
       return;
     prs.proposal_block_parts->set_index(index, true);
@@ -176,7 +176,7 @@ private:
 
 public:
   void ensure_vote_bit_arrays(int64_t height, int num_validators) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     ensure_vote_bit_arrays_(height, num_validators);
   }
 
@@ -189,7 +189,7 @@ private:
 
 public:
   void set_has_vote(const p2p::vote_message& msg) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     set_has_vote_(msg.height, msg.round, msg.type, msg.validator_index);
   }
 
@@ -248,14 +248,14 @@ public:
   }
 
   std::shared_ptr<peer_round_state> get_round_state() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     auto new_prs = std::make_shared<peer_round_state>();
     *new_prs = prs;
     return new_prs;
   }
 
   void init_proposal_block_parts(const p2p::part_set_header& part_set_header_) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (prs.proposal_block_parts != nullptr)
       return;
     prs.proposal_block_part_set_header = part_set_header_;
@@ -276,7 +276,7 @@ public:
   }
 
   std::tuple<std::shared_ptr<vote>, bool> pick_vote_to_send(vote_set_reader& votes) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
 
     if (votes.size == 0)
       return {nullptr, false};

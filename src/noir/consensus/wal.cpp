@@ -17,7 +17,7 @@ wal_decoder::wal_decoder(const std::string& full_path): file_(std::make_unique<:
 }
 
 wal_decoder::result wal_decoder::decode(timed_wal_message& msg) {
-  std::lock_guard<std::mutex> g(mtx_);
+  std::scoped_lock g(mtx_);
   try {
     {
       noir::bytes crc(4);
@@ -55,7 +55,7 @@ wal_encoder::wal_encoder(const std::string& full_path): file_(std::make_unique<:
 
 bool wal_encoder::encode(const timed_wal_message& msg, size_t& size) {
   size = 0;
-  std::lock_guard<std::mutex> g(mtx_);
+  std::scoped_lock g(mtx_);
   auto is_closed = !file_->is_open();
   if (is_closed) {
     wlog("wal file not opened");
@@ -91,7 +91,7 @@ bool wal_encoder::encode(const timed_wal_message& msg, size_t& size) {
 }
 
 bool wal_encoder::flush_and_sync() {
-  std::lock_guard<std::mutex> g(mtx_);
+  std::scoped_lock g(mtx_);
   if (!file_->is_open()) { // file is already closed no need to flush
     return true;
   }
@@ -106,7 +106,7 @@ bool wal_encoder::flush_and_sync() {
 }
 
 size_t wal_encoder::size() {
-  std::lock_guard<std::mutex> g(mtx_);
+  std::scoped_lock g(mtx_);
   if (!file_->is_open()) { // file is already closed no need to flush
     return fc::file_size(file_->get_file_path());
   }

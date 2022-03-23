@@ -109,7 +109,7 @@ std::shared_ptr<part_set> part_set::new_part_set_from_data(const bytes& data, ui
 }
 
 bool part_set::add_part(std::shared_ptr<part> part_) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
 
   if (part_->index >= total) {
     elog("error part set unexpected index");
@@ -188,7 +188,7 @@ std::shared_ptr<block> block::new_block_from_part_set(const std::shared_ptr<part
 }
 
 std::shared_ptr<part_set> block::make_part_set(uint32_t part_size) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   auto bz = encode(*this);
   return part_set::new_part_set_from_data(bz, part_size);
 }

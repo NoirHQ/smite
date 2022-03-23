@@ -17,31 +17,31 @@ namespace noir::p2p {
 class queued_buffer : boost::noncopyable {
 public:
   void clear_write_queue() {
-    std::lock_guard<std::mutex> g(_mtx);
+    std::scoped_lock g(_mtx);
     _write_queue.clear();
     _sync_write_queue.clear();
     _write_queue_size = 0;
   }
 
   void clear_out_queue() {
-    std::lock_guard<std::mutex> g(_mtx);
+    std::scoped_lock g(_mtx);
     while (_out_queue.size() > 0) {
       _out_queue.pop_front();
     }
   }
 
   uint32_t write_queue_size() const {
-    std::lock_guard<std::mutex> g(_mtx);
+    std::scoped_lock g(_mtx);
     return _write_queue_size;
   }
 
   bool is_out_queue_empty() const {
-    std::lock_guard<std::mutex> g(_mtx);
+    std::scoped_lock g(_mtx);
     return _out_queue.empty();
   }
 
   bool ready_to_send() const {
-    std::lock_guard<std::mutex> g(_mtx);
+    std::scoped_lock g(_mtx);
     // if out_queue is not empty then async_write is in progress
     return ((!_sync_write_queue.empty() || !_write_queue.empty()) && _out_queue.empty());
   }
@@ -49,7 +49,7 @@ public:
   // @param callback must not callback into queued_buffer
   bool add_write_queue(const std::shared_ptr<std::vector<char>>& buff,
     std::function<void(boost::system::error_code, std::size_t)> callback, bool to_sync_queue) {
-    std::lock_guard<std::mutex> g(_mtx);
+    std::scoped_lock g(_mtx);
     if (to_sync_queue) {
       _sync_write_queue.push_back({buff, callback});
     } else {
@@ -63,7 +63,7 @@ public:
   }
 
   void fill_out_buffer(std::vector<boost::asio::const_buffer>& bufs) {
-    std::lock_guard<std::mutex> g(_mtx);
+    std::scoped_lock g(_mtx);
     if (_sync_write_queue.size() > 0) { // always send msgs from sync_write_queue first
       fill_out_buffer(bufs, _sync_write_queue);
     } else { // postpone real_time write_queue if sync queue is not empty
@@ -73,7 +73,7 @@ public:
   }
 
   void out_callback(boost::system::error_code ec, std::size_t w) {
-    std::lock_guard<std::mutex> g(_mtx);
+    std::scoped_lock g(_mtx);
     for (auto& m : _out_queue) {
       m.callback(ec, w);
     }

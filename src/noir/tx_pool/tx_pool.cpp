@@ -103,7 +103,7 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
     }
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::scoped_lock lock(mutex_);
   auto old_tx = tx_queue_.get_tx(res.sender, res.nonce);
   if (old_tx) {
     if (res.gas_wanted < old_tx->gas + config_.gas_price_bump) {
@@ -138,7 +138,7 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
 }
 
 std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::scoped_lock lock(mutex_);
   std::vector<consensus::tx> txs;
   auto rbegin = tx_queue_.rbegin<unapplied_tx_queue::by_gas>(max_gas);
   auto rend = tx_queue_.rend<unapplied_tx_queue::by_gas>(0);
@@ -165,7 +165,7 @@ std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, u
 }
 
 std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::scoped_lock lock(mutex_);
   uint64_t count = std::min<uint64_t>(tx_count, tx_queue_.size());
 
   std::vector<consensus::tx> txs;
@@ -182,7 +182,7 @@ std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
 
 void tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
   std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::scoped_lock lock(mutex_);
   block_height_ = block_height;
 
   if (new_precheck) {
@@ -244,7 +244,7 @@ bool tx_pool::empty() const {
 }
 
 void tx_pool::flush() {
-  std::lock_guard<std::mutex> lock_guard(mutex_);
+  std::scoped_lock scoped_lock(mutex_);
   tx_queue_.clear();
   tx_cache_.reset();
 }

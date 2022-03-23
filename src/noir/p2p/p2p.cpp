@@ -362,7 +362,7 @@ void for_each_connection(Function f) {
 
 void p2p_impl::start_monitors() {
   {
-    std::lock_guard<std::mutex> g(connector_check_timer_mtx);
+    std::scoped_lock g(connector_check_timer_mtx);
     connector_check_timer.reset(new boost::asio::steady_timer(my_impl->thread_pool->get_executor()));
   }
   start_conn_timer(connector_period, std::weak_ptr<connection>());
@@ -371,7 +371,7 @@ void p2p_impl::start_monitors() {
 void p2p_impl::start_conn_timer(boost::asio::steady_timer::duration du, std::weak_ptr<connection> from_connection) {
   if (in_shutdown)
     return;
-  std::lock_guard<std::mutex> g(connector_check_timer_mtx);
+  std::scoped_lock g(connector_check_timer_mtx);
   ++connector_checks_in_flight;
   connector_check_timer->expires_from_now(du);
   connector_check_timer->async_wait([my = shared_from_this(), from_connection](boost::system::error_code ec) {
@@ -440,7 +440,7 @@ void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, boo
 
 void p2p_impl::update_chain_info() {
   //  controller& cc = chain_plug->chain();
-  //  std::lock_guard<std::mutex> g( chain_info_mtx );
+  //  std::scoped_lock g( chain_info_mtx );
   //  chain_head_blk_num = cc.head_block_num();
   //  chain_head_blk_id = cc.head_block_id();
   //  chain_fork_head_blk_num = cc.fork_db_pending_head_block_num();
@@ -450,7 +450,7 @@ void p2p_impl::update_chain_info() {
 }
 
 std::tuple<uint32_t, uint32_t, block_id_type, block_id_type> p2p_impl::get_chain_info() const {
-  std::lock_guard<std::mutex> g(chain_info_mtx);
+  std::scoped_lock g(chain_info_mtx);
   return std::make_tuple(chain_head_blk_num, chain_fork_head_blk_num, chain_head_blk_id, chain_fork_head_blk_id);
 }
 
@@ -482,7 +482,7 @@ void p2p_impl::start_listen_loop() {
                 if (conn->socket_is_open()) {
                   if (conn->peer_address().empty()) {
                     ++visitors;
-                    std::lock_guard<std::mutex> g_conn(conn->conn_mtx);
+                    std::scoped_lock g_conn(conn->conn_mtx);
                     if (paddr_str == conn->remote_endpoint_ip) {
                       ++from_addr;
                     }
@@ -494,7 +494,7 @@ void p2p_impl::start_listen_loop() {
                 ilog("Accepted new connection: " + paddr_str);
                 new_connection->set_heartbeat_timeout(heartbeat_timeout);
                 if (new_connection->start_session()) {
-                  std::lock_guard<std::shared_mutex> g_unique(connections_mtx);
+                  std::scoped_lock<std::shared_mutex> g_unique(connections_mtx);
                   connections.insert(new_connection);
                 }
 
@@ -534,7 +534,7 @@ void p2p_impl::start_listen_loop() {
 void p2p_impl::ticker() {
   if (in_shutdown)
     return;
-  std::lock_guard<std::mutex> g(keepalive_timer_mtx);
+  std::scoped_lock g(keepalive_timer_mtx);
   keepalive_timer->expires_from_now(keepalive_interval);
   keepalive_timer->async_wait([my = shared_from_this()](boost::system::error_code ec) {
     my->ticker();
@@ -745,7 +745,7 @@ void p2p::plugin_startup() {
     }
 
     {
-      std::lock_guard<std::mutex> g(my->keepalive_timer_mtx);
+      std::scoped_lock g(my->keepalive_timer_mtx);
       my->keepalive_timer.reset(new boost::asio::steady_timer(my->thread_pool->get_executor()));
     }
     my->ticker();
@@ -780,7 +780,7 @@ void p2p::plugin_shutdown() {
 }
 
 std::string p2p::connect(const std::string& host) {
-  std::lock_guard<std::shared_mutex> g(my->connections_mtx);
+  std::scoped_lock<std::shared_mutex> g(my->connections_mtx);
   if (my->find_connection(host))
     return "already connected";
 
@@ -795,7 +795,7 @@ std::string p2p::connect(const std::string& host) {
 }
 
 std::string p2p::disconnect(const std::string& host) {
-  std::lock_guard<std::shared_mutex> g(my->connections_mtx);
+  std::scoped_lock<std::shared_mutex> g(my->connections_mtx);
   for (auto itr = my->connections.begin(); itr != my->connections.end(); ++itr) {
     if ((*itr)->peer_address() == host) {
       ilog("disconnecting: ${p}", ("p", (*itr)->peer_name()));
@@ -913,7 +913,7 @@ bool connection::resolve_and_connect() {
   if (consecutive_immediate_connection_close > def_max_consecutive_immediate_connection_close ||
     no_retry == benign_other) {
     auto connector_period_us = std::chrono::duration_cast<std::chrono::microseconds>(my_impl->connector_period);
-    std::lock_guard<std::mutex> g(c->conn_mtx);
+    std::scoped_lock g(c->conn_mtx);
     if (last_close == fc::time_point() ||
       last_close > fc::time_point::now() - fc::microseconds(connector_period_us.count())) {
       return true; // true so doesn't remove from valid connections
@@ -955,7 +955,7 @@ connection_status connection::get_status() const {
   stat.peer = peer_addr;
   stat.connecting = connecting;
   stat.syncing = syncing;
-  std::lock_guard<std::mutex> g(conn_mtx);
+  std::scoped_lock g(conn_mtx);
   stat.last_handshake = last_handshake_recv;
   return stat;
 }
@@ -1075,7 +1075,7 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
   ++self->consecutive_immediate_connection_close;
   bool has_last_req = false;
   {
-    std::lock_guard<std::mutex> g_conn(self->conn_mtx);
+    std::scoped_lock g_conn(self->conn_mtx);
     //    has_last_req = self->last_req.has_value();
     self->last_handshake_recv = handshake_message();
     self->last_handshake_sent = handshake_message();
@@ -1096,7 +1096,7 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
 }
 
 const std::string connection::peer_name() {
-  std::lock_guard<std::mutex> g_conn(conn_mtx);
+  std::scoped_lock g_conn(conn_mtx);
   if (!last_handshake_recv.p2p_address.empty()) {
     return last_handshake_recv.p2p_address;
   }
@@ -1114,7 +1114,7 @@ void connection::update_endpoints() {
   boost::system::error_code ec2;
   auto rep = socket->remote_endpoint(ec);
   auto lep = socket->local_endpoint(ec2);
-  std::lock_guard<std::mutex> g_conn(conn_mtx);
+  std::scoped_lock g_conn(conn_mtx);
   remote_endpoint_ip = ec ? unknown : rep.address().to_string();
   remote_endpoint_port = ec ? unknown : std::to_string(rep.port());
   local_endpoint_ip = ec2 ? unknown : lep.address().to_string();
@@ -1292,7 +1292,7 @@ bool connection::process_next_message(uint32_t message_length) {
 }
 
 void connection::cancel_wait() {
-  std::lock_guard<std::mutex> g(response_expected_timer_mtx);
+  std::scoped_lock g(response_expected_timer_mtx);
   response_expected_timer.cancel();
 }
 
@@ -1398,7 +1398,7 @@ void connection::check_heartbeat(tstamp current_time) {
       close(true); // reconnect
     } else {
       {
-        std::lock_guard<std::mutex> g_conn(conn_mtx);
+        std::scoped_lock g_conn(conn_mtx);
         wlog("heartbeat timed out from ${p} ", ("p", last_handshake_recv.p2p_address));
       }
       close(false); // don't reconnect
@@ -1513,7 +1513,7 @@ void connection::handle_message(const go_away_message& msg) {
   wlog("received go_away_message, reason = ${r}", ("r", reason_str(msg.reason)));
   no_retry = msg.reason;
   if (msg.reason == duplicate) {
-    std::lock_guard<std::mutex> g_conn(conn_mtx);
+    std::scoped_lock g_conn(conn_mtx);
     conn_node_id = msg.node_id;
   }
   flush_queues();

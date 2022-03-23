@@ -167,12 +167,12 @@ struct part_set {
   }
 
   std::shared_ptr<part> get_part(int index) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return parts[index]; // todo - check range?
   }
 
   std::shared_ptr<bit_array> get_bit_array() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return parts_bit_array;
   }
 
@@ -255,7 +255,7 @@ struct block {
     : header(std::move(header_)), data(std::move(data_)), last_commit(std::move(last_commit_)) {}
   block(const block& b): header(b.header), data(b.data), last_commit(b.last_commit) {}
   block& operator=(const block& b) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     header = b.header;
     data = b.data;
     // evidence = b.evidence;
@@ -266,7 +266,7 @@ struct block {
   static std::shared_ptr<block> new_block_from_part_set(const std::shared_ptr<part_set>& ps);
 
   std::optional<std::string> validate_basic() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
 
     if (auto err = header.validate_basic(); err.has_value())
       return "invalid header: " + err.value();
@@ -305,7 +305,7 @@ struct block {
   bytes get_hash() {
     if (this == nullptr)
       return {};
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     // todo - implement
     return header.get_hash();
   }

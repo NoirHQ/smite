@@ -11,7 +11,7 @@ namespace noir::consensus {
 
 void consensus_reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
   dlog(fmt::format("peer update: peer_id={}, status={}", info->peer_id, p2p::peer_status_to_str(info->status)));
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   switch (info->status) {
   case p2p::peer_status::up: {
     auto it = peers.find(info->peer_id);

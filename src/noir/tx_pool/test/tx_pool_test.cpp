@@ -59,7 +59,7 @@ public:
   }
 
   req_res<response_check_tx>& new_rr() {
-    std::lock_guard _(mutex_);
+    std::scoped_lock _(mutex_);
     response_check_tx res{
       .gas_wanted = gas_wanted_,
       .sender = str_to_addr("user"),
@@ -82,12 +82,12 @@ public:
   }
 
   void set_nonce(uint64_t nonce) {
-    std::lock_guard _(mutex_);
+    std::scoped_lock _(mutex_);
     nonce_ = nonce;
   }
 
   void set_gas(uint64_t gas) {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     gas_wanted_ = gas;
   }
 
@@ -129,7 +129,7 @@ private:
 
 public:
   auto new_tx() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     return codec::scale::encode(tx_id_++);
   }
 
@@ -147,7 +147,7 @@ public:
     new_wrapped_tx.sender = str_to_addr(sender);
     new_wrapped_tx.gas = rand_gas();
 
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     new_wrapped_tx.tx = codec::scale::encode(tx_id_++);
     new_wrapped_tx.nonce = nonce_++;
     new_wrapped_tx.height = height_++;
@@ -155,7 +155,7 @@ public:
   }
 
   void reset_tx_id() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::scoped_lock lock(mutex_);
     tx_id_ = 0;
   }
 

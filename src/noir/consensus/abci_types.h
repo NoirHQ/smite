@@ -53,12 +53,12 @@ struct req_res {
   std::shared_ptr<T> res;
 
   void set_callback(std::function<void(T&)> cb) {
-    std::lock_guard _(mutex);
+    std::scoped_lock _(mutex);
     callback = std::move(cb);
   }
 
   void invoke_callback() {
-    std::lock_guard _(mutex);
+    std::scoped_lock _(mutex);
     if (callback) {
       callback(*res);
     }

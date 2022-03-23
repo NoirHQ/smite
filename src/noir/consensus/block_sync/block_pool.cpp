@@ -9,7 +9,7 @@
 namespace noir::consensus::block_sync {
 
 std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> block_pool::peek_two_blocks() {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   std::shared_ptr<block> first(nullptr);
   std::shared_ptr<block> second(nullptr);
   auto r1 = requesters.find(height);
@@ -22,7 +22,7 @@ std::tuple<std::shared_ptr<block>, std::shared_ptr<block>> block_pool::peek_two_
 }
 
 void block_pool::pop_request() {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
 
   auto r = requesters.find(height);
   if (r != requesters.end()) {
@@ -47,7 +47,7 @@ void block_pool::pop_request() {
 }
 
 void block_pool::remove_timed_out_peers() {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   auto it = peers.begin();
   while (it != peers.end()) {
     std::shared_ptr<bp_peer>& peer = it->second;
@@ -88,7 +88,7 @@ void block_pool::update_max_peer_height() {
 }
 
 std::shared_ptr<bp_peer> block_pool::pick_incr_available_peer(int64_t height_) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   for (auto const& [k, peer] : peers) {
     if (peer->did_timeout) {
       remove_peer(peer->id);
@@ -105,7 +105,7 @@ std::shared_ptr<bp_peer> block_pool::pick_incr_available_peer(int64_t height_) {
 }
 
 std::string block_pool::redo_request(int64_t height_) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   auto it = requesters.find(height_);
   if (it == requesters.end())
     return "";
@@ -116,7 +116,7 @@ std::string block_pool::redo_request(int64_t height_) {
 }
 
 void block_pool::add_block(std::string peer_id_, std::shared_ptr<consensus::block> block_, int block_size) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   auto requester = requesters.find(block_->header.height);
   if (requester == requesters.end()) {
     elog("peer sent us a block we didn't expect");
@@ -140,7 +140,7 @@ void block_pool::add_block(std::string peer_id_, std::shared_ptr<consensus::bloc
 }
 
 void block_pool::set_peer_range(std::string peer_id_, int64_t base, int64_t height_) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   auto peer = peers.find(peer_id_);
   if (peer != peers.end()) {
     peer->second->base = base;
@@ -198,7 +198,7 @@ void block_pool::transmit_new_envelope(
 // bp_requester
 //------------------------------------------------------------------------
 bool bp_requester::set_block(std::shared_ptr<block> blk_, std::string peer_id_) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   if (block_ != nullptr || peer_id != peer_id_)
     return false;
   block_ = blk_;

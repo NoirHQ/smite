@@ -24,14 +24,14 @@ struct message_handler {
   explicit message_handler(std::shared_ptr<consensus_state> cs_): cs(std::move(cs_)) {}
 
   void operator()(p2p::proposal_message& msg) {
-    std::lock_guard<std::mutex> g(cs->mtx);
+    std::scoped_lock g(cs->mtx);
     // will not cause transition.
     // once proposal is set, we can receive block parts
     cs->set_proposal(msg);
   }
 
   void operator()(p2p::block_part_message& msg) {
-    std::lock_guard<std::mutex> g(cs->mtx);
+    std::scoped_lock g(cs->mtx);
     // if the proposal is complete, we'll enter_prevote or try_finalize_commit
     auto added = cs->add_proposal_block_part(msg, node_id{});
     if (msg.round != cs->rs.round) {
@@ -41,7 +41,7 @@ struct message_handler {
   }
 
   void operator()(p2p::vote_message& msg) {
-    std::lock_guard<std::mutex> g(cs->mtx);
+    std::scoped_lock g(cs->mtx);
     // attempt to add the vote and dupeout the validator if its a duplicate signature
     // if the vote gives us a 2/3-any or 2/3-one, we transition
     cs->try_add_vote(msg, node_id{});
@@ -61,7 +61,7 @@ consensus_state::consensus_state()
 
   thread_pool.emplace("consensus", thread_pool_size);
   {
-    std::lock_guard<std::mutex> g(timeout_ticker_mtx);
+    std::scoped_lock g(timeout_ticker_mtx);
     timeout_ticker_timer.reset(new boost::asio::steady_timer(thread_pool->get_executor()));
   }
   old_ti = std::make_shared<timeout_info>(timeout_info{});
@@ -85,17 +85,17 @@ std::shared_ptr<consensus_state> consensus_state::new_state(const consensus_conf
 }
 
 state consensus_state::get_state() {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   return local_state;
 }
 
 int64_t consensus_state::get_last_height() {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   return rs.height - 1;
 }
 
 std::shared_ptr<round_state> consensus_state::get_round_state() {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   auto rs_copy = std::make_shared<round_state>();
   *rs_copy = rs;
   return rs_copy;
@@ -106,7 +106,7 @@ round_state::event_data consensus_state::get_round_state_event() {
 }
 
 void consensus_state::set_priv_validator(const std::shared_ptr<priv_validator>& priv) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
 
   local_priv_validator = priv;
   local_priv_validator_type = priv->get_type(); // todo - implement FilePV
@@ -146,7 +146,7 @@ void consensus_state::reconstruct_last_commit(state& state_) {
 }
 
 std::shared_ptr<commit> consensus_state::load_commit(int64_t height) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   auto ret = std::make_shared<commit>();
   if (height == block_store_->height()) {
     if (block_store_->load_seen_commit(*ret)) {
@@ -406,7 +406,7 @@ void consensus_state::schedule_timeout(
 }
 
 void consensus_state::tick(timeout_info_ptr ti) {
-  std::lock_guard<std::mutex> g(timeout_ticker_mtx);
+  std::scoped_lock g(timeout_ticker_mtx);
   dlog(fmt::format("received tick: old_ti=[duration={} {}/{}/{}], new_ti=[duration={} {}/{}/{}]",
     old_ti->duration_.count(), old_ti->height, old_ti->round, round_step_to_str(old_ti->step), ti->duration_.count(),
     ti->height, ti->round, round_step_to_str(old_ti->step)));
@@ -448,7 +448,7 @@ void consensus_state::tock(timeout_info_ptr ti) {
 }
 
 void consensus_state::handle_timeout(timeout_info_ptr ti) {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   dlog(fmt::format("Received tock: hrs={}/{}/{}, timeout={}", ti->height, ti->round, round_step_to_str(ti->step),
     ti->duration_.count()));
 
