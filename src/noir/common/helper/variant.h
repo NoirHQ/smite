@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/check.h>
 #include <noir/common/concepts.h>
+#include <noir/common/hex.h>
 #include <noir/common/refl.h>
 #include <fc/reflect/variant.hpp>
 
@@ -16,6 +17,14 @@ inline void to_variant(const int64_t& in, variant& out) {
 }
 
 inline void to_variant(const uint64_t& in, variant& out) {
+  out = in;
+}
+
+inline void to_variant(const noir::bytes32& in, variant& out) {
+  out = in.to_string();
+}
+
+inline void to_variant(const bool& in, variant& out) {
   out = in;
 }
 
