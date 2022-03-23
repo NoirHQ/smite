@@ -126,7 +126,7 @@ struct consensus_reactor {
   void query_maj23_routine(std::shared_ptr<peer_state> ps);
 
   std::shared_ptr<peer_state> get_peer_state(std::string peer_id) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     auto it = peers.find(peer_id);
     return it == peers.end() ? nullptr : it->second;
   }

@@ -89,19 +89,19 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   }
 
   std::tuple<int64_t, int32_t, int> get_status() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return {height, num_pending, requesters.size()};
   }
 
   bool is_caught_up() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (peers.empty())
       return false;
     return height >= (max_peer_height - 1);
   }
 
   std::vector<std::string> get_peer_ids() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     std::vector<std::string> ret;
     for (const auto& pair : peers)
       ret.push_back(pair.first);
@@ -165,17 +165,17 @@ struct bp_requester {
   bool set_block(std::shared_ptr<block> blk_, std::string peer_id_);
 
   std::shared_ptr<block> get_block() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return block_;
   }
 
   std::string get_peer_id() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return peer_id;
   }
 
   void reset() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (block_ != nullptr)
       pool->num_pending += 1;
     peer_id = "";

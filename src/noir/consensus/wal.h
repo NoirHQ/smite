@@ -143,7 +143,7 @@ public:
   std::shared_ptr<wal_encoder> get_wal_encoder(int64_t index = -1) {
     check(index <= max_index);
     if (index < 0) { // returns current using encoder
-      std::lock_guard<std::mutex> g(mtx_);
+      std::scoped_lock g(mtx_);
       return encoder_;
     }
     if (index == current_index) { // returns new encoder with implicit index
@@ -208,12 +208,12 @@ private:
   }
 
   bool need_rotate() {
-    std::lock_guard<std::mutex> g(mtx_);
+    std::scoped_lock g(mtx_);
     return encoder_->size() >= rotate_size_; // TODO: handle exception
   }
 
   bool rotate() {
-    std::lock_guard<std::mutex> g(mtx_);
+    std::scoped_lock g(mtx_);
     auto& file_ = encoder_->file_;
     auto new_file_path = full_path(dir_path_, current_index, false);
     try {
@@ -238,7 +238,7 @@ private:
   }
 
   bool load_min_max_index() {
-    std::lock_guard<std::mutex> g(mtx_);
+    std::scoped_lock g(mtx_);
     for (auto it = std::filesystem::directory_iterator(dir_path_); it != std::filesystem::end(it); ++it) {
       if (std::filesystem::is_regular_file(*it)) {
         auto index_ = index_from_file_name(it->path().filename());
@@ -308,7 +308,7 @@ public:
       flush_interval(std::chrono::system_clock::duration(2000000)) { // 2seconds = 2000000 microseconds
     thread_pool.emplace("consensus", thread_pool_size);
     {
-      // std::lock_guard<std::mutex> g(flush_ticker_mtx);
+      // std::scoped_lock g(flush_ticker_mtx);
       flush_ticker = std::make_unique<boost::asio::steady_timer>(thread_pool->get_executor());
     }
   }

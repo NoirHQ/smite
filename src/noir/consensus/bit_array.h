@@ -35,14 +35,14 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   bool get_index(int i) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (i >= bits)
       return false;
     return elem[i];
   }
 
   bool set_index(int i, bool v) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (i >= bits)
       return false;
     elem[i] = v;
@@ -52,8 +52,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   std::shared_ptr<bit_array> update(std::shared_ptr<bit_array> o) {
     if (o == nullptr)
       return nullptr;
-    std::lock_guard<std::mutex> g(mtx);
-    std::lock_guard<std::mutex> g2(o->mtx);
+    std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     elem = o->elem;
     return shared_from_this();
   }
@@ -61,8 +60,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   std::shared_ptr<bit_array> sub(std::shared_ptr<bit_array> o) {
     if (this == nullptr || o == nullptr)
       return nullptr;
-    std::lock_guard<std::mutex> g(mtx);
-    std::lock_guard<std::mutex> g2(o->mtx);
+    std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     auto c = copy_bits(bits);
     auto smaller = std::min(elem.size(), o->elem.size());
     for (auto i = 0; i < smaller; i++) {
@@ -75,8 +73,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   std::shared_ptr<bit_array> or_op(std::shared_ptr<bit_array> o) {
     if (o == nullptr)
       return copy();
-    std::lock_guard<std::mutex> g(mtx);
-    std::lock_guard<std::mutex> g2(o->mtx);
+    std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     auto c = copy_bits(std::max(bits, o->bits));
     auto smaller = std::min(elem.size(), o->elem.size());
     for (auto i = 0; i < smaller; i++) {
@@ -88,7 +85,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   std::shared_ptr<bit_array> not_op() {
     if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
       return nullptr;
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     auto c = copy();
     for (auto i = 0; i < c->elem.size(); i++)
       c->elem[i] = ~(c->elem[i]);
@@ -151,7 +148,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   std::tuple<int, bool> pick_random() {
     if (this == nullptr || elem.empty())
       return {0, false};
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     auto true_indices = get_true_indices();
     if (true_indices.empty())
       return {0, false};

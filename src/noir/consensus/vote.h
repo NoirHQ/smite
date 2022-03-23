@@ -137,7 +137,7 @@ struct vote_set {
   }
 
   std::shared_ptr<bit_array> bit_array_by_block_id(p2p::block_id block_id_) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     auto it = votes_by_block.find(block_id_.key());
     if (it != votes_by_block.end())
       return it->second.bit_array_->copy();
@@ -145,7 +145,7 @@ struct vote_set {
   }
 
   std::optional<std::string> set_peer_maj23(std::string peer_id, p2p::block_id block_id_) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
 
     auto block_key = block_id_.key();
 
@@ -171,17 +171,17 @@ struct vote_set {
   }
 
   bool has_two_thirds_majority() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return maj23.has_value();
   }
 
   bool has_two_thirds_any() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return sum > val_set.total_voting_power * 2 / 3;
   }
 
   bool has_all() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return sum == val_set.total_voting_power;
   }
 
@@ -189,7 +189,7 @@ struct vote_set {
    * if there is a 2/3+ majority for block_id, return block_id
    */
   std::optional<p2p::block_id> two_thirds_majority() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     // if (maj23.has_value())
     //  return maj23;
     // return {};
@@ -200,7 +200,7 @@ struct vote_set {
    * constructs a commit from the vote_set. It only include precommits for the block, which has 2/3+ majority and nil
    */
   commit make_commit() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (signed_msg_type_ != p2p::Precommit)
       throw std::runtime_error("cannot make_commit() unless signed_msg_type_ is Precommit");
     // Make sure we have a 2/3 majority

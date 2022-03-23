@@ -43,7 +43,7 @@ struct height_vote_set {
   }
 
   void reset(int64_t height_, const validator_set& val_set_) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     height = height_;
     val_set = val_set_;
     add_round(0);
@@ -60,7 +60,7 @@ struct height_vote_set {
   }
 
   void set_round(int32_t round_) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     auto new_round_ = round - 1; // todo - safe subtract
     if (round != 0 && round_ < new_round_)
       throw std::runtime_error("set_round() must increment round");
@@ -74,7 +74,7 @@ struct height_vote_set {
 
   std::optional<std::string> set_peer_maj23(
     int32_t round, p2p::signed_msg_type vote_type, std::string peer_id, p2p::block_id block_id_) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (vote_type != p2p::Prevote && vote_type != p2p::Precommit)
       return "setPeerMaj23: Invalid vote type";
     auto vote_set_ = get_vote_set(round, vote_type);
@@ -101,7 +101,7 @@ struct height_vote_set {
    * return last round number or -1 if not exists
    */
   int32_t pol_info() {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     for (auto r = round; r >= 0; r--) {
       auto rvs = get_vote_set(r, p2p::Prevote);
       if (rvs->two_thirds_majority().has_value())
@@ -111,7 +111,7 @@ struct height_vote_set {
   }
 
   bool add_vote(vote vote_, node_id peer_id) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     if (!p2p::is_vote_type_valid(vote_.type))
       return false;
     auto vote_set_ = get_vote_set(vote_.round, vote_.type);
@@ -130,12 +130,12 @@ struct height_vote_set {
   }
 
   std::shared_ptr<vote_set> prevotes(int32_t round_) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return get_vote_set(round_, p2p::Prevote);
   }
 
   std::shared_ptr<vote_set> precommits(int32_t round_) {
-    std::lock_guard<std::mutex> g(mtx);
+    std::scoped_lock g(mtx);
     return get_vote_set(round_, p2p::Precommit);
   }
 };

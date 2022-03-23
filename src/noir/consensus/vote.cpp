@@ -26,7 +26,7 @@ std::shared_ptr<vote_set> vote_set::new_vote_set(std::string& chain_id_, int64_t
 }
 
 std::shared_ptr<bit_array> vote_set::get_bit_array() {
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
   return votes_bit_array->copy();
 }
 
@@ -34,7 +34,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   if (!vote_.has_value())
     throw std::runtime_error("add_vote() on empty vote_set");
 
-  std::lock_guard<std::mutex> g(mtx);
+  std::scoped_lock g(mtx);
 
   auto val_index = vote_->validator_index;
   auto val_addr = vote_->validator_address;
