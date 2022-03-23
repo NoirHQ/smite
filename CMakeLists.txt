@@ -21,9 +21,11 @@ endif()
 
 add_compile_definitions(BOOST_ASIO_HAS_STD_INVOKE_RESULT)
 
+set(NOIR_UNITY_BUILD FALSE CACHE BOOL "unity build")
+
 if(APPLE)
-  set(BOOST_ROOT "/usr/local/opt/boost" CACHE BOOL "boost root directory")
-  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl" CACHE BOOL "openssl root directory")
+  set(BOOST_ROOT "/usr/local/opt/boost" CACHE STRING "boost root directory")
+  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl" CACHE STRING "openssl root directory")
 endif()
 
 add_subdirectory(libs)

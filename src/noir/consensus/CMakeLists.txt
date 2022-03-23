@@ -1,5 +1,4 @@
-target_sources(noir
-  PRIVATE
+add_library(noir_consensus STATIC
   block.cpp
   block_sync/block_pool.cpp
   block_sync/reactor.cpp
@@ -7,21 +6,31 @@ target_sources(noir
   consensus_state.cpp
   merkle/proof.cpp
   merkle/tree.cpp
-  privval/file.cpp
   priv_validator.cpp
+  privval/file.cpp
   replay.cpp
   validation.cpp
   validator.cpp
   vote.cpp
-  wal.cpp)
+  wal.cpp
+)
+target_link_libraries(noir_consensus
+  noir_common
+  noir_crypto
+  noir_tx_pool
+  rocksdb
+)
+set_target_properties(noir_consensus PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
-add_noir_test(bit_array_test test/bit_array_test.cpp)
-add_noir_test(block_executor_test test/block_executor_test.cpp)
-add_noir_test(block_test test/block_test.cpp)
-add_noir_test(consensus_state_test test/consensus_state_test.cpp)
-add_noir_test(privval_test privval/test/file_test.cpp)
-add_noir_test(replay_test test/replay_test.cpp)
-add_noir_test(tree_test merkle/test/tree_test.cpp)
-add_noir_test(validator_test test/validator_test.cpp)
-add_noir_test(wal_test test/wal_test.cpp)
-add_noir_test(store_test store/test/state_store_test.cpp store/test/block_store_test.cpp)
+add_library(noir::consensus ALIAS noir_consensus)
+
+add_noir_test(bit_array_test test/bit_array_test.cpp DEPENDS noir_consensus)
+add_noir_test(block_executor_test test/block_executor_test.cpp DEPENDS noir_consensus)
+add_noir_test(block_test test/block_test.cpp DEPENDS noir_consensus)
+add_noir_test(consensus_state_test test/consensus_state_test.cpp DEPENDS noir_consensus)
+add_noir_test(privval_test privval/test/file_test.cpp DEPENDS noir_consensus)
+add_noir_test(replay_test test/replay_test.cpp DEPENDS noir_consensus)
+add_noir_test(tree_test merkle/test/tree_test.cpp DEPENDS noir_consensus)
+add_noir_test(validator_test test/validator_test.cpp DEPENDS noir_consensus)
+add_noir_test(wal_test test/wal_test.cpp DEPENDS noir_consensus)
+add_noir_test(store_test store/test/state_store_test.cpp store/test/block_store_test.cpp DEPENDS noir_consensus)
