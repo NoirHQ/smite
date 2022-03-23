@@ -26,10 +26,12 @@ list(APPEND PROTO_SOURCES
   tendermint/store/types.proto
 )
 
+find_package(Protobuf REQUIRED)
+
 set(PROTO_PATH ${PROJECT_SOURCE_DIR}/proto)
 foreach(PROTO ${PROTO_SOURCES})
   set(PROTO_OUTPUT ${PROTO})
-  string(REPLACE "\\.proto" ".pb.cc" PROTO_OUTPUT ${PROTO_OUTPUT})
+  string(REPLACE "\.proto" ".pb.cc" PROTO_OUTPUT ${PROTO_OUTPUT})
   if(NOT EXISTS ${PROTO_OUTPUT})
     execute_process(
       COMMAND protoc --proto_path=${PROTO_PATH} --cpp_out=${PROTO_PATH} ${PROTO_PATH}/${PROTO}
@@ -38,4 +40,8 @@ foreach(PROTO ${PROTO_SOURCES})
   endif()
 endforeach()
 
-target_sources(noir PRIVATE ${PROTO_GENERATED})
+add_library(noir_proto STATIC ${PROTO_GENERATED})
+target_include_directories(noir_proto PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(noir_proto protobuf::libprotobuf)
+
+add_library(noir::proto ALIAS noir_proto)

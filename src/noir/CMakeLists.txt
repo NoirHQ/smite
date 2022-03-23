@@ -1,5 +1,4 @@
 add_subdirectory(codec)
-add_subdirectory(common)
 add_subdirectory(consensus)
 add_subdirectory(crypto)
 add_subdirectory(db)
