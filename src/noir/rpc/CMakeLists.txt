@@ -4,3 +4,5 @@ target_sources(noir
     jsonrpc.cpp
     rpc.cpp
 )
+
+add_noir_test(resource_test test/resource_test.cpp)
