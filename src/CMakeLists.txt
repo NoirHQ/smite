@@ -28,5 +28,6 @@ target_link_libraries(noir
   softfloat
 )
 
-add_subdirectory(eth)
 add_subdirectory(noir)
+add_subdirectory(eth)
+add_subdirectory(tendermint)

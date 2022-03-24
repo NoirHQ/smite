@@ -7,6 +7,7 @@
 #include <noir/rpc/jsonrpc.h>
 #include <noir/rpc/rpc.h>
 #include <eth/rpc/rpc.h>
+#include <tendermint/rpc/rpc.h>
 
 using namespace noir::rpc;
 
@@ -16,7 +17,7 @@ CLI::App* start(CLI::App& root) {
   return root.add_subcommand("start", "Run the NOIR node")->final_callback([]() {
     auto home_dir = app.home_dir();
 
-    if (!app.initialize<rpc::rpc, rpc::jsonrpc, eth::rpc::rpc>()) {
+    if (!app.initialize<rpc::rpc, rpc::jsonrpc, eth::rpc::rpc, tendermint::rpc::rpc>()) {
       throw CLI::Success();
     }
     app.startup();

@@ -10,6 +10,7 @@
 #include <noir/tx_pool/tx_pool.h>
 #include <appbase/application.hpp>
 #include <eth/rpc/rpc.h>
+#include <tendermint/rpc/rpc.h>
 
 using namespace noir;
 
@@ -45,6 +46,7 @@ int main(int argc, char** argv) {
   app.register_plugin<noir::rpc::rpc>();
   app.register_plugin<noir::rpc::jsonrpc>();
   app.register_plugin<eth::rpc::rpc>();
+  app.register_plugin<tendermint::rpc::rpc>();
 
   return app.run(argc, argv);
 }
