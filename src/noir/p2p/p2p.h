@@ -20,7 +20,7 @@ class p2p : public appbase::plugin<p2p> {
 public:
   APPBASE_PLUGIN_REQUIRES()
 
-  p2p();
+  p2p(appbase::application& app);
   virtual ~p2p();
 
   void set_program_options(CLI::App& config) override;

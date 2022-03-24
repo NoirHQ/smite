@@ -18,7 +18,7 @@ namespace noir::rpc {
  */
 class jsonrpc : public appbase::plugin<jsonrpc> {
 public:
-  jsonrpc();
+  jsonrpc(appbase::application&);
 
   APPBASE_PLUGIN_REQUIRES((rpc))
   void set_program_options(CLI::App& config) override {}

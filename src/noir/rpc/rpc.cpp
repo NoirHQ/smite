@@ -532,9 +532,10 @@ public:
    * @param my - the rpc_impl
    * @return the constructed internal_url_handler
    */
-  static detail::internal_url_handler make_app_thread_url_handler(int priority, url_handler next, rpc_impl_ptr my) {
+  static detail::internal_url_handler make_app_thread_url_handler(
+    appbase::application& app, int priority, url_handler next, rpc_impl_ptr my) {
     auto next_ptr = std::make_shared<url_handler>(std::move(next));
-    return [my = std::move(my), priority, next_ptr = std::move(next_ptr)](
+    return [&app, my = std::move(my), priority, next_ptr = std::move(next_ptr)](
              detail::abstract_conn_ptr conn, string r, string b, url_response_callback then) {
       auto tracked_b = make_in_flight<string>(std::move(b), my);
       if (!conn->verify_max_bytes_in_flight()) {
@@ -546,7 +547,7 @@ public:
 
       // post to the app thread taking shared ownership of next (via std::shared_ptr),
       // sole ownership of the tracked body and the passed in parameters
-      app().post(priority,
+      app.post(priority,
         [next_ptr, conn = std::move(conn), r = std::move(r), tracked_b,
           wrapped_then = std::move(wrapped_then)]() mutable {
           try {
@@ -697,7 +698,7 @@ public:
 //}
 //#endif
 
-rpc::rpc(): my(new rpc_impl()) {}
+rpc::rpc(appbase::application& app): plugin(app), my(new rpc_impl()) {}
 rpc::~rpc() = default;
 
 void rpc::set_program_options(CLI::App& config) {
@@ -782,7 +783,7 @@ void rpc::plugin_initialize(const CLI::App& config) {
       my->valid_hosts.insert(aliases.begin(), aliases.end());
     }
 
-    tcp::resolver resolver(app().io_context());
+    tcp::resolver resolver(app.io_context());
     if (rpc_options->get_option("--http-server-address")->as<string>().length()) {
       string lipstr = rpc_options->get_option("--http-server-address")->as<string>();
       string host = lipstr.substr(0, lipstr.find(':'));
@@ -861,7 +862,7 @@ void rpc::plugin_initialize(const CLI::App& config) {
 
 void rpc::plugin_startup() {
   handle_sighup(); // setup logging
-  app().post(priority::high, [this]() {
+  app.post(priority::high, [this]() {
     try {
       my->thread_pool.emplace("rpc", my->thread_pool_size);
       if (my->listen_endpoint) {
@@ -930,7 +931,7 @@ void rpc::plugin_startup() {
       }
     } catch (...) {
       fc_elog(logger, "rpc startup fails, shutting down");
-      app().quit();
+      app.quit();
     }
   });
 }
@@ -957,12 +958,12 @@ void rpc::plugin_shutdown() {
   // release rpc_impl_ptr shared_ptrs captured in url handlers
   my->url_handlers.clear();
 
-  app().post(0, [me = my]() {}); // keep my pointer alive until queue is drained
+  app.post(0, [me = my]() {}); // keep my pointer alive until queue is drained
 }
 
 void rpc::add_handler(const string& url, const url_handler& handler, int priority) {
   fc_ilog(logger, "add api url: ${c}", ("c", url));
-  my->url_handlers[url] = my->make_app_thread_url_handler(priority, handler, my);
+  my->url_handlers[url] = my->make_app_thread_url_handler(app, priority, handler, my);
 }
 
 void rpc::add_async_handler(const string& url, const url_handler& handler) {

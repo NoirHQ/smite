@@ -15,7 +15,7 @@ namespace eth::rpc {
 
 class rpc : public appbase::plugin<rpc> {
 public:
-  rpc();
+  rpc(appbase::application& app);
 
   APPBASE_PLUGIN_REQUIRES((noir::rpc::jsonrpc)(noir::consensus::abci)(noir::tx_pool::tx_pool))
   void set_program_options(CLI::App& config) override;

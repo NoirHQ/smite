@@ -4,12 +4,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <appbase/application.hpp>
 #include <functional>
 
 // forward declaration
 namespace CLI {
 class App;
 }
+
+extern appbase::application app;
 
 namespace noir::commands {
 

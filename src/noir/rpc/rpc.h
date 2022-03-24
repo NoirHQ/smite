@@ -67,7 +67,7 @@ struct rpc_defaults {
  */
 class rpc : public appbase::plugin<rpc> {
 public:
-  rpc();
+  rpc(appbase::application&);
   ~rpc() override;
 
   // must be called before initialize

@@ -254,6 +254,10 @@ const std::string connection::unknown = "<unknown>";
 //------------------------------------------------------------------------
 class p2p_impl : public std::enable_shared_from_this<p2p_impl> {
 public:
+  p2p_impl(appbase::application& app): app(app) {}
+
+  appbase::application& app;
+
   std::unique_ptr<tcp::acceptor> acceptor;
   std::atomic<uint32_t> current_connection_id{0};
 
@@ -290,19 +294,19 @@ public:
 
   // Channels
   plugin_interface::incoming::channels::cs_reactor_message_queue::channel_type& cs_reactor_mq_channel =
-    appbase::app().get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>();
+    app.get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>();
   plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type& bs_reactor_mq_channel =
-    appbase::app().get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>();
+    app.get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>();
   plugin_interface::channels::update_peer_status::channel_type& update_peer_status_channel =
-    appbase::app().get_channel<plugin_interface::channels::update_peer_status>();
+    app.get_channel<plugin_interface::channels::update_peer_status>();
 
   plugin_interface::egress::channels::transmit_message_queue::channel_type::handle xmt_mq_subscription =
-    appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
+    app.get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
       std::bind(&p2p_impl::transmit_message, this, std::placeholders::_1));
 
   // Methods
   plugin_interface::methods::send_error_to_peer::method_type::handle send_error_to_peer_provider =
-    appbase::app().get_method<plugin_interface::methods::send_error_to_peer>().register_provider(
+    app.get_method<plugin_interface::methods::send_error_to_peer>().register_provider(
       [this](const std::string& peer_id, std::span<const char> msg) -> void {
         send_peer_error(peer_id, msg);
         disconnect(peer_id);
@@ -608,7 +612,7 @@ void p2p_impl::disconnect(const std::string& peer_id) {
 //------------------------------------------------------------------------
 // p2p
 //------------------------------------------------------------------------
-p2p::p2p(): my(new p2p_impl) {
+p2p::p2p(appbase::application& app): plugin(app), my(new p2p_impl(app)) {
   my_impl = my.get();
 }
 
@@ -669,7 +673,7 @@ void p2p::plugin_startup() {
     ilog("my node_id is ${id}", ("id", my->node_id.to_string()));
 
     //    my->producer_plug = app().find_plugin<producer_plugin>();
-    if (auto plug = appbase::app().find_plugin<consensus::abci>(); plug->get_state() == started) {
+    if (auto plug = app.find_plugin<consensus::abci>(); plug->get_state() == started) {
       ilog("abci_plugin is up and running; p2p <--> abci");
       my->abci_plug = plug;
       // TODO: initialize channels between p2p and abci

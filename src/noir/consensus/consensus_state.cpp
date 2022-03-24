@@ -48,15 +48,14 @@ struct message_handler {
   }
 };
 
-consensus_state::consensus_state()
-  : timeout_ticker_channel(appbase::app().get_channel<plugin_interface::channels::timeout_ticker>()),
-    internal_mq_channel(appbase::app().get_channel<plugin_interface::channels::internal_message_queue>()),
-    event_switch_mq_channel(
-      appbase::app().get_channel<plugin_interface::egress::channels::event_switch_message_queue>()),
+consensus_state::consensus_state(appbase::application& app)
+  : timeout_ticker_channel(app.get_channel<plugin_interface::channels::timeout_ticker>()),
+    internal_mq_channel(app.get_channel<plugin_interface::channels::internal_message_queue>()),
+    event_switch_mq_channel(app.get_channel<plugin_interface::egress::channels::event_switch_message_queue>()),
     wal_(std::make_unique<nil_wal>()) {
-  timeout_ticker_subscription = appbase::app().get_channel<plugin_interface::channels::timeout_ticker>().subscribe(
+  timeout_ticker_subscription = app.get_channel<plugin_interface::channels::timeout_ticker>().subscribe(
     std::bind(&consensus_state::tock, this, std::placeholders::_1));
-  internal_mq_subscription = appbase::app().get_channel<plugin_interface::channels::internal_message_queue>().subscribe(
+  internal_mq_subscription = app.get_channel<plugin_interface::channels::internal_message_queue>().subscribe(
     std::bind(&consensus_state::receive_routine, this, std::placeholders::_1));
 
   thread_pool.emplace("consensus", thread_pool_size);
@@ -67,9 +66,10 @@ consensus_state::consensus_state()
   old_ti = std::make_shared<timeout_info>(timeout_info{});
 }
 
-std::shared_ptr<consensus_state> consensus_state::new_state(const consensus_config& cs_config_, state& state_,
-  const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store) {
-  auto consensus_state_ = std::make_shared<consensus_state>();
+std::shared_ptr<consensus_state> consensus_state::new_state(appbase::application& app,
+  const consensus_config& cs_config_, state& state_, const std::shared_ptr<block_executor>& block_exec_,
+  const std::shared_ptr<block_store>& new_block_store) {
+  auto consensus_state_ = std::make_shared<consensus_state>(app);
   consensus_state_->cs_config = cs_config_;
   consensus_state_->block_exec = block_exec_;
   consensus_state_->block_store_ = new_block_store;

@@ -49,8 +49,9 @@ private:
   postcheck_func* postcheck_ = nullptr;
 
 public:
-  tx_pool();
-  tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxyApp, uint64_t block_height);
+  tx_pool(appbase::application& app);
+  tx_pool(appbase::application& app, const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxyApp,
+    uint64_t block_height);
 
   virtual ~tx_pool() = default;
 

@@ -17,6 +17,8 @@
 
 #include <stdlib.h>
 
+appbase::application app;
+
 namespace noir::consensus {
 
 constexpr int64_t test_min_power = 10;
@@ -106,7 +108,7 @@ std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config
   auto bls = std::make_shared<noir::consensus::block_store>(session);
   auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls);
 
-  auto cs = consensus_state::new_state(config_.consensus, state_, block_exec, bls);
+  auto cs = consensus_state::new_state(app, config_.consensus, state_, block_exec, bls);
   cs->set_priv_validator(priv_vals[0]); // todo - requires many other fields to be properly initialized
 
   for (auto i = 0; i < num_validators; i++) {

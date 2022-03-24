@@ -31,7 +31,7 @@ struct node {
   std::shared_ptr<consensus_reactor> cs_reactor{};
   std::shared_ptr<block_sync::reactor> bs_reactor{};
 
-  static std::unique_ptr<node> new_default_node(const std::shared_ptr<config>& new_config) {
+  static std::unique_ptr<node> new_default_node(appbase::application& app, const std::shared_ptr<config>& new_config) {
     // Load or generate priv - todo
     std::vector<genesis_validator> validators;
     std::vector<std::shared_ptr<priv_validator>> priv_validators;
@@ -49,14 +49,14 @@ struct node {
     // Load or generate node_key - todo
     auto node_key_ = node_key::gen_node_key();
 
-    auto db_dir = appbase::app().home_dir() / "db";
+    auto db_dir = app.home_dir() / "db";
     auto session =
       std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
 
-    return make_node(new_config, priv_validators[0], node_key_, std::make_shared<genesis_doc>(gen_doc), session);
+    return make_node(app, new_config, priv_validators[0], node_key_, std::make_shared<genesis_doc>(gen_doc), session);
   }
 
-  static std::unique_ptr<node> make_node(const std::shared_ptr<config>& new_config,
+  static std::unique_ptr<node> make_node(appbase::application& app, const std::shared_ptr<config>& new_config,
     const std::shared_ptr<priv_validator>& new_priv_validator, const node_key& new_node_key,
     const std::shared_ptr<genesis_doc>& new_genesis_doc,
     const std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>& session) {
@@ -83,10 +83,10 @@ struct node {
 
     log_node_startup_info(state_, pub_key_, new_config->base.mode);
 
-    auto new_bs_reactor = create_block_sync_reactor(state_, block_exec, bls, block_sync);
+    auto new_bs_reactor = create_block_sync_reactor(app, state_, block_exec, bls, block_sync);
 
     auto [new_cs_reactor, new_cs_state] = create_consensus_reactor(
-      new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, block_sync);
+      app, new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, block_sync);
 
     auto node_ = std::make_unique<node>();
     node_->config_ = new_config;
@@ -134,23 +134,23 @@ struct node {
     }
   }
 
-  static std::shared_ptr<block_sync::reactor> create_block_sync_reactor(state& state_,
+  static std::shared_ptr<block_sync::reactor> create_block_sync_reactor(appbase::application& app, state& state_,
     const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store,
     bool block_sync_) {
-    auto bs_reactor = block_sync::reactor::new_reactor(state_, block_exec_, new_block_store, block_sync_);
+    auto bs_reactor = block_sync::reactor::new_reactor(app, state_, block_exec_, new_block_store, block_sync_);
     return bs_reactor;
   }
 
   static std::tuple<std::shared_ptr<consensus_reactor>, std::shared_ptr<consensus_state>> create_consensus_reactor(
-    const std::shared_ptr<config>& config_, const std::shared_ptr<state>& state_,
+    appbase::application& app, const std::shared_ptr<config>& config_, const std::shared_ptr<state>& state_,
     const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& block_store_,
     const std::shared_ptr<priv_validator>& priv_validator_, bool wait_sync) {
-    auto cs_state = consensus_state::new_state(config_->consensus, *state_, block_exec_, block_store_);
+    auto cs_state = consensus_state::new_state(app, config_->consensus, *state_, block_exec_, block_store_);
 
     if (config_->base.mode == Validator)
       cs_state->set_priv_validator(priv_validator_);
 
-    auto cs_reactor = consensus_reactor::new_consensus_reactor(cs_state, wait_sync);
+    auto cs_reactor = consensus_reactor::new_consensus_reactor(app, cs_state, wait_sync);
 
     return {cs_reactor, cs_state};
   }

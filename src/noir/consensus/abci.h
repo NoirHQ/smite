@@ -13,7 +13,6 @@ class abci : public appbase::plugin<abci> {
 public:
   APPBASE_PLUGIN_REQUIRES()
 
-  abci() {}
   virtual ~abci() {}
 
   void set_program_options(CLI::App& app_config) {
@@ -35,25 +34,25 @@ public:
     auto config_ = std::make_shared<config>(config::get_default());
     config_->base.chain_id = "test_chain";
     config_->base.mode = Validator; // TODO: read from config or cli
-    config_->base.root_dir = appbase::app().home_dir().string();
+    config_->base.root_dir = app.home_dir().string();
     config_->consensus.root_dir = config_->base.root_dir;
     config_->priv_validator.root_dir = config_->base.root_dir;
 
     if (do_not_start_node) {
       // Do not start node, but create an instance of consensus_reactor so network messages can be processed
       static std::shared_ptr<consensus_reactor> cs_reactor =
-        std::make_shared<consensus_reactor>(std::make_shared<consensus_state>(), false);
+        std::make_shared<consensus_reactor>(app, std::make_shared<consensus_state>(app), false);
       return;
     }
     if (start_non_validator_node) {
       // Start non-validator node; aka full node (but not seed node) TODO: do we need to support seed nodes?
-      appbase::app().set_home_dir("/tmp");
+      app.set_home_dir("/tmp");
       config_->consensus.root_dir = "/tmp";
       config_->priv_validator.root_dir = "/tmp";
       config_->base.mode = Full;
     }
 
-    node_ = node::new_default_node(config_);
+    node_ = node::new_default_node(app, config_);
 
     // Setup callbacks // TODO: is this right place to setup callback?
     node_->bs_reactor->set_callback_switch_to_cs_sync(std::bind(
