@@ -35,13 +35,13 @@ public:
   using precheck_func = bool(const consensus::tx&);
   using postcheck_func = bool(const consensus::tx&, consensus::response_check_tx&);
 
+  std::shared_ptr<consensus::app_connection> proxy_app_;
+
 private:
   std::mutex mutex_;
   config config_;
   unapplied_tx_queue tx_queue_;
   LRU_cache<consensus::tx_hash, consensus::tx> tx_cache_;
-
-  std::shared_ptr<consensus::app_connection> proxy_app_;
 
   uint64_t block_height_ = 0;
 
@@ -65,7 +65,7 @@ public:
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
 
-  void check_tx_sync(const consensus::tx& tx);
+  consensus::response_check_tx& check_tx_sync(const consensus::tx& tx);
   void check_tx_async(const consensus::tx& tx);
 
   std::vector<consensus::tx> reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
@@ -75,6 +75,7 @@ public:
     postcheck_func* new_postcheck = nullptr);
 
   size_t size() const;
+  uint64_t size_bytes() const;
   bool empty() const;
   void flush();
   void flush_app_conn();

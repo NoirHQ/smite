@@ -63,11 +63,12 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
   postcheck_ = postcheck;
 }
 
-void tx_pool::check_tx_sync(const consensus::tx& tx) {
+consensus::response_check_tx& tx_pool::check_tx_sync(const consensus::tx& tx) {
   auto tx_hash = consensus::get_tx_hash(tx);
   check_tx_internal(tx_hash, tx);
   auto& res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = tx});
   add_tx(tx_hash, tx, res);
+  return res;
 }
 
 void tx_pool::check_tx_async(const consensus::tx& tx) {
@@ -238,6 +239,10 @@ void tx_pool::update_recheck_txs() {
 
 size_t tx_pool::size() const {
   return tx_queue_.size();
+}
+
+uint64_t tx_pool::size_bytes() const {
+  return tx_queue_.bytes_size();
 }
 
 bool tx_pool::empty() const {
