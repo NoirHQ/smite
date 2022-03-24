@@ -209,10 +209,6 @@ using rpc_impl_ptr = std::shared_ptr<class rpc_impl>;
 
 static bool verbose_http_errors = false;
 
-void on_message(websocket_server_type* s, websocketpp::connection_hdl hdl, websocket_server_type::message_ptr msg) {
-  s->send(hdl, msg->get_payload(), msg->get_opcode());
-}
-
 class rpc_impl : public std::enable_shared_from_this<rpc_impl> {
 public:
   rpc_impl() = default;
@@ -703,9 +699,9 @@ public:
       ws.clear_access_channels(websocketpp::log::alevel::all);
       ws.set_access_channels(websocketpp::log::alevel::all);
       ws.init_asio(&thread_pool->get_executor());
-      using websocketpp::lib::placeholders::_1;
-      using websocketpp::lib::placeholders::_2;
-      ws.set_message_handler(bind(&on_message, &ws, _1, _2));
+      ws.set_message_handler([&](websocketpp::connection_hdl hdl, websocket_server_type::message_ptr msg){
+        ws.send(hdl, msg->get_payload(), msg->get_opcode());
+      });
     } catch (const fc::exception& e) {
       fc_elog(logger, "ws: ${e}", ("e", e.to_detail_string()));
     } catch (const std::exception& e) {
@@ -989,6 +985,8 @@ void rpc::plugin_shutdown() {
     my->server.stop_listening();
   if (my->https_server.is_listening())
     my->https_server.stop_listening();
+  if (my->ws_server.is_listening())
+    my->ws_server.stop_listening();
   //#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
   //  if(my->unix_server.is_listening())
   //    my->unix_server.stop_listening();
