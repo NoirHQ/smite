@@ -17,6 +17,10 @@ constexpr auto switch_to_consensus_interval{std::chrono::seconds(1)};
 constexpr auto sync_timeout{std::chrono::seconds(60)};
 
 struct reactor {
+  reactor(appbase::application& app): app(app) {}
+
+  appbase::application& app;
+
   consensus::state initial_state;
   consensus::state latest_state;
   uint64_t blocks_synced{};
@@ -33,16 +37,17 @@ struct reactor {
 
   // Receive an envelope from peers [via p2p]
   plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type::handle bs_reactor_mq_subscription =
-    appbase::app().get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>().subscribe(
+    app.get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>().subscribe(
       std::bind(&reactor::process_peer_msg, this, std::placeholders::_1));
 
   // Receive peer_status update from p2p
   plugin_interface::channels::update_peer_status::channel_type::handle update_peer_status_subscription =
-    appbase::app().get_channel<plugin_interface::channels::update_peer_status>().subscribe(
+    app.get_channel<plugin_interface::channels::update_peer_status>().subscribe(
       std::bind(&reactor::process_peer_update, this, std::placeholders::_1));
 
-  static std::shared_ptr<reactor> new_reactor(state& state_, const std::shared_ptr<block_executor>& block_exec_,
-    const std::shared_ptr<block_store>& new_block_store, bool block_sync_) {
+  static std::shared_ptr<reactor> new_reactor(appbase::application& app, state& state_,
+    const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store,
+    bool block_sync_) {
 
     if (state_.last_block_height != new_block_store->height()) {
       elog("block_sync_reactor: state_ and store height mismatch");
@@ -53,11 +58,11 @@ struct reactor {
     if (start_height == 1)
       start_height = state_.initial_height;
 
-    auto reactor_ = std::make_shared<reactor>();
+    auto reactor_ = std::make_shared<reactor>(app);
     reactor_->initial_state = state_;
     reactor_->block_exec = block_exec_;
     reactor_->store = new_block_store;
-    reactor_->pool = block_pool::new_block_pool(start_height);
+    reactor_->pool = block_pool::new_block_pool(app, start_height);
     reactor_->block_sync = block_sync_;
     reactor_->sync_start_time = 0;
 

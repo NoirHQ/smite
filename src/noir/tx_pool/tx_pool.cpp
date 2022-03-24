@@ -8,12 +8,13 @@
 
 namespace noir::tx_pool {
 
-tx_pool::tx_pool()
-  : config_(config{}), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
+tx_pool::tx_pool(appbase::application& app)
+  : plugin(app), config_(config{}), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
     proxy_app_(std::make_shared<consensus::app_connection>()) {}
 
-tx_pool::tx_pool(const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxy_app, uint64_t block_height)
-  : config_(cfg), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
+tx_pool::tx_pool(appbase::application& app, const config& cfg,
+  std::shared_ptr<consensus::app_connection>& new_proxy_app, uint64_t block_height)
+  : plugin(app), config_(cfg), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
     proxy_app_(new_proxy_app), block_height_(block_height) {}
 
 void tx_pool::set_program_options(CLI::App& cfg) {

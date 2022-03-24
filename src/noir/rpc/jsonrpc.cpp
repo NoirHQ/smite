@@ -13,13 +13,15 @@ using namespace noir::jsonrpc;
 
 class jsonrpc_impl : std::enable_shared_from_this<jsonrpc_impl> {
 public:
+  jsonrpc_impl(appbase::application& app): app(app) {}
+
   endpoint& get_or_create_endpoint(const std::string& url) {
     if (endpoints.find(url) != endpoints.end())
       return endpoints[url];
 
     endpoints.emplace(std::make_pair(url, endpoint{}));
 
-    app().get_plugin<rpc>().add_api({
+    app.get_plugin<rpc>().add_api({
       {url,
         [&](std::string url, std::string body, url_response_callback cb) mutable {
           try {
@@ -36,10 +38,11 @@ public:
   }
 
 private:
+  appbase::application& app;
   std::map<std::string, endpoint> endpoints;
 };
 
-jsonrpc::jsonrpc(): my(new jsonrpc_impl()) {}
+jsonrpc::jsonrpc(appbase::application& app): plugin(app), my(new jsonrpc_impl(app)) {}
 
 void jsonrpc::plugin_initialize(const CLI::App& config) {}
 

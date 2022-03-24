@@ -12,7 +12,7 @@ namespace eth::rpc {
 using namespace appbase;
 using namespace noir;
 
-rpc::rpc(): api(std::make_unique<api::api>()){};
+rpc::rpc(appbase::application& app): plugin(app), api(std::make_unique<api::api>()){};
 
 void rpc::set_program_options(CLI::App& config) {
   auto eth_options = config.add_section("eth", "Ethereum Configuration");
@@ -35,17 +35,17 @@ void rpc::plugin_initialize(const CLI::App& config) {
   api->set_tx_fee_cap(tx_fee_cap);
   api->set_allow_unprotected_txs(allow_unprotected_txs);
 
-  auto tx_poor_ptr = app().find_plugin<tx_pool::tx_pool>();
+  auto tx_poor_ptr = app.find_plugin<tx_pool::tx_pool>();
   api->set_tx_pool_ptr(tx_poor_ptr);
 
-  auto& block_store_ptr = app().get_plugin<consensus::abci>().node_->block_store_;
+  auto& block_store_ptr = app.get_plugin<consensus::abci>().node_->block_store_;
   api->set_block_store(block_store_ptr);
 }
 
 void rpc::plugin_startup() {
   ilog("starting ethereum rpc");
 
-  auto& endpoint = app().get_plugin<noir::rpc::jsonrpc>().get_or_create_endpoint("/eth");
+  auto& endpoint = app.get_plugin<noir::rpc::jsonrpc>().get_or_create_endpoint("/eth");
   endpoint.add_handler("eth_sendRawTransaction", [&](auto& req) { return api->send_raw_tx(req); });
   endpoint.add_handler("eth_chainId", [&](auto& req) { return api->chain_id(req); });
   endpoint.add_handler("net_version", [&](auto& req) { return api->net_version(req); });

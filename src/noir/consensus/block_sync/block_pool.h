@@ -28,6 +28,8 @@ struct bp_peer;
 
 /// \brief keeps track of block sync peers, block requests and block responses
 struct block_pool : std::enable_shared_from_this<block_pool> {
+  appbase::application& app;
+
   p2p::tstamp last_advance{};
 
   std::mutex mtx;
@@ -47,14 +49,14 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
 
   // Send an envelope to peers [via p2p]
   plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel =
-    appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>();
+    app.get_channel<plugin_interface::egress::channels::transmit_message_queue>();
 
-  block_pool() {
+  block_pool(appbase::application& app): app(app) {
     thread_pool.emplace("cs_reactor", thread_pool_size);
   }
 
-  static std::shared_ptr<block_pool> new_block_pool(int64_t start) {
-    auto bp = std::make_shared<block_pool>();
+  static std::shared_ptr<block_pool> new_block_pool(appbase::application& app, int64_t start) {
+    auto bp = std::make_shared<block_pool>(app);
     bp->height = start;
     bp->start_height = start;
     bp->num_pending = 0;

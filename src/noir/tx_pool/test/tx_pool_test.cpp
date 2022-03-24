@@ -16,6 +16,8 @@ using namespace noir;
 using namespace noir::consensus;
 using namespace noir::tx_pool;
 
+appbase::application app;
+
 namespace test_detail {
 
 static address_type str_to_addr(const std::string& str) {
@@ -179,7 +181,7 @@ public:
     auto proxy_app = std::make_shared<app_connection>();
     test_app_ = test_app;
     proxy_app->application = test_app;
-    tp_ = std::make_shared<noir::tx_pool::tx_pool>(cfg, proxy_app, 0);
+    tp_ = std::make_shared<noir::tx_pool::tx_pool>(app, cfg, proxy_app, 0);
     return *tp_;
   }
 };

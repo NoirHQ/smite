@@ -3,7 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <appbase/application.hpp>
+#include <noir/commands/commands.h>
 
 static std::string mode;
 static std::string key_type;

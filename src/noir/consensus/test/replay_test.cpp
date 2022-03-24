@@ -16,6 +16,8 @@ using namespace noir::consensus;
 using namespace noir::p2p;
 namespace fs = std::filesystem;
 
+appbase::application app;
+
 auto prepare_consensus = [](auto num_validators) { // copy and modification of rand_cs
   auto local_config = config_setup();
   auto [state_, priv_vals] = rand_genesis_state(local_config, num_validators, false, 10);
@@ -30,7 +32,7 @@ auto prepare_consensus = [](auto num_validators) { // copy and modification of r
   auto bls = std::make_shared<noir::consensus::block_store>(session);
   auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls);
 
-  auto cs = consensus_state::new_state(local_config.consensus, state_, block_exec, bls);
+  auto cs = consensus_state::new_state(app, local_config.consensus, state_, block_exec, bls);
   cs->set_priv_validator(priv_vals[0]); // todo - requires many other fields to be properly initialized
   cs->cs_config.root_dir = tmp_path;
 

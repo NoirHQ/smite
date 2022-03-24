@@ -25,10 +25,11 @@ namespace noir::consensus {
  * The internal state machine receives input from peers, the internal validator, and from a timer.
  */
 struct consensus_state : public std::enable_shared_from_this<consensus_state> {
-  consensus_state();
+  consensus_state(appbase::application&);
 
-  static std::shared_ptr<consensus_state> new_state(const consensus_config& cs_config_, state& state_,
-    const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store);
+  static std::shared_ptr<consensus_state> new_state(appbase::application& app, const consensus_config& cs_config_,
+    state& state_, const std::shared_ptr<block_executor>& block_exec_,
+    const std::shared_ptr<block_store>& new_block_store);
 
   state get_state();
   int64_t get_last_height();

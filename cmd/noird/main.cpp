@@ -13,8 +13,9 @@
 
 using namespace noir;
 
+appbase::application app;
+
 int main(int argc, char** argv) {
-  auto& app = appbase::app();
 
   // set default configuration
   app.config().require_subcommand();

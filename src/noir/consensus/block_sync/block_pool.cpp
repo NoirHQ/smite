@@ -174,7 +174,7 @@ void block_pool::send_request(int64_t height_, std::string peer_id_) {
 void block_pool::send_error(std::string err, std::string peer_id_) {
   if (!is_running)
     return;
-  appbase::app().get_method<plugin_interface::methods::send_error_to_peer>()(peer_id_, err);
+  app.get_method<plugin_interface::methods::send_error_to_peer>()(peer_id_, err);
 }
 
 void block_pool::transmit_new_envelope(
