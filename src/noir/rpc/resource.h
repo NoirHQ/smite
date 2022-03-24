@@ -38,7 +38,7 @@ private:
     if (queries.empty())
       return;
     std::string key, value;
-    for (auto & query : queries) {
+    for (auto& query : queries) {
       std::size_t pos = query.find('=');
       check(pos != std::string::npos, "invalid uri format");
       key = query.substr(0, pos);
