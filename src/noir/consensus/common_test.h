@@ -46,18 +46,15 @@ void increment_height(validator_stub_list& vss, size_t begin_at) {
 config config_setup() {
   auto config_ = config::get_default();
   config_.base.chain_id = "test_chain";
-  config_.base.root_dir = "/tmp/test_consensus";
-  config_.consensus.root_dir = config_.base.root_dir;
-  config_.priv_validator.root_dir = config_.base.root_dir;
 
   // create consensus.root_dir if not exist
-  try {
-    if (!std::filesystem::exists(config_.consensus.root_dir)) {
-      std::filesystem::create_directories(config_.consensus.root_dir);
-    }
-  } catch (...) {
-    check(false, "unable to create root_dir", config_.consensus.root_dir);
-  }
+  auto temp_dir = std::filesystem::temp_directory_path();
+  auto temp_config_path = temp_dir / "test_consensus";
+  std::filesystem::create_directories(temp_config_path);
+
+  config_.base.root_dir = temp_config_path.string();
+  config_.consensus.root_dir = config_.base.root_dir;
+  config_.priv_validator.root_dir = config_.base.root_dir;
   return config_;
 }
 

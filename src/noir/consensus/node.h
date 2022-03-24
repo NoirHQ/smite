@@ -54,7 +54,7 @@ struct node {
     // Load or generate node_key - todo
     auto node_key_ = node_key::gen_node_key();
 
-    auto db_dir = app.home_dir() / "db";
+    auto db_dir = std::filesystem::path{new_config->consensus.root_dir} / "db";
     auto session =
       std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
 
