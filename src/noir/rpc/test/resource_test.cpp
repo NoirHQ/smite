@@ -12,33 +12,33 @@ TEST_CASE("resource: single query", "[noir][rpc][resource]") {
   auto res = "test?foo=bar";
   resource r(res);
 
-  CHECK(r.path_ == "test");
-  CHECK(r.full_query_ == "foo=bar");
-  CHECK(r.query_["foo"] == "bar");
+  CHECK(r.path == "test");
+  CHECK(r.full_query == "foo=bar");
+  CHECK(r.query["foo"] == "bar");
 }
 
 TEST_CASE("resource: multi query", "[noir][rpc][resource]") {
   auto res = "test?foo=bar&age=35&query='height=1000'&=temp";
   resource r(res);
 
-  CHECK(r.path_ == "test");
-  CHECK(r.full_query_ == "foo=bar&age=35&query='height=1000'&=temp");
-  CHECK(r.query_["foo"] == "bar");
-  CHECK(r.query_["age"] == "35");
-  CHECK(r.query_["query"] == "'height=1000'");
-  CHECK(r.query_[""] == "temp");
+  CHECK(r.path == "test");
+  CHECK(r.full_query == "foo=bar&age=35&query='height=1000'&=temp");
+  CHECK(r.query["foo"] == "bar");
+  CHECK(r.query["age"] == "35");
+  CHECK(r.query["query"] == "'height=1000'");
+  CHECK(r.query[""] == "temp");
 }
 
 TEST_CASE("resource: no query", "[noir][rpc][resource]") {
   auto res = "test";
   resource r(res);
-  CHECK(r.path_ == "test");
+  CHECK(r.path == "test");
 }
 
 TEST_CASE("resource: empty query", "[noir][rpc][resource]") {
   auto res = "test?";
   resource r(res);
-  CHECK(r.path_ == "test");
+  CHECK(r.path == "test");
 }
 
 TEST_CASE("resource: parsing failed", "[noir][rpc][resource]") {

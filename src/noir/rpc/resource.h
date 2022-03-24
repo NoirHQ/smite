@@ -14,35 +14,35 @@
 namespace noir::rpc {
 class resource {
 public:
-  resource(const std::string& res) {
+  explicit resource(const std::string& res) {
     std::size_t found = res.find('?');
     if (found != std::string::npos) {
-      path_ = res.substr(0, found);
-      full_query_ = res.substr(found + 1);
-      if (!full_query_.empty()) {
-        query_parse(full_query_, this->query_);
+      path = res.substr(0, found);
+      full_query = res.substr(found + 1);
+      if (!full_query.empty()) {
+        query_parse(full_query, query);
       }
     } else {
-      path_ = res;
+      path = res;
     }
   }
 
-  std::string path_;
-  std::string full_query_;
-  std::map<std::string, std::string> query_;
+  std::string path;
+  std::string full_query;
+  std::map<std::string, std::string> query;
 
 private:
-  void query_parse(const std::string& in, std::map<std::string, std::string>& out) {
+  static void query_parse(const std::string& in, std::map<std::string, std::string>& out) {
     std::vector<std::string> queries;
     boost::split(queries, in, boost::is_any_of("&"));
     if (queries.empty())
       return;
     std::string key, value;
-    for (auto it = queries.begin(); it != queries.end(); ++it) {
-      std::size_t pos = (*it).find('=');
+    for (auto & query : queries) {
+      std::size_t pos = query.find('=');
       check(pos != std::string::npos, "invalid uri format");
-      key = (*it).substr(0, pos);
-      value = (*it).substr(pos + 1);
+      key = query.substr(0, pos);
+      value = query.substr(pos + 1);
 
       out[key] = value;
       key.clear();
