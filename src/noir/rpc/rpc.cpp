@@ -22,6 +22,8 @@
 #include <websocketpp/client.hpp>
 #include <websocketpp/config/asio.hpp>
 #include <websocketpp/config/asio_client.hpp>
+#include <websocketpp/config/debug_asio_no_tls.hpp>
+#include <websocketpp/extensions/permessage_deflate/enabled.hpp>
 #include <websocketpp/logger/stub.hpp>
 #include <websocketpp/server.hpp>
 
@@ -207,6 +209,10 @@ using rpc_impl_ptr = std::shared_ptr<class rpc_impl>;
 
 static bool verbose_http_errors = false;
 
+void on_message(websocket_server_type* s, websocketpp::connection_hdl hdl, websocket_server_type::message_ptr msg) {
+  s->send(hdl, msg->get_payload(), msg->get_opcode());
+}
+
 class rpc_impl : public std::enable_shared_from_this<rpc_impl> {
 public:
   rpc_impl() = default;
@@ -247,6 +253,9 @@ public:
   //  std::optional<asio::local::stream_protocol::endpoint> unix_endpoint;
   //  websocket_local_server_type unix_server;
   //#endif
+
+  std::optional<tcp::endpoint> ws_listen_endpoint;
+  websocket_server_type ws_server;
 
   bool validate_host = true;
   set<string> valid_hosts;
@@ -688,6 +697,23 @@ public:
     valid_hosts.emplace(host + ":" + port);
     valid_hosts.emplace(host + ":" + resolved_port_str);
   }
+
+  void create_ws_server_for_endpoint(const tcp::endpoint& ep, websocket_server_type& ws) {
+    try {
+      ws.clear_access_channels(websocketpp::log::alevel::all);
+      ws.set_access_channels(websocketpp::log::alevel::all);
+      ws.init_asio(&thread_pool->get_executor());
+      using websocketpp::lib::placeholders::_1;
+      using websocketpp::lib::placeholders::_2;
+      ws.set_message_handler(bind(&on_message, &ws, _1, _2));
+    } catch (const fc::exception& e) {
+      fc_elog(logger, "ws: ${e}", ("e", e.to_detail_string()));
+    } catch (const std::exception& e) {
+      fc_elog(logger, "ws: ${e}", ("e", e.what()));
+    } catch (...) {
+      fc_elog(logger, "error thrown from ws io service");
+    }
+  }
 };
 
 //#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
@@ -926,6 +952,24 @@ void rpc::plugin_startup() {
           throw;
         } catch (...) {
           fc_elog(logger, "error thrown from https io service");
+          throw;
+        }
+      }
+
+      if (my->ws_listen_endpoint) {
+        try {
+          my->create_ws_server_for_endpoint(*my->ws_listen_endpoint, my->ws_server);
+          fc_ilog(logger, "start listening for ws requests");
+          my->ws_server.listen(*my->ws_listen_endpoint);
+          my->ws_server.start_accept();
+        } catch (const fc::exception& e) {
+          fc_elog(logger, "http service failed to start: ${e}", ("e", e.to_detail_string()));
+          throw;
+        } catch (const std::exception& e) {
+          fc_elog(logger, "http service failed to start: ${e}", ("e", e.what()));
+          throw;
+        } catch (...) {
+          fc_elog(logger, "error thrown from http io service");
           throw;
         }
       }
