@@ -45,8 +45,6 @@ private:
       value = query.substr(pos + 1);
 
       out[key] = value;
-      key.clear();
-      value.clear();
     }
   }
 };
