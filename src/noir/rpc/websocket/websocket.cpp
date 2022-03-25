@@ -11,35 +11,39 @@ namespace noir::rpc {
 using namespace std;
 using namespace appbase;
 
-void websocket::add_message_handler(std::string path, message_handler& handler, int priority) {
-  message_handlers[path] = make_app_thread_message_handler(priority, handler);
+using connection_ptr = websocketpp::server<websocketpp::config::asio>::connection_ptr;
+using message_ptr = websocketpp::server<websocketpp::config::asio>::message_ptr;
+
+void websocket::add_message_api(const std::string& path, message_handler handler, int priority) {
+  add_message_handler(path, handler, priority);
 }
 
-internal_message_handler websocket::make_app_thread_message_handler(int priority, message_handler& handler) {
-  auto next_ptr = std::make_shared<message_handler>(std::move(handler));
-  return [my = shared_from_this(), priority, next_ptr = std::move(next_ptr)](
-           connection_ptr conn_ptr, message_ptr msg_ptr, message_sender then) {
-    message_sender wrapped_then = [then = std::move(then)](string msg) { then(msg); };
+void websocket::add_message_handler(const std::string& path, message_handler& handler, int priority) {
+  message_handlers[path] = make_app_thread_message_handler(handler, priority);
+}
 
-    app().post(priority,
-      [my = std::move(my), next_ptr, c = std::move(conn_ptr), m = std::move(msg_ptr),
-        wrapped_then = std::move(wrapped_then)]() mutable {
-        try {
-          (*next_ptr)(std::move(m->get_payload()), std::move(wrapped_then));
-        } catch (...) {
-          c->send("Internal Server Error");
-        }
-      });
+internal_message_handler websocket::make_app_thread_message_handler(message_handler next, int priority) {
+  auto next_ptr = std::make_shared<message_handler>(std::move(next));
+  return [priority, next_ptr = std::move(next_ptr)](connection_ptr conn, const string& payload, message_sender then) {
+    message_sender wrapped_then = [then = std::move(then)](string msg) { then(std::move(msg)); };
+
+    app().post(priority, [next_ptr, conn = std::move(conn), payload, wrapped_then = std::move(wrapped_then)]() mutable {
+      try {
+        (*next_ptr)(payload, std::move(wrapped_then));
+      } catch (...) {
+        conn->send("Internal Server Error");
+      }
+    });
   };
 }
 
-message_sender websocket::make_message_sender(connection_ptr conn_ptr, int priority) {
-  return [my = shared_from_this(), priority, conn_ptr](string msg) {
-    app().post(priority, [my = std::move(my), c = std::move(conn_ptr), msg]() {
+message_sender websocket::make_message_sender(connection_ptr conn, int priority) {
+  return [priority, conn = std::move(conn)](const string& msg) {
+    app().post(priority, [conn, msg]() {
       try {
-        c->send(msg);
+        conn->send(msg);
       } catch (...) {
-        c->send("Internal Server Error");
+        conn->send("Internal Server Error");
       }
     });
   };

@@ -673,12 +673,12 @@ public:
   }
 
   void handle_message(
-    websocketpp::server<websocketpp::config::asio>::connection_ptr con, websocket_server_type::message_ptr msg) {
-    std::string resource = con->get_uri()->get_resource();
+    websocketpp::server<websocketpp::config::asio>::connection_ptr conn, websocket_server_type::message_ptr msg) {
+    std::string resource = conn->get_uri()->get_resource();
     if (wsocket.message_handlers.contains(resource)) {
-      wsocket.message_handlers[resource](con, msg, wsocket.make_message_sender(con));
+      wsocket.message_handlers[resource](conn, msg->get_payload(), wsocket.make_message_sender(conn));
     } else {
-      con->send("Unknown Endpoint");
+      conn->send("Unknown Endpoint");
     }
   }
 
@@ -709,9 +709,6 @@ public:
 
   void create_ws_server_for_endpoint(const tcp::endpoint& ep, ws_server_type& ws) {
     try {
-      std::function next = [&](std::string payload, message_sender sender) { sender(payload); };
-      wsocket.add_message_handler("/test", next, appbase::priority::medium_low);
-
       ws.clear_access_channels(websocketpp::log::alevel::all);
       ws.set_access_channels(websocketpp::log::alevel::all);
       ws.init_asio(&thread_pool->get_executor());
@@ -764,6 +761,9 @@ void rpc::set_program_options(CLI::App& config) {
   else
     rpc_options->add_option("--http-server-address",
       "The local IP and port to listen for incoming http connections; leave blank to disable.");
+
+  rpc_options->add_option("--ws-server-address",
+    "The local IP and port to listen for incoming ws connections; leave blank to disable.");
 
   rpc_options->add_option("--https-server-address",
     "The local IP and port to listen for incoming https connections; leave blank to disable.");
@@ -839,9 +839,6 @@ void rpc::plugin_initialize(const CLI::App& config) {
       }
     }
 
-    // TODO: remove before release
-    my->ws_listen_endpoint = *resolver.resolve(tcp::v4(), "127.0.0.1", "26657");
-
     //#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
     //    if(rpc_options->count("unix-socket-path") &&
     //    !rpc_options->get_option("unix-socket-path")->as<string>().empty()) {
@@ -881,6 +878,23 @@ void rpc::plugin_initialize(const CLI::App& config) {
       // add in resolved hosts and ports as well
       if (my->https_listen_endpoint) {
         my->add_aliases_for_endpoint(*my->https_listen_endpoint, host, port);
+      }
+    }
+
+    if (rpc_options->count("--ws-server-address") && rpc_options->get_option("--ws-server-address")->as<string>().length()) {
+      string lipstr = rpc_options->get_option("--ws-server-address")->as<string>();
+      string host = lipstr.substr(0, lipstr.find(':'));
+      string port = lipstr.substr(host.size() + 1, lipstr.size());
+      try {
+        my->ws_listen_endpoint = *resolver.resolve(tcp::v4(), host, port);
+        ilog("configured ws to listen on ${h}:${p}", ("h", host)("p", port));
+      } catch (const boost::system::system_error& ec) {
+        elog("failed to configure ws to listen on ${h}:${p} (${m})", ("h", host)("p", port)("m", ec.what()));
+      }
+
+      // add in resolved hosts and ports as well
+      if (my->ws_listen_endpoint) {
+        my->add_aliases_for_endpoint(*my->ws_listen_endpoint, host, port);
       }
     }
 
