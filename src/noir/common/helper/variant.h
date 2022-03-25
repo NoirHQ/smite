@@ -28,10 +28,10 @@ template<noir::reflection T>
 void to_variant(const T& in, variant& out) {
   mutable_variant_object obj;
   noir::refl::for_each_field(
-    [&](const auto& name, const auto& value) {
+    [&](const auto& desc, const auto& value) {
       fc::variant var;
       to_variant(value, var);
-      obj.set(std::string(name), var);
+      obj.set(std::string(desc.name), var);
     },
     in);
   out = obj;
@@ -48,7 +48,8 @@ template<noir::reflection T>
 void from_variant(const variant& in, T& out) {
   noir::check(in.is_object());
   auto obj = in.get_object();
-  noir::refl::for_each_field([&](const auto& name, auto& value) { from_variant(obj[std::string(name)], value); }, out);
+  noir::refl::for_each_field(
+    [&](const auto& desc, auto& value) { from_variant(obj[std::string(desc.name)], value); }, out);
 }
 
 } // namespace fc
