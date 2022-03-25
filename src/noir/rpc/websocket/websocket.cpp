@@ -33,7 +33,7 @@ internal_message_handler websocket::make_app_thread_message_handler(int priority
   };
 }
 
-message_sender websocket::make_message_sender(int priority, connection_ptr conn_ptr) {
+message_sender websocket::make_message_sender(connection_ptr conn_ptr, int priority) {
   return [my = shared_from_this(), priority, conn_ptr](string msg) {
     app().post(priority, [my = std::move(my), c = std::move(conn_ptr), msg]() {
       try {
