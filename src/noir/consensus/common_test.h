@@ -10,6 +10,7 @@
 #include <noir/consensus/store/store_test.h>
 #include <noir/consensus/types.h>
 
+#include <appbase/application.hpp>
 #include <fc/crypto/base58.hpp>
 #include <fc/crypto/private_key.hpp>
 #include <fc/crypto/public_key.hpp>
@@ -20,6 +21,21 @@
 appbase::application app;
 
 namespace noir::consensus {
+
+class test_plugin : public appbase::plugin<test_plugin> {
+public:
+  APPBASE_PLUGIN_REQUIRES()
+
+  virtual ~test_plugin() {}
+
+  void set_program_options(CLI::App& app_config) {}
+
+  void plugin_initialize(const CLI::App& app_config) {}
+
+  void plugin_startup() {}
+
+  void plugin_shutdown() {}
+};
 
 constexpr int64_t test_min_power = 10;
 
