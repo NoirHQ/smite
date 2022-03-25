@@ -261,6 +261,12 @@ void consensus_state::on_start() {
   }
 }
 
+void consensus_state::on_stop() {
+  wal_->on_stop();
+  timeout_ticker_timer->cancel();
+  thread_pool->stop();
+}
+
 void consensus_state::update_height(int64_t height) {
   rs.height = height;
 }

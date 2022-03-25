@@ -72,6 +72,7 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   }
   void on_stop() {
     is_running = false;
+    thread_pool->stop();
   }
 
   void make_requester_routine() {
