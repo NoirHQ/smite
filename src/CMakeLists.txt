@@ -22,7 +22,6 @@ target_link_libraries(noir
   b2
   expected
   fc
-  fixed_string
   fmt
   protobuf::libprotobuf
   range-v3

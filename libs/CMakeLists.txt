@@ -16,7 +16,6 @@ add_subdirectory(expected)
 set(SKIP_FC_TESTS ON)
 add_subdirectory(fc)
 
-add_subdirectory(fixed_string)
 add_subdirectory(fmt)
 add_subdirectory(scope-lite)
 add_subdirectory(range-v3)
