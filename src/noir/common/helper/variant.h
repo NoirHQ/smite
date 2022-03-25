@@ -32,6 +32,7 @@ void to_variant(const T& in, variant& out) {
       fc::variant var;
       to_variant(value, var);
       obj.set(std::string(desc.name), var);
+      return true;
     },
     in);
   out = obj;
@@ -49,7 +50,11 @@ void from_variant(const variant& in, T& out) {
   noir::check(in.is_object());
   auto obj = in.get_object();
   noir::refl::for_each_field(
-    [&](const auto& desc, auto& value) { from_variant(obj[std::string(desc.name)], value); }, out);
+    [&](const auto& desc, auto& value) {
+      from_variant(obj[std::string(desc.name)], value);
+      return true;
+    },
+    out);
 }
 
 } // namespace fc
