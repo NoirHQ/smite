@@ -24,7 +24,12 @@ concept foreachable = is_foreachable_v<T>;
 template<typename F, typename T>
 void for_each_field(F&& f, T& v) {
   if constexpr (refl::has_refl_v<T>) {
-    refl::for_each_field([&](const auto& desc, auto& value) { f(value); }, v);
+    refl::for_each_field(
+      [&](const auto& desc, auto& value) {
+        f(value);
+        return true;
+      },
+      v);
   } else {
     boost::pfr::for_each_field(v, f);
   }
@@ -33,7 +38,12 @@ void for_each_field(F&& f, T& v) {
 template<typename F, typename T>
 void for_each_field(F&& f, const T& v) {
   if constexpr (refl::has_refl_v<T>) {
-    refl::for_each_field([&](const auto& desc, const auto& value) { f(value); }, v);
+    refl::for_each_field(
+      [&](const auto& desc, const auto& value) {
+        f(value);
+        return true;
+      },
+      v);
   } else {
     boost::pfr::for_each_field(v, f);
   }
