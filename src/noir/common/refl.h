@@ -62,38 +62,48 @@ using base_t = typename base<T>::type;
 
 /// \cond PRIVATE
 template<size_t I, typename F, typename T>
-void _for_each_field(F&& f, T& v) {
+bool _for_each_field(F&& f, T& v) {
   if constexpr (I < fields_count_v<T>) {
-    f(field<I, T>{}, get<I>(v));
-    _for_each_field<I + 1>(f, v);
+    if (!f(field<I, T>{}, get<I>(v))) {
+      return false;
+    }
+    return _for_each_field<I + 1>(f, v);
   }
+  return true;
 }
 
 template<size_t I, typename F, typename T>
-void _for_each_field(F&& f, const T& v) {
+bool _for_each_field(F&& f, const T& v) {
   if constexpr (I < fields_count_v<T>) {
-    f(field<I, T>{}, get<I>(v));
-    _for_each_field<I + 1>(f, v);
+    if (!f(field<I, T>{}, get<I>(v))) {
+      return false;
+    }
+    return _for_each_field<I + 1>(f, v);
   }
+  return true;
 }
 /// \endcond
 
 /// \brief iterates fields of T
 template<typename F, typename T>
-void for_each_field(F&& f, T& v) {
+bool for_each_field(F&& f, T& v) {
   if constexpr (!std::is_void_v<base_t<T>>) {
-    _for_each_field<0>(f, (base_t<T>&)v);
+    if (!_for_each_field<0>(f, (base_t<T>&)v)) {
+      return false;
+    }
   }
-  _for_each_field<0>(f, v);
+  return _for_each_field<0>(f, v);
 }
 
 /// \brief iterates const fields of const T
 template<typename F, typename T>
-void for_each_field(F&& f, const T& v) {
+bool for_each_field(F&& f, const T& v) {
   if constexpr (!std::is_void_v<base_t<T>>) {
-    _for_each_field<0>(f, (const base_t<T>&)v);
+    if (!_for_each_field<0>(f, (const base_t<T>&)v)) {
+      return false;
+    }
   }
-  _for_each_field<0>(f, v);
+  return _for_each_field<0>(f, v);
 }
 
 /// \}
