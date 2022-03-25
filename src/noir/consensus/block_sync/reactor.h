@@ -77,10 +77,10 @@ struct reactor {
   }
 
   void on_stop() {
-    if (block_sync.load()) {
+    bool expected = true;
+    if (block_sync.compare_exchange_strong(expected, false)) {
       pool->on_stop();
     }
-    pool->is_running = false;
   }
 
   void switch_to_block_sync(state& state_) {

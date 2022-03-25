@@ -177,7 +177,10 @@ struct node {
     bs_reactor->on_start(); // TODO: is this right place to start block_sync?
   }
 
-  void on_stop() {}
+  void on_stop() {
+    bs_reactor->on_stop();
+    cs_reactor->on_stop();
+  }
 
   /**
    * load state from the database, or create one using the given genDoc.
