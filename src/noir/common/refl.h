@@ -160,18 +160,11 @@ concept reflection = refl::has_refl_v<T>;
 #define NOIR_REFLECT_DERIVED_NO_DESC(TYPE, BASE, ...) \
   namespace noir::refl { \
     template<> \
-    struct has_refl<TYPE> : std::true_type {}; \
-    template<> \
     struct base<TYPE> { \
       using type = BASE; \
     }; \
-    template<> \
-    struct fields_count<TYPE> { \
-      static constexpr size_t value = BOOST_PP_VARIADIC_SIZE(__VA_ARGS__); \
-    }; \
-    BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD_GET, TYPE, \
-      BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)) \
-  }
+  } \
+  NOIR_REFLECT_NO_DESC(TYPE, __VA_ARGS__)
 
 /// \brief helper macro for reflection of derived type with field descriptors
 #define NOIR_REFLECT_DERIVED(TYPE, BASE, ...) \
