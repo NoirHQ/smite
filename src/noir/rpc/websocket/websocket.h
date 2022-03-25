@@ -25,7 +25,7 @@ class websocket : std::enable_shared_from_this<websocket> {
 public:
   void add_message_handler(std::string path, message_handler& handler, int priority = appbase::priority::medium_low);
   internal_message_handler make_app_thread_message_handler(int priority, message_handler& handler);
-  message_sender make_message_sender(int priority, connection_ptr conn_ptr);
+  message_sender make_message_sender(connection_ptr conn_ptr, int priority = appbase::priority::medium_low);
 
   std::map<std::string, internal_message_handler> message_handlers;
 };

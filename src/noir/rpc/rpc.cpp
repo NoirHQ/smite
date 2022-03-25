@@ -672,10 +672,11 @@ public:
     }
   }
 
-  void handle_message(ws_connection_ptr con, websocket_server_type::message_ptr msg) {
+  void handle_message(
+    websocketpp::server<websocketpp::config::asio>::connection_ptr con, websocket_server_type::message_ptr msg) {
     std::string resource = con->get_uri()->get_resource();
-    if (message_handlers.contains(resource)) {
-      message_handlers[resource](con, msg, make_message_sender(con));
+    if (wsocket.message_handlers.contains(resource)) {
+      wsocket.message_handlers[resource](con, msg, wsocket.make_message_sender(con));
     } else {
       con->send("Unknown Endpoint");
     }
@@ -708,11 +709,13 @@ public:
 
   void create_ws_server_for_endpoint(const tcp::endpoint& ep, ws_server_type& ws) {
     try {
+      std::function next = [&](std::string payload, message_sender sender) { sender(payload); };
+      wsocket.add_message_handler("/test", next, appbase::priority::medium_low);
+
       ws.clear_access_channels(websocketpp::log::alevel::all);
       ws.set_access_channels(websocketpp::log::alevel::all);
       ws.init_asio(&thread_pool->get_executor());
-      ws.set_message_handler([&](websocketpp::connection_hdl hdl, websocket_server_type::message_ptr msg) {
-        auto conn = ws.get_con_from_hdl(hdl);
+      ws.set_message_handler([&](websocketpp::connection_hdl hdl, ws_server_type::message_ptr msg) {
         handle_message(ws.get_con_from_hdl(hdl), msg);
       });
     } catch (const fc::exception& e) {
