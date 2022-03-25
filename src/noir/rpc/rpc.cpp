@@ -8,6 +8,7 @@
 //#include <noir/rpc/local_endpoint.h>
 //#endif
 #include <noir/common/thread_pool.h>
+#include <noir/rpc/websocket/websocket.h>
 
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
@@ -250,8 +251,10 @@ public:
   //  websocket_local_server_type unix_server;
   //#endif
 
+  using ws_server_type = websocketpp::server<websocketpp::config::asio>;
   std::optional<tcp::endpoint> ws_listen_endpoint;
-  websocket_server_type ws_server;
+  ws_server_type ws_server;
+  websocket wsocket;
 
   bool validate_host = true;
   set<string> valid_hosts;
@@ -669,6 +672,15 @@ public:
     }
   }
 
+  void handle_message(ws_connection_ptr con, websocket_server_type::message_ptr msg) {
+    std::string resource = con->get_uri()->get_resource();
+    if (message_handlers.contains(resource)) {
+      message_handlers[resource](con, msg, make_message_sender(con));
+    } else {
+      con->send("Unknown Endpoint");
+    }
+  }
+
   template<class T>
   void create_server_for_endpoint(const tcp::endpoint& ep, websocketpp::server<detail::asio_with_stub_log<T>>& ws) {
     try {
@@ -694,13 +706,14 @@ public:
     valid_hosts.emplace(host + ":" + resolved_port_str);
   }
 
-  void create_ws_server_for_endpoint(const tcp::endpoint& ep, websocket_server_type& ws) {
+  void create_ws_server_for_endpoint(const tcp::endpoint& ep, ws_server_type& ws) {
     try {
       ws.clear_access_channels(websocketpp::log::alevel::all);
       ws.set_access_channels(websocketpp::log::alevel::all);
       ws.init_asio(&thread_pool->get_executor());
-      ws.set_message_handler([&](websocketpp::connection_hdl hdl, websocket_server_type::message_ptr msg){
-        ws.send(hdl, msg->get_payload(), msg->get_opcode());
+      ws.set_message_handler([&](websocketpp::connection_hdl hdl, websocket_server_type::message_ptr msg) {
+        auto conn = ws.get_con_from_hdl(hdl);
+        handle_message(ws.get_con_from_hdl(hdl), msg);
       });
     } catch (const fc::exception& e) {
       fc_elog(logger, "ws: ${e}", ("e", e.to_detail_string()));
@@ -822,6 +835,9 @@ void rpc::plugin_initialize(const CLI::App& config) {
         my->add_aliases_for_endpoint(*my->listen_endpoint, host, port);
       }
     }
+
+    // TODO: remove before release
+    my->ws_listen_endpoint = *resolver.resolve(tcp::v4(), "127.0.0.1", "26657");
 
     //#ifdef BOOST_ASIO_HAS_LOCAL_SOCKETS
     //    if(rpc_options->count("unix-socket-path") &&
