@@ -1,0 +1,207 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+#pragma once
+
+#include <noir/common/expected.h>
+#include <noir/consensus/types/events.h>
+#include <appbase/application.hpp>
+#include <appbase/channel.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+namespace noir::consensus::events {
+
+struct message {
+  std::string sub_id;
+  tm_event_data data;
+  std::vector<event> events;
+};
+
+class event_bus {
+public:
+  using tm_pub_sub = appbase::channel_decl<struct event_bus_tag, message>;
+
+  event_bus(appbase::application& app): event_bus_channel_(app.get_channel<tm_pub_sub>()) {}
+
+  bool has_subscribers() const {
+    return event_bus_channel_.has_subscribers();
+  }
+
+  struct subscription {
+    std::string subscriber;
+    std::string id;
+    std::shared_ptr<tm_pub_sub::channel_type::handle> handle;
+  };
+
+  size_t num_clients() const {
+    return subscription_map_.size();
+  }
+
+  size_t num_client_subscription(const std::string& subscriber) {
+    auto it = subscription_map_.find(subscriber);
+    return (it == subscription_map_.end()) ? 0 : it->second.size();
+  }
+
+  template<typename Callback>
+  subscription subscribe(const std::string& subscriber, Callback cb) {
+    subscription ret{
+      .subscriber = subscriber,
+      .id = boost::uuids::to_string(boost::uuids::random_generator()()),
+      .handle = std::make_shared<tm_pub_sub::channel_type::handle>(event_bus_channel_.subscribe(cb)),
+    };
+    subscription_map_[subscriber][ret.id] = ret; // FIXME: handle duplicated case
+    return ret;
+  }
+
+  std::optional<std::string> unsubscribe(subscription& handle) {
+    if (!handle.handle) {
+      return "invalid subscription";
+    }
+    handle.handle->unsubscribe();
+    auto it = subscription_map_.find(handle.subscriber);
+    if (it == subscription_map_.end()) {
+      return fmt::format("invalid subscriber:{}", handle.subscriber);
+    }
+    auto it2 = it->second.find(handle.id);
+    if (it2 == it->second.end()) {
+      return fmt::format("invalid subscription id: {}", handle.id);
+    }
+    it->second.erase(handle.id);
+    if (it->second.size() == 0) { // if all elements are deleted
+      subscription_map_.erase(handle.subscriber);
+    }
+    return {};
+  }
+
+  std::optional<std::string> unsubscribe_all(const std::string& subscriber) {
+    auto it = subscription_map_.find(subscriber);
+    if (it == subscription_map_.end()) {
+      return fmt::format("invalid subscriber:{}", subscriber);
+    }
+    for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
+      it2->second.handle->unsubscribe();
+    }
+    subscription_map_.erase(subscriber);
+    return {};
+  }
+
+  void publish(const std::string& event_value, const tm_event_data& data) {
+    publish_with_events(data,
+      {{.type = "tm", // TODO: check tokenizing event_type_key
+        .attributes = {event_attribute{
+          .key = "event", // TODO: check tokenizing event_type_key
+          .value = event_value,
+        }}}});
+  }
+
+  void publish_event_new_block(const event_data_new_block& data) {
+    std::vector<event> events = data.result_begin_block.events;
+    events.insert(events.end(), data.result_end_block.events.begin(), data.result_end_block.events.end());
+    // add Tendermint-reserved new block event
+    events.insert(events.end(), prepopulated_event<event_value::new_block>());
+    publish_with_events(data, events);
+  }
+
+  void publish_event_new_block_header(const event_data_new_block_header& data) {
+    std::vector<event> events = data.result_begin_block.events;
+    events.insert(events.end(), data.result_end_block.events.begin(), data.result_end_block.events.end());
+    // add Tendermint-reserved new block event
+    events.push_back(prepopulated_event<event_value::new_block_header>());
+    publish_with_events(data, events);
+  }
+
+  void publish_event_new_evidence(const event_data_new_evidence& data) {
+    publish(string_from_event_value(event_value::new_evidence), data);
+  }
+
+  void publish_event_vote(const event_data_vote& data) {
+    publish(string_from_event_value(event_value::vote), data);
+  }
+
+  void publish_event_valid_block(const event_data_round_state& data) {
+    publish(string_from_event_value(event_value::valid_block), data);
+  }
+
+  void publish_event_block_sync_status(const event_data_block_sync_status& data) {
+    publish(string_from_event_value(event_value::block_sync_status), data);
+  }
+
+  void publish_event_state_sync_status(const event_data_state_sync_status& data) {
+    publish(string_from_event_value(event_value::state_sync_status), data);
+  }
+
+  /// publishes tx event with events from Result. Note it will add
+  /// predefined keys (EventTypeKey, TxHashKey). Existing events with the same keys
+  /// will be overwritten.
+  /// \param[in] data
+  void publish_event_tx(const event_data_tx& data) {
+    std::vector<event> events = data.tx_result.result.events;
+
+    // add Tendermint-reserved events
+    events.push_back(prepopulated_event<event_value::tx>());
+
+    events.push_back({.type = "tx", // TODO: check tokenizing tx_hash_key
+      .attributes = {event_attribute{
+        .key = "hash", // TODO: check tokenizing tx_hash_key
+        .value = get_tx_hash(data.tx_result.tx).to_string(),
+      }}});
+
+    events.push_back({.type = "tx", // TODO: check tokenizing tx_height_key
+      .attributes = {event_attribute{
+        .key = "height", // TODO: check tokenizing tx_height_key
+        .value = std::to_string(data.tx_result.height),
+      }}});
+    publish_with_events(data, events);
+  }
+
+  void publish_event_new_round_step(const event_data_round_state& data) {
+    publish(string_from_event_value(event_value::new_round_step), data);
+  }
+  void publish_event_timeout_propose(const event_data_round_state& data) {
+    publish(string_from_event_value(event_value::timeout_propose), data);
+  }
+  void publish_event_timeout_wait(const event_data_round_state& data) {
+    publish(string_from_event_value(event_value::timeout_wait), data);
+  }
+  void publish_event_new_round(const event_data_new_round& data) {
+    publish(string_from_event_value(event_value::new_round), data);
+  }
+  void publish_event_complete_proposal(const event_data_complete_proposal& data) {
+    publish(string_from_event_value(event_value::complete_proposal), data);
+  }
+  void publish_event_polka(const event_data_round_state& data) {
+    publish(string_from_event_value(event_value::polka), data);
+  }
+  void publish_event_unlock(const event_data_round_state& data) {
+    publish(string_from_event_value(event_value::unlock), data);
+  }
+  void publish_event_relock(const event_data_round_state& data) {
+    publish(string_from_event_value(event_value::relock), data);
+  }
+  void publish_event_lock(const event_data_round_state& data) {
+    publish(string_from_event_value(event_value::lock), data);
+  }
+  void publish_event_validator_set_updates(const event_data_validator_set_updates& data) {
+    publish(string_from_event_value(event_value::validator_set_updates), data);
+  }
+
+private:
+  static constexpr int priority_ = appbase::priority::medium;
+  tm_pub_sub::channel_type& event_bus_channel_;
+  std::map<std::string, std::map<std::string, subscription>> subscription_map_;
+
+  inline void publish_with_events(const tm_event_data& data, const std::vector<event> events) {
+    message msg{
+      // .sub_id,
+      .data = data,
+      .events = events,
+    };
+    event_bus_channel_.publish(priority_, msg);
+  }
+};
+
+} // namespace noir::consensus::events
