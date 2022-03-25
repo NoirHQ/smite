@@ -154,9 +154,10 @@ void reactor::switch_to_consensus_ticker() {
 
     /// Let's switch to consensus
 
-    pool->on_stop();
-
-    block_sync.store(false);
+    bool expected = true;
+    if (block_sync.compare_exchange_strong(expected, false)) {
+      pool->on_stop();
+    }
 
     if (callback_switch_to_cs_sync)
       callback_switch_to_cs_sync(latest_state, blocks_synced > 0);

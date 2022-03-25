@@ -75,6 +75,7 @@ struct consensus_reactor {
     }
     thread_pool_gossip->stop();
     thread_pool_query_maj23->stop();
+    cs_state->on_stop();
     ilog("stopped cs_reactor");
   }
 

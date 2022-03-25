@@ -43,6 +43,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   /// \return shared_ptr of commit
   std::shared_ptr<commit> load_commit(int64_t height);
   void on_start();
+  void on_stop();
 
   void update_height(int64_t height);
   void update_round_step(int32_t rount, p2p::round_step_type step);
