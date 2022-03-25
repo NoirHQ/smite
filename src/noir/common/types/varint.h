@@ -98,8 +98,8 @@ size_t write_zigzag(DataStream& ds, const varint<T>& v) {
 
 template<typename DataStream, typename T>
 size_t read_zigzag(DataStream& ds, varint<T>& v) {
-  std::make_unsigned_t<T> val;
-  auto ret = read_uleb128(ds, variant<decltype(val)>(val));
+  varint<std::make_unsigned_t<T>> val = 0;
+  auto ret = read_uleb128(ds, val);
   v.value = (val >> 1) ^ (-(val & 1));
   return ret;
 }
