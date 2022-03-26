@@ -37,9 +37,32 @@ public:
     return endpoints[url];
   }
 
+  endpoint& get_or_create_ws_endpoint(const std::string& url) {
+    if (ws_endpoints.find(url) != ws_endpoints.end())
+      return ws_endpoints[url];
+
+    ws_endpoints.emplace(std::make_pair(url, endpoint{}));
+
+    app().get_plugin<rpc>().add_ws_api({
+      {url,
+        [&](std::string payload, message_sender sender) mutable {
+          try {
+            if (payload.empty())
+              payload = "{}";
+            auto result = ws_endpoints[url].handle_request(payload);
+            sender(result);
+          } catch (...) {
+            sender("Internal Server Error");
+          }
+        }},
+    });
+    return ws_endpoints[url];
+  }
+
 private:
   appbase::application& app;
   std::map<std::string, endpoint> endpoints;
+  std::map<std::string, endpoint> ws_endpoints;
 };
 
 jsonrpc::jsonrpc(appbase::application& app): plugin(app), my(new jsonrpc_impl(app)) {}
@@ -54,6 +77,10 @@ void jsonrpc::plugin_shutdown() {}
 
 endpoint& jsonrpc::get_or_create_endpoint(const std::string& url) {
   return my->get_or_create_endpoint(url);
+}
+
+endpoint& jsonrpc::get_or_create_ws_endpoint(const std::string& url) {
+  return my->get_or_create_ws_endpoint(url);
 }
 
 } // namespace noir::rpc

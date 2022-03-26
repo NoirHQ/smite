@@ -4,7 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/rpc/rpc.h>
+#include <appbase/application.hpp>
+#include <fc/variant.hpp>
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 #include <map>
