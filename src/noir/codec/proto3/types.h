@@ -66,8 +66,8 @@ template<>
 struct wire_type<bool> {
   static constexpr uint32_t value = 0;
 };
-template<typename T>
-requires(std::is_enum_v<T>) struct wire_type<T> {
+template<enumeration T>
+struct wire_type<T> {
   static constexpr uint32_t value = 0;
 };
 
