@@ -20,6 +20,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
 
 template<typename Stream, integral T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
+  v = 0;
   varint<T> val;
   read_uleb128(ds, val);
   v = val;
@@ -34,6 +35,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const sint<T>& v) {
 
 template<typename Stream, typename T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, sint<T>& v) {
+  v = 0;
   read_zigzag(ds, v);
   return ds;
 }
@@ -46,6 +48,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const fixed<T>& v) {
 
 template<typename Stream, typename T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, fixed<T>& v) {
+  v = 0;
   ds.read((char*)&v.value, sizeof(T));
   return ds;
 }
