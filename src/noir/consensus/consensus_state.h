@@ -9,6 +9,7 @@
 #include <noir/consensus/block_executor.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/crypto.h>
+#include <noir/consensus/event_bus.h>
 #include <noir/consensus/node_id.h>
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
@@ -153,11 +154,10 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //  // information about about added votes and block parts are written on this channel
   //  // so statistics can be computed by reactor
   //  statsMsgQueue chan msgInfo
-  //
-  //  // we use eventBus to trigger msg broadcasts in the reactor,
-  //  // and to notify external subscribers, eg. through a websocket
-  //  eventBus *types.EventBus
-  //
+
+  // we use eventBus to trigger msg broadcasts in the reactor,
+  // and to notify external subscribers, eg. through a websocket
+  std::shared_ptr<events::event_bus> event_bus_;
 
   // a Write-Ahead Log ensures we can recover from any kind of crash and helps us avoid signing conflicting votes
   // TODO: configurable
