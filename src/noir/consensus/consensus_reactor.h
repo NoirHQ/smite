@@ -5,10 +5,12 @@
 //
 #pragma once
 #include <noir/consensus/consensus_state.h>
+#include <noir/consensus/event_bus.h>
 #include <noir/consensus/peer_state.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/store/store_test.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/events.h>
 
 namespace noir::consensus {
 
@@ -16,6 +18,8 @@ struct consensus_reactor {
   appbase::application& app;
 
   std::shared_ptr<consensus_state> cs_state;
+
+  std::shared_ptr<events::event_bus> event_bus_;
 
   std::map<std::string, std::shared_ptr<peer_state>> peers;
   bool wait_sync;
@@ -49,7 +53,8 @@ struct consensus_reactor {
     app.get_channel<plugin_interface::channels::internal_message_queue>();
 
   consensus_reactor(appbase::application& app, std::shared_ptr<consensus_state> new_cs_state, bool new_wait_sync)
-    : app(app), cs_state(std::move(new_cs_state)), wait_sync(new_wait_sync),
+    : app(app), cs_state(std::move(new_cs_state)), event_bus_(std::make_shared<events::event_bus>(app)),
+      wait_sync(new_wait_sync),
       xmt_mq_channel(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {
     thread_pool_gossip.emplace("gossip", thread_pool_size);
     thread_pool_query_maj23.emplace("query_maj23", thread_pool_size);
@@ -93,6 +98,11 @@ struct consensus_reactor {
       cs_state->do_wal_catchup = false;
 
     cs_state->on_start();
+
+    event_bus_->publish_event_block_sync_status(events::event_data_block_sync_status{
+      .complete = true,
+      .height = cs_state->get_last_height(),
+    });
   }
 
   void process_event(const plugin_interface::event_info_ptr& info) {
