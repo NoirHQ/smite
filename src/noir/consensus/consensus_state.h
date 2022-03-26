@@ -198,10 +198,6 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   /// \return true on success, false otherwise
   bool read_replay_message(const timed_wal_message& msg);
 
-  /// \brief get round_state::event_data from round_state
-  /// \return round_state::event_data object
-  round_state::event_data get_round_state_event();
-
   //  // for tests where we want to limit the number of transitions the state makes
   //  nSteps int
   int n_steps;

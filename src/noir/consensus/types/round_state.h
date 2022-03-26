@@ -40,16 +40,6 @@ struct round_state {
   std::shared_ptr<vote_set> last_commit{};
   std::shared_ptr<validator_set> last_validators{};
   bool triggered_timeout_precommit;
-
-  struct event_data {
-    int64_t height;
-    int32_t round;
-    int32_t step;
-  };
-
-  event_data new_event_data() {
-    return {.height = height, .round = round, .step = static_cast<int32_t>(step)};
-  }
 };
 
 } // namespace noir::consensus

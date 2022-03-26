@@ -101,10 +101,6 @@ std::shared_ptr<round_state> consensus_state::get_round_state() {
   return rs_copy;
 }
 
-round_state::event_data consensus_state::get_round_state_event() {
-  return rs.new_event_data();
-}
-
 void consensus_state::set_priv_validator(const std::shared_ptr<priv_validator>& priv) {
   std::scoped_lock g(mtx);
 
@@ -376,7 +372,7 @@ void consensus_state::update_to_state(state& state_) {
 }
 
 void consensus_state::new_step() {
-  if (!wal_->write({get_round_state_event()})) { // TODO: null check for rs or WAL?
+  if (!wal_->write({events::event_data_round_state{rs}})) { // TODO: null check for rs or WAL?
     elog("failed writing to WAL");
   }
   n_steps++;
