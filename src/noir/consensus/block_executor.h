@@ -6,9 +6,11 @@
 #pragma once
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/app_connection.h>
+#include <noir/consensus/event_bus.h>
 #include <noir/consensus/store/block_store.h>
 #include <noir/consensus/store/state_store.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/events.h>
 #include <noir/tx_pool/tx_pool.h>
 
 #include <utility>
@@ -27,17 +29,20 @@ struct block_executor {
   std::shared_ptr<app_connection> proxyApp_{};
 
   // evidence tool // todo
-  // eventBus // todo - we may not need to handle events for tendermint but only for app?
+  // todo - we may not need to handle events for tendermint but only for app?
+  std::shared_ptr<events::event_bus> event_bus_{};
 
   std::map<std::string, bool> cache; // storing verification result for a single height
 
   block_executor(std::shared_ptr<db_store> new_store, std::shared_ptr<app_connection> new_proxyApp,
-    std::shared_ptr<block_store> new_block_store)
-    : store_(std::move(new_store)), proxyApp_(std::move(new_proxyApp)), block_store_(std::move(new_block_store)) {}
+    std::shared_ptr<block_store> new_block_store, std::shared_ptr<events::event_bus> new_event_bus)
+    : store_(std::move(new_store)), block_store_(std::move(new_block_store)), proxyApp_(std::move(new_proxyApp)),
+      event_bus_(new_event_bus) {}
 
   static std::shared_ptr<block_executor> new_block_executor(const std::shared_ptr<db_store>& new_store,
-    const std::shared_ptr<app_connection>& new_proxyApp, const std::shared_ptr<block_store>& new_block_store) {
-    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_block_store);
+    const std::shared_ptr<app_connection>& new_proxyApp, const std::shared_ptr<block_store>& new_block_store,
+    const std::shared_ptr<events::event_bus>& new_event_bus) {
+    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_block_store, new_event_bus);
     return res;
   }
 
@@ -218,7 +223,8 @@ struct block_executor {
     // Reset verficiation cache
     cache.clear();
 
-    // fire_events() // todo?
+    // fire_events()
+    fire_events(*block_, block_id_, *abci_responses_, *validator_updates);
 
     return new_state_.value();
   }
@@ -362,6 +368,55 @@ struct block_executor {
     // ret.last_result_hash = store::abci_responses_result_hash(abci_responses_); // todo
     ret.app_hash.clear();
     return ret;
+  }
+
+  /// Fire NewBlock, NewBlockHeader.
+  /// Fire TxEvent for every tx.
+  /// \note if Tendermint crashes before commit, some or all of these events may be published again.
+  void fire_events(const block& block_, const p2p::block_id& block_id_, const abci_responses& abci_rsp,
+    const std::vector<validator> val_updates) {
+    event_bus_->publish_event_new_block(events::event_data_new_block{
+      .block = block_,
+      .block_id = block_id_,
+      .result_begin_block = abci_rsp.begin_block,
+      .result_end_block = abci_rsp.end_block,
+    });
+
+    event_bus_->publish_event_new_block_header(events::event_data_new_block_header{
+      .header = block_.header,
+      .num_txs = static_cast<int64_t>(block_.data.txs.size()),
+      .result_begin_block = abci_rsp.begin_block,
+      .result_end_block = abci_rsp.end_block,
+    });
+
+    // TODO: evidence
+    // if (block_.evidence.evidence.size()) {
+    //   for (auto ev : block_.evidence.evidence) {
+    //     event_bus_->publish_event_new_evidence(events::event_data_new_evidence{
+    //       .evidence = ev,
+    //       .height = block_.header.height,
+    //     });
+    //   }
+    // }
+
+    for (uint32_t i = 0; auto tx : block_.data.txs) {
+      event_bus_->publish_event_tx(events::event_data_tx{
+        .tx_result =
+          tx_result{
+            .height = block_.header.height,
+            .index = i,
+            .tx = tx,
+            .result = abci_rsp.deliver_txs[i],
+          },
+      });
+      ++i;
+    }
+
+    if (val_updates.size() > 0) {
+      event_bus_->publish_event_validator_set_updates(events::event_data_validator_set_updates{
+        .validator_updates = val_updates,
+      });
+    }
   }
 
   uint64_t prune_blocks(int64_t retain_height) {

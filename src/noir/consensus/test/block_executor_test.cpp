@@ -44,7 +44,8 @@ TEST_CASE("block_executor: Apply block", "[noir][consensus]") {
 
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
-  auto block_exec = block_executor::new_block_executor(state_db, proxyApp, bls);
+  auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
+  auto block_exec = block_executor::new_block_executor(state_db, proxyApp, bls, ev_bus);
 
   auto block_ = make_block(1, state_, commit{});
   auto block_id_ = p2p::block_id{block_->get_hash(), block_->make_part_set(65536)->header()};
