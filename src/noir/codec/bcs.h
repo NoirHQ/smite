@@ -68,6 +68,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const varint<T>& v) {
 
 template<typename Stream, unsigned_integral T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
+  v = 0;
   read_uleb128(ds, v);
   return ds;
 }
