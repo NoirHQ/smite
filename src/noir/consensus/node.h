@@ -69,7 +69,8 @@ struct node {
     auto dbs = std::make_shared<noir::consensus::db_store>(session);
     auto proxyApp = std::make_shared<app_connection>();
     auto bls = std::make_shared<noir::consensus::block_store>(session);
-    auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls);
+    auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
+    auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls, ev_bus);
 
     state state_ = load_state_from_db_or_genesis(dbs, new_genesis_doc);
 
