@@ -5,7 +5,6 @@
 //
 #pragma once
 #include <noir/codec/datastream.h>
-#include <noir/codec/proto3/fields_count.h>
 #include <noir/codec/proto3/types.h>
 #include <noir/common/concepts.h>
 #include <noir/common/refl.h>
@@ -172,8 +171,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
       },
       v);
     check(!ret, "field not found with tag: {}", tag);
-    if (ds.remaining() == 0 && fields_count) {
-      check(fields_count == unset_fields_count(v), "datastream reaches end before setting required fields");
+    if (ds.remaining() == 0) {
       break;
     }
   }
