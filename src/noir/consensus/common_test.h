@@ -119,7 +119,8 @@ std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
-  auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls);
+  auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
+  auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls, ev_bus);
 
   auto cs = consensus_state::new_state(app, config_.consensus, state_, block_exec, bls);
   cs->set_priv_validator(priv_vals[0]); // todo - requires many other fields to be properly initialized

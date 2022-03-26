@@ -7,6 +7,7 @@
 #include <noir/common/helper/go.h>
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/consensus_state.h>
+#include <noir/consensus/event_bus.h>
 #include <noir/consensus/wal.h>
 #include <noir/crypto/rand.h>
 #include <filesystem>
@@ -30,7 +31,8 @@ auto prepare_consensus = [](auto num_validators) { // copy and modification of r
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
-  auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls);
+  auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
+  auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls, ev_bus);
 
   auto cs = consensus_state::new_state(app, local_config.consensus, state_, block_exec, bls);
   cs->set_priv_validator(priv_vals[0]); // todo - requires many other fields to be properly initialized
