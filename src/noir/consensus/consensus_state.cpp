@@ -52,6 +52,7 @@ consensus_state::consensus_state(appbase::application& app)
   : timeout_ticker_channel(app.get_channel<plugin_interface::channels::timeout_ticker>()),
     internal_mq_channel(app.get_channel<plugin_interface::channels::internal_message_queue>()),
     event_switch_mq_channel(app.get_channel<plugin_interface::egress::channels::event_switch_message_queue>()),
+    event_bus_(std::make_shared<events::event_bus>(app)), // TODO: propagate from node
     wal_(std::make_unique<nil_wal>()) {
   timeout_ticker_subscription = app.get_channel<plugin_interface::channels::timeout_ticker>().subscribe(
     std::bind(&consensus_state::tock, this, std::placeholders::_1));
@@ -372,10 +373,14 @@ void consensus_state::update_to_state(state& state_) {
 }
 
 void consensus_state::new_step() {
-  if (!wal_->write({events::event_data_round_state{rs}})) { // TODO: null check for rs or WAL?
+  auto event = events::event_data_round_state{rs};
+  if (!wal_->write({event})) { // TODO: null check for rs or WAL?
     elog("failed writing to WAL");
   }
   n_steps++;
+
+  // newStep is called by updateToState in NewState before the eventBus is set!
+  event_bus_->publish_event_new_round_step(event);
 
   // todo - notify consensus_reactor about rs
   event_switch_mq_channel.publish(appbase::priority::medium,
@@ -469,12 +474,15 @@ void consensus_state::handle_timeout(timeout_info_ptr ti) {
     enter_propose(ti->height, 0);
     break;
   case round_step_type::Propose:
+    event_bus_->publish_event_timeout_propose(events::event_data_round_state{rs});
     enter_prevote(ti->height, ti->round);
     break;
   case round_step_type::PrevoteWait:
+    event_bus_->publish_event_timeout_wait(events::event_data_round_state{rs});
     enter_precommit(ti->height, ti->round);
     break;
   case round_step_type::PrecommitWait:
+    event_bus_->publish_event_timeout_wait(events::event_data_round_state{rs});
     enter_precommit(ti->height, ti->round);
     enter_new_round(ti->height, ti->round + 1);
     break;
@@ -521,7 +529,9 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
   rs.votes->set_round(round + 1); // todo - safe math
   rs.triggered_timeout_precommit = false;
 
-  // event bus // todo?
+  // event bus
+  event_bus_->publish_event_new_round(events::event_data_new_round{rs});
+
   // metrics // todo?
 
   // wait for tx? // todo?
@@ -774,6 +784,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
 
   // At this point 2/3+ prevoted for a block or nil
   // publish event polka // todo - is this necessary?
+  event_bus_->publish_event_polka(events::event_data_round_state{rs});
 
   // latest pol_round should be this round
   auto pol_round = rs.votes->pol_info();
@@ -789,7 +800,8 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
       rs.locked_round = -1;
       rs.locked_block = {};
       rs.locked_block_parts = {};
-      // publish event unlock // todo
+      // publish event unlock
+      event_bus_->publish_event_unlock(events::event_data_round_state{rs});
     }
     sign_add_vote(p2p::Precommit, bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
@@ -800,7 +812,8 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
   if (rs.locked_block && rs.locked_block->hashes_to(block_id_->hash)) {
     dlog("precommit step; +2/3 prevoted locked block; relocking");
     rs.locked_round = round;
-    // publish event relock // todo
+    // publish event relock
+    event_bus_->publish_event_relock(events::event_data_round_state{rs});
     sign_add_vote(p2p::Precommit, block_id_->hash, block_id_->parts);
     return;
   }
@@ -815,7 +828,8 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
     rs.locked_block = rs.proposal_block;
     rs.locked_block_parts = rs.proposal_block_parts;
 
-    // publish event lock // todo
+    // publish event lock
+    event_bus_->publish_event_lock(events::event_data_round_state{rs});
     sign_add_vote(p2p::Precommit, block_id_->hash, block_id_->parts);
     return;
   }
@@ -834,7 +848,8 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
     rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
   }
 
-  // publish event unlock // todo
+  // publish event unlock
+  event_bus_->publish_event_unlock(events::event_data_round_state{rs});
   sign_add_vote(p2p::Precommit, bytes{} /* todo - nil */, p2p::part_set_header{});
 }
 
@@ -904,6 +919,7 @@ void consensus_state::enter_commit(int64_t height, int32_t round) {
       rs.proposal_block = {};
       rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
 
+      event_bus_->publish_event_valid_block(events::event_data_round_state{rs});
       event_switch_mq_channel.publish(appbase::priority::medium,
         std::make_shared<plugin_interface::event_info>(plugin_interface::event_info{EventValidBlock, round_state{rs}}));
     }
@@ -1073,6 +1089,8 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node
     // NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
     ilog(fmt::format("received complete proposal block: height={}", rs.proposal_block->header.height));
 
+    event_bus_->publish_event_complete_proposal(events::event_data_complete_proposal{rs});
+
     // Update Valid if we can
     auto prevotes = rs.votes->prevotes(rs.round);
     auto block_id_ = prevotes->two_thirds_majority();
@@ -1128,6 +1146,7 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
       return false;
 
     dlog("added vote to last precommits");
+    event_bus_->publish_event_vote(events::event_data_vote{.vote = vote_});
 
     event_switch_mq_channel.publish(appbase::priority::medium,
       std::make_shared<plugin_interface::event_info>(
@@ -1166,6 +1185,7 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
     return false;
   }
 
+  event_bus_->publish_event_vote(events::event_data_vote{.vote = vote_});
   event_switch_mq_channel.publish(appbase::priority::medium,
     std::make_shared<plugin_interface::event_info>(plugin_interface::event_info{EventVote, p2p::vote_message{vote_}}));
 
@@ -1189,6 +1209,8 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
         rs.locked_round = -1;
         rs.locked_block = {};
         rs.locked_block_parts = {};
+
+        event_bus_->publish_event_unlock(events::event_data_round_state{rs});
       }
 
       // Update Valid* if we can.
@@ -1213,6 +1235,8 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
         event_switch_mq_channel.publish(appbase::priority::medium,
           std::make_shared<plugin_interface::event_info>(
             plugin_interface::event_info{EventValidBlock, round_state{rs}}));
+
+        event_bus_->publish_event_valid_block(events::event_data_round_state{rs});
       }
     }
 
