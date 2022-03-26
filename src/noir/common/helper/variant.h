@@ -8,6 +8,7 @@
 #include <noir/common/concepts.h>
 #include <noir/common/hex.h>
 #include <noir/common/refl.h>
+#include <noir/common/types/bytes_n.h>
 #include <fc/reflect/variant.hpp>
 
 namespace fc {
