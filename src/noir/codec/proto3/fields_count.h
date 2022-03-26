@@ -8,7 +8,7 @@
 #include <noir/common/type_traits.h>
 #include <cstddef>
 
-namespace noir::codec::protobuf {
+namespace noir::codec::proto3 {
 
 template<size_t I, typename T>
 size_t _unset_fields_count(const T& v, size_t count) {
@@ -25,4 +25,4 @@ size_t unset_fields_count(const T& v) {
   return _unset_fields_count<0, T>(v, 0);
 }
 
-} // namespace noir::codec::protobuf
+} // namespace noir::codec::proto3
