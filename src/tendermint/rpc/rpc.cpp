@@ -12,21 +12,21 @@ using namespace fc;
 using namespace noir;
 using namespace noir::rpc;
 
-rpc::rpc(): mempool_(std::make_shared<mempool>()){};
+rpc::rpc(appbase::application& app): plugin(app), mempool_(std::make_shared<mempool>()){};
 
 void rpc::set_program_options(CLI::App& config) {}
 
 void rpc::plugin_initialize(const CLI::App& config) {
   ilog("initializing tendermint rpc");
 
-  auto tx_poor_ptr = app().find_plugin<tx_pool::tx_pool>();
+  auto tx_poor_ptr = app.find_plugin<tx_pool::tx_pool>();
   mempool_->set_tx_pool_ptr(tx_poor_ptr);
 }
 
 void rpc::plugin_startup() {
   ilog("starting tendermint rpc");
 
-  auto& endpoint = app().get_plugin<noir::rpc::jsonrpc>().get_or_create_endpoint("/tendermint");
+  auto& endpoint = app.get_plugin<noir::rpc::jsonrpc>().get_or_create_endpoint("/tendermint");
   endpoint.add_handler("broadcast_tx_async", [&](auto& req) {
     auto tx = req.get_object()["tx"].as_string();
     auto d = base64_decode(tx);

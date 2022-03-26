@@ -12,7 +12,7 @@ namespace tendermint::rpc {
 
 class rpc : public appbase::plugin<rpc> {
 public:
-  rpc();
+  rpc(appbase::application& app);
 
   APPBASE_PLUGIN_REQUIRES((noir::rpc::rpc)(noir::rpc::jsonrpc))
   void set_program_options(CLI::App& config) override;
