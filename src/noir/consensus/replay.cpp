@@ -106,7 +106,7 @@ struct wal_replay_handler {
     // Skip meta messages which exist for demarcating boundaries.
     return true;
   }
-  bool operator()(const round_state::event_data& msg) {
+  bool operator()(const events::event_data_round_state& msg) {
     // for logging
     ilog(fmt::format("Replay: New Step height={} round={} step={}", msg.height, msg.round, msg.step));
     // TODO: handle step_sub
