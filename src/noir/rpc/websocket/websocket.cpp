@@ -56,4 +56,15 @@ message_sender websocket::make_message_sender(appbase::application& app, connect
     });
   };
 }
+
+void websocket::handle_message(
+  websocketpp::server<websocketpp::config::asio>::connection_ptr conn, ws_server_type::message_ptr msg) {
+  std::string resource = conn->get_uri()->get_resource();
+  if (message_handlers.contains(resource)) {
+    message_handlers[resource](conn, msg->get_payload(), make_message_sender(app, conn));
+  } else {
+    conn->send("Unknown Endpoint");
+  }
+}
+
 } // namespace noir::rpc

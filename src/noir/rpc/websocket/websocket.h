@@ -17,6 +17,8 @@ using message_handler = std::function<void(std::string, message_sender)>;
 using internal_message_handler =
   std::function<void(websocketpp::server<websocketpp::config::asio>::connection_ptr, std::string, message_sender)>;
 
+using ws_server_type = websocketpp::server<websocketpp::config::asio>;
+
 class websocket {
 public:
   websocket(appbase::application& app): app(app){};
@@ -27,6 +29,8 @@ public:
     appbase::application& app, message_handler, int priority);
   static message_sender make_message_sender(appbase::application& app,
     websocketpp::server<websocketpp::config::asio>::connection_ptr, int priority = appbase::priority::medium_low);
+  void handle_message(
+    websocketpp::server<websocketpp::config::asio>::connection_ptr conn, ws_server_type::message_ptr msg);
 
   std::map<std::string, internal_message_handler> message_handlers;
 

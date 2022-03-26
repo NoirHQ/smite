@@ -252,7 +252,6 @@ public:
   //  websocket_local_server_type unix_server;
   //#endif
 
-  using ws_server_type = websocketpp::server<websocketpp::config::asio>;
   std::optional<tcp::endpoint> ws_listen_endpoint;
   ws_server_type ws_server;
   websocket wsocket;
@@ -673,16 +672,6 @@ public:
     }
   }
 
-  void handle_message(
-    websocketpp::server<websocketpp::config::asio>::connection_ptr conn, websocket_server_type::message_ptr msg) {
-    std::string resource = conn->get_uri()->get_resource();
-    if (wsocket.message_handlers.contains(resource)) {
-      wsocket.message_handlers[resource](conn, msg->get_payload(), wsocket.make_message_sender(app, conn));
-    } else {
-      conn->send("Unknown Endpoint");
-    }
-  }
-
   template<class T>
   void create_server_for_endpoint(const tcp::endpoint& ep, websocketpp::server<detail::asio_with_stub_log<T>>& ws) {
     try {
@@ -714,7 +703,7 @@ public:
       ws.set_access_channels(websocketpp::log::alevel::all);
       ws.init_asio(&thread_pool->get_executor());
       ws.set_message_handler([&](websocketpp::connection_hdl hdl, ws_server_type::message_ptr msg) {
-        handle_message(ws.get_con_from_hdl(hdl), msg);
+        wsocket.handle_message(ws.get_con_from_hdl(hdl), msg);
       });
     } catch (const fc::exception& e) {
       fc_elog(logger, "ws: ${e}", ("e", e.to_detail_string()));
