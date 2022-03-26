@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <appbase/application.hpp>
+#include <tendermint/node/plugin.h>
 
 appbase::application app;
 
@@ -19,4 +20,6 @@ void init_app() {
   app.config().get_option("--plugin")->group("")->configurable(false);
 
   app.config().add_option("--log-level", log_level, "log level (default \"info\")");
+
+  app.register_plugin<tendermint::NodePlugin>();
 }

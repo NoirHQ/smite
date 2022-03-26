@@ -29,3 +29,4 @@ target_link_libraries(noir
 )
 
 add_subdirectory(noir)
+add_subdirectory(tendermint)
