@@ -34,7 +34,7 @@ auto prepare_consensus = [](auto num_validators) { // copy and modification of r
   auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
   auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls, ev_bus);
 
-  auto cs = consensus_state::new_state(app, local_config.consensus, state_, block_exec, bls);
+  auto cs = consensus_state::new_state(app, local_config.consensus, state_, block_exec, bls, ev_bus);
   cs->set_priv_validator(priv_vals[0]); // todo - requires many other fields to be properly initialized
   cs->cs_config.root_dir = tmp_path;
 
