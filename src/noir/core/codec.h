@@ -25,7 +25,7 @@ std::vector<char> encode(const T& v) {
 }
 template<typename T>
 T decode(std::span<const char> s) {
-  T v;
+  T v{};
   datastream<const char> ds(s);
   ds >> v;
   return v;
