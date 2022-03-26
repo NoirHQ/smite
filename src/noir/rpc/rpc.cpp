@@ -762,8 +762,8 @@ void rpc::set_program_options(CLI::App& config) {
     rpc_options->add_option("--http-server-address",
       "The local IP and port to listen for incoming http connections; leave blank to disable.");
 
-  rpc_options->add_option("--ws-server-address",
-    "The local IP and port to listen for incoming ws connections; leave blank to disable.");
+  rpc_options->add_option(
+    "--ws-server-address", "The local IP and port to listen for incoming ws connections; leave blank to disable.");
 
   rpc_options->add_option("--https-server-address",
     "The local IP and port to listen for incoming https connections; leave blank to disable.");
@@ -881,7 +881,8 @@ void rpc::plugin_initialize(const CLI::App& config) {
       }
     }
 
-    if (rpc_options->count("--ws-server-address") && rpc_options->get_option("--ws-server-address")->as<string>().length()) {
+    if (rpc_options->count("--ws-server-address") &&
+      rpc_options->get_option("--ws-server-address")->as<string>().length()) {
       string lipstr = rpc_options->get_option("--ws-server-address")->as<string>();
       string host = lipstr.substr(0, lipstr.find(':'));
       string port = lipstr.substr(host.size() + 1, lipstr.size());

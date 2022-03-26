@@ -11,7 +11,7 @@
 
 namespace noir::rpc {
 
-using message_sender = std::function<void(std::string)>;
+using message_sender = std::function<void(std::optional<fc::variant>)>;
 using message_handler = std::function<void(std::string, message_sender)>;
 using internal_message_handler =
   std::function<void(websocketpp::server<websocketpp::config::asio>::connection_ptr, std::string, message_sender)>;
