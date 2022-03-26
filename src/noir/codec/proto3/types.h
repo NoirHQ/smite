@@ -121,7 +121,6 @@ struct wire_type<std::optional<T>> {
   static constexpr uint32_t value = wire_type_v<T>;
 };
 
-
 inline constexpr uint32_t repeated_type = uint32_t(-1);
 
 template<typename T>
