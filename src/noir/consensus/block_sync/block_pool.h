@@ -43,16 +43,16 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   p2p::tstamp last_hundred_block_timestamp{};
   double last_sync_rate{};
 
-  bool is_running{};
-  uint16_t thread_pool_size = 15;
+  std::atomic_bool is_running = false;
+  uint16_t thread_pool_size = 5;
   std::optional<named_thread_pool> thread_pool;
 
   // Send an envelope to peers [via p2p]
   plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel =
     app.get_channel<plugin_interface::egress::channels::transmit_message_queue>();
 
-  block_pool(appbase::application& app): app(app) {
-    thread_pool.emplace("cs_reactor", thread_pool_size);
+  explicit block_pool(appbase::application& app): app(app) {
+    thread_pool.emplace("block_pool_thread", thread_pool_size);
   }
 
   static std::shared_ptr<block_pool> new_block_pool(appbase::application& app, int64_t start) {
@@ -65,14 +65,18 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
   }
 
   void on_start() {
-    last_advance = get_time();
-    last_hundred_block_timestamp = last_advance;
-    is_running = true;
-    make_requester_routine();
+    if (!is_running) {
+      is_running = true;
+      last_advance = get_time();
+      last_hundred_block_timestamp = last_advance;
+      make_requester_routine();
+    }
   }
   void on_stop() {
-    is_running = false;
-    thread_pool->stop();
+    if (is_running) {
+      is_running = false;
+      thread_pool->stop();
+    }
   }
 
   void make_requester_routine() {

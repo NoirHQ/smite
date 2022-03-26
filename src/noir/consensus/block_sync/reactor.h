@@ -17,7 +17,8 @@ constexpr auto switch_to_consensus_interval{std::chrono::seconds(1)};
 constexpr auto sync_timeout{std::chrono::seconds(60)};
 
 struct reactor {
-  reactor(appbase::application& app): app(app) {}
+  reactor(appbase::application& app)
+    : app(app), thread_pool(std::make_unique<named_thread_pool>("bs_reactor_thread", 1)) {}
 
   appbase::application& app;
 
@@ -44,6 +45,8 @@ struct reactor {
   plugin_interface::channels::update_peer_status::channel_type::handle update_peer_status_subscription =
     app.get_channel<plugin_interface::channels::update_peer_status>().subscribe(
       std::bind(&reactor::process_peer_update, this, std::placeholders::_1));
+
+  std::unique_ptr<named_thread_pool> thread_pool;
 
   static std::shared_ptr<reactor> new_reactor(appbase::application& app, state& state_,
     const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store,
@@ -77,12 +80,16 @@ struct reactor {
   }
 
   void on_stop() {
+    ilog("stopping bs_reactor...");
     bool expected = true;
     if (block_sync.compare_exchange_strong(expected, false)) {
       pool->on_stop();
     }
+    thread_pool->stop();
+    ilog("stopped bs_reactor");
   }
 
+  // TODO : check this function is safe
   void switch_to_block_sync(state& state_) {
     block_sync.store(true);
     initial_state = state_;
