@@ -211,13 +211,15 @@ static bool verbose_http_errors = false;
 
 class rpc_impl : public std::enable_shared_from_this<rpc_impl> {
 public:
-  rpc_impl() = default;
+  rpc_impl(appbase::application& app): app(app), wsocket(app){};
 
   rpc_impl(const rpc_impl&) = delete;
   rpc_impl(rpc_impl&&) = delete;
 
   rpc_impl& operator=(const rpc_impl&) = delete;
   rpc_impl& operator=(rpc_impl&&) = delete;
+
+  appbase::application& app;
 
   // key -> priority, url_handler
   map<string, detail::internal_url_handler> url_handlers;
@@ -675,7 +677,7 @@ public:
     websocketpp::server<websocketpp::config::asio>::connection_ptr conn, websocket_server_type::message_ptr msg) {
     std::string resource = conn->get_uri()->get_resource();
     if (wsocket.message_handlers.contains(resource)) {
-      wsocket.message_handlers[resource](conn, msg->get_payload(), wsocket.make_message_sender(conn));
+      wsocket.message_handlers[resource](conn, msg->get_payload(), wsocket.make_message_sender(app, conn));
     } else {
       conn->send("Unknown Endpoint");
     }
@@ -732,7 +734,7 @@ public:
 //}
 //#endif
 
-rpc::rpc(appbase::application& app): plugin(app), my(new rpc_impl()) {}
+rpc::rpc(appbase::application& app): plugin(app), my(new rpc_impl(app)) {}
 rpc::~rpc() = default;
 
 void rpc::set_program_options(CLI::App& config) {
@@ -1043,7 +1045,7 @@ void rpc::add_handler(const string& url, const url_handler& handler, int priorit
 
 void rpc::add_ws_handler(const string& url, const message_handler& handler, int priority) {
   fc_ilog(logger, "add ws api url: ${c}", ("c", url));
-  my->wsocket.message_handlers[url] = my->wsocket.make_app_thread_message_handler(handler, priority);
+  my->wsocket.message_handlers[url] = my->wsocket.make_app_thread_message_handler(app, handler, priority);
 }
 
 void rpc::add_async_handler(const string& url, const url_handler& handler) {

@@ -43,7 +43,7 @@ public:
 
     ws_endpoints.emplace(std::make_pair(url, endpoint{}));
 
-    app().get_plugin<rpc>().add_ws_api({
+    app.get_plugin<rpc>().add_ws_api({
       {url,
         [&](std::string payload, message_sender sender) mutable {
           try {
