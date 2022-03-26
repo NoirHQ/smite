@@ -40,8 +40,9 @@ public:
 
     if (do_not_start_node) {
       // Do not start node, but create an instance of consensus_reactor so network messages can be processed
+      auto event_bus_ = std::make_shared<events::event_bus>(app);
       static std::shared_ptr<consensus_reactor> cs_reactor =
-        std::make_shared<consensus_reactor>(app, std::make_shared<consensus_state>(app), false);
+        std::make_shared<consensus_reactor>(app, std::make_shared<consensus_state>(app, event_bus_), event_bus_, false);
       return;
     }
     if (start_non_validator_node) {

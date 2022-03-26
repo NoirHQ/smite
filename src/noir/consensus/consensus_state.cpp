@@ -48,12 +48,11 @@ struct message_handler {
   }
 };
 
-consensus_state::consensus_state(appbase::application& app)
+consensus_state::consensus_state(appbase::application& app, const std::shared_ptr<events::event_bus>& event_bus_)
   : timeout_ticker_channel(app.get_channel<plugin_interface::channels::timeout_ticker>()),
     internal_mq_channel(app.get_channel<plugin_interface::channels::internal_message_queue>()),
     event_switch_mq_channel(app.get_channel<plugin_interface::egress::channels::event_switch_message_queue>()),
-    event_bus_(std::make_shared<events::event_bus>(app)), // TODO: propagate from node
-    wal_(std::make_unique<nil_wal>()) {
+    event_bus_(event_bus_), wal_(std::make_unique<nil_wal>()) {
   timeout_ticker_subscription = app.get_channel<plugin_interface::channels::timeout_ticker>().subscribe(
     std::bind(&consensus_state::tock, this, std::placeholders::_1));
   internal_mq_subscription = app.get_channel<plugin_interface::channels::internal_message_queue>().subscribe(
@@ -69,8 +68,8 @@ consensus_state::consensus_state(appbase::application& app)
 
 std::shared_ptr<consensus_state> consensus_state::new_state(appbase::application& app,
   const consensus_config& cs_config_, state& state_, const std::shared_ptr<block_executor>& block_exec_,
-  const std::shared_ptr<block_store>& new_block_store) {
-  auto consensus_state_ = std::make_shared<consensus_state>(app);
+  const std::shared_ptr<block_store>& new_block_store, const std::shared_ptr<events::event_bus>& event_bus_) {
+  auto consensus_state_ = std::make_shared<consensus_state>(app, event_bus_);
   consensus_state_->cs_config = cs_config_;
   consensus_state_->block_exec = block_exec_;
   consensus_state_->block_store_ = new_block_store;
