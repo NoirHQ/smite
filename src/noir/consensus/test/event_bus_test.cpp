@@ -27,18 +27,29 @@ TEST_CASE("event_bus: subscribe/unsubscribe", "[noir][consensus][events]") {
     CHECK(ev_bus.has_subscribers() == false);
     CHECK(ev_bus.num_clients() == 0);
 
-    event_bus::subscription invalid_subscription{
-      .subscriber = "invalid_subscriber",
-      .id = "invalid_id",
-      .handle = nullptr,
-    };
+    event_bus::subscription invalid_subscription{};
+    invalid_subscription.subscriber = "invalid_subscriber";
+    invalid_subscription.id = "invalid_id";
+
     CHECK(ev_bus.unsubscribe(invalid_subscription) != std::nullopt);
     CHECK(ev_bus.unsubscribe_all("invalid_id") != std::nullopt);
 
-    auto handle = ev_bus.subscribe("test", [&](const message msg) {});
-    CHECK(ev_bus.has_subscribers() == true);
-    CHECK(ev_bus.num_clients() == 1);
-    CHECK(ev_bus.num_client_subscription("test") == 1);
+    {
+      auto handle = ev_bus.subscribe("test", [&](const message msg) {});
+      CHECK(ev_bus.has_subscribers() == true);
+      CHECK(ev_bus.num_clients() == 1);
+      CHECK(ev_bus.num_client_subscription("test") == 1);
+    }
+    // unsubscribed due to RAII
+    CHECK(ev_bus.has_subscribers() == false);
+    CHECK(ev_bus.num_clients() == 0);
+    CHECK(ev_bus.num_client_subscription("test") == 0);
+
+    // destroying unsubscribed handle should not panic
+    CHECK_NOTHROW([&]() {
+      auto handle = ev_bus.subscribe("test", [&](const message msg) {});
+      handle.unsubscribe();
+    }());
   }
 
   SECTION("subscribe with 1 subscriber") {
