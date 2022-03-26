@@ -100,7 +100,7 @@ struct node {
     auto new_bs_reactor = create_block_sync_reactor(app, state_, block_exec, bls, block_sync);
 
     auto [new_cs_reactor, new_cs_state] = create_consensus_reactor(
-      app, new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, block_sync);
+      app, new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, event_bus_, block_sync);
 
     auto node_ = std::make_unique<node>();
     node_->config_ = new_config;
@@ -159,13 +159,14 @@ struct node {
   static std::tuple<std::shared_ptr<consensus_reactor>, std::shared_ptr<consensus_state>> create_consensus_reactor(
     appbase::application& app, const std::shared_ptr<config>& config_, const std::shared_ptr<state>& state_,
     const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& block_store_,
-    const std::shared_ptr<priv_validator>& priv_validator_, bool wait_sync) {
-    auto cs_state = consensus_state::new_state(app, config_->consensus, *state_, block_exec_, block_store_);
+    const std::shared_ptr<priv_validator>& priv_validator_, const std::shared_ptr<events::event_bus>& event_bus_,
+    bool wait_sync) {
+    auto cs_state = consensus_state::new_state(app, config_->consensus, *state_, block_exec_, block_store_, event_bus_);
 
     if (config_->base.mode == Validator)
       cs_state->set_priv_validator(priv_validator_);
 
-    auto cs_reactor = consensus_reactor::new_consensus_reactor(app, cs_state, wait_sync);
+    auto cs_reactor = consensus_reactor::new_consensus_reactor(app, cs_state, event_bus_, wait_sync);
 
     return {cs_reactor, cs_state};
   }
