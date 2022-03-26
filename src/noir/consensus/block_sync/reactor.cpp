@@ -66,7 +66,7 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
 }
 
 void reactor::request_routine() {
-  pool->thread_pool->get_executor().post([this]() {
+  thread_pool->get_executor().post([this]() {
     while (true) {
       if (!pool->is_running)
         return;
@@ -85,7 +85,7 @@ void reactor::pool_routine(bool state_synced) {
 }
 
 void reactor::try_sync_ticker() {
-  pool->thread_pool->get_executor().post([this]() {
+  thread_pool->get_executor().post([this]() {
     auto chain_id = initial_state.chain_id;
     latest_state = initial_state;
     blocks_synced = 0;
@@ -132,7 +132,7 @@ void reactor::try_sync_ticker() {
 }
 
 void reactor::switch_to_consensus_ticker() {
-  pool->thread_pool->get_executor().post([this]() {
+  thread_pool->get_executor().post([this]() {
     while (true) {
       auto [height, num_pending, len_requesters] = pool->get_status();
       auto last_advance = pool->last_advance;
