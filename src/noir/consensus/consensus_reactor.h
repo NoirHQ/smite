@@ -52,17 +52,18 @@ struct consensus_reactor {
   plugin_interface::channels::internal_message_queue::channel_type& internal_mq_channel =
     app.get_channel<plugin_interface::channels::internal_message_queue>();
 
-  consensus_reactor(appbase::application& app, std::shared_ptr<consensus_state> new_cs_state, bool new_wait_sync)
-    : app(app), cs_state(std::move(new_cs_state)), event_bus_(std::make_shared<events::event_bus>(app)),
-      wait_sync(new_wait_sync),
+  consensus_reactor(appbase::application& app, std::shared_ptr<consensus_state> new_cs_state,
+    const std::shared_ptr<events::event_bus>& event_bus_, bool new_wait_sync)
+    : app(app), cs_state(std::move(new_cs_state)), event_bus_(event_bus_), wait_sync(new_wait_sync),
       xmt_mq_channel(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {
     thread_pool_gossip.emplace("gossip", thread_pool_size);
     thread_pool_query_maj23.emplace("query_maj23", thread_pool_size);
   }
 
-  static std::shared_ptr<consensus_reactor> new_consensus_reactor(
-    appbase::application& app, std::shared_ptr<consensus_state>& new_cs_state, bool new_wait_sync) {
-    auto consensus_reactor_ = std::make_shared<consensus_reactor>(app, new_cs_state, new_wait_sync);
+  static std::shared_ptr<consensus_reactor> new_consensus_reactor(appbase::application& app,
+    std::shared_ptr<consensus_state>& new_cs_state, const std::shared_ptr<events::event_bus>& event_bus_,
+    bool new_wait_sync) {
+    auto consensus_reactor_ = std::make_shared<consensus_reactor>(app, new_cs_state, event_bus_, new_wait_sync);
     return consensus_reactor_;
   }
 
