@@ -25,7 +25,9 @@ class event_bus {
 public:
   using tm_pub_sub = appbase::channel_decl<struct event_bus_tag, message>;
 
-  event_bus(appbase::application& app): event_bus_channel_(app.get_channel<tm_pub_sub>()) {}
+  event_bus(appbase::application& app)
+    : event_bus_channel_(app.get_channel<tm_pub_sub>()), subscription_map_(std::make_shared<subscription_map_type_>()) {
+  }
 
   bool has_subscribers() const {
     return event_bus_channel_.has_subscribers();
@@ -34,58 +36,87 @@ public:
   struct subscription {
     std::string subscriber;
     std::string id;
-    std::shared_ptr<tm_pub_sub::channel_type::handle> handle;
+
+    ~subscription() {
+      unsubscribe();
+    }
+
+    // can be constructed and moved
+    subscription() = default;
+    subscription(subscription&&) = default;
+    subscription& operator=(subscription&&) = default;
+
+    // cannot copy
+    subscription(const subscription&) = delete;
+    subscription& operator=(const subscription&) = delete;
+
+    std::optional<std::string> unsubscribe() {
+      auto handle_ptr = handle_.lock();
+      auto map_ptr = map_.lock();
+      if (!handle_ptr || !map_ptr) {
+        return "invalid subscription";
+      }
+      handle_ptr->unsubscribe();
+
+      auto it = map_ptr->find(subscriber);
+      if (it == map_ptr->end()) {
+        return fmt::format("invalid subscriber:{}", subscriber);
+      }
+      auto it2 = it->second.find(id);
+      if (it2 == it->second.end()) {
+        return fmt::format("invalid subscription id: {}", id);
+      }
+      it->second.erase(id);
+      if (it->second.size() == 0) { // if all elements are deleted
+        map_ptr->erase(subscriber);
+      }
+      return {};
+    }
+
+  private:
+    friend class event_bus;
+    using handle_type_ = tm_pub_sub::channel_type::handle;
+    using subscription_map_type_ =
+      std::map<std::string, std::map<std::string, std::shared_ptr<tm_pub_sub::channel_type::handle>>>;
+    std::weak_ptr<handle_type_> handle_;
+    std::weak_ptr<subscription_map_type_> map_;
+
+    subscription(std::string subscriber, std::string id, std::shared_ptr<tm_pub_sub::channel_type::handle> handle_,
+      std::shared_ptr<subscription_map_type_> map_)
+      : subscriber(subscriber), id(id), handle_(handle_), map_(map_) {}
   };
 
   size_t num_clients() const {
-    return subscription_map_.size();
+    return subscription_map_->size();
   }
 
   size_t num_client_subscription(const std::string& subscriber) {
-    auto it = subscription_map_.find(subscriber);
-    return (it == subscription_map_.end()) ? 0 : it->second.size();
+    auto it = subscription_map_->find(subscriber);
+    return (it == subscription_map_->end()) ? 0 : it->second.size();
   }
 
   template<typename Callback>
-  subscription subscribe(const std::string& subscriber, Callback cb) {
-    subscription ret{
-      .subscriber = subscriber,
-      .id = boost::uuids::to_string(boost::uuids::random_generator()()),
-      .handle = std::make_shared<tm_pub_sub::channel_type::handle>(event_bus_channel_.subscribe(cb)),
-    };
-    subscription_map_[subscriber][ret.id] = ret; // FIXME: handle duplicated case
-    return ret;
+  [[nodiscard]] subscription subscribe(const std::string& subscriber, Callback cb) {
+    auto handle_ = std::make_shared<tm_pub_sub::channel_type::handle>(event_bus_channel_.subscribe(cb));
+    subscription ret(
+      subscriber, boost::uuids::to_string(boost::uuids::random_generator()()), handle_, subscription_map_);
+    (*subscription_map_)[subscriber][ret.id] = std::move(handle_); // FIXME: handle duplicated case
+    return std::move(ret);
   }
 
   std::optional<std::string> unsubscribe(subscription& handle) {
-    if (!handle.handle) {
-      return "invalid subscription";
-    }
-    handle.handle->unsubscribe();
-    auto it = subscription_map_.find(handle.subscriber);
-    if (it == subscription_map_.end()) {
-      return fmt::format("invalid subscriber:{}", handle.subscriber);
-    }
-    auto it2 = it->second.find(handle.id);
-    if (it2 == it->second.end()) {
-      return fmt::format("invalid subscription id: {}", handle.id);
-    }
-    it->second.erase(handle.id);
-    if (it->second.size() == 0) { // if all elements are deleted
-      subscription_map_.erase(handle.subscriber);
-    }
-    return {};
+    return handle.unsubscribe();
   }
 
   std::optional<std::string> unsubscribe_all(const std::string& subscriber) {
-    auto it = subscription_map_.find(subscriber);
-    if (it == subscription_map_.end()) {
+    auto it = subscription_map_->find(subscriber);
+    if (it == subscription_map_->end()) {
       return fmt::format("invalid subscriber:{}", subscriber);
     }
     for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
-      it2->second.handle->unsubscribe();
+      it2->second->unsubscribe();
     }
-    subscription_map_.erase(subscriber);
+    subscription_map_->erase(subscriber);
     return {};
   }
 
@@ -190,9 +221,11 @@ public:
   }
 
 private:
+  using subscription_map_type_ =
+    std::map<std::string, std::map<std::string, std::shared_ptr<tm_pub_sub::channel_type::handle>>>;
   static constexpr int priority_ = appbase::priority::medium;
   tm_pub_sub::channel_type& event_bus_channel_;
-  std::map<std::string, std::map<std::string, subscription>> subscription_map_;
+  std::shared_ptr<subscription_map_type_> subscription_map_;
 
   inline void publish_with_events(const tm_event_data& data, const std::vector<event> events) {
     message msg{
