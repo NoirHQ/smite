@@ -60,6 +60,24 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
 }
 
 template<typename Stream, typename T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const varint<T>& v) {
+  if (v != 0) {
+    write_uleb128(ds, v);
+  }
+  return ds;
+}
+
+template<typename Stream, typename T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
+  v = 0;
+  if (ds.remaining()) {
+    read_uleb128(ds, v);
+    check(v, "0 should not be encoded");
+  }
+  return ds;
+}
+
+template<typename Stream, typename T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const sint<T>& v) {
   if (v != 0) {
     write_zigzag(ds, v);
@@ -92,6 +110,20 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, fixed<T>& v) {
     ds.read((char*)&v.value, sizeof(T));
     check(v, "0 should not be encoded");
   }
+  return ds;
+}
+
+template<typename Stream, enumeration E>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const E& v) {
+  ds << static_cast<const std::underlying_type_t<E>>(v);
+  return ds;
+}
+
+template<typename Stream, enumeration E>
+datastream<Stream>& operator>>(datastream<Stream>& ds, E& v) {
+  std::underlying_type_t<E> tmp;
+  ds >> tmp;
+  v = static_cast<E>(tmp);
   return ds;
 }
 
