@@ -4,12 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/codec/protobuf.h>
-#include <noir/codec/protobuf/refl.h>
+#include <noir/codec/proto3.h>
+#include <noir/codec/proto3/refl.h>
 #include <noir/common/hex.h>
 
 using namespace noir;
-using namespace noir::codec::protobuf;
+using namespace noir::codec::proto3;
 
 template<typename T>
 void check_conversion(const T& v, std::string_view s) {
@@ -18,7 +18,7 @@ void check_conversion(const T& v, std::string_view s) {
   CHECK(v == decode<T>(data));
 }
 
-TEST_CASE("protobuf: primitive types", "[noir][codec]") {
+TEST_CASE("proto3: primitive types", "[noir][codec]") {
   check_conversion<int32_t>(300, "ac02");
   check_conversion<sint32>(0, "00");
   check_conversion<sint32>(-1, "01");
@@ -29,26 +29,26 @@ TEST_CASE("protobuf: primitive types", "[noir][codec]") {
 }
 
 struct Test1 {
-  std::optional<int32_t> a; // = 1
+  int32_t a; // = 1
 };
 PROTOBUF_REFLECT(Test1, (a, 1));
 
 struct Test2 {
-  std::optional<std::string> b; // = 2
+  std::string b; // = 2
 };
 PROTOBUF_REFLECT(Test2, (b, 2));
 
 struct Test3 {
-  std::optional<Test1> c; // = 3
+  Test1 c; // = 3
 };
 PROTOBUF_REFLECT(Test3, (c, 3));
 
 struct Test4 {
-  std::optional<std::vector<int32_t>> d; // = 4
+  std::vector<int32_t> d; // = 4
 };
 PROTOBUF_REFLECT(Test4, (d, 4));
 
-TEST_CASE("protobuf: messages", "[noir][codec]") {
+TEST_CASE("proto3: messages", "[noir][codec]") {
   {
     Test1 v{150};
     auto data = encode(v);
@@ -67,7 +67,7 @@ TEST_CASE("protobuf: messages", "[noir][codec]") {
     Test3 v{Test1{150}};
     auto data = encode(v);
     CHECK(to_hex(data) == "1a03089601");
-    CHECK(v.c->a == decode<Test3>(data).c->a);
+    CHECK(v.c.a == decode<Test3>(data).c.a);
   }
 
   {

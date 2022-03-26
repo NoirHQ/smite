@@ -8,7 +8,7 @@
 #include <noir/common/types/bytes.h>
 #include <noir/common/types/varint.h>
 
-namespace noir::codec::protobuf {
+namespace noir::codec::proto3 {
 
 // static constexpr uint32_t max_tag = std::numeric_limits<uint32_t>::max() >> 3;
 static constexpr uint32_t max_tag = 256;
@@ -120,4 +120,4 @@ struct wire_type<std::optional<T>> {
   static constexpr uint32_t value = wire_type_v<T>;
 };
 
-} // namespace noir::codec::protobuf
+} // namespace noir::codec::proto3

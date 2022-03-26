@@ -5,12 +5,12 @@
 //
 #pragma once
 #include <noir/codec/datastream.h>
-#include <noir/codec/protobuf/fields_count.h>
-#include <noir/codec/protobuf/types.h>
+#include <noir/codec/proto3/fields_count.h>
+#include <noir/codec/proto3/types.h>
 #include <noir/common/concepts.h>
 #include <noir/common/refl.h>
 
-NOIR_CODEC(protobuf) {
+NOIR_CODEC(proto3) {
 
 template<typename Stream, integral T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
@@ -180,4 +180,4 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   return ds;
 }
 
-} // NOIR_CODEC(protobuf)
+} // NOIR_CODEC(proto3)
