@@ -8,7 +8,6 @@
 //#include <noir/rpc/local_endpoint.h>
 //#endif
 #include <noir/common/thread_pool.h>
-#include <noir/rpc/websocket/websocket.h>
 
 #include <boost/asio.hpp>
 #include <boost/optional.hpp>
@@ -1040,6 +1039,11 @@ void rpc::plugin_shutdown() {
 void rpc::add_handler(const string& url, const url_handler& handler, int priority) {
   fc_ilog(logger, "add api url: ${c}", ("c", url));
   my->url_handlers[url] = my->make_app_thread_url_handler(app, priority, handler, my);
+}
+
+void rpc::add_ws_handler(const string& url, const message_handler& handler, int priority) {
+  fc_ilog(logger, "add ws api url: ${c}", ("c", url));
+  my->wsocket.message_handlers[url] = my->wsocket.make_app_thread_message_handler(handler, priority);
 }
 
 void rpc::add_async_handler(const string& url, const url_handler& handler) {

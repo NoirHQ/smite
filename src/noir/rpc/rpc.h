@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/expected.h>
+#include <noir/rpc/websocket/websocket.h>
 #include <appbase/application.hpp>
 #include <fc/exception/exception.hpp>
 #include <fc/io/json.hpp>
@@ -40,6 +41,7 @@ using url_handler = std::function<void(std::string, std::string, url_response_ca
  * call, and the handler is the function which implements the API call
  */
 using api_description = std::map<std::string, url_handler>;
+using ws_api_description = std::map<std::string, message_handler>;
 
 struct rpc_defaults {
   // If empty, unix socket support will be completely disabled. If not empty,
@@ -85,6 +87,12 @@ public:
   void add_api(const api_description& api, int priority = appbase::priority::medium_low) {
     for (const auto& call : api)
       add_handler(call.first, call.second, priority);
+  }
+
+  void add_ws_handler(const std::string& url, const message_handler&, int priority = appbase::priority::medium_low);
+  void add_ws_api(const ws_api_description& api, int priority = appbase::priority::medium_low) {
+    for (const auto& call : api)
+      add_ws_handler(call.first, call.second, priority);
   }
 
   void add_async_handler(const std::string& url, const url_handler& handler);

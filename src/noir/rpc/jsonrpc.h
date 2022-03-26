@@ -28,6 +28,7 @@ public:
   void plugin_shutdown();
 
   noir::jsonrpc::endpoint& get_or_create_endpoint(const std::string& url);
+  noir::jsonrpc::endpoint& get_or_create_ws_endpoint(const std::string& url);
 
 private:
   std::shared_ptr<class jsonrpc_impl> my;
