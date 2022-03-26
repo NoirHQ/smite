@@ -86,3 +86,21 @@ TEST_CASE("proto3: default values", "[noir][codec]") {
     CHECK(v.a == 0);
   }
 }
+
+struct TestRepeat1 {
+  int32_t x;
+  std::vector<Test1> y;
+};
+NOIR_REFLECT(TestRepeat1, x, y);
+
+TEST_CASE("proto3: repeat fields", "[noir][codec]") {
+  {
+    TestRepeat1 v;
+    v.x = 150;
+    v.y = {{1}, {2}};
+    auto data = encode(v);
+    CHECK(to_hex(data) == "0896011202080112020802");
+    auto w = decode<TestRepeat1>(data);
+    CHECK(((v.x == w.x) && (v.y[0].a == w.y[0].a) && (v.y[1].a == w.y[1].a)));
+  }
+}

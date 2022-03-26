@@ -36,7 +36,7 @@ template<typename T>
 struct wire_type;
 
 template<typename T>
-static constexpr auto wire_type_v = wire_type<T>::value;
+inline constexpr auto wire_type_v = wire_type<T>::value;
 
 template<>
 struct wire_type<int32_t> {
@@ -98,7 +98,7 @@ struct wire_type<T> {
   static constexpr uint32_t value = 2;
 };
 // packed
-template<typename T>
+template<integral T>
 struct wire_type<std::vector<T>> {
   static constexpr uint32_t value = 2;
 };
@@ -119,6 +119,14 @@ struct wire_type<float> {
 template<typename T>
 struct wire_type<std::optional<T>> {
   static constexpr uint32_t value = wire_type_v<T>;
+};
+
+
+inline constexpr uint32_t repeated_type = uint32_t(-1);
+
+template<typename T>
+struct wire_type<std::vector<T>> {
+  static constexpr uint32_t value = repeated_type;
 };
 
 } // namespace noir::codec::proto3
