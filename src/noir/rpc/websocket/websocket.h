@@ -19,12 +19,18 @@ using internal_message_handler =
 
 class websocket {
 public:
+  websocket(appbase::application& app): app(app){};
+
   void add_message_api(const std::string&, message_handler, int priority = appbase::priority::medium_low);
   void add_message_handler(const std::string&, message_handler&, int priority);
-  static internal_message_handler make_app_thread_message_handler(message_handler, int priority);
-  static message_sender make_message_sender(
+  static internal_message_handler make_app_thread_message_handler(
+    appbase::application& app, message_handler, int priority);
+  static message_sender make_message_sender(appbase::application& app,
     websocketpp::server<websocketpp::config::asio>::connection_ptr, int priority = appbase::priority::medium_low);
 
   std::map<std::string, internal_message_handler> message_handlers;
+
+private:
+  appbase::application& app;
 };
 } // namespace noir::rpc

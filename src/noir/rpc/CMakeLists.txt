@@ -2,6 +2,7 @@ add_library(noir_rpc STATIC
   jsonrpc.cpp
   jsonrpc/endpoint.cpp
   rpc.cpp
+  websocket/websocket.cpp
 )
 target_link_libraries(noir_rpc
   noir_common
