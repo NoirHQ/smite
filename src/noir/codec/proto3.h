@@ -9,7 +9,35 @@
 #include <noir/common/concepts.h>
 #include <noir/common/refl.h>
 
-NOIR_CODEC(proto3) {
+namespace noir::codec::proto3 {
+
+template<typename T>
+class datastream : public basic_datastream<T> {
+public:
+  using basic_datastream<T>::basic_datastream;
+  uint32_t tag = 0;
+};
+template<typename T>
+constexpr size_t encode_size(const T& v, uint32_t tag = 0) {
+  datastream<size_t> ds;
+  ds.tag = tag;
+  ds << v;
+  return ds.tellp();
+}
+template<typename T>
+std::vector<char> encode(const T& v) {
+  auto buffer = std::vector<char>(encode_size(v));
+  datastream<char> ds(buffer);
+  ds << v;
+  return buffer;
+}
+template<typename T>
+T decode(std::span<const char> s) {
+  T v{};
+  datastream<const char> ds(s);
+  ds >> v;
+  return v;
+}
 
 template<typename Stream, integral T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
@@ -120,6 +148,36 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
   return ds;
 }
 
+// repeated fields
+template<typename Stream, typename T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) {
+  check(ds.tag, "tag should not be 0");
+  for (const auto& e : v) {
+    auto type = wire_type_v<T>;
+    auto size = encode_size(e);
+    if (size > 0) {
+      ds.put((ds.tag << 3) | type);
+      if (type == 2) {
+        ds << size;
+      }
+      ds << e;
+    }
+  }
+  ds.tag = 0;
+  return ds;
+}
+
+// repeated fields
+template<typename Stream, typename T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
+  if (ds.remaining()) {
+    T tmp;
+    ds >> tmp;
+    v.push_back(tmp);
+  }
+  return ds;
+}
+
 template<typename Stream, reflection T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   auto fields_count = refl::fields_count_v<T>;
@@ -129,11 +187,15 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
       [&](const auto& desc, const auto& value) {
         if (desc.tag == tag) {
           auto type = wire_type_v<std::decay_t<decltype(value)>>;
-          auto size = encode_size(value);
+          auto size = encode_size(value, (type == repeated_type) ? tag : 0);
           if (size > 0) {
-            ds.put((desc.tag << 3) | type);
-            if (type == 2) {
-              ds << size;
+            if (type == repeated_type) {
+              ds.tag = tag;
+            } else {
+              ds.put((desc.tag << 3) | type);
+              if (type == 2) {
+                ds << size;
+              }
             }
             ds << value;
           }
@@ -159,13 +221,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
       read_uleb128(ds, key);
       auto tag = key.value >> 3;
       // for canonical representation, original specification doesn't have this limitation.
-      check(tag > processed, "not encoded in canonical sequence");
+      check(tag >= processed, "not encoded in canonical sequence");
       processed = tag;
       auto type = key & 0b111;
       auto ret = refl::for_each_field(
         [&](const auto& desc, auto& value) {
           if (desc.tag == tag) {
-            check(type == wire_type_v<std::decay_t<decltype(value)>>, "wire type unmatched");
+            auto w_type = wire_type_v<std::decay_t<decltype(value)>>;
+            check(type == w_type || w_type == repeated_type, "wire type unmatched");
             if (type == 2) {
               size_t size = 0;
               ds >> size;
@@ -176,7 +239,9 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
             } else {
               ds >> value;
             }
-            fields_count -= 1;
+            if (w_type != repeated_type) {
+              fields_count -= 1;
+            }
             return false;
           }
           return true;
@@ -207,4 +272,4 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::optional<T>& v) {
   return ds;
 }
 
-} // NOIR_CODEC(proto3)
+} // namespace noir::codec::proto3
