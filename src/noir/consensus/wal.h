@@ -7,7 +7,7 @@
 
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/types.h>
-#include <noir/consensus/types/round_state.h>
+#include <noir/consensus/types/events.h>
 #include <noir/p2p/protocol.h>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -25,7 +25,7 @@ struct end_height_message {
 };
 
 using wal_message_body_t =
-  std::variant<end_height_message, p2p::internal_msg_info, timeout_info, round_state::event_data>;
+  std::variant<end_height_message, p2p::internal_msg_info, timeout_info, events::event_data_round_state>;
 
 /// \brief default WALMessage type
 struct wal_message {

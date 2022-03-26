@@ -7,6 +7,7 @@
 
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/round_state.h>
 
 namespace noir::consensus::events {
 
@@ -165,6 +166,14 @@ struct event_data_round_state {
   int64_t height;
   int32_t round;
   std::string step;
+
+  event_data_round_state() = default;
+  event_data_round_state(const event_data_round_state&) = default;
+  event_data_round_state(event_data_round_state&&) = default;
+  explicit event_data_round_state(const round_state& rs)
+    : height(rs.height), round(rs.round), step(p2p::round_step_to_str(rs.step)) {}
+  event_data_round_state& operator=(const event_data_round_state& other) = default;
+  event_data_round_state& operator=(event_data_round_state&& other) = default;
 };
 
 struct validator_info {
@@ -178,6 +187,21 @@ struct event_data_new_round {
   std::string step;
 
   validator_info proposer;
+
+  event_data_new_round() = default;
+  event_data_new_round(const event_data_new_round&) = default;
+  event_data_new_round(event_data_new_round&&) = default;
+  explicit event_data_new_round(const round_state& rs)
+    : height(rs.height), round(rs.round), step(p2p::round_step_to_str(rs.step)) {
+    auto addr = rs.validators->get_proposer()->address;
+    auto idx = rs.validators->get_index_by_address(addr);
+    proposer = validator_info{
+      .address = addr,
+      .index = idx,
+    };
+  }
+  event_data_new_round& operator=(const event_data_new_round& other) = default;
+  event_data_new_round& operator=(event_data_new_round&& other) = default;
 };
 
 struct event_data_complete_proposal {
@@ -186,6 +210,16 @@ struct event_data_complete_proposal {
   std::string step;
 
   noir::p2p::block_id block_id;
+
+  event_data_complete_proposal() = default;
+  event_data_complete_proposal(const event_data_complete_proposal&) = default;
+  event_data_complete_proposal(event_data_complete_proposal&&) = default;
+  explicit event_data_complete_proposal(const round_state& rs)
+    : height(rs.height), round(rs.round), step(p2p::round_step_to_str(rs.step)),
+      block_id(noir::p2p::block_id{.hash = rs.proposal_block->get_hash(), .parts = rs.proposal_block_parts->header()}) {
+  }
+  event_data_complete_proposal& operator=(const event_data_complete_proposal& other) = default;
+  event_data_complete_proposal& operator=(event_data_complete_proposal&& other) = default;
 };
 
 struct event_data_vote {
