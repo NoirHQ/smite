@@ -124,6 +124,7 @@ concept reflection = refl::has_refl_v<T>;
     struct field<INDEX, TYPE> { \
       using type = decltype(TYPE::FIELD); \
       std::string_view name = BOOST_PP_STRINGIZE(FIELD); \
+      uint32_t tag = INDEX + 1; \
     }; \
   }
 
