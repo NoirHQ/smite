@@ -255,6 +255,7 @@ public:
   std::optional<tcp::endpoint> ws_listen_endpoint;
   ws_server_type ws_server;
   websocket wsocket;
+  size_t max_message_size{1024 * 1024};
 
   bool validate_host = true;
   set<string> valid_hosts;
@@ -702,6 +703,7 @@ public:
       ws.clear_access_channels(websocketpp::log::alevel::all);
       ws.set_access_channels(websocketpp::log::alevel::all);
       ws.init_asio(&thread_pool->get_executor());
+      ws.set_max_message_size(max_message_size);
       ws.set_message_handler([&](websocketpp::connection_hdl hdl, ws_server_type::message_ptr msg) {
         wsocket.handle_message(ws.get_con_from_hdl(hdl), msg);
       });
@@ -768,6 +770,8 @@ void rpc::set_program_options(CLI::App& config) {
     ->default_val(https_ecdh_curve_t::SECP384R1);
 
   rpc_options->add_option("--max-body-size", "The maximum body size in bytes allowed for incoming RPC requests")
+    ->default_val(1024 * 1024);
+  rpc_options->add_option("--max-message-size", "The maximum message size in bytes allowed for incoming RPC requests")
     ->default_val(1024 * 1024);
   rpc_options
     ->add_option("--http-max-bytes-in-flight-mb",
