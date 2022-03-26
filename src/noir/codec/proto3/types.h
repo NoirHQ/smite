@@ -7,6 +7,7 @@
 #include <noir/common/refl.h>
 #include <noir/common/types/bytes.h>
 #include <noir/common/types/varint.h>
+#include <optional>
 
 namespace noir::codec::proto3 {
 

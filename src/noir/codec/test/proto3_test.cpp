@@ -20,7 +20,7 @@ void check_conversion(const T& v, std::string_view s) {
 
 TEST_CASE("proto3: primitive types", "[noir][codec]") {
   check_conversion<int32_t>(300, "ac02");
-  check_conversion<sint32>(0, "00");
+  check_conversion<sint32>(0, ""); // default value should not be encoded
   check_conversion<sint32>(-1, "01");
   check_conversion<sint32>(1, "02");
   check_conversion<sint32>(-2, "03");
@@ -75,5 +75,14 @@ TEST_CASE("proto3: messages", "[noir][codec]") {
     auto data = encode(v);
     CHECK(to_hex(data) == "2206038e029ea705");
     CHECK(v.d == decode<Test4>(data).d);
+  }
+}
+
+TEST_CASE("proto3: default values", "[noir][codec]") {
+  {
+    Test1 v{150};
+    bytes data;
+    v = decode<Test1>(data);
+    CHECK(v.a == 0);
   }
 }
