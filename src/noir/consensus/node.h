@@ -27,6 +27,7 @@ struct node {
 
   std::shared_ptr<db_store> store_{};
   std::shared_ptr<block_store> block_store_{};
+  std::shared_ptr<events::event_bus> event_bus_{};
   bool state_sync_on{};
 
   std::shared_ptr<consensus_reactor> cs_reactor{};
@@ -74,6 +75,13 @@ struct node {
 
     state state_ = load_state_from_db_or_genesis(dbs, new_genesis_doc);
 
+    // EventBus and IndexerService must be started before the handshake because
+    // we might need to index the txs of the replayed block as this might not have happened
+    // when the node stopped last time (i.e. the node stopped after it saved the block
+    // but before it indexed the txs, or, endblocker panicked)
+    auto event_bus_ = std::make_shared<events::event_bus>(app);
+    // indexer
+
     // Setup pub_key_
     pub_key pub_key_;
     if (new_config->base.mode == Validator) {
@@ -101,6 +109,7 @@ struct node {
     node_->node_key_ = new_node_key;
     node_->store_ = dbs;
     node_->block_store_ = bls;
+    node_->event_bus_ = event_bus_;
     node_->state_sync_on = new_state_sync_on;
     node_->bs_reactor = new_bs_reactor;
     node_->cs_reactor = new_cs_reactor;
