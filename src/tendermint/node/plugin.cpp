@@ -21,8 +21,7 @@ struct NodePluginImpl {
 
 NodePlugin::NodePlugin(appbase::application& app): plugin(app, "tendermint::node"), my(new NodePluginImpl(app)) {}
 
-void NodePlugin::set_program_options(CLI::App&) {
-}
+void NodePlugin::set_program_options(CLI::App&) {}
 
 void NodePlugin::plugin_initialize(const CLI::App& config) {
   my->node.emplace();

@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <tendermint/common/common.h>
+#include <tendermint/log/log.h>
 #include <atomic>
 
 namespace tendermint::service {
@@ -25,11 +26,11 @@ public:
     bool started_expected = false;
     if (started.compare_exchange_strong(started_expected, true)) {
       if (stopped.load()) {
-        // logger.error("Not starting {} service -- already stopped", name);
+        elog("Not starting {} service -- already stopped", name);
         started.store(false);
         return make_unexpected(err_already_stopped);
       }
-      // logger.info("Starting {} service", name);
+      ilog("Starting {} service", name);
       auto res = static_cast<Derived*>(this)->on_start();
       if (!res) {
         started.store(false);
@@ -37,7 +38,7 @@ public:
       }
       return {};
     }
-    // logger.debug("Not starting {} service -- already started", name);
+    dlog("Not starting {} service -- already started", name);
     return make_unexpected(err_already_started);
   }
 
@@ -45,23 +46,23 @@ public:
     bool stopped_expected = false;
     if (stopped.compare_exchange_strong(stopped_expected, true)) {
       if (!started.load()) {
-        // logger.error("Not stopping {} service -- has not been started yet", name);
+        elog("Not stopping {} service -- has not been started yet", name);
         stopped.store(false);
         return make_unexpected(err_not_started);
       }
-      // logger.info("Stopping {} service", name);
+      ilog("Stopping {} service", name);
       static_cast<Derived*>(this)->on_stop();
       // quit
       return {};
     }
-    // logger.debug("Stopping {} service (already stopped)", name);
+    dlog("Stopping {} service (already stopped)", name);
     return make_unexpected(err_already_stopped);
   }
 
   result<void> reset() noexcept {
     bool stopped_expected = true;
     if (!stopped.compare_exchange_strong(stopped_expected, false)) {
-      // logger.debug("Can't reset {} service, Not stopped", name);
+      dlog("Can't reset {} service, Not stopped", name);
       return make_unexpected(fmt::format("can't reset running {}", name));
     }
 
@@ -84,6 +85,7 @@ public:
 
 protected:
   std::string name;
+
 private:
   std::atomic_bool started;
   std::atomic_bool stopped;

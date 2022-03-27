@@ -13,12 +13,9 @@ Node::Node() {
 }
 
 result<void> Node::on_start() noexcept {
-  std::cout << "Starting Node" << std::endl;
   return {};
 }
 
-void Node::on_stop() noexcept {
-  std::cout << "Stopping Node" << std::endl;
-}
+void Node::on_stop() noexcept {}
 
 } // namespace tendermint::node
