@@ -3,9 +3,9 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <appbase/application.hpp>
 #include <tendermint/log/config.h>
 #include <tendermint/node/plugin.h>
+#include <appbase/application.hpp>
 
 appbase::application app;
 
