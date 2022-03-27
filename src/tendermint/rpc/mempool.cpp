@@ -36,7 +36,6 @@ result_broadcast_tx mempool::broadcast_tx_sync(const tx& t) {
 
 result_unconfirmed_txs mempool::unconfirmed_txs(const uint32_t& limit_ptr) {
   auto txs = tx_pool_ptr->reap_max_txs(limit_ptr);
-  auto size = tx_pool_ptr->size();
   return result_unconfirmed_txs{
     .count = txs.size(), .total = tx_pool_ptr->size(), .total_bytes = tx_pool_ptr->size_bytes(), .txs = txs};
 }
