@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/commands/commands.h>
+#include <noir/common/backtrace.h>
 #include <noir/common/log.h>
 #include <noir/eth/rpc/rpc.h>
 #include <noir/rpc/jsonrpc.h>
@@ -11,12 +12,14 @@
 #include <noir/tendermint/rpc/rpc.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <appbase/application.hpp>
+#include <signal.h>
 
 using namespace noir;
 
 appbase::application app;
 
 int main(int argc, char** argv) {
+  signal(SIGSEGV, noir::print_backtrace); // install our handler
 
   // set default configuration
   app.config().require_subcommand();
