@@ -16,7 +16,7 @@ CompactNamespaces: false
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 2
 IncludeCategories:
-  - Regex:        '^(<noir/)'
+  - Regex:        '^(<(noir|tendermint)/)'
     SortPriority: 2
   - Regex:        '^(<catch2/)'
     SortPriority: 1
