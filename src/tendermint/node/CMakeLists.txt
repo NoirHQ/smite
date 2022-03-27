@@ -5,6 +5,7 @@ add_library(tendermint_node STATIC
 target_include_directories(tendermint_node PUBLIC ${NOIR_SOURCE_DIR})
 target_link_libraries(tendermint_node
   tendermint::common
+  tendermint::log
 )
 
 add_library(tendermint::node ALIAS tendermint_node)
