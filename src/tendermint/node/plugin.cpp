@@ -29,11 +29,11 @@ void NodePlugin::plugin_initialize(const CLI::App& config) {
 }
 
 void NodePlugin::plugin_startup() {
-  my->node->on_start();
+  my->node->start();
 }
 
 void NodePlugin::plugin_shutdown() {
-  my->node->on_stop();
+  my->node->stop();
 }
 
 Node& NodePlugin::node() {
