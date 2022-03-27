@@ -24,7 +24,7 @@ NodePlugin::NodePlugin(appbase::application& app): plugin(app, "tendermint::node
 void NodePlugin::set_program_options(CLI::App&) {}
 
 void NodePlugin::plugin_initialize(const CLI::App& config) {
-  my->node.emplace();
+  my->node.emplace(app);
 }
 
 void NodePlugin::plugin_startup() {

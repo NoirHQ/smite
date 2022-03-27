@@ -8,7 +8,7 @@
 
 namespace tendermint::node {
 
-Node::Node() {
+Node::Node(appbase::application& app): app(app) {
   name = "node";
 }
 

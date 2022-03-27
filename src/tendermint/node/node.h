@@ -6,15 +6,20 @@
 #pragma once
 #include <tendermint/common/common.h>
 #include <tendermint/service/service.h>
+#include <appbase/application.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace tendermint::node {
 
-class Node : public service::Service<Node> {
+class Node : public service::Service<Node>, boost::noncopyable {
 public:
-  Node();
+  Node(appbase::application&);
 
   result<void> on_start() noexcept;
   void on_stop() noexcept;
+
+private:
+  appbase::application& app;
 };
 
 } // namespace tendermint::node
