@@ -5,11 +5,14 @@
 //
 #pragma once
 #include <tendermint/common/common.h>
+#include <tendermint/service/service.h>
 
 namespace tendermint::node {
 
-class Node {
+class Node : public service::Service<Node> {
 public:
+  Node();
+
   result<void> on_start() noexcept;
   void on_stop() noexcept;
 };

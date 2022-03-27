@@ -8,6 +8,10 @@
 
 namespace tendermint::node {
 
+Node::Node() {
+  name = "node";
+}
+
 result<void> Node::on_start() noexcept {
   std::cout << "Starting Node" << std::endl;
   return {};
