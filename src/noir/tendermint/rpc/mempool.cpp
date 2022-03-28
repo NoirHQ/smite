@@ -6,12 +6,14 @@
 #include <noir/common/check.h>
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/tx.h>
-#include <tendermint/rpc/mempool.h>
+#include <noir/tendermint/rpc/mempool.h>
 
-namespace tendermint::rpc {
+namespace noir::tendermint::rpc {
 
 using namespace noir;
 using namespace noir::consensus;
+
+using tx = bytes;
 
 result_broadcast_tx mempool::broadcast_tx_async(const tx& t) {
   tx_pool_ptr->check_tx_async(t);
@@ -48,4 +50,4 @@ result_unconfirmed_txs mempool::num_unconfirmed_txs() {
 response_check_tx& mempool::check_tx(const tx& t) {
   return tx_pool_ptr->proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = t});
 }
-} // namespace tendermint::rpc
+} // namespace noir::tendermint::rpc

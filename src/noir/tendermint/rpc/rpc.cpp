@@ -4,15 +4,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/rpc/jsonrpc.h>
-#include <tendermint/rpc/rpc.h>
+#include <noir/tendermint/rpc/rpc.h>
 
-namespace tendermint::rpc {
+namespace noir::tendermint::rpc {
 using namespace appbase;
 using namespace fc;
 using namespace noir;
 using namespace noir::rpc;
 
-rpc::rpc(appbase::application& app): plugin(app), mempool_(std::make_shared<mempool>()){};
+rpc::rpc(appbase::application& app): plugin(app), mempool_(std::make_shared<mempool>()) {}
 
 void rpc::set_program_options(CLI::App& config) {}
 
@@ -82,4 +82,4 @@ void rpc::plugin_startup() {
 
 void rpc::plugin_shutdown() {}
 
-} // namespace tendermint::rpc
+} // namespace noir::tendermint::rpc
