@@ -18,7 +18,7 @@ constexpr auto sync_timeout{std::chrono::seconds(60)};
 
 struct reactor {
   reactor(appbase::application& app)
-    : app(app), thread_pool(std::make_unique<named_thread_pool>("bs_reactor_thread", 1)) {}
+    : app(app), thread_pool(std::make_unique<named_thread_pool>("bs_reactor_thread", 3)) {}
 
   appbase::application& app;
 
