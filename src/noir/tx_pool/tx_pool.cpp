@@ -3,19 +3,22 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/tx_pool/tx_pool.h>
 #include <noir/core/codec.h>
+#include <noir/tx_pool/tx_pool.h>
 #include <algorithm>
 
 namespace noir::tx_pool {
 
 tx_pool::tx_pool(appbase::application& app)
   : plugin(app), config_(config{}), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
-    proxy_app_(std::make_shared<consensus::app_connection>()), xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
+    proxy_app_(std::make_shared<consensus::app_connection>()),
+    xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
 
-tx_pool::tx_pool(appbase::application& app, const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxy_app, uint64_t block_height)
+tx_pool::tx_pool(appbase::application& app, const config& cfg,
+  std::shared_ptr<consensus::app_connection>& new_proxy_app, uint64_t block_height)
   : plugin(app), config_(cfg), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
-    proxy_app_(new_proxy_app), block_height_(block_height), xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
+    proxy_app_(new_proxy_app), block_height_(block_height),
+    xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
 
 void tx_pool::set_program_options(CLI::App& cfg) {
   auto tx_pool_options = cfg.add_section("tx_pool",

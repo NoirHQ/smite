@@ -5,12 +5,12 @@
 //
 #pragma once
 
+#include <noir/common/plugin_interface.h>
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/app_connection.h>
 #include <noir/consensus/tx.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/unapplied_tx_queue.h>
-#include <noir/common/plugin_interface.h>
 #include <appbase/application.hpp>
 #include <fc/exception/exception.hpp>
 
