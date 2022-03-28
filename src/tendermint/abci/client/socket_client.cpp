@@ -8,7 +8,8 @@
 
 namespace tendermint::abci {
 
-SocketClient::SocketClient(appbase::application& app, const std::string& addr, bool must_connect): Client(app), addr(addr), must_connect(must_connect), thread_pool("socketClient", 4 /* make configurable */) {
+SocketClient::SocketClient(appbase::application& app, const std::string& addr, bool must_connect)
+  : Client(app), addr(addr), must_connect(must_connect), thread_pool("socketClient", 4 /* make configurable */) {
   name = "socketClient";
 }
 
@@ -74,11 +75,13 @@ result<std::unique_ptr<ReqRes>> SocketClient::on_offer_snapshot_async(const Requ
   return queue_request(to_request_offer_snapshot(req));
 }
 
-result<std::unique_ptr<ReqRes>> SocketClient::on_load_snapshot_chunk_async(const RequestLoadSnapshotChunk& req) noexcept {
+result<std::unique_ptr<ReqRes>> SocketClient::on_load_snapshot_chunk_async(
+  const RequestLoadSnapshotChunk& req) noexcept {
   return queue_request(to_request_load_snapshot_chunk(req));
 }
 
-result<std::unique_ptr<ReqRes>> SocketClient::on_apply_snapshot_chunk_async(const RequestApplySnapshotChunk& req) noexcept {
+result<std::unique_ptr<ReqRes>> SocketClient::on_apply_snapshot_chunk_async(
+  const RequestApplySnapshotChunk& req) noexcept {
   return queue_request(to_request_apply_snapshot_chunk(req));
 }
 
@@ -126,7 +129,6 @@ result<std::unique_ptr<ResponseSetOption>> SocketClient::on_set_option_sync(cons
     return make_unexpected(err.error());
   }
   return std::unique_ptr<ResponseSetOption>(reqres->response->release_set_option());
-
 }
 
 result<std::unique_ptr<ResponseDeliverTx>> SocketClient::on_deliver_tx_sync(const RequestDeliverTx& req) noexcept {
@@ -187,7 +189,6 @@ result<std::unique_ptr<ResponseInitChain>> SocketClient::on_init_chain_sync(cons
     return make_unexpected(err.error());
   }
   return std::unique_ptr<ResponseInitChain>(reqres->response->release_init_chain());
-
 }
 
 result<std::unique_ptr<ResponseBeginBlock>> SocketClient::on_begin_block_sync(const RequestBeginBlock& req) noexcept {
@@ -200,7 +201,6 @@ result<std::unique_ptr<ResponseBeginBlock>> SocketClient::on_begin_block_sync(co
     return make_unexpected(err.error());
   }
   return std::unique_ptr<ResponseBeginBlock>(reqres->response->release_begin_block());
-
 }
 
 result<std::unique_ptr<ResponseEndBlock>> SocketClient::on_end_block_sync(const RequestEndBlock& req) noexcept {
@@ -215,7 +215,8 @@ result<std::unique_ptr<ResponseEndBlock>> SocketClient::on_end_block_sync(const 
   return std::unique_ptr<ResponseEndBlock>(reqres->response->release_end_block());
 }
 
-result<std::unique_ptr<ResponseListSnapshots>> SocketClient::on_list_snapshots_sync(const RequestListSnapshots& req) noexcept {
+result<std::unique_ptr<ResponseListSnapshots>> SocketClient::on_list_snapshots_sync(
+  const RequestListSnapshots& req) noexcept {
   auto reqres = queue_request(to_request_list_snapshots(req));
   reqres->wait();
   if (auto err = error(); !err) {
@@ -227,7 +228,8 @@ result<std::unique_ptr<ResponseListSnapshots>> SocketClient::on_list_snapshots_s
   return std::unique_ptr<ResponseListSnapshots>(reqres->response->release_list_snapshots());
 }
 
-result<std::unique_ptr<ResponseOfferSnapshot>> SocketClient::on_offer_snapshot_sync(const RequestOfferSnapshot& req) noexcept {
+result<std::unique_ptr<ResponseOfferSnapshot>> SocketClient::on_offer_snapshot_sync(
+  const RequestOfferSnapshot& req) noexcept {
   auto reqres = queue_request(to_request_offer_snapshot(req));
   reqres->wait();
   if (auto err = error(); !err) {
@@ -239,7 +241,8 @@ result<std::unique_ptr<ResponseOfferSnapshot>> SocketClient::on_offer_snapshot_s
   return std::unique_ptr<ResponseOfferSnapshot>(reqres->response->release_offer_snapshot());
 }
 
-result<std::unique_ptr<ResponseLoadSnapshotChunk>> SocketClient::on_load_snapshot_chunk_sync(const RequestLoadSnapshotChunk& req) noexcept {
+result<std::unique_ptr<ResponseLoadSnapshotChunk>> SocketClient::on_load_snapshot_chunk_sync(
+  const RequestLoadSnapshotChunk& req) noexcept {
   auto reqres = queue_request(to_request_load_snapshot_chunk(req));
   reqres->wait();
   if (auto err = error(); !err) {
@@ -251,7 +254,8 @@ result<std::unique_ptr<ResponseLoadSnapshotChunk>> SocketClient::on_load_snapsho
   return std::unique_ptr<ResponseLoadSnapshotChunk>(reqres->response->release_load_snapshot_chunk());
 }
 
-result<std::unique_ptr<ResponseApplySnapshotChunk>> SocketClient::on_apply_snapshot_chunk_sync(const RequestApplySnapshotChunk& req) noexcept {
+result<std::unique_ptr<ResponseApplySnapshotChunk>> SocketClient::on_apply_snapshot_chunk_sync(
+  const RequestApplySnapshotChunk& req) noexcept {
   auto reqres = queue_request(to_request_apply_snapshot_chunk(req));
   reqres->wait();
   if (auto err = error(); !err) {
@@ -266,8 +270,7 @@ result<std::unique_ptr<ResponseApplySnapshotChunk>> SocketClient::on_apply_snaps
 std::unique_ptr<ReqRes> SocketClient::queue_request(std::unique_ptr<Request> req) {
   auto reqres = std::make_unique<ReqRes>();
   reqres->request = std::move(req);
-  reqres->future = async_thread_pool(thread_pool.get_executor(), [&]() {
-  });
+  reqres->future = async_thread_pool(thread_pool.get_executor(), [&]() {});
   if (req->has_flush()) {
     // flush_timer.unset();
   } else {
