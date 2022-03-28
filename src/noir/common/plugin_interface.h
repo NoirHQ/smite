@@ -43,6 +43,7 @@ namespace incoming {
   namespace channels {
     using cs_reactor_message_queue = appbase::channel_decl<struct cs_reactor_message_queue_tag, p2p::envelope_ptr>;
     using bs_reactor_message_queue = appbase::channel_decl<struct bs_reactor_message_queue_tag, p2p::envelope_ptr>;
+    using tp_reactor_message_queue = appbase::channel_decl<struct tp_reactor_message_queue_tag, p2p::envelope_ptr>;
   } // namespace channels
 } // namespace incoming
 
