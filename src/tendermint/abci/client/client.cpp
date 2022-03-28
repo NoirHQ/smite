@@ -16,14 +16,14 @@ void ReqRes::set_callback(std::function<void(Response*)> cb) {
   this->cb = cb;
 }
 
-void ReqRes::invoke_callback(Response* r) {
+void ReqRes::invoke_callback(Response* r) const {
   std::scoped_lock _(mtx);
   if (cb) {
     cb(response);
   }
 }
 
-std::function<void(Response*)> ReqRes::get_callback() {
+std::function<void(Response*)> ReqRes::get_callback() const {
   std::scoped_lock _(mtx);
   return cb;
 }
@@ -31,6 +31,12 @@ std::function<void(Response*)> ReqRes::get_callback() {
 void ReqRes::set_done() {
   std::scoped_lock _(mtx);
   done = true;
+}
+
+void ReqRes::wait() const {
+  if (future) {
+    future->wait();
+  }
 }
 
 } // namespace tendermint::abci
