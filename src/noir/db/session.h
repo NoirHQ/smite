@@ -197,6 +197,12 @@ public:
   template<typename Iterable>
   void write(const Iterable& key_values);
 
+  /// \brief Writes a batch of key/value pairs into this session.
+  /// \param key_values A type that supports iteration and returns in its iterator a pair containing shared_bytes
+  /// instances that represents a key and a value.
+  template<typename Iterable>
+  void write_from_bytes(const Iterable& key_values);
+
   /// \brief Erases a batch of keys from this session.
   /// \param keys A type that supports iteration and returns in its iterator a shared_bytes type representing the key.
   template<typename Iterable>
@@ -657,6 +663,16 @@ void session<Parent>::write(const Iterable& key_values) {
   // Currently the batch write will just iteratively call the non batch write
   for (const auto& kv : key_values) {
     write(kv.first, kv.second);
+  }
+}
+
+// TODO: decide K/V type of session
+template<typename Parent>
+template<typename Iterable>
+void session<Parent>::write_from_bytes(const Iterable& key_values) {
+  // Currently the batch write will just iteratively call the non batch write
+  for (const auto& kv : key_values) {
+    write(shared_bytes(kv.first.data(), kv.first.size()), shared_bytes(kv.second.data(), kv.second.size()));
   }
 }
 
