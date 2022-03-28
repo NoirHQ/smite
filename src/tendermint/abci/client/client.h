@@ -18,7 +18,19 @@ static constexpr auto echo_retry_interval_seconds = 1;
 
 using Callback = std::function<void(Request*, Response*)>;
 
-struct ReqRes {};
+struct ReqRes {
+  Request* request;
+  Response* response; // FIXME: atomic
+
+  std::mutex mtx;
+  bool done;
+  std::function<void(Response*)> cb;
+
+  void set_callback(std::function<void(Response*)> cb);
+  void invoke_callback(Response* r);
+  std::function<void(Response*)> get_callback();
+  void set_done();
+};
 
 template<typename Derived>
 class Client : public service::Service<Client<Derived>> {
