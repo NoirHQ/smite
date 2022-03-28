@@ -247,7 +247,7 @@ TEST_CASE("tx_pool: Nonce override", "[noir][tx_pool]") {
   CHECK_NOTHROW(tp.check_tx_sync(tx2));
 }
 
-TEST_CASE("tx_pool: Check Broadcast", "[noir][tx_pool]") {
+TEST_CASE("tx_pool: Broadcast tx", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
   config config{.broadcast = true};
   auto test_app = std::make_shared<test_application>();
@@ -272,20 +272,46 @@ TEST_CASE("tx_pool: Check Broadcast", "[noir][tx_pool]") {
     app.exec();
   });
 
-  auto tx1 = test_helper->gen_random_tx();
-  auto tx2 = test_helper->gen_random_tx();
+  // Send
+  {
+    auto tx1 = test_helper->gen_random_tx();
+    auto tx2 = test_helper->gen_random_tx();
 
-  CHECK_NOTHROW(tp.check_tx_sync(tx1));
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  CHECKED_IF(result) {
-    CHECK(tx == tx1);
-    result = false;
+    CHECK_NOTHROW(tp.check_tx_sync(tx1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    CHECKED_IF(result) {
+      CHECK(tx == tx1);
+      result = false;
+    }
+
+    CHECK_NOTHROW(tp.check_tx_async(tx2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    CHECKED_IF(result) {
+      CHECK(tx == tx2);
+    }
   }
 
-  CHECK_NOTHROW(tp.check_tx_async(tx2));
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  CHECKED_IF(result) {
-    CHECK(tx == tx2);
+  // Receive
+  {
+    auto tx = test_helper->gen_random_tx();
+    auto new_env = std::make_shared<p2p::envelope>();
+    new_env->from = "";
+    new_env->to = "";
+    new_env->broadcast = true;
+    new_env->id = p2p::Transaction;
+
+    const uint32_t payload_size = encode_size(tx);
+    new_env->message.resize(payload_size);
+    datastream<char> ds(new_env->message.data(), payload_size);
+    ds << tx;
+
+    auto size = tp.size();
+
+    app.get_channel<plugin_interface::incoming::channels::tp_reactor_message_queue>().publish(
+      appbase::priority::medium, new_env);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    CHECK(size + 1 == tp.size());
   }
 
   app.quit();
