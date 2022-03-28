@@ -119,6 +119,9 @@ public:
   void write(const Iterable& key_values);
 
   template<typename Iterable>
+  void write_from_bytes(const Iterable& key_values);
+
+  template<typename Iterable>
   void erase(const Iterable& keys);
 
   template<typename Other_data_store, typename Iterable>
@@ -336,6 +339,18 @@ session<rocksdb_t>::read(const Iterable& keys) {
 
 template<typename Iterable>
 void session<rocksdb_t>::write(const Iterable& key_values) {
+  auto batch = rocksdb::WriteBatch{1024 * 1024};
+
+  for (const auto& kv : key_values) {
+    batch.Put(column_family_(), {kv.first.data(), kv.first.size()}, {kv.second.data(), kv.second.size()});
+  }
+
+  auto status = m_db->Write(m_write_options, &batch);
+}
+
+// TODO: decide K/V type of session
+template<typename Iterable>
+void session<rocksdb_t>::write_from_bytes(const Iterable& key_values) {
   auto batch = rocksdb::WriteBatch{1024 * 1024};
 
   for (const auto& kv : key_values) {
