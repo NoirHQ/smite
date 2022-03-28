@@ -15,7 +15,9 @@ tx_pool::tx_pool(appbase::application& app)
     tx_queue_(config_.max_tx_num * config_.max_tx_bytes),
     tx_cache_(config_.max_tx_num),
     proxy_app_(std::make_shared<consensus::app_connection>()),
-    xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
+    xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()),
+    msg_handle_(app.get_channel<plugin_interface::incoming::channels::tp_reactor_message_queue>().subscribe(
+      [this](auto&& arg) { handle_msg(std::forward<decltype(arg)>(arg)); })) {}
 
 tx_pool::tx_pool(appbase::application& app,
   const config& cfg,
@@ -27,7 +29,9 @@ tx_pool::tx_pool(appbase::application& app,
     tx_cache_(config_.max_tx_num),
     proxy_app_(new_proxy_app),
     block_height_(block_height),
-    xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()) {}
+    xmt_mq_channel_(app.get_channel<plugin_interface::egress::channels::transmit_message_queue>()),
+    msg_handle_(app.get_channel<plugin_interface::incoming::channels::tp_reactor_message_queue>().subscribe(
+      [this](auto&& arg) { handle_msg(std::forward<decltype(arg)>(arg)); })) {}
 
 void tx_pool::set_program_options(CLI::App& cfg) {
   auto tx_pool_options = cfg.add_section("tx_pool",
@@ -298,6 +302,14 @@ void tx_pool::broadcast_tx(const consensus::tx& tx) {
   ds << tx;
 
   xmt_mq_channel_.publish(appbase::priority::medium, new_env);
+}
+
+void tx_pool::handle_msg(p2p::envelope_ptr msg) {
+  datastream<char> ds(msg->message.data(), msg->message.size());
+  consensus::tx tx;
+  ds >> tx;
+
+  check_tx_sync(tx); // TODO : sync only?
 }
 
 } // namespace noir::tx_pool

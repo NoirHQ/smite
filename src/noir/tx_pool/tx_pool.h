@@ -50,6 +50,7 @@ private:
   postcheck_func* postcheck_ = nullptr;
 
   plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel_;
+  plugin_interface::incoming::channels::tp_reactor_message_queue ::channel_type::handle msg_handle_;
 
 public:
   tx_pool(appbase::application& app);
@@ -92,6 +93,7 @@ private:
   void add_tx(const consensus::tx_hash& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
   void update_recheck_txs();
   void broadcast_tx(const consensus::tx& tx);
+  void handle_msg(p2p::envelope_ptr msg);
 };
 
 enum tx_pool_exception {
