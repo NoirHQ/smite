@@ -14,6 +14,11 @@ const error err_already_started = "already started";
 const error err_already_stopped = "already stopped";
 const error err_not_started = "not started";
 
+#define _ilog(FORMAT, ...) SPDLOG_LOGGER_INFO(logger.get(), FORMAT, __VA_ARGS__)
+#define _dlog(FORMAT, ...) SPDLOG_LOGGER_DEBUG(logger.get(), FORMAT, __VA_ARGS__)
+#define _wlog(FORMAT, ...) SPDLOG_LOGGER_WARN(logger.get(), FORMAT, __VA_ARGS__)
+#define _elog(FORMAT, ...) SPDLOG_LOGGER_ERROR(logger.get(), FORMAT, __VA_ARGS__)
+
 // XXX: optimize atomic operations in memory order - relaxed?
 template<typename Derived>
 class Service {
@@ -26,11 +31,11 @@ public:
     bool started_expected = false;
     if (started.compare_exchange_strong(started_expected, true)) {
       if (stopped.load()) {
-        elog("Not starting {} service -- already stopped", name);
+        _elog("Not starting {} service -- already stopped", name);
         started.store(false);
         return make_unexpected(err_already_stopped);
       }
-      ilog("Starting {} service", name);
+      _ilog("Starting {} service", name);
       auto res = static_cast<Derived*>(this)->on_start();
       if (!res) {
         started.store(false);
@@ -38,7 +43,7 @@ public:
       }
       return {};
     }
-    dlog("Not starting {} service -- already started", name);
+    _dlog("Not starting {} service -- already started", name);
     return make_unexpected(err_already_started);
   }
 
@@ -46,23 +51,23 @@ public:
     bool stopped_expected = false;
     if (stopped.compare_exchange_strong(stopped_expected, true)) {
       if (!started.load()) {
-        elog("Not stopping {} service -- has not been started yet", name);
+        _elog("Not stopping {} service -- has not been started yet", name);
         stopped.store(false);
         return make_unexpected(err_not_started);
       }
-      ilog("Stopping {} service", name);
+      _ilog("Stopping {} service", name);
       static_cast<Derived*>(this)->on_stop();
       // quit
       return {};
     }
-    dlog("Stopping {} service (already stopped)", name);
+    _dlog("Stopping {} service (already stopped)", name);
     return make_unexpected(err_already_stopped);
   }
 
   result<void> reset() noexcept {
     bool stopped_expected = true;
     if (!stopped.compare_exchange_strong(stopped_expected, false)) {
-      dlog("Can't reset {} service, Not stopped", name);
+      _dlog("Can't reset {} service, Not stopped", name);
       return make_unexpected(fmt::format("can't reset running {}", name));
     }
 
@@ -79,12 +84,16 @@ public:
     return name;
   }
 
-  // set_logger
+  void set_logger(std::shared_ptr<log::logger> l) {
+    this->logger = l;
+  }
+
   // wait
   // quit
 
 protected:
   std::string name;
+  std::shared_ptr<log::logger> logger = log::default_logger();;
 
 private:
   std::atomic_bool started;
