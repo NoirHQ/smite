@@ -779,6 +779,9 @@ void p2p::plugin_shutdown() {
     c->close(false);
     return true;
   });
+  my->keepalive_timer->cancel();
+  my->expire_timer->cancel();
+  my->connector_check_timer->cancel();
   my->thread_pool->stop();
   my->thread_pool.reset();
 }
