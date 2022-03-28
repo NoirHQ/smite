@@ -5,12 +5,15 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/codec/scale.h>
+#include <noir/core/codec.h>
 #include <noir/common/hex.h>
+#include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <noir/tx_pool/unapplied_tx_queue.h>
 #include <algorithm>
+#include <thread>
 
 using namespace noir;
 using namespace noir::consensus;
@@ -19,6 +22,21 @@ using namespace noir::tx_pool;
 appbase::application app;
 
 namespace test_detail {
+
+class test_plugin : public appbase::plugin<test_plugin> {
+public:
+  APPBASE_PLUGIN_REQUIRES()
+
+  virtual ~test_plugin() {}
+
+  void set_program_options(CLI::App& app_config) {}
+
+  void plugin_initialize(const CLI::App& app_config) {}
+
+  void plugin_startup() {}
+
+  void plugin_shutdown() {}
+};
 
 static address_type str_to_addr(const std::string& str) {
   address_type addr(str.begin(), str.end());
@@ -130,6 +148,11 @@ private:
   std::shared_ptr<test_application> test_app_ = nullptr;
 
 public:
+  auto gen_random_tx() {
+    std::uniform_int_distribution<uint64_t> dist_tx{0, 0xFFFFFFFF};
+    return codec::scale::encode(dist_tx(generator));
+  }
+
   auto new_tx() {
     std::scoped_lock lock(mutex_);
     return codec::scale::encode(tx_id_++);
@@ -594,6 +617,51 @@ TEST_CASE("tx_pool: Nonce override", "[noir][tx_pool]") {
   test_app->set_nonce(0);
   test_app->set_gas(config.gas_price_bump);
   CHECK_NOTHROW(tp.check_tx_sync(tx2));
+}
+
+TEST_CASE("tx_pool: Check Broadcast", "[noir][tx_pool]") {
+  auto test_helper = std::make_unique<::test_helper>();
+  config config{.broadcast = true};
+  auto test_app = std::make_shared<test_application>();
+  auto& tp = test_helper->make_tx_pool(config, test_app);
+
+  std::atomic_bool result = false;
+  consensus::tx tx;
+  auto handle = app.get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
+    [&](const p2p::envelope_ptr& envelop) {
+      CHECKED_IF(envelop->id == p2p::Transaction) {
+        datastream<char> ds(envelop->message.data(), envelop->message.size());
+        ds >> tx;
+        result = true;
+      }
+    });
+
+  auto thread = std::make_unique<named_thread_pool>("test_thread", 1);
+  noir::async_thread_pool(thread->get_executor(), [&]() {
+    app.register_plugin<test_plugin>();
+    app.initialize<test_plugin>();
+    app.startup();
+    app.exec();
+  });
+
+  auto tx1 = test_helper->gen_random_tx();
+  auto tx2 = test_helper->gen_random_tx();
+
+  CHECK_NOTHROW(tp.check_tx_sync(tx1));
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  CHECKED_IF(result) {
+    CHECK(tx == tx1);
+    result = false;
+  }
+
+  CHECK_NOTHROW(tp.check_tx_async(tx2));
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  CHECKED_IF(result) {
+    CHECK(tx == tx2);
+  }
+
+  app.quit();
+  thread->stop();
 }
 
 TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
