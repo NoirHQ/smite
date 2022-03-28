@@ -7,6 +7,7 @@
 #include <noir/codec/scale.h>
 #include <noir/common/thread_pool.h>
 #include <noir/tx_pool/tx_pool.h>
+#include <fc/crypto/rand.hpp>
 
 using namespace noir;
 using namespace noir::consensus;
@@ -15,6 +16,21 @@ using namespace noir::tx_pool;
 namespace test_detail {
 
 static appbase::application app;
+
+class test_plugin : public appbase::plugin<test_plugin> {
+public:
+  APPBASE_PLUGIN_REQUIRES()
+
+  virtual ~test_plugin() {}
+
+  void set_program_options(CLI::App& app_config) {}
+
+  void plugin_initialize(const CLI::App& app_config) {}
+
+  void plugin_startup() {}
+
+  void plugin_shutdown() {}
+};
 
 static address_type str_to_addr(const std::string& str) {
   address_type addr(str.begin(), str.end());
@@ -30,8 +46,10 @@ static uint64_t rand_gas(uint64_t max = 0xFFFF, uint64_t min = 0) {
 }
 
 class test_application : public application::base_application {
+private:
   std::shared_mutex mutex_;
   std::list<std::shared_ptr<req_res<response_check_tx>>> rrs_;
+  response_check_tx response_for_sync;
   uint64_t nonce_ = 0;
   uint64_t gas_wanted_ = 0;
 
@@ -56,27 +74,22 @@ public:
     thread_->stop();
   }
 
-  req_res<response_check_tx>& new_rr() {
-    std::scoped_lock _(mutex_);
-    response_check_tx res{
-      .gas_wanted = gas_wanted_,
-      .sender = str_to_addr("user"),
-      .nonce = nonce_++,
-    };
-
-    auto rr_ptr = std::make_shared<req_res<response_check_tx>>();
-    rr_ptr->res = std::make_shared<response_check_tx>(res);
-    rrs_.push_back(rr_ptr);
-
-    return *rr_ptr;
+  response_check_tx new_response_check_tx() {
+    return response_check_tx{.gas_wanted = gas_wanted_, .sender = str_to_addr("user"), .nonce = nonce_++};
   }
 
   response_check_tx& check_tx_sync() override {
-    return *new_rr().res;
+    std::scoped_lock _(mutex_);
+    response_for_sync = new_response_check_tx();
+    return response_for_sync;
   }
 
   req_res<response_check_tx>& check_tx_async() override {
-    return new_rr();
+    std::scoped_lock _(mutex_);
+    auto rr_ptr = std::make_shared<req_res<response_check_tx>>();
+    rr_ptr->res = std::make_shared<response_check_tx>(new_response_check_tx());
+    rrs_.push_back(rr_ptr);
+    return *rr_ptr;
   }
 
   void set_nonce(uint64_t nonce) {
@@ -126,6 +139,11 @@ private:
   std::shared_ptr<test_application> test_app_ = nullptr;
 
 public:
+  auto gen_random_tx() {
+    std::uniform_int_distribution<uint64_t> dist_tx{0, 0xFFFFFFFF};
+    return codec::scale::encode(dist_tx(generator));
+  }
+
   auto new_tx() {
     std::scoped_lock lock(mutex_);
     return codec::scale::encode(tx_id_++);

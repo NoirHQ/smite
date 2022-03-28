@@ -4,9 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
+#include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
+#include <noir/core/codec.h>
 #include <noir/tx_pool/test/tx_pool_test_helper.h>
 #include <noir/tx_pool/tx_pool.h>
+#include <thread>
 
 using namespace noir;
 using namespace noir::consensus;
@@ -242,4 +245,49 @@ TEST_CASE("tx_pool: Nonce override", "[noir][tx_pool]") {
   test_app->set_nonce(0);
   test_app->set_gas(config.gas_price_bump);
   CHECK_NOTHROW(tp.check_tx_sync(tx2));
+}
+
+TEST_CASE("tx_pool: Check Broadcast", "[noir][tx_pool]") {
+  auto test_helper = std::make_unique<::test_helper>();
+  config config{.broadcast = true};
+  auto test_app = std::make_shared<test_application>();
+  auto& tp = test_helper->make_tx_pool(config, test_app);
+
+  std::atomic_bool result = false;
+  consensus::tx tx;
+  auto handle = app.get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
+    [&](const p2p::envelope_ptr& envelop) {
+      CHECKED_IF(envelop->id == p2p::Transaction) {
+        datastream<char> ds(envelop->message.data(), envelop->message.size());
+        ds >> tx;
+        result = true;
+      }
+    });
+
+  auto thread = std::make_unique<named_thread_pool>("test_thread", 1);
+  noir::async_thread_pool(thread->get_executor(), [&]() {
+    app.register_plugin<test_plugin>();
+    app.initialize<test_plugin>();
+    app.startup();
+    app.exec();
+  });
+
+  auto tx1 = test_helper->gen_random_tx();
+  auto tx2 = test_helper->gen_random_tx();
+
+  CHECK_NOTHROW(tp.check_tx_sync(tx1));
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  CHECKED_IF(result) {
+    CHECK(tx == tx1);
+    result = false;
+  }
+
+  CHECK_NOTHROW(tp.check_tx_async(tx2));
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  CHECKED_IF(result) {
+    CHECK(tx == tx2);
+  }
+
+  app.quit();
+  thread->stop();
 }
