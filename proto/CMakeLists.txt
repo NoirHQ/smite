@@ -40,8 +40,8 @@ foreach(PROTO ${PROTO_SOURCES})
   endif()
 endforeach()
 
-add_library(noir_proto STATIC ${PROTO_GENERATED})
-target_include_directories(noir_proto PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(noir_proto protobuf::libprotobuf)
+add_library(tendermint_proto STATIC ${PROTO_GENERATED})
+target_include_directories(tendermint_proto PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(tendermint_proto protobuf::libprotobuf)
 
-add_library(noir::proto ALIAS noir_proto)
+add_library(tendermint::proto ALIAS tendermint_proto)
