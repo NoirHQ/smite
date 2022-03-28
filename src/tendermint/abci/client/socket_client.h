@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/thread_pool.h>
 #include <tendermint/abci/client/client.h>
 #include <tendermint/common/common.h>
+#include <boost/asio/io_context_strand.hpp>
 
 namespace tendermint::abci {
 
@@ -20,7 +20,7 @@ public:
   /// SocketClient creates a new socket client, which connects to a given
   /// address. If must_connect is true, the client will throw an exception  upon start
   /// if it fails to connect.
-  SocketClient(appbase::application& app, const std::string& address, bool must_connect);
+  SocketClient(const std::string& address, bool must_connect, boost::asio::io_context& io_context);
 
   void on_set_response_callback(Callback cb) noexcept;
   result<void> on_error() noexcept;
@@ -75,7 +75,7 @@ private:
   std::deque<std::shared_ptr<ReqRes>> req_sent;
   std::function<void(Request*, Response*)> res_cb;
 
-  named_thread_pool thread_pool;
+  boost::asio::io_context::strand strand;
 
   std::shared_ptr<ReqRes> queue_request(std::unique_ptr<Request> req);
   void will_send_req(std::shared_ptr<ReqRes> reqres);

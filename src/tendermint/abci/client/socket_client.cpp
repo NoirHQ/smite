@@ -5,11 +5,12 @@
 //
 #include <tendermint/abci/client/socket_client.h>
 #include <tendermint/abci/types/messages.h>
+#include <tendermint/common/thread_utils.h>
 
 namespace tendermint::abci {
 
-SocketClient::SocketClient(appbase::application& app, const std::string& addr, bool must_connect)
-  : Client(app), addr(addr), must_connect(must_connect), thread_pool("SocketClient", 4 /* make configurable */) {
+SocketClient::SocketClient(const std::string& addr, bool must_connect, boost::asio::io_context& io_context)
+  : addr(addr), must_connect(must_connect), strand(io_context) {
   name = "SocketClient";
 }
 
@@ -17,8 +18,7 @@ result<void> SocketClient::on_start() noexcept {
   return {};
 }
 
-void SocketClient::on_stop() noexcept {
-}
+void SocketClient::on_stop() noexcept {}
 
 result<void> SocketClient::on_reset() noexcept {
   return make_unexpected("not implemented");
@@ -101,10 +101,6 @@ result<std::shared_ptr<ReqRes>> SocketClient::on_apply_snapshot_chunk_async(
 
 result<std::unique_ptr<ResponseEcho>> SocketClient::on_echo_sync(const std::string& msg) noexcept {
   auto reqres = queue_request(to_request_echo(msg));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -122,10 +118,6 @@ result<void> SocketClient::on_flush_sync() noexcept {
 
 result<std::unique_ptr<ResponseInfo>> SocketClient::on_info_sync(const RequestInfo& req) noexcept {
   auto reqres = queue_request(to_request_info(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -133,12 +125,7 @@ result<std::unique_ptr<ResponseInfo>> SocketClient::on_info_sync(const RequestIn
 }
 
 result<std::unique_ptr<ResponseSetOption>> SocketClient::on_set_option_sync(const RequestSetOption& req) noexcept {
-  return {};
   auto reqres = queue_request(to_request_set_option(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -147,10 +134,6 @@ result<std::unique_ptr<ResponseSetOption>> SocketClient::on_set_option_sync(cons
 
 result<std::unique_ptr<ResponseDeliverTx>> SocketClient::on_deliver_tx_sync(const RequestDeliverTx& req) noexcept {
   auto reqres = queue_request(to_request_deliver_tx(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -159,10 +142,6 @@ result<std::unique_ptr<ResponseDeliverTx>> SocketClient::on_deliver_tx_sync(cons
 
 result<std::unique_ptr<ResponseCheckTx>> SocketClient::on_check_tx_sync(const RequestCheckTx& req) noexcept {
   auto reqres = queue_request(to_request_check_tx(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -171,10 +150,6 @@ result<std::unique_ptr<ResponseCheckTx>> SocketClient::on_check_tx_sync(const Re
 
 result<std::unique_ptr<ResponseQuery>> SocketClient::on_query_sync(const RequestQuery& req) noexcept {
   auto reqres = queue_request(to_request_query(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -183,10 +158,6 @@ result<std::unique_ptr<ResponseQuery>> SocketClient::on_query_sync(const Request
 
 result<std::unique_ptr<ResponseCommit>> SocketClient::on_commit_sync(const RequestCommit& req) noexcept {
   auto reqres = queue_request(to_request_commit(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -195,10 +166,6 @@ result<std::unique_ptr<ResponseCommit>> SocketClient::on_commit_sync(const Reque
 
 result<std::unique_ptr<ResponseInitChain>> SocketClient::on_init_chain_sync(const RequestInitChain& req) noexcept {
   auto reqres = queue_request(to_request_init_chain(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -207,10 +174,6 @@ result<std::unique_ptr<ResponseInitChain>> SocketClient::on_init_chain_sync(cons
 
 result<std::unique_ptr<ResponseBeginBlock>> SocketClient::on_begin_block_sync(const RequestBeginBlock& req) noexcept {
   auto reqres = queue_request(to_request_begin_block(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -219,10 +182,6 @@ result<std::unique_ptr<ResponseBeginBlock>> SocketClient::on_begin_block_sync(co
 
 result<std::unique_ptr<ResponseEndBlock>> SocketClient::on_end_block_sync(const RequestEndBlock& req) noexcept {
   auto reqres = queue_request(to_request_end_block(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -232,10 +191,6 @@ result<std::unique_ptr<ResponseEndBlock>> SocketClient::on_end_block_sync(const 
 result<std::unique_ptr<ResponseListSnapshots>> SocketClient::on_list_snapshots_sync(
   const RequestListSnapshots& req) noexcept {
   auto reqres = queue_request(to_request_list_snapshots(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -245,10 +200,6 @@ result<std::unique_ptr<ResponseListSnapshots>> SocketClient::on_list_snapshots_s
 result<std::unique_ptr<ResponseOfferSnapshot>> SocketClient::on_offer_snapshot_sync(
   const RequestOfferSnapshot& req) noexcept {
   auto reqres = queue_request(to_request_offer_snapshot(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -258,10 +209,6 @@ result<std::unique_ptr<ResponseOfferSnapshot>> SocketClient::on_offer_snapshot_s
 result<std::unique_ptr<ResponseLoadSnapshotChunk>> SocketClient::on_load_snapshot_chunk_sync(
   const RequestLoadSnapshotChunk& req) noexcept {
   auto reqres = queue_request(to_request_load_snapshot_chunk(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -271,10 +218,6 @@ result<std::unique_ptr<ResponseLoadSnapshotChunk>> SocketClient::on_load_snapsho
 result<std::unique_ptr<ResponseApplySnapshotChunk>> SocketClient::on_apply_snapshot_chunk_sync(
   const RequestApplySnapshotChunk& req) noexcept {
   auto reqres = queue_request(to_request_apply_snapshot_chunk(req));
-  reqres->wait();
-  if (auto err = error(); !err) {
-    return make_unexpected(err.error());
-  }
   if (auto err = flush_sync(); !err) {
     return make_unexpected(err.error());
   }
@@ -284,7 +227,7 @@ result<std::unique_ptr<ResponseApplySnapshotChunk>> SocketClient::on_apply_snaps
 std::shared_ptr<ReqRes> SocketClient::queue_request(std::unique_ptr<Request> req) {
   auto reqres = std::make_unique<ReqRes>();
   reqres->request = std::move(req);
-  reqres->future = async_thread_pool(thread_pool.get_executor(), [&]() {});
+  reqres->future = async_strand(strand, [&]() {});
   if (req->has_flush()) {
     // flush_timer.unset();
   } else {
@@ -349,9 +292,9 @@ void SocketClient::stop_for_error(const tendermint::error& err) {
       this->err = err;
     }
   }
-  elog("Stopping SocketClient for error: {}", err);
+  tm_elog(logger.get(), "Stopping SocketClient for error: {}", err);
   if (auto err = stop(); !err) {
-    elog("Error stopping SocketClient: {}", err.error());
+    tm_elog(logger.get(), "Error stopping SocketClient: {}", err.error());
   }
 }
 
