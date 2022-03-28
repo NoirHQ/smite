@@ -9,7 +9,7 @@
 namespace tendermint::node {
 
 Node::Node(appbase::application& app): app(app) {
-  name = "node";
+  name = "Node";
 }
 
 result<void> Node::on_start() noexcept {
