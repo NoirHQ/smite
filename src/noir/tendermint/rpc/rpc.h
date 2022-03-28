@@ -5,14 +5,14 @@
 //
 #pragma once
 #include <noir/rpc/rpc.h>
+#include <noir/tendermint/rpc/mempool.h>
 #include <appbase/application.hpp>
-#include <tendermint/rpc/mempool.h>
 
-namespace tendermint::rpc {
+namespace noir::tendermint::rpc {
 
 class rpc : public appbase::plugin<rpc> {
 public:
-  rpc(appbase::application& app);
+  explicit rpc(appbase::application& app);
 
   APPBASE_PLUGIN_REQUIRES((noir::rpc::rpc)(noir::rpc::jsonrpc))
   void set_program_options(CLI::App& config) override;
@@ -25,4 +25,4 @@ private:
   std::shared_ptr<mempool> mempool_;
 };
 
-} // namespace tendermint::rpc
+} // namespace noir::tendermint::rpc

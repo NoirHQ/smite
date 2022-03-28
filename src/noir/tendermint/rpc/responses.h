@@ -6,9 +6,8 @@
 #include <noir/common/helper/variant.h>
 #include <noir/common/refl.h>
 #include <tendermint/abci/types.pb.h>
-#include <tendermint/common/types.h>
 
-namespace tendermint::rpc {
+namespace noir::tendermint::rpc {
 
 struct result_broadcast_tx {
   uint32_t code;
@@ -21,8 +20,8 @@ struct result_broadcast_tx {
 };
 
 struct result_broadcast_tx_commit {
-  abci::ResponseCheckTx check_tx;
-  abci::ResponseDeliverTx deliver_tx;
+  ::tendermint::abci::ResponseCheckTx check_tx;
+  ::tendermint::abci::ResponseDeliverTx deliver_tx;
   bytes hash;
   int64_t height;
 };
@@ -31,10 +30,10 @@ struct result_unconfirmed_txs {
   uint64_t count;
   uint64_t total;
   uint64_t total_bytes;
-  std::vector<tx> txs;
+  std::vector<bytes> txs;
 };
 
-} // namespace tendermint::rpc
+} // namespace noir::tendermint::rpc
 
 NOIR_REFLECT(tendermint::rpc::result_broadcast_tx, code, data, log, codespace, mempool_error, hash)
 NOIR_REFLECT(tendermint::rpc::result_unconfirmed_txs, count, total, total_bytes, txs)

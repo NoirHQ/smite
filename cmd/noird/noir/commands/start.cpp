@@ -7,7 +7,7 @@
 #include <noir/eth/rpc/rpc.h>
 #include <noir/rpc/jsonrpc.h>
 #include <noir/rpc/rpc.h>
-#include <tendermint/rpc/rpc.h>
+#include <noir/tendermint/rpc/rpc.h>
 
 using namespace noir::rpc;
 
