@@ -71,6 +71,8 @@ class db_store : public state_store {
   using db_session_type = noir::db::session::session<noir::db::session::rocksdb_t>;
 
 private:
+  using batch_type = std::vector<std::pair<bytes, bytes>>;
+
   // TEMP struct for encoding
   struct validators_info {
     int64_t last_height_changed;
@@ -151,11 +153,13 @@ public:
   }
 
   bool save_validator_sets(int64_t lower_height, int64_t upper_height, const validator_set& v_set) override {
+    batch_type batch{};
     for (auto height = lower_height; height <= upper_height; ++height) {
-      if (!save_validators_info(height, lower_height, v_set)) {
+      if (!save_validators_info(height, lower_height, v_set, batch)) {
         return false;
       }
     }
+    db_session_->write_from_bytes(batch);
     db_session_->commit();
     return true;
   }
@@ -202,42 +206,47 @@ private:
   }
 
   bool save_internal(const state& st) {
+    batch_type batch{};
     auto next_height = st.last_block_height + 1;
     if (next_height == 1) {
       next_height = st.initial_height;
-      if (!save_validators_info(next_height, next_height, st.validators)) {
+      if (!save_validators_info(next_height, next_height, st.validators, batch)) {
         return false;
       }
     }
-    if (!save_validators_info(next_height + 1, st.last_height_validators_changed, st.next_validators)) {
+    if (!save_validators_info(next_height + 1, st.last_height_validators_changed, st.next_validators, batch)) {
       return false;
     }
 
-    if (!save_consensus_params_info(next_height, st.last_height_consensus_params_changed, st.consensus_params_)) {
+    if (!save_consensus_params_info(
+          next_height, st.last_height_consensus_params_changed, st.consensus_params_, batch)) {
       return false;
     }
 
-    db_session_->write_from_bytes(state_key_, encode(st));
+    batch.emplace_back(state_key_, encode(st));
+    db_session_->write_from_bytes(batch);
     db_session_->commit();
     return true;
   }
 
   bool bootstrap_internal(const state& st) {
+    batch_type batch{};
     auto height = st.last_block_height + 1;
     if (height == 1) {
       height = st.initial_height;
     } else if (!st.last_validators.validators.empty()) { // height > 1, can height < 0 ?
-      if (!save_validators_info(height, height, st.validators)) {
+      if (!save_validators_info(height, height, st.validators, batch)) {
         return false;
       }
     }
-    if (!save_validators_info(height + 1, height + 1, st.validators)) {
+    if (!save_validators_info(height + 1, height + 1, st.validators, batch)) {
       return false;
     }
-    if (!save_consensus_params_info(height, st.last_height_consensus_params_changed, st.consensus_params_)) {
+    if (!save_consensus_params_info(height, st.last_height_consensus_params_changed, st.consensus_params_, batch)) {
       return false;
     }
-    db_session_->write_from_bytes(state_key_, encode(st));
+    batch.emplace_back(state_key_, encode(st));
+    db_session_->write_from_bytes(batch);
     db_session_->commit();
     return true;
   }
@@ -251,7 +260,8 @@ private:
     return true;
   }
 
-  bool save_validators_info(int64_t height, int64_t last_height_changed, const validator_set& v_set) {
+  bool save_validators_info(
+    int64_t height, int64_t last_height_changed, const validator_set& v_set, batch_type& batch) {
     if (last_height_changed > height) {
       return false;
     }
@@ -262,7 +272,7 @@ private:
         : std::nullopt,
     };
     auto buf = encode(v_info);
-    db_session_->write_from_bytes(encode_key<prefix::validators>(height), buf);
+    batch.emplace_back(encode_key<prefix::validators>(height), buf);
     return true;
   } // namespace noir::consensus
 
@@ -280,13 +290,14 @@ private:
     return std::max(checkpoint_height, last_height_changed);
   }
 
-  bool save_consensus_params_info(int64_t next_height, int64_t change_height, const consensus_params& cs_params) {
+  bool save_consensus_params_info(
+    int64_t next_height, int64_t change_height, const consensus_params& cs_params, batch_type& batch) {
     consensus_params_info cs_param_info{
       .last_height_changed = change_height,
       .cs_param = (change_height == next_height) ? std::optional<consensus_params>(cs_params) : std::nullopt,
     };
     auto buf = encode(cs_param_info);
-    db_session_->write_from_bytes(encode_key<prefix::consensus_params>(next_height), buf);
+    batch.emplace_back(encode_key<prefix::consensus_params>(next_height), buf);
     return true;
   }
 
@@ -302,6 +313,7 @@ private:
   bool save_abci_responses_internal(int64_t height, const abci_responses& rsp) {
     auto buf = encode(rsp);
     db_session_->write_from_bytes(encode_key<prefix::abci_response>(height), buf);
+    db_session_->commit();
     return true;
   }
 

@@ -200,6 +200,7 @@ public:
     auto height_ = bl.header.height;
     auto hash_ = const_cast<block&>(bl).get_hash();
     auto parts_ = const_cast<part_set&>(bl_parts);
+    batch_type batch{};
 
     // TODO: handle panic in consensus
     auto expected_height = height() + 1;
@@ -213,24 +214,25 @@ public:
     // complete as soon as the block meta is written.
     for (auto i = 0; i < parts_.total; i++) {
       const auto part = parts_.get_part(i);
-      save_block_part(height_, i, *part);
+      save_block_part(height_, i, *part, batch);
     }
 
     {
       block_meta bl_meta = block_meta::new_block_meta(bl, bl_parts);
       auto buf = encode(bl_meta);
-      db_session_->write_from_bytes(encode_key<prefix::block_meta>(height_), buf);
-      db_session_->write_from_bytes(encode_key<prefix::block_hash>(hash_), encode_val(height_));
+      batch.emplace_back(encode_key<prefix::block_meta>(height_), buf);
+      batch.emplace_back(encode_key<prefix::block_hash>(hash_), encode_val(height_));
     }
     {
       auto buf = encode(bl.last_commit);
-      db_session_->write_from_bytes(encode_key<prefix::block_commit>(height_ - 1), buf);
+      batch.emplace_back(encode_key<prefix::block_commit>(height_ - 1), buf);
     }
     // Save seen commit (seen +2/3 precommits for block)
     {
       auto buf = encode(seen_commit);
-      db_session_->write_from_bytes(encode_key<prefix::seen_commit>(), buf);
+      batch.emplace_back(encode_key<prefix::seen_commit>(), buf);
     }
+    db_session_->write_from_bytes(batch);
     db_session_->commit();
     return true;
   }
@@ -319,6 +321,7 @@ public:
   }
 
 private:
+  using batch_type = std::vector<std::pair<bytes, bytes>>;
   enum class prefix : char {
     block_meta = 0,
     block_part = 1,
@@ -389,9 +392,9 @@ private:
     return true;
   }
 
-  bool save_block_part(int64_t height_, int index_, const part& part_) {
+  bool save_block_part(int64_t height_, int index_, const part& part_, batch_type& batch) {
     auto buf = encode(part_);
-    db_session_->write_from_bytes(encode_key<prefix::block_part>(height_, index_), buf);
+    batch.emplace_back(encode_key<prefix::block_part>(height_, index_), buf);
     return true;
   }
 
