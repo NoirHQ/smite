@@ -15,81 +15,168 @@ using namespace noir::consensus;
 
 namespace test_detail {
 
+class test_node;
+std::vector<test_node> test_nodes;
+
 struct channel_stub {
 public:
-  // common channels
   plugin_interface::channels::update_peer_status::channel_type& update_peer_status_channel;
+  plugin_interface::egress::channels::transmit_message_queue::channel_type::handle xmt_mq_subscription;
 
-  plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel;
-
-  // block_sync_reactor channels
   plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type& bs_reactor_mq_channel;
-
-  // consensus_reactor channels
-  plugin_interface::egress::channels::event_switch_message_queue::channel_type& event_switch_mq_channel;
-
   plugin_interface::incoming::channels::cs_reactor_message_queue::channel_type& cs_reactor_mq_channel;
 
-  plugin_interface::channels::internal_message_queue::channel_type& internal_mq_channel;
-
-  channel_stub()
-    : update_peer_status_channel(appbase::app().get_channel<plugin_interface::channels::update_peer_status>()),
-      xmt_mq_channel(appbase::app().get_channel<plugin_interface::egress::channels::transmit_message_queue>()),
-      bs_reactor_mq_channel(
-        appbase::app().get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>()),
-      event_switch_mq_channel(
-        appbase::app().get_channel<plugin_interface::egress::channels::event_switch_message_queue>()),
-      cs_reactor_mq_channel(
-        appbase::app().get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>()),
-      internal_mq_channel(appbase::app().get_channel<plugin_interface::channels::internal_message_queue>()) {}
+  channel_stub() = delete;
+  explicit channel_stub(appbase::application& app)
+    : update_peer_status_channel(app.get_channel<plugin_interface::channels::update_peer_status>()),
+      bs_reactor_mq_channel(app.get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>()),
+      cs_reactor_mq_channel(app.get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>()) {}
 };
 
-std::unique_ptr<node> new_test_node(
-  int num, std::shared_ptr<genesis_doc> gen_doc, std::shared_ptr<priv_validator> priv_val) {
-  auto cfg = std::make_shared<config>(config::get_default());
-  cfg->base.chain_id = "test_chain";
-  cfg->base.mode = Validator;
-  cfg->base.root_dir = "/tmp/noir_test/node_" + to_string(num);
-  cfg->consensus.root_dir = cfg->base.root_dir;
-  cfg->priv_validator.root_dir = cfg->base.root_dir;
+class test_node {
+public:
+  test_node() = delete;
+  test_node(int num, std::shared_ptr<appbase::application> app, const std::shared_ptr<genesis_doc>& gen_doc,
+    const std::shared_ptr<priv_validator>& priv_val)
+    : app_(std::move(app)), channel_stub_(std::make_shared<channel_stub>(*app_)), node_number_(num) {
+    node_name_ = "node_" + to_string(node_number_);
 
-  auto db_dir = std::filesystem::path{cfg->consensus.root_dir} / "db";
-  auto session =
-    std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
+    channel_stub_->xmt_mq_subscription =
+      app_->get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
+        [this](auto&& PH1) { route_message(std::forward<decltype(PH1)>(PH1)); });
 
-  auto node = node::make_node(cfg, priv_val, node_key::gen_node_key(), gen_doc, session);
+    auto cfg = std::make_shared<config>(config::get_default());
+    cfg->base.chain_id = "test_chain";
+    cfg->base.mode = Validator;
+    cfg->base.node_key = node_name_;
+    cfg->base.root_dir = "/tmp/noir_test/" + node_name_;
+    cfg->consensus.root_dir = cfg->base.root_dir;
+    cfg->priv_validator.root_dir = cfg->base.root_dir;
 
-  node->bs_reactor->set_callback_switch_to_cs_sync([ObjectPtr = node->cs_reactor](auto&& PH1, auto&& PH2) {
-    ObjectPtr->switch_to_consensus(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2));
-  });
+    std::filesystem::remove_all(cfg->consensus.root_dir); // delete exist node directory
+    std::filesystem::create_directories(cfg->consensus.root_dir);
+    auto db_dir = std::filesystem::path{cfg->consensus.root_dir} / "db";
+    auto session =
+      std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
 
-  return node;
-}
+    node_ = node::make_node(*app_, cfg, priv_val, node_key::gen_node_key(), gen_doc, session);
 
-std::vector<std::unique_ptr<node>> make_node_set(int count) {
+    node_->bs_reactor->set_callback_switch_to_cs_sync([ObjectPtr = node_->cs_reactor](auto&& PH1, auto&& PH2) {
+      ObjectPtr->switch_to_consensus(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2));
+    });
+
+    thread_ = std::make_unique<noir::named_thread_pool>("test_thread", 1);
+  }
+
+  void start() {
+    noir::async_thread_pool(thread_->get_executor(), [this]() {
+      app_->register_plugin<test_plugin>();
+      app_->initialize<test_plugin>();
+      app_->startup();
+      app_->exec();
+    });
+    node_->on_start();
+  }
+
+  void stop() {
+    node_->on_stop();
+    app_->quit();
+    thread_->stop();
+  }
+
+  void peer_update(const std::string& from) {
+    channel_stub_->update_peer_status_channel.publish(appbase::priority::medium,
+      std::make_shared<plugin_interface::peer_status_info>(
+        plugin_interface::peer_status_info{from, p2p::peer_status::up}));
+  }
+
+  void handle_message(const p2p::envelope_ptr& env) {
+    ilog(fmt::format("receive msg. from={}, to={}, id={}, broadcast={}", env->from, env->to, env->id, env->broadcast));
+    switch (env->id) {
+    case p2p::Consensus: {
+      channel_stub_->cs_reactor_mq_channel.publish(appbase::priority::medium, env);
+      break;
+    }
+
+    case p2p::BlockSync: {
+      channel_stub_->bs_reactor_mq_channel.publish(appbase::priority::medium, env);
+      break;
+    }
+
+    case p2p::PeerError:
+    default:
+      // TODO : handling error case?
+      break;
+    }
+  }
+
+  void route_message(const p2p::envelope_ptr& env) {
+    env->from = node_name_;
+    if (env->broadcast) {
+      for (auto& n : test_nodes) {
+        if (n.node_name() == node_name())
+          continue;
+        n.handle_message(env);
+      }
+    } else {
+      for (auto& n : test_nodes) {
+        if (n.node_name() == env->to) {
+          n.handle_message(env);
+          return;
+        }
+      }
+    }
+  }
+
+  std::string node_name() const {
+    return node_name_;
+  }
+
+private:
+  const int node_number_;
+  std::string node_name_;
+  std::shared_ptr<appbase::application> app_;
+  std::unique_ptr<node> node_;
+  std::shared_ptr<channel_stub> channel_stub_;
+  std::unique_ptr<noir::named_thread_pool> thread_;
+};
+
+void make_node_set(int count) {
   auto cfg = config::get_default();
   cfg.base.chain_id = "test_chain";
   auto [gen_doc, priv_vals] = rand_genesis_doc(cfg, count, false, 100 / count);
   auto gen_doc_ptr = std::make_shared<genesis_doc>(gen_doc);
-  std::vector<std::unique_ptr<node>> nodes;
-  nodes.reserve(count);
+  test_nodes.reserve(count);
   for (int i = 0; i < count; i++) {
-    nodes.push_back(new_test_node(i, gen_doc_ptr, priv_vals[i]));
+    test_nodes.emplace_back(i, std::make_shared<appbase::application>(), gen_doc_ptr, priv_vals[i]);
   }
-  return nodes;
+}
+
+void ice_breaking() {
+  for (auto& test_node : test_nodes) {
+    for (auto& n : test_nodes) {
+      if (test_node.node_name() == n.node_name())
+        continue;
+      n.peer_update(test_node.node_name());
+    }
+  }
 }
 
 } // namespace test_detail
 
-TEST_CASE("multiple validator test") {
+TEST_CASE("node: multiple validator test") {
   fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
-  auto nodes = test_detail::make_node_set(1);
+  test_detail::make_node_set(1);
 
-  for (auto& node : nodes) {
-    node->on_start();
+  for (auto& test_node : test_detail::test_nodes) {
+    test_node.start();
   }
 
-  for (auto& node : nodes) {
-    node->on_stop();
+  test_detail::ice_breaking();
+
+  sleep(1000);
+
+  for (auto& test_node : test_detail::test_nodes) {
+    test_node.stop();
   }
 }
