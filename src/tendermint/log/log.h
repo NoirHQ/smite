@@ -6,6 +6,16 @@
 #pragma once
 #include <spdlog/spdlog.h>
 
+namespace tendermint::log {
+
+using ::spdlog::logger;
+
+inline auto default_logger() {
+  return spdlog::default_logger();
+}
+
+} // namespace tendermint::log
+
 #if defined(ilog)
 #undef ilog
 #endif
