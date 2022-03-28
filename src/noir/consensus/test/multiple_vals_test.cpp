@@ -43,7 +43,7 @@ public:
 
     channel_stub_->xmt_mq_subscription =
       app_->get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
-        [this](auto&& PH1) { route_message(std::forward<decltype(PH1)>(PH1)); });
+        [this](auto&& arg) { route_message(std::forward<decltype(arg)>(arg)); });
 
     auto cfg = std::make_shared<config>(config::get_default());
     cfg->base.chain_id = "test_chain";
@@ -61,8 +61,8 @@ public:
 
     node_ = node::make_node(*app_, cfg, priv_val, node_key::gen_node_key(), gen_doc, session);
 
-    node_->bs_reactor->set_callback_switch_to_cs_sync([ObjectPtr = node_->cs_reactor](auto&& PH1, auto&& PH2) {
-      ObjectPtr->switch_to_consensus(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2));
+    node_->bs_reactor->set_callback_switch_to_cs_sync([cs_reactor = node_->cs_reactor](auto&& arg1, auto&& arg2) {
+      cs_reactor->switch_to_consensus(std::forward<decltype(arg1)>(arg1), std::forward<decltype(arg2)>(arg2));
     });
 
     thread_ = std::make_unique<noir::named_thread_pool>("test_thread", 1);
@@ -166,7 +166,11 @@ void ice_breaking() {
 
 TEST_CASE("node: multiple validator test") {
   fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
-  test_detail::make_node_set(1);
+
+  int node_count = 2;
+  int second = 100;
+
+  test_detail::make_node_set(node_count);
 
   for (auto& test_node : test_detail::test_nodes) {
     test_node.start();
@@ -174,7 +178,7 @@ TEST_CASE("node: multiple validator test") {
 
   test_detail::ice_breaking();
 
-  sleep(1000);
+  sleep(second);
 
   for (auto& test_node : test_detail::test_nodes) {
     test_node.stop();
