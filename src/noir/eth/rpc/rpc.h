@@ -5,13 +5,12 @@
 //
 #pragma once
 #include <noir/consensus/abci.h>
+#include <noir/eth/rpc/api.h>
 #include <noir/rpc/jsonrpc.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <appbase/application.hpp>
-#include <eth/common/types.h>
-#include <eth/rpc/api.h>
 
-namespace eth::rpc {
+namespace noir::eth::rpc {
 
 class rpc : public appbase::plugin<rpc> {
 public:
@@ -28,4 +27,4 @@ private:
   std::unique_ptr<api::api> api;
 };
 
-} // namespace eth::rpc
+} // namespace noir::eth::rpc

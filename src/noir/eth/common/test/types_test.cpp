@@ -4,10 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <eth/common/transaction.h>
+#include <noir/common/types.h>
+#include <noir/eth/common/transaction.h>
 
 using namespace std;
-using namespace eth;
+using namespace noir;
+using namespace noir::eth;
 
 TEST_CASE("eth:types: transaction", "[eth][common]") {
   transaction tx = {

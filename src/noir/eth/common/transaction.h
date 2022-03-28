@@ -4,10 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <eth/common/types.h>
 #include <memory>
 
-namespace eth {
+namespace noir::eth {
 
 struct transaction {
   uint64_t nonce;
@@ -34,4 +33,4 @@ struct rpc_transaction : public transaction {
   uint64_t transaction_index;
 };
 
-} // namespace eth
+} // namespace noir::eth

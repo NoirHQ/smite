@@ -6,10 +6,9 @@
 #pragma once
 #include <noir/consensus/abci.h>
 #include <noir/tx_pool/tx_pool.h>
-#include <eth/common/types.h>
 #include <fc/variant.hpp>
 
-namespace eth::api {
+namespace noir::eth::api {
 
 class api {
 public:
@@ -56,4 +55,4 @@ private:
   std::shared_ptr<noir::consensus::block_store> block_store_ptr;
 };
 
-} // namespace eth::api
+} // namespace noir::eth::api

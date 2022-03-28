@@ -4,10 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <eth/common/log.h>
-#include <eth/common/types.h>
+#include <noir/eth/common/log.h>
 
-namespace eth {
+namespace noir::eth {
 
 struct receipt {
   uint8_t type;
@@ -23,4 +22,4 @@ struct receipt {
   uint32_t transaction_index;
 };
 
-} // namespace eth
+} // namespace noir::eth

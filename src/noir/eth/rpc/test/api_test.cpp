@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <eth/rpc/api.h>
+#include <noir/eth/rpc/api.h>
 
 using namespace std;
-using namespace eth::api;
+using namespace noir::eth::api;
 
 TEST_CASE("eth:params: check_params_size", "[eth][api]") {
   fc::variants vs;

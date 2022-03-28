@@ -6,14 +6,13 @@
 #include <noir/codec/rlp.h>
 #include <noir/common/check.h>
 #include <noir/common/hex.h>
-#include <eth/common/block.h>
-#include <eth/common/receipt.h>
-#include <eth/rpc/api.h>
+#include <noir/eth/common/block.h>
+#include <noir/eth/common/receipt.h>
+#include <noir/eth/rpc/api.h>
 #include <fmt/core.h>
 
-namespace eth::api {
+namespace noir::eth::api {
 
-using namespace noir;
 using namespace noir::codec;
 
 void api::check_params_size(const fc::variants& params, const uint32_t size) {
@@ -198,4 +197,4 @@ fc::variant api::call(const fc::variant& req) {
   return fc::variant("0x0");
 }
 
-} // namespace eth::api
+} // namespace noir::eth::api
