@@ -131,10 +131,12 @@ public:
   result<std::unique_ptr<ResponseOfferSnapshot>> offer_snapshot_sync(const RequestOfferSnapshot& req) noexcept {
     return static_cast<Derived*>(this)->on_offer_snapshot_sync(req);
   }
-  result<std::unique_ptr<ResponseLoadSnapshotChunk>> load_snapshot_chunk_sync(const RequestLoadSnapshotChunk& req) noexcept {
+  result<std::unique_ptr<ResponseLoadSnapshotChunk>> load_snapshot_chunk_sync(
+    const RequestLoadSnapshotChunk& req) noexcept {
     return static_cast<Derived*>(this)->on_load_snapshot_chunk_sync(req);
   }
-  result<std::unique_ptr<ResponseApplySnapshotChunk>> apply_snapshot_chunk_sync(const RequestApplySnapshotChunk& req) noexcept {
+  result<std::unique_ptr<ResponseApplySnapshotChunk>> apply_snapshot_chunk_sync(
+    const RequestApplySnapshotChunk& req) noexcept {
     return static_cast<Derived*>(this)->on_apply_snapshot_chunk_sync(req);
   }
 
@@ -151,8 +153,8 @@ public:
   }
   // }
 
-  protected:
-    appbase::application& app;
+protected:
+  appbase::application& app;
 };
 
 } // namespace tendermint::abci

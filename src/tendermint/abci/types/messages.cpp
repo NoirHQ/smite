@@ -97,4 +97,4 @@ std::unique_ptr<Request> to_request_apply_snapshot_chunk(const RequestApplySnaps
   return ret;
 }
 
-} // tendermint::abci
+} // namespace tendermint::abci

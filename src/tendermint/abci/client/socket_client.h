@@ -56,8 +56,10 @@ public:
   result<std::unique_ptr<ResponseEndBlock>> on_end_block_sync(const RequestEndBlock& req) noexcept;
   result<std::unique_ptr<ResponseListSnapshots>> on_list_snapshots_sync(const RequestListSnapshots& req) noexcept;
   result<std::unique_ptr<ResponseOfferSnapshot>> on_offer_snapshot_sync(const RequestOfferSnapshot& req) noexcept;
-  result<std::unique_ptr<ResponseLoadSnapshotChunk>> on_load_snapshot_chunk_sync(const RequestLoadSnapshotChunk& req) noexcept;
-  result<std::unique_ptr<ResponseApplySnapshotChunk>> on_apply_snapshot_chunk_sync(const RequestApplySnapshotChunk& req) noexcept;
+  result<std::unique_ptr<ResponseLoadSnapshotChunk>> on_load_snapshot_chunk_sync(
+    const RequestLoadSnapshotChunk& req) noexcept;
+  result<std::unique_ptr<ResponseApplySnapshotChunk>> on_apply_snapshot_chunk_sync(
+    const RequestApplySnapshotChunk& req) noexcept;
 
   result<void> on_start() noexcept;
   void on_stop() noexcept;
