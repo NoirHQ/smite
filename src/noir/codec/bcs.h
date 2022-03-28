@@ -11,6 +11,7 @@
 #include <noir/common/types.h>
 #include <boost/pfr.hpp>
 #include <map>
+#include <memory>
 #include <optional>
 #include <variant>
 
