@@ -4,13 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/common/helper/cli.h>
-#include <eth/rpc/api.h>
-#include <eth/rpc/rpc.h>
+#include <noir/eth/rpc/api.h>
+#include <noir/eth/rpc/rpc.h>
 
-namespace eth::rpc {
+namespace noir::eth::rpc {
 
 using namespace appbase;
-using namespace noir;
 
 rpc::rpc(appbase::application& app): plugin(app), api(std::make_unique<api::api>()){};
 
@@ -64,4 +63,4 @@ void rpc::plugin_startup() {
 
 void rpc::plugin_shutdown() {}
 
-} // namespace eth::rpc
+} // namespace noir::eth::rpc

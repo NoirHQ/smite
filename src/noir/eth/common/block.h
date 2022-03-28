@@ -6,11 +6,10 @@
 #pragma once
 #include <noir/common/hex.h>
 #include <noir/consensus/block.h>
-#include <eth/common/transaction.h>
-#include <eth/common/types.h>
+#include <noir/eth/common/transaction.h>
 #include <fc/variant_object.hpp>
 
-namespace eth {
+namespace noir::eth {
 
 struct header {
   bytes parent_hash;
@@ -81,4 +80,4 @@ public:
   }
 };
 
-} // namespace eth
+} // namespace noir::eth
