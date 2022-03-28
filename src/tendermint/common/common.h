@@ -11,3 +11,6 @@ namespace tendermint {
 using namespace noir;
 
 } // namespace tendermint
+
+#define errorf(FORMAT, ...) \
+  noir::make_unexpected(fmt::format(FORMAT, __VA_ARGS__))

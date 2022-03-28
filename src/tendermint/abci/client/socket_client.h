@@ -22,26 +22,24 @@ public:
   /// if it fails to connect.
   SocketClient(appbase::application& app, const std::string& address, bool must_connect);
 
-  std::unique_ptr<ReqRes> queue_request(std::unique_ptr<Request> req);
-
   void on_set_response_callback(Callback cb) noexcept;
   result<void> on_error() noexcept;
 
-  result<std::unique_ptr<ReqRes>> on_echo_async(const std::string& msg) noexcept;
-  result<std::unique_ptr<ReqRes>> on_flush_async() noexcept;
-  result<std::unique_ptr<ReqRes>> on_info_async(const RequestInfo& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_set_option_async(const RequestSetOption& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_deliver_tx_async(const RequestDeliverTx& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_check_tx_async(const RequestCheckTx& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_query_async(const RequestQuery& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_commit_async(const RequestCommit& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_init_chain_async(const RequestInitChain& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_begin_block_async(const RequestBeginBlock& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_end_block_async(const RequestEndBlock& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_list_snapshots_async(const RequestListSnapshots& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_offer_snapshot_async(const RequestOfferSnapshot& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_load_snapshot_chunk_async(const RequestLoadSnapshotChunk& req) noexcept;
-  result<std::unique_ptr<ReqRes>> on_apply_snapshot_chunk_async(const RequestApplySnapshotChunk& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_echo_async(const std::string& msg) noexcept;
+  result<std::shared_ptr<ReqRes>> on_flush_async() noexcept;
+  result<std::shared_ptr<ReqRes>> on_info_async(const RequestInfo& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_set_option_async(const RequestSetOption& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_deliver_tx_async(const RequestDeliverTx& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_check_tx_async(const RequestCheckTx& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_query_async(const RequestQuery& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_commit_async(const RequestCommit& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_init_chain_async(const RequestInitChain& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_begin_block_async(const RequestBeginBlock& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_end_block_async(const RequestEndBlock& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_list_snapshots_async(const RequestListSnapshots& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_offer_snapshot_async(const RequestOfferSnapshot& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_load_snapshot_chunk_async(const RequestLoadSnapshotChunk& req) noexcept;
+  result<std::shared_ptr<ReqRes>> on_apply_snapshot_chunk_async(const RequestApplySnapshotChunk& req) noexcept;
 
   result<std::unique_ptr<ResponseEcho>> on_echo_sync(const std::string& msg) noexcept;
   result<void> on_flush_sync() noexcept;
@@ -73,11 +71,17 @@ private:
   // flush_timer;
 
   std::mutex mtx;
-  tendermint::error err;
-  std::deque<ReqRes*> req_sent;
+  std::optional<tendermint::error> err;
+  std::deque<std::shared_ptr<ReqRes>> req_sent;
   std::function<void(Request*, Response*)> res_cb;
 
   named_thread_pool thread_pool;
+
+  std::shared_ptr<ReqRes> queue_request(std::unique_ptr<Request> req);
+  void will_send_req(std::shared_ptr<ReqRes> reqres);
+  result<void> did_recv_response(std::unique_ptr<Response> res);
+  void flush_queue();
+  void stop_for_error(const tendermint::error& err);
 };
 
 } // namespace tendermint::abci

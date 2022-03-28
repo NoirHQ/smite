@@ -20,15 +20,15 @@ using Callback = std::function<void(Request*, Response*)>;
 
 struct ReqRes {
   std::unique_ptr<Request> request;
-  Response* response; // FIXME: atomic
+  std::unique_ptr<Response> response; // FIXME: atomic
   std::optional<std::future<void>> future;
 
   mutable std::mutex mtx;
   bool done;
-  std::function<void(Response*)> cb;
+  void (Response::*cb)();
 
-  void set_callback(std::function<void(Response*)> cb);
-  void invoke_callback(Response* r) const;
+  void set_callback(void (Response::*cb)());
+  void invoke_callback() const;
   std::function<void(Response*)> get_callback() const;
   void set_done();
   void wait() const;
@@ -46,49 +46,49 @@ public:
     return static_cast<Derived*>(this)->on_error();
   }
 
-  result<std::unique_ptr<ReqRes>> echo_async(const std::string& msg) noexcept {
+  result<std::shared_ptr<ReqRes>> echo_async(const std::string& msg) noexcept {
     return static_cast<Derived*>(this)->on_echo_async(msg);
   }
-  result<std::unique_ptr<ReqRes>> flush_async() noexcept {
+  result<std::shared_ptr<ReqRes>> flush_async() noexcept {
     return static_cast<Derived*>(this)->on_flush_async();
   }
-  result<std::unique_ptr<ReqRes>> info_async(const RequestInfo& req) noexcept {
+  result<std::shared_ptr<ReqRes>> info_async(const RequestInfo& req) noexcept {
     return static_cast<Derived*>(this)->on_info_async(req);
   }
-  result<std::unique_ptr<ReqRes>> set_option_async(const RequestSetOption& req) noexcept {
+  result<std::shared_ptr<ReqRes>> set_option_async(const RequestSetOption& req) noexcept {
     return static_cast<Derived*>(this)->on_set_option_async(req);
   }
-  result<std::unique_ptr<ReqRes>> deliver_tx_async(const RequestDeliverTx& req) noexcept {
+  result<std::shared_ptr<ReqRes>> deliver_tx_async(const RequestDeliverTx& req) noexcept {
     return static_cast<Derived*>(this)->on_deliver_tx_async(req);
   }
-  result<std::unique_ptr<ReqRes>> check_tx_async(const RequestCheckTx& req) noexcept {
+  result<std::shared_ptr<ReqRes>> check_tx_async(const RequestCheckTx& req) noexcept {
     return static_cast<Derived*>(this)->on_check_tx_async(req);
   }
-  result<std::unique_ptr<ReqRes>> query_async(const RequestQuery& req) noexcept {
+  result<std::shared_ptr<ReqRes>> query_async(const RequestQuery& req) noexcept {
     return static_cast<Derived*>(this)->on_query_async(req);
   }
-  result<std::unique_ptr<ReqRes>> commit_async(const RequestCommit& req) noexcept {
+  result<std::shared_ptr<ReqRes>> commit_async(const RequestCommit& req) noexcept {
     return static_cast<Derived*>(this)->on_commit_async(req);
   }
-  result<std::unique_ptr<ReqRes>> init_chain_async(const RequestInitChain& req) noexcept {
+  result<std::shared_ptr<ReqRes>> init_chain_async(const RequestInitChain& req) noexcept {
     return static_cast<Derived*>(this)->on_init_chain_async(req);
   }
-  result<std::unique_ptr<ReqRes>> begin_block_async(const RequestBeginBlock& req) noexcept {
+  result<std::shared_ptr<ReqRes>> begin_block_async(const RequestBeginBlock& req) noexcept {
     return static_cast<Derived*>(this)->on_begin_block_async(req);
   }
-  result<std::unique_ptr<ReqRes>> end_block_async(const RequestEndBlock& req) noexcept {
+  result<std::shared_ptr<ReqRes>> end_block_async(const RequestEndBlock& req) noexcept {
     return static_cast<Derived*>(this)->on_end_block_async(req);
   }
-  result<std::unique_ptr<ReqRes>> list_snapshots_async(const RequestListSnapshots& req) noexcept {
+  result<std::shared_ptr<ReqRes>> list_snapshots_async(const RequestListSnapshots& req) noexcept {
     return static_cast<Derived*>(this)->on_list_snapshots_sync(req);
   }
-  result<std::unique_ptr<ReqRes>> offer_snapshot_async(const RequestOfferSnapshot& req) noexcept {
+  result<std::shared_ptr<ReqRes>> offer_snapshot_async(const RequestOfferSnapshot& req) noexcept {
     return static_cast<Derived*>(this)->on_offer_snapshot_async(req);
   }
-  result<std::unique_ptr<ReqRes>> load_snapshot_chunk_async(const RequestLoadSnapshotChunk& req) noexcept {
+  result<std::shared_ptr<ReqRes>> load_snapshot_chunk_async(const RequestLoadSnapshotChunk& req) noexcept {
     return static_cast<Derived*>(this)->on_load_snapshot_chunk_async(req);
   }
-  result<std::unique_ptr<ReqRes>> apply_snapshot_chunk_async(const RequestApplySnapshotChunk& req) noexcept {
+  result<std::shared_ptr<ReqRes>> apply_snapshot_chunk_async(const RequestApplySnapshotChunk& req) noexcept {
     return static_cast<Derived*>(this)->on_apply_snapshot_chunk_async(req);
   }
 

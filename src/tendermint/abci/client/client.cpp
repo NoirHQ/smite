@@ -7,19 +7,19 @@
 
 namespace tendermint::abci {
 
-void ReqRes::set_callback(std::function<void(Response*)> cb) {
+void ReqRes::set_callback(void (Response::*cb)()) {
   std::scoped_lock _(mtx);
   if (done) {
-    cb(response);
+    ((*response).*cb)();
     return;
   }
   this->cb = cb;
 }
 
-void ReqRes::invoke_callback(Response* r) const {
+void ReqRes::invoke_callback() const {
   std::scoped_lock _(mtx);
   if (cb) {
-    cb(response);
+    ((*response).*cb)();
   }
 }
 
