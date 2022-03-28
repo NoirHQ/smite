@@ -17,7 +17,7 @@ CLI::App* start(CLI::App& root) {
   return root.add_subcommand("start", "Run the NOIR node")->final_callback([]() {
     auto home_dir = app.home_dir();
 
-    if (!app.initialize<rpc::rpc, rpc::jsonrpc, noir::eth::rpc::rpc, tendermint::rpc::rpc>()) {
+    if (!app.initialize<rpc::rpc, rpc::jsonrpc, noir::eth::rpc::rpc, noir::tendermint::rpc::rpc>()) {
       throw CLI::Success();
     }
     app.startup();
