@@ -4,53 +4,78 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/thread_pool.h>
 #include <tendermint/abci/client/client.h>
 #include <tendermint/common/common.h>
 
 namespace tendermint::abci {
 
+static constexpr auto req_queue_size = 256;
+static constexpr auto flush_throttle_ms = 20;
+
 class SocketClient : public Client<SocketClient> {
 public:
-  SocketClient(appbase::application& app);
+  /// \breif creates a new socket client
+  ///
+  /// SocketClient creates a new socket client, which connects to a given
+  /// address. If must_connect is true, the client will throw an exception  upon start
+  /// if it fails to connect.
+  SocketClient(appbase::application& app, const std::string& address, bool must_connect);
+
+  std::unique_ptr<ReqRes> queue_request(std::unique_ptr<Request> req);
 
   void on_set_response_callback(Callback cb) noexcept;
   result<void> on_error() noexcept;
 
-  result<ReqRes*> on_flush_async() noexcept;
-  result<ReqRes*> on_echo_async(const std::string& msg) noexcept;
-  result<ReqRes*> on_info_async(RequestInfo* req) noexcept;
-  result<ReqRes*> on_set_option_async(RequestSetOption* req) noexcept;
-  result<ReqRes*> on_deliver_tx_async(RequestDeliverTx* req) noexcept;
-  result<ReqRes*> on_check_tx_async(RequestCheckTx* req) noexcept;
-  result<ReqRes*> on_query_async(RequestQuery* req) noexcept;
-  result<ReqRes*> on_commit_async(RequestCommit* req) noexcept;
-  result<ReqRes*> on_init_chain_async(RequestInitChain* req) noexcept;
-  result<ReqRes*> on_begin_block_async(RequestBeginBlock* req) noexcept;
-  result<ReqRes*> on_end_block_async(RequestEndBlock* req) noexcept;
-  result<ReqRes*> on_list_snapshots_async(RequestListSnapshots* req) noexcept;
-  result<ReqRes*> on_offer_snapshot_async(RequestOfferSnapshot* req) noexcept;
-  result<ReqRes*> on_load_snapshot_chunk_async(RequestLoadSnapshotChunk* req) noexcept;
-  result<ReqRes*> on_apply_snapshot_chunk_async(RequestApplySnapshotChunk* req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_echo_async(const std::string& msg) noexcept;
+  result<std::unique_ptr<ReqRes>> on_flush_async() noexcept;
+  result<std::unique_ptr<ReqRes>> on_info_async(const RequestInfo& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_set_option_async(const RequestSetOption& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_deliver_tx_async(const RequestDeliverTx& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_check_tx_async(const RequestCheckTx& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_query_async(const RequestQuery& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_commit_async(const RequestCommit& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_init_chain_async(const RequestInitChain& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_begin_block_async(const RequestBeginBlock& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_end_block_async(const RequestEndBlock& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_list_snapshots_async(const RequestListSnapshots& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_offer_snapshot_async(const RequestOfferSnapshot& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_load_snapshot_chunk_async(const RequestLoadSnapshotChunk& req) noexcept;
+  result<std::unique_ptr<ReqRes>> on_apply_snapshot_chunk_async(const RequestApplySnapshotChunk& req) noexcept;
 
+  result<std::unique_ptr<ResponseEcho>> on_echo_sync(const std::string& msg) noexcept;
   result<void> on_flush_sync() noexcept;
-  result<ResponseEcho*> on_echo_sync(const std::string& msg) noexcept;
-  result<ResponseInfo*> on_info_sync(RequestInfo* req) noexcept;
-  result<ResponseSetOption*> on_set_option_sync(RequestSetOption* req) noexcept;
-  result<ResponseDeliverTx*> on_deliver_tx_sync(RequestDeliverTx* req) noexcept;
-  result<ResponseCheckTx*> on_check_tx_sync(RequestCheckTx* req) noexcept;
-  result<ResponseQuery*> on_query_sync(RequestQuery* req) noexcept;
-  result<ResponseCommit*> on_commit_sync(RequestCommit* req) noexcept;
-  result<ResponseInitChain*> on_init_chain_sync(RequestInitChain* req) noexcept;
-  result<ResponseBeginBlock*> on_begin_block_sync(RequestBeginBlock* req) noexcept;
-  result<ResponseEndBlock*> on_end_block_sync(RequestEndBlock* req) noexcept;
-  result<ResponseListSnapshots*> on_list_snapshots_sync(RequestListSnapshots* req) noexcept;
-  result<ResponseOfferSnapshot*> on_offer_snapshot_sync(RequestOfferSnapshot* req) noexcept;
-  result<ResponseLoadSnapshotChunk*> on_load_snapshot_chunk_sync(RequestLoadSnapshotChunk* req) noexcept;
-  result<ResponseApplySnapshotChunk*> on_apply_snapshot_chunk_sync(RequestApplySnapshotChunk* req) noexcept;
+  result<std::unique_ptr<ResponseInfo>> on_info_sync(const RequestInfo& req) noexcept;
+  result<std::unique_ptr<ResponseSetOption>> on_set_option_sync(const RequestSetOption& req) noexcept;
+  result<std::unique_ptr<ResponseDeliverTx>> on_deliver_tx_sync(const RequestDeliverTx& req) noexcept;
+  result<std::unique_ptr<ResponseCheckTx>> on_check_tx_sync(const RequestCheckTx& req) noexcept;
+  result<std::unique_ptr<ResponseQuery>> on_query_sync(const RequestQuery& req) noexcept;
+  result<std::unique_ptr<ResponseCommit>> on_commit_sync(const RequestCommit& req) noexcept;
+  result<std::unique_ptr<ResponseInitChain>> on_init_chain_sync(const RequestInitChain& req) noexcept;
+  result<std::unique_ptr<ResponseBeginBlock>> on_begin_block_sync(const RequestBeginBlock& req) noexcept;
+  result<std::unique_ptr<ResponseEndBlock>> on_end_block_sync(const RequestEndBlock& req) noexcept;
+  result<std::unique_ptr<ResponseListSnapshots>> on_list_snapshots_sync(const RequestListSnapshots& req) noexcept;
+  result<std::unique_ptr<ResponseOfferSnapshot>> on_offer_snapshot_sync(const RequestOfferSnapshot& req) noexcept;
+  result<std::unique_ptr<ResponseLoadSnapshotChunk>> on_load_snapshot_chunk_sync(const RequestLoadSnapshotChunk& req) noexcept;
+  result<std::unique_ptr<ResponseApplySnapshotChunk>> on_apply_snapshot_chunk_sync(const RequestApplySnapshotChunk& req) noexcept;
 
   result<void> on_start() noexcept;
   void on_stop() noexcept;
   result<void> on_reset() noexcept;
+
+private:
+  std::string addr;
+  bool must_connect;
+  // net::Conn conn;
+
+  // flush_timer;
+
+  std::mutex mtx;
+  tendermint::error err;
+  std::deque<ReqRes*> req_sent;
+  std::function<void(Request*, Response*)> res_cb;
+
+  named_thread_pool thread_pool;
 };
 
 } // namespace tendermint::abci
