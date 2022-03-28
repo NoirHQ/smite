@@ -37,8 +37,6 @@ struct ReqRes {
 template<typename Derived>
 class Client : public service::Service<Client<Derived>> {
 public:
-  Client(appbase::application& app): app(app) {}
-
   void set_response_callback(Callback cb) noexcept {
     return static_cast<Derived*>(this)->on_set_response_callback(cb);
   }
@@ -152,9 +150,6 @@ public:
     return static_cast<Derived*>(this)->on_reset();
   }
   // }
-
-protected:
-  appbase::application& app;
 };
 
 } // namespace tendermint::abci
