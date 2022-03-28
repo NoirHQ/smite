@@ -18,7 +18,7 @@ public:
   result<void> on_start() noexcept;
   void on_stop() noexcept;
 
-private:
+protected:
   appbase::application& app;
 };
 
