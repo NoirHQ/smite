@@ -68,6 +68,11 @@ public:
     thread_ = std::make_unique<noir::named_thread_pool>("test_thread", 1);
   }
 
+  ~test_node() {
+    app_->quit();
+    thread_->stop();
+  }
+
   void start() {
     noir::async_thread_pool(thread_->get_executor(), [this]() {
       app_->register_plugin<test_plugin>();
@@ -80,8 +85,6 @@ public:
 
   void stop() {
     node_->on_stop();
-    app_->quit();
-    thread_->stop();
   }
 
   void peer_update(const std::string& from) {
