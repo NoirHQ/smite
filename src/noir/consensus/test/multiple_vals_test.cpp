@@ -36,7 +36,7 @@ public:
   test_node(test_node&&) = default;
   test_node(const test_node&) = delete;
   test_node& operator=(const test_node&&) = delete;
-  test_node(int num, std::shared_ptr<appbase::application> app, const std::shared_ptr<genesis_doc>& gen_doc,
+  test_node(int num, std::unique_ptr<appbase::application> app, const std::shared_ptr<genesis_doc>& gen_doc,
     const std::shared_ptr<priv_validator>& priv_val)
     : app_(std::move(app)), channel_stub_(std::make_shared<channel_stub>(*app_)), node_number_(num) {
     node_name_ = "node_" + to_string(node_number_);
@@ -141,7 +141,7 @@ public:
 private:
   const int node_number_;
   std::string node_name_;
-  std::shared_ptr<appbase::application> app_;
+  std::unique_ptr<appbase::application> app_;
   std::unique_ptr<node> node_;
   std::shared_ptr<channel_stub> channel_stub_;
   std::unique_ptr<noir::named_thread_pool> thread_;
@@ -158,7 +158,7 @@ std::vector<std::shared_ptr<test_node>> make_node_set(int count) {
   test_nodes.reserve(count);
   for (int i = 0; i < count; i++) {
     test_nodes.emplace_back(
-      std::make_shared<test_node>(i, std::make_shared<appbase::application>(), gen_doc_ptr, priv_vals[i]));
+      std::make_shared<test_node>(i, std::make_unique<appbase::application>(), gen_doc_ptr, priv_vals[i]));
   }
 
   return test_nodes;
