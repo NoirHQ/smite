@@ -37,7 +37,6 @@ class test_node {
 public:
   test_node() = delete;
   test_node(test_node&&) = default;
-  test_node& operator=(test_node&&) = default;
   test_node(const test_node&) = delete;
   test_node& operator=(const test_node&&) = delete;
   test_node(int num, std::shared_ptr<appbase::application> app, const std::shared_ptr<genesis_doc>& gen_doc,
