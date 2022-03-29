@@ -15,9 +15,6 @@ using namespace noir::consensus;
 
 namespace test_detail {
 
-class test_node;
-std::vector<test_node> test_nodes;
-
 struct channel_stub {
 public:
   plugin_interface::channels::update_peer_status::channel_type& update_peer_status_channel;
@@ -90,10 +87,11 @@ public:
     node_->on_stop();
   }
 
-  void peer_update(const std::string& from) {
+  void peer_update(const std::shared_ptr<test_node>& other_node) {
     channel_stub_->update_peer_status_channel.publish(appbase::priority::medium,
       std::make_shared<plugin_interface::peer_status_info>(
-        plugin_interface::peer_status_info{from, p2p::peer_status::up}));
+        plugin_interface::peer_status_info{other_node->node_name(), p2p::peer_status::up}));
+    peers_.push_back(other_node);
   }
 
   void handle_message(const p2p::envelope_ptr& env) {
@@ -119,15 +117,13 @@ public:
   void route_message(const p2p::envelope_ptr& env) {
     env->from = node_name_;
     if (env->broadcast) {
-      for (auto& n : test_nodes) {
-        if (n.node_name() == node_name())
-          continue;
-        n.handle_message(env);
+      for (auto& n : peers_) {
+        n->handle_message(env);
       }
     } else {
-      for (auto& n : test_nodes) {
-        if (n.node_name() == env->to) {
-          n.handle_message(env);
+      for (auto& n : peers_) {
+        if (n->node_name() == env->to) {
+          n->handle_message(env);
           return;
         }
       }
@@ -145,25 +141,31 @@ private:
   std::unique_ptr<node> node_;
   std::shared_ptr<channel_stub> channel_stub_;
   std::unique_ptr<noir::named_thread_pool> thread_;
+  std::vector<std::shared_ptr<test_node>> peers_;
 };
 
-void make_node_set(int count) {
+std::vector<std::shared_ptr<test_node>> make_node_set(int count) {
   auto cfg = config::get_default();
   cfg.base.chain_id = "test_chain";
   auto [gen_doc, priv_vals] = rand_genesis_doc(cfg, count, false, 100 / count);
   auto gen_doc_ptr = std::make_shared<genesis_doc>(gen_doc);
+
+  std::vector<std::shared_ptr<test_node>> test_nodes;
   test_nodes.reserve(count);
   for (int i = 0; i < count; i++) {
-    test_nodes.emplace_back(i, std::make_shared<appbase::application>(), gen_doc_ptr, priv_vals[i]);
+    test_nodes.emplace_back(
+      std::make_shared<test_node>(i, std::make_shared<appbase::application>(), gen_doc_ptr, priv_vals[i]));
   }
+
+  return test_nodes;
 }
 
-void ice_breaking() {
+void ice_breaking(std::vector<std::shared_ptr<test_node>> test_nodes) {
   for (auto& test_node : test_nodes) {
     for (auto& n : test_nodes) {
-      if (test_node.node_name() == n.node_name())
+      if (test_node == n)
         continue;
-      n.peer_update(test_node.node_name());
+      n->peer_update(test_node);
     }
   }
 }
@@ -172,21 +174,20 @@ void ice_breaking() {
 
 TEST_CASE("node: multiple validator test") {
   fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
-
   int node_count = 2;
-  int second = 100;
+  int test_time = 100; // seconds
 
-  test_detail::make_node_set(node_count);
+  auto test_nodes = test_detail::make_node_set(node_count);
 
-  for (auto& test_node : test_detail::test_nodes) {
-    test_node.start();
+  for (auto& test_node : test_nodes) {
+    test_node->start();
   }
 
-  test_detail::ice_breaking();
+  test_detail::ice_breaking(test_nodes);
 
-  sleep(second);
+  sleep(test_time);
 
-  for (auto& test_node : test_detail::test_nodes) {
-    test_node.stop();
+  for (auto& test_node : test_nodes) {
+    test_node->stop();
   }
 }
