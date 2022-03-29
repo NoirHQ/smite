@@ -88,10 +88,10 @@ public:
   }
 
   void peer_update(const std::shared_ptr<test_node>& other_node) {
+    peers_.push_back(other_node);
     channel_stub_->update_peer_status_channel.publish(appbase::priority::medium,
       std::make_shared<plugin_interface::peer_status_info>(
         plugin_interface::peer_status_info{other_node->node_name(), p2p::peer_status::up}));
-    peers_.push_back(other_node);
   }
 
   void handle_message(const p2p::envelope_ptr& env) {
@@ -118,12 +118,16 @@ public:
     env->from = node_name_;
     if (env->broadcast) {
       for (auto& n : peers_) {
-        n->handle_message(env);
+        auto node = n.lock();
+        if (node) {
+          node->handle_message(env);
+        }
       }
     } else {
       for (auto& n : peers_) {
-        if (n->node_name() == env->to) {
-          n->handle_message(env);
+        auto node = n.lock();
+        if (node && (node->node_name() == env->to)) {
+          node->handle_message(env);
           return;
         }
       }
@@ -141,7 +145,7 @@ private:
   std::unique_ptr<node> node_;
   std::shared_ptr<channel_stub> channel_stub_;
   std::unique_ptr<noir::named_thread_pool> thread_;
-  std::vector<std::shared_ptr<test_node>> peers_;
+  std::vector<std::weak_ptr<test_node>> peers_;
 };
 
 std::vector<std::shared_ptr<test_node>> make_node_set(int count) {
@@ -160,7 +164,7 @@ std::vector<std::shared_ptr<test_node>> make_node_set(int count) {
   return test_nodes;
 }
 
-void ice_breaking(std::vector<std::shared_ptr<test_node>> test_nodes) {
+void ice_breaking(const std::vector<std::shared_ptr<test_node>>& test_nodes) {
   for (auto& test_node : test_nodes) {
     for (auto& n : test_nodes) {
       if (test_node == n)
