@@ -22,6 +22,7 @@ inline std::shared_ptr<rocksdb::DB> make_rocks_db(bool destroy = true, const std
   options.create_if_missing = true;
   options.level_compaction_dynamic_level_bytes = true;
   options.bytes_per_sync = 1048576;
+  options.IncreaseParallelism();
   options.OptimizeLevelStyleCompaction(256ull << 20);
 
   auto status = rocksdb::DB::Open(options, name.c_str(), &cache_ptr);
