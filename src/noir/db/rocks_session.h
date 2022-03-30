@@ -196,6 +196,10 @@ private:
 
   /// \brief A list of the available indices in the iterator cache that are available for use.
   mutable std::vector<size_t> m_free_list;
+
+  /// brief Mutex to avoid concurrency error on iterators.
+  /// \todo remove mutex
+  mutable std::shared_ptr<std::mutex> m_iterator_mtx;
 };
 
 inline session<rocksdb_t> make_session(std::shared_ptr<rocksdb::DB> db, size_t max_iterators) {
@@ -231,7 +235,8 @@ inline session<rocksdb_t>::session(std::shared_ptr<rocksdb::DB> db, size_t max_i
         list[i] = i;
       }
       return list;
-    }()} {
+    }()},
+    m_iterator_mtx(std::make_shared<std::mutex>()) {
   m_write_options.disableWAL = true;
 }
 
@@ -387,6 +392,8 @@ template<typename Predicate>
 typename session<rocksdb_t>::iterator session<rocksdb_t>::make_iterator_(const Predicate& setup) const {
   rocksdb::Iterator* rit = nullptr;
   int64_t index = -1;
+
+  std::scoped_lock lock(*m_iterator_mtx);
   if (!m_free_list.empty()) {
     index = m_free_list.back();
     m_free_list.pop_back();
@@ -544,6 +551,7 @@ session<rocksdb_t>::rocks_iterator<Iterator_traits>::~rocks_iterator() {
 template<typename Iterator_traits>
 void session<rocksdb_t>::rocks_iterator<Iterator_traits>::reset() {
   if (m_index > -1) {
+    std::scoped_lock lock(*m_session->m_iterator_mtx);
     m_session->m_free_list.push_back(m_index);
   } else if (m_iterator) {
     delete m_iterator;
