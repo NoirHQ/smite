@@ -24,7 +24,7 @@ public:
   void plugin_shutdown();
 
 private:
-  std::unique_ptr<api::api> api;
+  std::unique_ptr<api> api_;
 };
 
 } // namespace noir::eth::rpc

@@ -19,11 +19,11 @@ public:
   noir::consensus::response_check_tx& check_tx(const bytes& tx);
 
   void set_tx_pool_ptr(noir::tx_pool::tx_pool* tx_pool_ptr) {
-    this->tx_pool_ptr = tx_pool_ptr;
+    tx_poor_ = tx_pool_ptr;
   }
 
 private:
-  noir::tx_pool::tx_pool* tx_pool_ptr;
+  noir::tx_pool::tx_pool* tx_poor_;
 };
 
 } // namespace noir::tendermint::rpc
