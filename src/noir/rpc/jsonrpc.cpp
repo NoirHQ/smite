@@ -45,7 +45,7 @@ public:
 
     app.get_plugin<rpc>().add_ws_api({
       {url,
-        [&](std::string payload, message_sender sender) mutable {
+        [&](std::string url, std::string payload, message_sender sender) mutable {
           try {
             if (payload.empty())
               payload = "{}";

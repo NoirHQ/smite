@@ -4,8 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/rpc/rpc.h>
+#include <noir/rpc/jsonrpc.h>
 #include <noir/tendermint/rpc/api.h>
+#include <noir/tx_pool/tx_pool.h>
 #include <appbase/application.hpp>
 
 namespace noir::tendermint::rpc {
