@@ -3,7 +3,6 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/rpc/jsonrpc.h>
 #include <noir/tendermint/rpc/rpc.h>
 
 namespace noir::tendermint::rpc {
@@ -33,6 +32,14 @@ void rpc::plugin_startup() {
   endpoint.add_handler("unconfirmed_txs", [&](auto& req) { return api_->unconfirmed_txs(req); });
   endpoint.add_handler("num_unconfirmed_txs", [&](auto& req) { return api_->num_unconfirmed_txs(req); });
   endpoint.add_handler("check_tx", [&](auto& req) { return api_->check_tx(req); });
+
+  auto& ws_endpoint = app.get_plugin<noir::rpc::jsonrpc>().get_or_create_ws_endpoint("/tendermint");
+  ws_endpoint.add_handler("broadcast_tx_async", [&](auto& req) { return api_->broadcast_tx_async(req); });
+  ws_endpoint.add_handler("broadcast_tx_sync", [&](auto& req) { return api_->broadcast_tx_sync(req); });
+  ws_endpoint.add_handler("broadcast_tx_commit", [&](auto& req) { return api_->broadcast_tx_commit(req); });
+  ws_endpoint.add_handler("unconfirmed_txs", [&](auto& req) { return api_->unconfirmed_txs(req); });
+  ws_endpoint.add_handler("num_unconfirmed_txs", [&](auto& req) { return api_->num_unconfirmed_txs(req); });
+  ws_endpoint.add_handler("check_tx", [&](auto& req) { return api_->check_tx(req); });
 }
 
 void rpc::plugin_shutdown() {}
