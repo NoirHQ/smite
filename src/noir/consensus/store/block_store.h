@@ -53,7 +53,8 @@ public:
     auto tmp = begin_it.key();
     bytes key_{tmp.begin(), tmp.end()};
     int64_t height_;
-    check(decode_block_meta_key(key_, height_)); // TODO: handle panic in consensus
+    check(decode_block_meta_key(key_, height_),
+      fmt::format("unable to decode base key={}", to_string(key_))); // TODO: handle panic in consensus
     return height_;
   }
 
@@ -68,7 +69,8 @@ public:
     auto tmp = (--end_it).key();
     bytes key_{tmp.begin(), tmp.end()};
     int64_t height_;
-    check(decode_block_meta_key(key_, height_)); // TODO: handle panic in consensus
+    check(decode_block_meta_key(key_, height_),
+      fmt::format("unable to decode height key={}", to_string(key_))); // TODO: handle panic in consensus
     return height_;
   }
 
