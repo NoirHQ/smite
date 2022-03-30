@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
+#include <noir/common/overloaded.h>
 #include <noir/common/plugin_interface.h>
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/node.h>
@@ -14,6 +15,7 @@ using namespace noir;
 using namespace noir::consensus;
 
 namespace test_detail {
+using namespace noir::consensus::events;
 
 struct channel_stub {
 public:
@@ -64,6 +66,7 @@ public:
     node_->bs_reactor->set_callback_switch_to_cs_sync([cs_reactor = node_->cs_reactor](auto&& arg1, auto&& arg2) {
       cs_reactor->switch_to_consensus(std::forward<decltype(arg1)>(arg1), std::forward<decltype(arg2)>(arg2));
     });
+    monitor = status_monitor(node_, node_name_);
 
     thread_ = std::make_unique<noir::named_thread_pool>("test_thread", 1);
   }
@@ -137,6 +140,70 @@ public:
   std::string node_name() const {
     return node_name_;
   }
+
+  class status_monitor {
+  public:
+    status_monitor() = default;
+    // move is permitted
+    status_monitor(status_monitor&&) = default;
+    status_monitor& operator=(status_monitor&&) = default;
+    // copy is not permitted
+    status_monitor(const status_monitor&) = delete;
+    status_monitor& operator=(const status_monitor&) = delete;
+
+    status_monitor(const std::unique_ptr<node>& node_, const std::string& node_name)
+      : handle([&node_, &node_name]() {
+          return node_->event_bus_->subscribe(node_name, [](const events::message msg) {
+            std::visit(noir::overloaded{
+                         [&](const event_data_new_block& msg) {
+                           // std::cout << "event_data_new_block received!!" << std::endl;
+                         },
+                         [&](const event_data_new_block_header& msg) {
+                           // std::cout << "event_data_new_block_header received!!" << std::endl;
+                         },
+                         [&](const event_data_new_evidence& msg) {
+                           // std::cout << "event_data_new_evidence received!!" << std::endl;
+                         },
+                         [&](const event_data_tx& msg) {
+                           // std::cout << "event_data_tx received!!" << std::endl;
+                         },
+                         [&](const event_data_new_round& msg) {
+                           // std::cout << "event_data_new_round received!!" << std::endl;
+                         },
+                         [&](const event_data_complete_proposal& msg) {
+                           // std::cout << "event_data_complete_proposal received!!" << std::endl;
+                         },
+                         [&](const event_data_vote& msg) {
+                           // std::cout << "event_data_vote received!!" << std::endl;
+                         },
+                         [&](const event_data_string& str) {
+                           // std::cout << "event_data_string received!!" << std::endl;
+                         },
+                         [&](const event_data_validator_set_updates& msg) {
+                           // std::cout << "event_data_new_block_header received!!" << std::endl;
+                         },
+                         [&](const event_data_block_sync_status& msg) {
+                           // std::cout << "event_data_block_sync_status received!!" << std::endl;
+                         },
+                         [&](const event_data_state_sync_status& msg) {
+                           // std::cout << "event_data_state_sync_status received!!" << std::endl;
+                         },
+                         [&](const event_data_round_state& msg) {
+                           // std::cout << "event_data_round_state received!!" << std::endl;
+                         },
+                         [&](const auto& msg) {
+                           // std::cout << "invalid msg type" << std::endl;
+                         },
+                       },
+              msg.data);
+          });
+        }()) {}
+
+  private:
+    events::event_bus::subscription handle;
+  };
+
+  status_monitor monitor;
 
 private:
   const int node_number_;
