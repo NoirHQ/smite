@@ -58,8 +58,7 @@ public:
     std::filesystem::remove_all(cfg->consensus.root_dir); // delete exist node directory
     std::filesystem::create_directories(cfg->consensus.root_dir);
     auto db_dir = std::filesystem::path{cfg->consensus.root_dir} / "db";
-    auto session =
-      std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(false, db_dir));
+    auto session = make_session(true, db_dir);
 
     node_ = node::make_node(*app_, cfg, priv_val, node_key::gen_node_key(), gen_doc, session);
 

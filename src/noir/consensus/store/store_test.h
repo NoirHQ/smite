@@ -31,10 +31,10 @@ inline std::shared_ptr<rocksdb::DB> make_rocks_db(bool destroy = true, const std
   return cache;
 }
 
-inline noir::db::session::session<noir::db::session::rocksdb_t> make_session(
+inline std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>> make_session(
   bool destroy = true, const std::string& name = "/tmp/testdb") {
   auto rocksdb = make_rocks_db(destroy, name);
-  return noir::db::session::make_session(std::move(rocksdb), 16);
+  return std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(std::move(rocksdb), 16);
 }
 
 inline noir::bytes gen_random_bytes(size_t num) {

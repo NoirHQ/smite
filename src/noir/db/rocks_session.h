@@ -87,15 +87,15 @@ public:
 
 public:
   session() = default;
-  session(const session&) = default;
   session(session&&) = default;
+  session(const session&) = delete; // copy is not permitted
 
   /// \brief Constructor
   /// \param db A pointer to the RocksDB db type instance.
   /// \param max_iterators This type will cache up to max_iterators RocksDB iterator instances.
   session(std::shared_ptr<rocksdb::DB> db, size_t max_iterators);
 
-  session& operator=(const session&) = default;
+  session& operator=(const session&) = delete; // copy is not permitted
   session& operator=(session&&) = default;
 
   std::unordered_set<shared_bytes> updated_keys() const;
