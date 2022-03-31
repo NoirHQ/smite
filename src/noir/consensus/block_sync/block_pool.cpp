@@ -179,7 +179,8 @@ void block_pool::send_error(std::string err, std::string peer_id_) {
 
 void block_pool::transmit_new_envelope(
   const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg, bool broadcast, int priority) {
-  dlog(fmt::format("transmitting a new envelope: id=BlockSync, to={}, msg_type={}", to, msg.index()));
+  auto dest = broadcast ? "all" : to;
+  dlog(fmt::format("[bs_reactor] send msg: from={}, to={}, type={}, broadcast={}", from, dest, msg.index(), broadcast));
   auto new_env = std::make_shared<p2p::envelope>();
   new_env->from = from;
   new_env->to = to;

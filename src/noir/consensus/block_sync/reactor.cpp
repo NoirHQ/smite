@@ -30,12 +30,14 @@ void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
 
 void reactor::process_peer_msg(p2p::envelope_ptr info) {
   auto from = info->from;
+  auto to = info->broadcast ? "all" : info->to;
 
   datastream<char> ds(info->message.data(), info->message.size());
   p2p::bs_reactor_message msg;
   ds >> msg;
 
-  dlog(fmt::format("received message={} from='{}'", msg.index(), from));
+  dlog(fmt::format(
+    "[bs_reactor] recv msg. from={}, to={}, type={}, broadcast={}", from, to, msg.index(), info->broadcast));
 
   std::visit(
     overloaded{///
