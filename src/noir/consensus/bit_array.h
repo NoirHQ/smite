@@ -31,10 +31,16 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   int size() const {
+    if (this == nullptr) { ///< NOT a very nice way of coding; need to refactor later
+      return 0;
+    }
     return bits;
   }
 
   bool get_index(int i) {
+    if (this == nullptr) { ///< NOT a very nice way of coding; need to refactor later
+      return false;
+    }
     std::scoped_lock g(mtx);
     if (i >= bits)
       return false;
@@ -42,6 +48,9 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   bool set_index(int i, bool v) {
+    if (this == nullptr) { ///< NOT a very nice way of coding; need to refactor later
+      return false;
+    }
     std::scoped_lock g(mtx);
     if (i >= bits)
       return false;
@@ -58,7 +67,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   std::shared_ptr<bit_array> sub(std::shared_ptr<bit_array> o) {
-    if (this == nullptr || o == nullptr)
+    if (this == nullptr || o == nullptr) ///< NOT a very nice way of coding; need to refactor later
       return nullptr;
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     auto c = copy_bits(bits);
