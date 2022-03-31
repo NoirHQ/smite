@@ -87,7 +87,7 @@ public:
 
 public:
   session() = default;
-  session(session&&) = default;
+  session(session&&);
   session(const session&) = delete; // copy is not permitted
 
   /// \brief Constructor
@@ -96,7 +96,7 @@ public:
   session(std::shared_ptr<rocksdb::DB> db, size_t max_iterators);
 
   session& operator=(const session&) = delete; // copy is not permitted
-  session& operator=(session&&) = default;
+  session& operator=(session&&);
 
   std::unordered_set<shared_bytes> updated_keys() const;
   std::unordered_set<shared_bytes> deleted_keys() const;
@@ -198,8 +198,7 @@ private:
   mutable std::vector<size_t> m_free_list;
 
   /// brief Mutex to avoid concurrency error on iterators.
-  /// \todo remove mutex
-  mutable std::shared_ptr<std::mutex> m_iterator_mtx;
+  mutable std::mutex m_iterator_mtx;
 };
 
 inline session<rocksdb_t> make_session(std::shared_ptr<rocksdb::DB> db, size_t max_iterators) {
@@ -236,8 +235,28 @@ inline session<rocksdb_t>::session(std::shared_ptr<rocksdb::DB> db, size_t max_i
       }
       return list;
     }()},
-    m_iterator_mtx(std::make_shared<std::mutex>()) {
+    m_iterator_mtx() {
   m_write_options.disableWAL = true;
+}
+
+inline session<rocksdb_t>::session(session<rocksdb_t>&& other)
+  : m_db(std::move(other.m_db)), m_column_family(std::move(other.m_column_family)),
+    m_read_options(std::move(other.m_read_options)), m_iterator_read_options(std::move(other.m_iterator_read_options)),
+    m_write_options(std::move(other.m_write_options)), m_iterators(std::move(other.m_iterators)) {
+  std::scoped_lock lock(m_iterator_mtx);
+  m_free_list = std::move(other.m_free_list);
+}
+
+inline session<rocksdb_t>& session<rocksdb_t>::operator=(session<rocksdb_t>&& other) {
+  m_db = std::move(other.m_db);
+  m_column_family = std::move(other.m_column_family);
+  m_read_options = std::move(other.m_read_options);
+  m_iterator_read_options = std::move(other.m_iterator_read_options);
+  m_write_options = std::move(other.m_write_options);
+  m_iterators = std::move(other.m_iterators);
+  std::scoped_lock lock(m_iterator_mtx);
+  m_free_list = std::move(other.m_free_list);
+  return *this;
 }
 
 inline std::unordered_set<shared_bytes> session<rocksdb_t>::updated_keys() const {
@@ -393,7 +412,7 @@ typename session<rocksdb_t>::iterator session<rocksdb_t>::make_iterator_(const P
   rocksdb::Iterator* rit = nullptr;
   int64_t index = -1;
 
-  std::scoped_lock lock(*m_iterator_mtx);
+  std::scoped_lock lock(m_iterator_mtx);
   if (!m_free_list.empty()) {
     index = m_free_list.back();
     m_free_list.pop_back();
@@ -551,7 +570,7 @@ session<rocksdb_t>::rocks_iterator<Iterator_traits>::~rocks_iterator() {
 template<typename Iterator_traits>
 void session<rocksdb_t>::rocks_iterator<Iterator_traits>::reset() {
   if (m_index > -1) {
-    std::scoped_lock lock(*m_session->m_iterator_mtx);
+    std::scoped_lock lock(m_session->m_iterator_mtx);
     m_session->m_free_list.push_back(m_index);
   } else if (m_iterator) {
     delete m_iterator;
