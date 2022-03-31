@@ -54,18 +54,21 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
      */
   }
 
+  auto from = info->from;
+  auto to = info->broadcast ? "all" : info->to;
+
   if (wait_sync) {
-    ilog("ignore messages received during sync");
+    dlog(fmt::format(
+      "ignore messages received during sync. from={}, to={}, broadcast={}", from, to, info->broadcast));
     return;
   }
-
-  auto from = info->from;
 
   datastream<char> ds(info->message.data(), info->message.size());
   p2p::cs_reactor_message msg;
   ds >> msg;
 
-  dlog(fmt::format("received message={} from='{}'", msg.index(), from));
+  dlog(fmt::format(
+    "[cs_reactor] recv msg. from={}, to={}, type={}, broadcast={}", from, to, msg.index(), info->broadcast));
   auto ps = get_peer_state(from);
   if (!ps) {
     wlog(fmt::format("unable to find peer_state for from='{}'", from));
@@ -450,7 +453,8 @@ void consensus_reactor::send_new_round_step_message(std::string peer_id) {
 
 void consensus_reactor::transmit_new_envelope(
   std::string from, std::string to, const p2p::cs_reactor_message& msg, bool broadcast, int priority) {
-  dlog(fmt::format("transmitting a new envelope: to={}, msg_type={}, broadcast={}", to, msg.index(), broadcast));
+  auto dest = broadcast ? "all" : to;
+  dlog(fmt::format("[cs_reactor] send msg: from={}, to={}, type={}, broadcast={}", from, dest, msg.index(), broadcast));
   auto new_env = std::make_shared<p2p::envelope>();
   new_env->from = from;
   new_env->to = to;
