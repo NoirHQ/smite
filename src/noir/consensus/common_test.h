@@ -115,7 +115,7 @@ std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config
   validator_stub_list vss;
 
   auto db_dir = std::filesystem::path{config_.consensus.root_dir} / "testdb";
-  auto session = std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session(true, db_dir));
+  auto session = make_session(true, db_dir);
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
