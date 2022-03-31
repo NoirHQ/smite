@@ -26,7 +26,7 @@ make_state(int n_vals, int height) {
   gen_doc.validators = vals;
   auto s = state::make_genesis_state(gen_doc);
 
-  auto session = std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(make_session());
+  auto session = make_session();
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   dbs->save(s);
 
