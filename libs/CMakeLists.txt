@@ -24,6 +24,7 @@ add_subdirectory(xxHash/cmake_unofficial)
 include(cmake/rocksdb.cmake)
 include(cmake/b2.cmake)
 include(cmake/XKCP.cmake)
+include(cmake/Findsodium.cmake)
 
 set(SPDLOG_FMT_EXTERNAL ON)
 add_subdirectory(spdlog)
