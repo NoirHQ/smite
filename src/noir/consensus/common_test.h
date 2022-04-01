@@ -4,7 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/helper/go.h>
 #include <noir/common/hex.h>
+#include <noir/common/overloaded.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/store/store_test.h>
@@ -215,83 +217,98 @@ public:
   void start() {
     std::shared_ptr<events::event_bus> ev{ev_bus.lock()};
     REQUIRE(ev != nullptr);
-    handle = ev->subscribe(node_name, [&](const events::message msg) {
-      auto state = cs_state_.lock();
-      REQUIRE(state != nullptr);
-      std::visit(noir::overloaded{
-                   [&](const events::event_data_new_block& msg) {
-                     // std::cout << "event_data_new_block received!!" << std::endl;
-                   },
-                   [&](const events::event_data_new_block_header& msg) {
-                     // std::cout << "event_data_new_block_header received!!" << std::endl;
-                   },
-                   [&](const events::event_data_new_evidence& msg) {
-                     // std::cout << "event_data_new_evidence received!!" << std::endl;
-                   },
-                   [&](const events::event_data_tx& msg) {
-                     // std::cout << "event_data_tx received!!" << std::endl;
-                   },
-                   [&](const events::event_data_new_round& msg) {
-                     // std::cout << "event_data_new_round received!!" << std::endl;
-                     height = msg.height;
-                     round = msg.round;
-                     step = step_map_[msg.step];
-
-                     REQUIRE(state->rs.height == height);
-                     REQUIRE(state->rs.round == round);
-                     REQUIRE(state->rs.step == step);
-                   },
-                   [&](const events::event_data_complete_proposal& msg) {
-                     // std::cout << "event_data_complete_proposal received!!" << std::endl;
-                     height = msg.height;
-                     round = msg.round;
-                     step = step_map_[msg.step];
-
-                     REQUIRE(state->rs.height == height);
-                     REQUIRE(state->rs.round == round);
-                     REQUIRE(state->rs.step == step);
-                   },
-                   [&](const events::event_data_vote& msg) {
-                     // std::cout << "event_data_vote received!!" << std::endl;
-                   },
-                   [&](const events::event_data_string& str) {
-                     // std::cout << "event_data_string received!!" << std::endl;
-                   },
-                   [&](const events::event_data_validator_set_updates& msg) {
-                     // std::cout << "event_data_new_block_header received!!" << std::endl;
-                   },
-                   [&](const events::event_data_block_sync_status& msg) {
-                     // std::cout << "event_data_block_sync_status received!!" << std::endl;
-                   },
-                   [&](const events::event_data_state_sync_status& msg) {
-                     // std::cout << "event_data_state_sync_status received!!" << std::endl;
-                   },
-                   [&](const events::event_data_round_state& msg) {
-                     // std::cout << "event_data_round_state received!!" << std::endl;
-                     height = msg.height;
-                     round = msg.round;
-                     step = step_map_[msg.step];
-
-                     REQUIRE(state->rs.height == height);
-                     REQUIRE(state->rs.round == round);
-                     REQUIRE(state->rs.step == step);
-                   },
-                   [&](const auto& msg) {
-                     std::cout << "invalid msg type" << std::endl;
-                     CHECK(false);
-                   },
-                 },
-        msg.data);
-    });
+    handle = ev->subscribe(node_name, [&](const events::message msg) { msg_queue.push(msg); });
   }
 
-  std::string to_string() const {
-    return fmt::format(
-      "test_node[{}] height={} round={} step={}", node_name, height, round, p2p::round_step_to_str(step));
+  struct process_msg_result {
+    std::string node_name;
+    int32_t index = -1;
+    int64_t height = -1;
+    int32_t round = -1;
+    p2p::round_step_type step = static_cast<p2p::round_step_type>(-1);
+    p2p::signed_msg_type vote_type = p2p::signed_msg_type::Unknown;
+
+    std::string to_string() {
+      return fmt::format("test_node[{}] type_index={} height={} round={} step={}", node_name, index, height, round,
+        p2p::round_step_to_str(step));
+    }
+  };
+
+  process_msg_result process_msg() {
+    process_msg_result ret{
+      .node_name = node_name,
+    };
+    if (msg_queue.empty()) {
+      return ret;
+    }
+    auto state = cs_state_.lock();
+    REQUIRE(state != nullptr);
+
+    auto& event_msg = msg_queue.front();
+    noir_defer([&msg_queue = msg_queue]() { msg_queue.pop(); });
+    ret.index = event_msg.data.index();
+
+    std::visit(noir::overloaded{
+                 [&](const events::event_data_new_block& msg) {
+                   // std::cout << "event_data_new_block received!!" << std::endl;
+                 },
+                 [&](const events::event_data_new_block_header& msg) {
+                   // std::cout << "event_data_new_block_header received!!" << std::endl;
+                 },
+                 [&](const events::event_data_new_evidence& msg) {
+                   // std::cout << "event_data_new_evidence received!!" << std::endl;
+                 },
+                 [&](const events::event_data_tx& msg) {
+                   // std::cout << "event_data_tx received!!" << std::endl;
+                 },
+                 [&](const events::event_data_new_round& msg) {
+                   // std::cout << "event_data_new_round received!!" << std::endl;
+                   ret.height = msg.height;
+                   ret.round = msg.round;
+                   ret.step = step_map_[msg.step];
+                 },
+                 [&](const events::event_data_complete_proposal& msg) {
+                   // std::cout << "event_data_complete_proposal received!!" << std::endl;
+                   ret.height = msg.height;
+                   ret.round = msg.round;
+                   ret.step = step_map_[msg.step];
+                 },
+                 [&](const events::event_data_vote& msg) {
+                   // std::cout << "event_data_vote received!!" << std::endl;
+                   ret.height = msg.vote.height;
+                   ret.round = msg.vote.round;
+                   ret.vote_type = msg.vote.type;
+                 },
+                 [&](const events::event_data_string& str) {
+                   // std::cout << "event_data_string received!!" << std::endl;
+                 },
+                 [&](const events::event_data_validator_set_updates& msg) {
+                   // std::cout << "event_data_new_block_header received!!" << std::endl;
+                 },
+                 [&](const events::event_data_block_sync_status& msg) {
+                   // std::cout << "event_data_block_sync_status received!!" << std::endl;
+                 },
+                 [&](const events::event_data_state_sync_status& msg) {
+                   // std::cout << "event_data_state_sync_status received!!" << std::endl;
+                 },
+                 [&](const events::event_data_round_state& msg) {
+                   // std::cout << "event_data_round_state received!!" << std::endl;
+                   ret.height = msg.height;
+                   ret.round = msg.round;
+                   ret.step = step_map_[msg.step];
+                 },
+                 [&](const auto& msg) {
+                   std::cout << "invalid msg type" << std::endl;
+                   CHECK(false);
+                 },
+               },
+      event_msg.data);
+
+    return ret;
   }
 
   std::string node_name;
-
+  std::queue<events::message> msg_queue;
   int64_t height{-1};
   int32_t round{-1};
   p2p::round_step_type step;

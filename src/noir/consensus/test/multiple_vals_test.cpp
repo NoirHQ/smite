@@ -206,7 +206,10 @@ TEST_CASE("node: multiple validator test") {
     sleep(sleep_interval);
     std::cout << "elapsed_time=" << i << std::endl;
     for (auto& test_node : test_nodes) {
-      std::cout << test_node->monitor.to_string() << std::endl;
+      status_monitor::process_msg_result ret;
+      while (ret = test_node->monitor.process_msg(), ret.index >= 0) {
+        std::cout << ret.to_string() << std::endl;
+      }
     }
   }
 
