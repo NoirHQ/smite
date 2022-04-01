@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/common/overloaded.h>
 #include <noir/common/plugin_interface.h>
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/node.h>
@@ -67,7 +66,7 @@ public:
     node_->bs_reactor->set_callback_switch_to_cs_sync([cs_reactor = node_->cs_reactor](auto&& arg1, auto&& arg2) {
       cs_reactor->switch_to_consensus(std::forward<decltype(arg1)>(arg1), std::forward<decltype(arg2)>(arg2));
     });
-    monitor = status_monitor(node_, node_name_);
+    monitor = status_monitor(node_name_, node_->event_bus_, node_->cs_reactor->cs_state);
     monitor.start();
 
     thread_ = std::make_unique<noir::named_thread_pool>("test_thread", 2);
@@ -148,108 +147,6 @@ public:
     return node_name_;
   }
 
-  class status_monitor {
-  public:
-    status_monitor() = default;
-    status_monitor(status_monitor&&) = default;
-    status_monitor& operator=(status_monitor&&) = default;
-    status_monitor(const std::unique_ptr<node>& node_, const std::string& node_name)
-      : node_name(node_name), ev_bus(node_->event_bus_), cs_state_(node_->cs_reactor->cs_state) {}
-    // copy is not permitted
-    status_monitor(const status_monitor&) = delete;
-    status_monitor& operator=(const status_monitor&) = delete;
-
-    void start() {
-      std::shared_ptr<event_bus> ev{ev_bus.lock()};
-      REQUIRE(ev != nullptr);
-      handle = ev->subscribe(node_name, [&](const events::message msg) {
-        auto state = cs_state_.lock();
-        CHECK(state != nullptr);
-        std::visit(noir::overloaded{
-                     [&](const event_data_new_block& msg) {
-                       // std::cout << "event_data_new_block received!!" << std::endl;
-                     },
-                     [&](const event_data_new_block_header& msg) {
-                       // std::cout << "event_data_new_block_header received!!" << std::endl;
-                     },
-                     [&](const event_data_new_evidence& msg) {
-                       // std::cout << "event_data_new_evidence received!!" << std::endl;
-                     },
-                     [&](const event_data_tx& msg) {
-                       // std::cout << "event_data_tx received!!" << std::endl;
-                     },
-                     [&](const event_data_new_round& msg) {
-                       // std::cout << "event_data_new_round received!!" << std::endl;
-                       height = msg.height;
-                       round = msg.round;
-                       step = step_map_[msg.step];
-
-                       CHECK(state->rs.height == height);
-                       CHECK(state->rs.round == round);
-                       CHECK(state->rs.step == step);
-                     },
-                     [&](const event_data_complete_proposal& msg) {
-                       // std::cout << "event_data_complete_proposal received!!" << std::endl;
-                       height = msg.height;
-                       round = msg.round;
-                       step = step_map_[msg.step];
-
-                       CHECK(state->rs.height == height);
-                       CHECK(state->rs.round == round);
-                       CHECK(state->rs.step == step);
-                     },
-                     [&](const event_data_vote& msg) {
-                       // std::cout << "event_data_vote received!!" << std::endl;
-                     },
-                     [&](const event_data_string& str) {
-                       // std::cout << "event_data_string received!!" << std::endl;
-                     },
-                     [&](const event_data_validator_set_updates& msg) {
-                       // std::cout << "event_data_new_block_header received!!" << std::endl;
-                     },
-                     [&](const event_data_block_sync_status& msg) {
-                       // std::cout << "event_data_block_sync_status received!!" << std::endl;
-                     },
-                     [&](const event_data_state_sync_status& msg) {
-                       // std::cout << "event_data_state_sync_status received!!" << std::endl;
-                     },
-                     [&](const event_data_round_state& msg) {
-                       // std::cout << "event_data_round_state received!!" << std::endl;
-                       height = msg.height;
-                       round = msg.round;
-                       step = step_map_[msg.step];
-
-                       CHECK(state->rs.height == height);
-                       CHECK(state->rs.round == round);
-                       CHECK(state->rs.step == step);
-                     },
-                     [&](const auto& msg) {
-                       std::cout << "invalid msg type" << std::endl;
-                       CHECK(false);
-                     },
-                   },
-          msg.data);
-      });
-    }
-
-    std::string to_string() const {
-      return fmt::format(
-        "test_node[{}] height={} round={} step={}", node_name, height, round, p2p::round_step_to_str(step));
-    }
-
-    std::string node_name;
-
-    int64_t height{-1};
-    int32_t round{-1};
-    p2p::round_step_type step;
-
-  private:
-    std::weak_ptr<event_bus> ev_bus;
-    std::weak_ptr<consensus_state> cs_state_;
-    events::event_bus::subscription handle;
-    static std::map<std::string, p2p::round_step_type> step_map_;
-  };
-
   status_monitor monitor;
 
 private:
@@ -260,17 +157,6 @@ private:
   std::shared_ptr<channel_stub> channel_stub_;
   std::unique_ptr<noir::named_thread_pool> thread_;
   std::vector<std::weak_ptr<test_node>> peers_;
-};
-
-std::map<std::string, p2p::round_step_type> test_node::status_monitor::step_map_{
-  {std::string{"NewHeight"}, p2p::round_step_type::NewHeight},
-  {std::string{"NewRound"}, p2p::round_step_type::NewRound},
-  {std::string{"Propose"}, p2p::round_step_type::Propose},
-  {std::string{"Prevote"}, p2p::round_step_type::Prevote},
-  {std::string{"PrevoteWait"}, p2p::round_step_type::PrevoteWait},
-  {std::string{"Precommit"}, p2p::round_step_type::Precommit},
-  {std::string{"PrecommitWait"}, p2p::round_step_type::PrecommitWait},
-  {std::string{"Commit"}, p2p::round_step_type::Commit},
 };
 
 std::vector<std::shared_ptr<test_node>> make_node_set(int count) {

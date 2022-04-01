@@ -200,4 +200,118 @@ inline noir::consensus::commit make_commit(int64_t height, noir::p2p::tstamp tim
   };
 }
 
+class status_monitor {
+public:
+  status_monitor() = default;
+  status_monitor(status_monitor&&) = default;
+  status_monitor& operator=(status_monitor&&) = default;
+  status_monitor(const std::string& node_name, const std::shared_ptr<events::event_bus>& ev_bus,
+    const std::shared_ptr<consensus_state>& cs_state)
+    : node_name(node_name), ev_bus(ev_bus), cs_state_(cs_state) {}
+  // copy is not permitted
+  status_monitor(const status_monitor&) = delete;
+  status_monitor& operator=(const status_monitor&) = delete;
+
+  void start() {
+    std::shared_ptr<events::event_bus> ev{ev_bus.lock()};
+    REQUIRE(ev != nullptr);
+    handle = ev->subscribe(node_name, [&](const events::message msg) {
+      auto state = cs_state_.lock();
+      REQUIRE(state != nullptr);
+      std::visit(noir::overloaded{
+                   [&](const events::event_data_new_block& msg) {
+                     // std::cout << "event_data_new_block received!!" << std::endl;
+                   },
+                   [&](const events::event_data_new_block_header& msg) {
+                     // std::cout << "event_data_new_block_header received!!" << std::endl;
+                   },
+                   [&](const events::event_data_new_evidence& msg) {
+                     // std::cout << "event_data_new_evidence received!!" << std::endl;
+                   },
+                   [&](const events::event_data_tx& msg) {
+                     // std::cout << "event_data_tx received!!" << std::endl;
+                   },
+                   [&](const events::event_data_new_round& msg) {
+                     // std::cout << "event_data_new_round received!!" << std::endl;
+                     height = msg.height;
+                     round = msg.round;
+                     step = step_map_[msg.step];
+
+                     REQUIRE(state->rs.height == height);
+                     REQUIRE(state->rs.round == round);
+                     REQUIRE(state->rs.step == step);
+                   },
+                   [&](const events::event_data_complete_proposal& msg) {
+                     // std::cout << "event_data_complete_proposal received!!" << std::endl;
+                     height = msg.height;
+                     round = msg.round;
+                     step = step_map_[msg.step];
+
+                     REQUIRE(state->rs.height == height);
+                     REQUIRE(state->rs.round == round);
+                     REQUIRE(state->rs.step == step);
+                   },
+                   [&](const events::event_data_vote& msg) {
+                     // std::cout << "event_data_vote received!!" << std::endl;
+                   },
+                   [&](const events::event_data_string& str) {
+                     // std::cout << "event_data_string received!!" << std::endl;
+                   },
+                   [&](const events::event_data_validator_set_updates& msg) {
+                     // std::cout << "event_data_new_block_header received!!" << std::endl;
+                   },
+                   [&](const events::event_data_block_sync_status& msg) {
+                     // std::cout << "event_data_block_sync_status received!!" << std::endl;
+                   },
+                   [&](const events::event_data_state_sync_status& msg) {
+                     // std::cout << "event_data_state_sync_status received!!" << std::endl;
+                   },
+                   [&](const events::event_data_round_state& msg) {
+                     // std::cout << "event_data_round_state received!!" << std::endl;
+                     height = msg.height;
+                     round = msg.round;
+                     step = step_map_[msg.step];
+
+                     REQUIRE(state->rs.height == height);
+                     REQUIRE(state->rs.round == round);
+                     REQUIRE(state->rs.step == step);
+                   },
+                   [&](const auto& msg) {
+                     std::cout << "invalid msg type" << std::endl;
+                     CHECK(false);
+                   },
+                 },
+        msg.data);
+    });
+  }
+
+  std::string to_string() const {
+    return fmt::format(
+      "test_node[{}] height={} round={} step={}", node_name, height, round, p2p::round_step_to_str(step));
+  }
+
+  std::string node_name;
+
+  int64_t height{-1};
+  int32_t round{-1};
+  p2p::round_step_type step;
+
+private:
+  std::weak_ptr<events::event_bus> ev_bus;
+  std::weak_ptr<consensus_state> cs_state_;
+  events::event_bus::subscription handle;
+  static std::map<std::string, p2p::round_step_type> step_map_;
+};
+
+std::map<std::string, p2p::round_step_type> status_monitor::step_map_{
+  {std::string{"NewHeight"}, p2p::round_step_type::NewHeight},
+  {std::string{"NewRound"}, p2p::round_step_type::NewRound},
+  {std::string{"Propose"}, p2p::round_step_type::Propose},
+  {std::string{"Prevote"}, p2p::round_step_type::Prevote},
+  {std::string{"PrevoteWait"}, p2p::round_step_type::PrevoteWait},
+  {std::string{"Precommit"}, p2p::round_step_type::Precommit},
+  {std::string{"PrecommitWait"}, p2p::round_step_type::PrecommitWait},
+  {std::string{"Commit"}, p2p::round_step_type::Commit},
+};
+
 } // namespace noir::consensus
