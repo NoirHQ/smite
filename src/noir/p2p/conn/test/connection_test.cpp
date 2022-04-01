@@ -30,6 +30,35 @@ TEST_CASE("secret_connection: make_secret_connection", "[noir][p2p]") {
   c->shared_eph_pub_key(received_pub_key);
 }
 
+TEST_CASE("secret_connection: derive_secrets", "[noir][p2p]") {
+  auto priv_key_str =
+    fc::base64_decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
+  std::vector<char> loc_priv_key(priv_key_str.begin(), priv_key_str.end());
+  auto c = p2p::secret_connection::make_secret_connection(loc_priv_key);
+
+  auto tests = std::to_array<std::tuple<std::string, std::string, std::string, std::string>>({
+    {"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03",
+      "80a83ad6afcb6f8175192e41973aed31dd75e3c106f813d986d9567a4865eb2f",
+      "96362a04f628a0666d9866147326898bb0847b8db8680263ad19e6336d4eed9e",
+      "2632c3fd20f456c5383ed16aa1d56dc7875a2b0fc0d5ff053c3ada8934098c69"},
+    {"0716764b370d543fee692af03832c16410f0a56e4ddb79604ea093b10bb6f654",
+      "cba357ae33d7234520d5742102a2a6cdb39b7db59c14a58fa8aadd310127630f",
+      "84f2b1e8658456529a2c324f46c3406c3c6fecd5fbbf9169f60bed8956a8b03d",
+      "576643a8fcc1a4cf866db900f4a150dbe35d44a1b3ff36e4911565c3fa22fc32"},
+    {"6104474c791cda24d952b356fb41a5d273c0ce6cc87d270b1701d0523cd5aa13",
+      "1cb4397b9e478430321af4647da2ccbef62ff8888542d31cca3f626766c8080f",
+      "673b23318826bd31ad1a4995c6e5095c4b092f5598aa0a96381a3e977bc0eaf9",
+      "4a25a25c5f75d6cc512f2ba8c1546e6263e9ef8269f0c046c37838cc66aa83e6"},
+  });
+  std::for_each(tests.begin(), tests.end(), [&](auto& t) {
+    bytes32 dh_secret{std::get<0>(t)};
+    auto key = c->derive_secrets(dh_secret);
+    CHECK(to_hex(std::span((const byte_type*)key.data(), 32)) == std::get<1>(t));
+    CHECK(to_hex(std::span((const byte_type*)key.data() + 32, 32)) == std::get<2>(t));
+    CHECK(to_hex(std::span((const byte_type*)key.data() + 64, 32)) == std::get<3>(t));
+  });
+}
+
 TEST_CASE("secret_connection: openssl - key gen", "[noir][p2p]") {
   EVP_PKEY* pkey = NULL;
   EVP_PKEY_CTX* pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL);

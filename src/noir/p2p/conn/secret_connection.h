@@ -14,7 +14,6 @@ struct auth_sig_message {
 };
 
 struct secret_connection {
-
   bytes loc_pub_key;
   bytes rem_pub_key; // other's pub key
 
@@ -22,8 +21,6 @@ struct secret_connection {
   bytes32 loc_eph_priv;
 
   bytes32 rem_eph_pub; // other's ephemeral pub key
-
-  bytes32 dh_secret;
 
   bytes32 recv_secret;
   bytes32 send_secret;
@@ -34,6 +31,8 @@ struct secret_connection {
   std::optional<std::string> shared_eph_pub_key(bytes32& received_pub_key);
 
   std::optional<std::string> shared_auth_sig(auth_sig_message& received_msg);
+
+  bytes derive_secrets(bytes32& dh_secret);
 };
 
 } // namespace noir::p2p
