@@ -307,6 +307,51 @@ public:
     return ret;
   }
 
+  bool ensure_new_event(int timeout, int64_t height, int32_t round) {
+    return ensure_events_internal<events::event_data_round_state>(timeout, height, round);
+  }
+
+  bool ensure_new_round(int timeout, int64_t height, int32_t round) {
+    return ensure_events_internal<events::event_data_new_round>(timeout, height, round);
+  }
+
+  bool ensure_new_timeout(int timeout, int64_t height, int32_t round) {
+    return ensure_events_internal<events::event_data_round_state>(timeout, height, round);
+  }
+
+  bool ensure_new_proposal(int timeout, int64_t height, int32_t round) {
+    return ensure_events_internal<events::event_data_complete_proposal>(timeout, height, round);
+  }
+
+  bool ensure_new_valid_block(int timeout, int64_t height, int32_t round) {
+    return ensure_events_internal<events::event_data_round_state>(timeout, height, round);
+  }
+
+  bool ensure_new_block(int timeout, int64_t height) {
+    return ensure_events_internal<events::event_data_new_block>(timeout, height);
+  }
+
+  bool ensure_new_block_header(int timeout, int64_t height) {
+    return ensure_events_internal<events::event_data_new_block_header>(timeout, height);
+  }
+
+  bool ensure_new_unlock(int timeout, int64_t height, int32_t round) {
+    return ensure_events_internal<events::event_data_round_state>(timeout, height, round);
+  }
+
+  bool ensure_proposal(int timeout, int64_t height, int32_t round) {
+    // what is diff vs ensure_new_proposal?
+    return ensure_events_internal<events::event_data_complete_proposal>(timeout, height, round);
+  }
+
+  bool ensure_precommit(int timeout, int64_t height, int32_t round) {
+    return ensure_events_internal<events::event_data_vote>(timeout, height, round, p2p::signed_msg_type::Precommit);
+  }
+
+  bool ensure_prevote(int timeout, int64_t height, int32_t round) {
+    return ensure_events_internal<events::event_data_vote>(timeout, height, round, p2p::signed_msg_type::Prevote);
+  }
+
   std::string node_name;
   std::queue<events::message> msg_queue;
   int64_t height{-1};
@@ -318,6 +363,39 @@ private:
   std::weak_ptr<consensus_state> cs_state_;
   events::event_bus::subscription handle;
   static std::map<std::string, p2p::round_step_type> step_map_;
+
+  template<typename T>
+  static int get_message_type_index() {
+    events::tm_event_data tmp{T{}};
+    return tmp.index();
+  }
+
+  template<typename T>
+  bool ensure_events_internal(int timeout, int64_t height = -1, int32_t round = -1,
+    p2p::signed_msg_type vote_type = p2p::signed_msg_type::Unknown) {
+    process_msg_result ret;
+    while (ret = process_msg(), ret.index < 0) { // TODO: implement timeout
+    }
+    CHECKED_ELSE(ret.index == get_message_type_index<T>()) {
+      return false;
+    }
+    if (height >= 0) {
+      CHECKED_ELSE(ret.height == height) {
+        return false;
+      }
+    }
+    if (round >= 0) {
+      CHECKED_ELSE(ret.round == round) {
+        return false;
+      }
+    }
+    if (vote_type != p2p::signed_msg_type::Unknown) {
+      CHECKED_ELSE(ret.vote_type == vote_type) {
+        return false;
+      }
+    }
+    return true;
+  }
 };
 
 std::map<std::string, p2p::round_step_type> status_monitor::step_map_{
