@@ -1,4 +1,5 @@
 add_library(noir_p2p STATIC
+  conn/secret_connection.cpp
   p2p.cpp
 )
 target_link_libraries(noir_p2p
