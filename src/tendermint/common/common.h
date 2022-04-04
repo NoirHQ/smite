@@ -12,5 +12,4 @@ using namespace noir;
 
 } // namespace tendermint
 
-#define errorf(FORMAT, ...) \
-  noir::make_unexpected(fmt::format(FORMAT, __VA_ARGS__))
+#define errorf(FORMAT, ...) noir::make_unexpected(fmt::format(FORMAT, __VA_ARGS__))
