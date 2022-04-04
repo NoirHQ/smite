@@ -83,7 +83,8 @@ size_t read_uleb128(DataStream& ds, varint<T>& v) {
     }
   }
   uint8_t c = ds.get();
-  check(!(c >> (sizeof(T) * 8 - (max_len - 1) * 7)), "uleb128: unused bits must be cleared");
+  // FIXME: this check makes parsing messages from go-implmented abci server failed.
+  // check(!(c >> (sizeof(T) * 8 - (max_len - 1) * 7)), "uleb128: unused bits must be cleared");
   val |= T(c) << (max_len - 1) * 7;
   v = val;
   return max_len;
