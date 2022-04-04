@@ -21,13 +21,12 @@ using Callback = std::function<void(Request*, Response*)>;
 struct ReqRes {
   std::unique_ptr<Request> request;
   std::unique_ptr<Response> response; // FIXME: atomic
-  std::optional<std::future<void>> future;
 
   mutable std::mutex mtx;
-  bool done;
-  void (Response::*cb)();
+  bool done{false};
+  std::function<void(Response*)> cb;
 
-  void set_callback(void (Response::*cb)());
+  void set_callback(std::function<void(Response*)> cb);
   void invoke_callback() const;
   std::function<void(Response*)> get_callback() const;
   void set_done();
