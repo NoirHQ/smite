@@ -32,12 +32,12 @@ inline auto default_logger() {
 #undef elog
 #endif
 
-#define ilog(FORMAT, ...) SPDLOG_INFO(FORMAT __VA_OPT__(,) __VA_ARGS__);
-#define dlog(FORMAT, ...) SPDLOG_DEBUG(FORMAT __VA_OPT__(,) __VA_ARGS__);
-#define wlog(FORMAT, ...) SPDLOG_WARN(FORMAT __VA_OPT__(,) __VA_ARGS__);
-#define elog(FORMAT, ...) SPDLOG_ERROR(FORMAT __VA_OPT__(,) __VA_ARGS__);
+#define ilog(FORMAT, ...) SPDLOG_INFO(FORMAT __VA_OPT__(, ) __VA_ARGS__);
+#define dlog(FORMAT, ...) SPDLOG_DEBUG(FORMAT __VA_OPT__(, ) __VA_ARGS__);
+#define wlog(FORMAT, ...) SPDLOG_WARN(FORMAT __VA_OPT__(, ) __VA_ARGS__);
+#define elog(FORMAT, ...) SPDLOG_ERROR(FORMAT __VA_OPT__(, ) __VA_ARGS__);
 
-#define tm_ilog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_INFO(LOGGER, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#define tm_dlog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_DEBUG(LOGGER, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#define tm_wlog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_WARN(LOGGER, FORMAT __VA_OPT__(,) __VA_ARGS__)
-#define tm_elog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_ERROR(LOGGER, FORMAT __VA_OPT__(,) __VA_ARGS__)
+#define tm_ilog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_INFO(LOGGER, FORMAT __VA_OPT__(, ) __VA_ARGS__)
+#define tm_dlog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_DEBUG(LOGGER, FORMAT __VA_OPT__(, ) __VA_ARGS__)
+#define tm_wlog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_WARN(LOGGER, FORMAT __VA_OPT__(, ) __VA_ARGS__)
+#define tm_elog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_ERROR(LOGGER, FORMAT __VA_OPT__(, ) __VA_ARGS__)
