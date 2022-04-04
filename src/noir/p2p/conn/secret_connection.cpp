@@ -7,17 +7,20 @@
 
 #include <fc/crypto/base64.hpp>
 
+extern "C" {
 #include <openssl/core_names.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 
 #include <sodium.h>
+}
 
 namespace noir::p2p {
 
 std::shared_ptr<secret_connection> secret_connection::make_secret_connection(bytes& loc_priv_key) {
   check(loc_priv_key.size() == 64, "unable to create a new create_connection: invalid private key size");
   auto sc = std::make_shared<secret_connection>();
+  sc->loc_priv_key = loc_priv_key;
   sc->loc_pub_key = bytes(loc_priv_key.begin() + 32, loc_priv_key.end());
 
   // Generate ephemeral local keys
@@ -62,10 +65,28 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(bytes32& receiv
     recv_secret = bytes32(std::span(key.data() + 32, 32));
   }
   chal_secret = bytes32(std::span(key.data() + 64, 32));
+
+  // Sign challenge bytes for authentication
+  uint8_t sm[32 + crypto_sign_BYTES];
+  unsigned long long smlen;
+  if (crypto_sign(sm, &smlen, reinterpret_cast<const unsigned char*>(chal_secret.data()), chal_secret.size(),
+        reinterpret_cast<const unsigned char*>(loc_priv_key.data())) != 0)
+    return "unable to sign challenge";
+  loc_signature = bytes(sm, sm + smlen);
   return {};
 }
 
 std::optional<std::string> secret_connection::shared_auth_sig(auth_sig_message& received_msg) {
+  // By here, we have already exchanged auth_sig_message with the other
+  rem_pub_key = received_msg.key;
+
+  // Verify signature
+  uint8_t m[32 + crypto_sign_BYTES + 1];
+  unsigned long long mlen;
+  if (crypto_sign_open(m, &mlen, reinterpret_cast<const unsigned char*>(received_msg.sig.data()),
+        received_msg.sig.size(), reinterpret_cast<const unsigned char*>(rem_pub_key.data())) != 0)
+    return "unable to verify challenge";
+  is_authorized = true;
   return {};
 }
 

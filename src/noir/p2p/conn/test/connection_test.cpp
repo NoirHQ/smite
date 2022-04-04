@@ -75,6 +75,11 @@ TEST_CASE("secret_connection: verify key exchanges", "[noir][p2p]") {
   c_peer2->shared_eph_pub_key(eph_pub_key_peer1);
   CHECK(c_peer1->send_secret == c_peer2->recv_secret);
   CHECK(c_peer1->chal_secret == c_peer2->chal_secret);
+
+  auto auth_sig_msg1 = p2p::auth_sig_message{c_peer1->loc_pub_key, c_peer1->loc_signature};
+  auto auth_sig_msg2 = p2p::auth_sig_message{c_peer2->loc_pub_key, c_peer2->loc_signature};
+  CHECK(!c_peer1->shared_auth_sig(auth_sig_msg2).has_value());
+  CHECK(!c_peer2->shared_auth_sig(auth_sig_msg1).has_value());
 }
 
 TEST_CASE("secret_connection: openssl - key gen", "[noir][p2p]") {
