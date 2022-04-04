@@ -24,6 +24,7 @@ target_link_libraries(noir
   noir::p2p
   noir::rpc
   noir::tx_pool
+  tendermint::proto
   softfloat
 )
 
