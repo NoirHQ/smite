@@ -59,6 +59,24 @@ TEST_CASE("secret_connection: derive_secrets", "[noir][p2p]") {
   });
 }
 
+TEST_CASE("secret_connection: verify key exchanges", "[noir][p2p]") {
+  auto priv_key_str_peer1 =
+    fc::base64_decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
+  std::vector<char> loc_priv_key_peer1(priv_key_str_peer1.begin(), priv_key_str_peer1.end());
+  auto c_peer1 = p2p::secret_connection::make_secret_connection(loc_priv_key_peer1);
+  auto priv_key_str_peer2 =
+    fc::base64_decode("x1eX2WKe+mhZwO7PLVgLdMZ4Ucr4NfdBxMtD/59mOfmk8GO0T1p8YNpObegcTLZmqnK6ffVtjvWjDSSVgVwGAw==");
+  std::vector<char> loc_priv_key_peer2(priv_key_str_peer2.begin(), priv_key_str_peer2.end());
+  auto c_peer2 = p2p::secret_connection::make_secret_connection(loc_priv_key_peer2);
+
+  bytes32 eph_pub_key_peer1 = c_peer1->loc_eph_pub;
+  bytes32 eph_pub_key_peer2 = c_peer2->loc_eph_pub;
+  c_peer1->shared_eph_pub_key(eph_pub_key_peer2);
+  c_peer2->shared_eph_pub_key(eph_pub_key_peer1);
+  CHECK(c_peer1->send_secret == c_peer2->recv_secret);
+  CHECK(c_peer1->chal_secret == c_peer2->chal_secret);
+}
+
 TEST_CASE("secret_connection: openssl - key gen", "[noir][p2p]") {
   EVP_PKEY* pkey = NULL;
   EVP_PKEY_CTX* pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL);
@@ -188,7 +206,7 @@ TEST_CASE("secret_connection: libsodium - key exchange ", "[noir][p2p]") {
   if (crypto_scalarmult(scalarmult_q_by_client, client_secretkey, server_publickey) != 0) {
     /* Error */
   }
-  crypto_generichash_init(&h, NULL, 0U, sizeof sharedkey_by_client);
+  crypto_generichash_init(&h, nullptr, 0U, sizeof sharedkey_by_client);
   crypto_generichash_update(&h, scalarmult_q_by_client, sizeof scalarmult_q_by_client);
   crypto_generichash_update(&h, client_publickey, sizeof client_publickey);
   crypto_generichash_update(&h, server_publickey, sizeof server_publickey);
@@ -198,14 +216,15 @@ TEST_CASE("secret_connection: libsodium - key exchange ", "[noir][p2p]") {
 TEST_CASE("secret_connection: openssl - hkdf ", "[noir][p2p]") {
   EVP_KDF* kdf;
   EVP_KDF_CTX* kctx;
+  static char const* digest = "SHA256";
   unsigned char key[32 + 32 + 32];
   OSSL_PARAM params[5], *p = params;
 
-  kdf = EVP_KDF_fetch(NULL, "HKDF", NULL);
+  kdf = EVP_KDF_fetch(nullptr, "HKDF", nullptr);
   kctx = EVP_KDF_CTX_new(kdf);
   EVP_KDF_free(kdf);
 
-  *p++ = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_sha256, strlen(SN_sha256));
+  *p++ = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char*)digest, strlen(digest));
 
   // *p++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, (void*)"secret", (size_t)6);
   bytes32 secret{"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03"};
@@ -237,4 +256,23 @@ TEST_CASE("secret_connection: openssl - hkdf ", "[noir][p2p]") {
     "96362a04f628a0666d9866147326898bb0847b8db8680263ad19e6336d4eed9e");
   CHECK(to_hex(std::span((const byte_type*)(key + 64), 32)) ==
     "2632c3fd20f456c5383ed16aa1d56dc7875a2b0fc0d5ff053c3ada8934098c69");
+}
+
+TEST_CASE("secret_connection: libsodium - chacha20", "[noir][p2p]") {
+  bytes32 key{"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03"};
+  uint8_t nonce[crypto_stream_chacha20_IETF_NONCEBYTES];
+  randombytes_buf(nonce, sizeof nonce);
+  std::string msg = "hello";
+
+  unsigned long long ciphertext_len;
+  unsigned char ciphertext[1024];
+  unsigned char decrypted[1024];
+
+  crypto_stream_chacha20_ietf_xor(ciphertext, reinterpret_cast<const unsigned char*>(msg.data()), msg.size(), nonce,
+    reinterpret_cast<const unsigned char*>(key.data()));
+
+  crypto_stream_chacha20_ietf_xor(decrypted, reinterpret_cast<const unsigned char*>(ciphertext), msg.size(), nonce,
+    reinterpret_cast<const unsigned char*>(key.data()));
+
+  CHECK(std::string(decrypted, decrypted + 5) == msg);
 }
