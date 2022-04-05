@@ -76,8 +76,7 @@ public:
 template<typename ABCIClient>
 class AppConnQuery {
 public:
-  AppConnQuery(const std::string& address, boost::asio::io_context& io_context)
-    : app_conn(address, true, io_context) {}
+  AppConnQuery(const std::string& address, boost::asio::io_context& io_context): app_conn(address, true, io_context) {}
 
   result<void> error() {
     return app_conn.error();
@@ -112,10 +111,12 @@ public:
   result<std::unique_ptr<abci::ResponseOfferSnapshot>> offer_snapshot_sync(const abci::RequestOfferSnapshot& req) {
     return app_conn.offer_snapshot_sync(req);
   }
-  result<std::unique_ptr<abci::ResponseLoadSnapshotChunk>> load_snapshot_chunk_sync(const abci::RequestLoadSnapshotChunk& req) {
+  result<std::unique_ptr<abci::ResponseLoadSnapshotChunk>> load_snapshot_chunk_sync(
+    const abci::RequestLoadSnapshotChunk& req) {
     return app_conn.load_snapshot_sync(req);
   }
-  result<std::unique_ptr<abci::ResponseApplySnapshotChunk>> apply_snapshot_chunk_sync(const abci::RequestApplySnapshotChunk& req) {
+  result<std::unique_ptr<abci::ResponseApplySnapshotChunk>> apply_snapshot_chunk_sync(
+    const abci::RequestApplySnapshotChunk& req) {
     return app_conn.apply_snapshot_chunk_sync(req);
   }
 
