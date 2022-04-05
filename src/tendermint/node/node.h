@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <tendermint/common/common.h>
+#include <tendermint/proxy/multi_app_conn.h>
 #include <tendermint/service/service.h>
 #include <appbase/application.hpp>
 #include <boost/noncopyable.hpp>
@@ -17,6 +18,9 @@ public:
 
   result<void> on_start() noexcept;
   void on_stop() noexcept;
+
+public:
+  proxy::TCPAppConns proxy_app;
 
 protected:
   appbase::application& app;
