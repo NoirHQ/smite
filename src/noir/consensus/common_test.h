@@ -242,10 +242,15 @@ public:
   status_monitor(const status_monitor&) = delete;
   status_monitor& operator=(const status_monitor&) = delete;
 
-  void start() {
+  template<typename FilterCb>
+  void subscribe_filtered_msg(FilterCb cb) {
     std::shared_ptr<events::event_bus> ev{ev_bus.lock()};
     REQUIRE(ev != nullptr);
-    handle = ev->subscribe(node_name, [&](const events::message msg) { msg_queue.push(msg); });
+    handle = ev->subscribe(node_name, [&](const events::message msg) {
+      if (cb(msg)) {
+        msg_queue.push(msg);
+      }
+    });
   }
 
   struct process_msg_result {
@@ -386,6 +391,12 @@ public:
   int32_t round{-1};
   p2p::round_step_type step;
 
+  template<typename T>
+  static int get_message_type_index() {
+    events::tm_event_data tmp{T{}};
+    return tmp.index();
+  }
+
 private:
   std::weak_ptr<events::event_bus> ev_bus;
   std::weak_ptr<consensus_state> cs_state_;
@@ -393,17 +404,12 @@ private:
   static std::map<std::string, p2p::round_step_type> step_map_;
 
   template<typename T>
-  static int get_message_type_index() {
-    events::tm_event_data tmp{T{}};
-    return tmp.index();
-  }
-
-  template<typename T>
   bool ensure_events_internal(int timeout, int64_t height = -1, int32_t round = -1,
     p2p::signed_msg_type vote_type = p2p::signed_msg_type::Unknown) {
     process_msg_result ret;
     while (ret = process_msg(), ret.index < 0) { // TODO: implement timeout
     }
+
     CHECKED_ELSE(ret.index == get_message_type_index<T>()) {
       return false;
     }
