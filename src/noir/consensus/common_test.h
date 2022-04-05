@@ -149,6 +149,33 @@ void force_tick(std::shared_ptr<consensus_state>& cs) {
 void sign_add_votes(config& config_, std::shared_ptr<consensus_state>& cs, p2p::signed_msg_type type, bytes hash,
   p2p::part_set_header header) {}
 
+bool validate_votes(const std::shared_ptr<vote_set>& votes, const bytes& address, const bytes& block_hash) {
+  auto index = votes->val_set.get_index_by_address(address);
+  if (index < 0) {
+    return false;
+  }
+
+  auto& vote = votes->votes[index];
+  if (!vote) {
+    return false;
+  }
+  return vote->block_id_.hash == block_hash;
+}
+
+bool validate_prevote(consensus_state& cs_state, int32_t round, validator_stub& priv_val, bytes& block_hash) {
+  auto prevotes = cs_state.rs.votes->prevotes(round);
+  auto pub_key = priv_val.priv_val->get_pub_key();
+  auto address = pub_key.address();
+  return validate_votes(prevotes, address, block_hash);
+}
+
+bool validate_last_precommit(consensus_state& cs_state, validator_stub& priv_val, bytes& block_hash) {
+  auto votes = cs_state.rs.last_commit;
+  auto pub_key = priv_val.priv_val->get_pub_key();
+  auto address = pub_key.address();
+  return validate_votes(votes, address, block_hash);
+}
+
 inline std::vector<noir::consensus::tx> make_txs(int64_t height, int num) {
   std::vector<noir::consensus::tx> txs{};
   for (auto i = 0; i < num; ++i) {
