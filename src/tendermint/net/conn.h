@@ -6,7 +6,7 @@
 #pragma once
 #include <tendermint/common/common.h>
 #include <tendermint/log/log.h>
-#include <tendermint/net/details/message_buffer.hpp>
+#include <tendermint/net/details/message_buffer.h>
 #include <tendermint/net/details/queued_buffer.h>
 #include <boost/asio/io_context_strand.hpp>
 #include <future>
