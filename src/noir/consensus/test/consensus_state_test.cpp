@@ -97,3 +97,42 @@ TEST_CASE("consensus_state: Verify vote signature", "[noir][consensus]") {
   auto result = local_priv_validator->get_pub_key().verify_signature(data_vote2, vote_.signature);
   CHECK(result == true);
 }
+
+TEST_CASE("consensus_state: Test State Full Round1", "[noir][consensus]") {
+  appbase::application app_;
+  app_.register_plugin<test_plugin>();
+  app_.initialize<test_plugin>();
+
+  auto local_config = config_setup();
+  auto [cs1, vss] = rand_cs(local_config, 1, app_);
+  auto local_priv_validator = cs1->local_priv_validator;
+  auto cs_monitor = status_monitor("test", cs1->event_bus_, cs1);
+  auto height = cs1->rs.height;
+  auto round = cs1->rs.round;
+
+  auto thread = std::make_unique<noir::named_thread_pool>("test_thread", 5);
+  auto res = noir::async_thread_pool(thread->get_executor(), [&]() {
+    app_.startup();
+    app_.exec();
+  });
+
+  std::vector<int> type_indexes = {
+    status_monitor::get_message_type_index<events::event_data_vote>(),
+    status_monitor::get_message_type_index<events::event_data_complete_proposal>(),
+    status_monitor::get_message_type_index<events::event_data_new_round>(),
+  };
+  cs_monitor.subscribe_msg_types(type_indexes);
+  start_test_round(cs1, height, round);
+
+  CHECK(cs_monitor.ensure_new_round(10, height, round) == true);
+  CHECK(cs_monitor.ensure_new_proposal(10, height, round) == true);
+  auto prop_block_hash = cs1->get_round_state()->proposal_block->get_hash();
+  CHECK(cs_monitor.ensure_prevote(10, height, round) == true);
+
+  CHECK(validate_prevote(*cs1, round, vss[0], prop_block_hash) == true);
+  CHECK(cs_monitor.ensure_precommit(10, height, round) == true);
+  CHECK(cs_monitor.ensure_new_round(10, height + 1, 0) == true);
+  CHECK(validate_last_precommit(*cs1, vss[0], prop_block_hash) == true);
+
+  app_.quit();
+}
