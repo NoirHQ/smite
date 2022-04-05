@@ -116,12 +116,17 @@ TEST_CASE("consensus_state: Test State Full Round1", "[noir][consensus]") {
     app_.exec();
   });
 
-  std::vector<int> type_indexes = {
-    status_monitor::get_message_type_index<events::event_data_vote>(),
-    status_monitor::get_message_type_index<events::event_data_complete_proposal>(),
-    status_monitor::get_message_type_index<events::event_data_new_round>(),
+  auto event_message_filter = [](const events::message& msg) {
+    static const std::vector<int> subscribed_msg_types = {
+      status_monitor::get_message_type_index<events::event_data_vote>(),
+      status_monitor::get_message_type_index<events::event_data_complete_proposal>(),
+      status_monitor::get_message_type_index<events::event_data_new_round>(),
+    };
+    return std::any_of(subscribed_msg_types.begin(), subscribed_msg_types.end(),
+      [&](int i) { return i == static_cast<int>(msg.data.index()); });
   };
-  cs_monitor.subscribe_msg_types(type_indexes);
+
+  cs_monitor.subscribe_filtered_msg(event_message_filter);
   start_test_round(cs1, height, round);
 
   CHECK(cs_monitor.ensure_new_round(10, height, round) == true);
