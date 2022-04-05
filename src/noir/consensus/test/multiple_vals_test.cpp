@@ -67,7 +67,7 @@ public:
       cs_reactor->switch_to_consensus(std::forward<decltype(arg1)>(arg1), std::forward<decltype(arg2)>(arg2));
     });
     monitor = status_monitor(node_name_, node_->event_bus_, node_->cs_reactor->cs_state);
-    monitor.start();
+    monitor.subscribe_filtered_msg([](const events::message&) { return false; }); // event is not used yet
 
     thread_ = std::make_unique<noir::named_thread_pool>("test_thread", 2);
   }
