@@ -40,10 +40,10 @@ constexpr void check(bool pred, const char* msg = "") {
 /// \param format_str string for formatting
 /// \param args variable arguments for formatted message
 /// \ingroup common
-template<typename Error = std::runtime_error, typename T, typename... Ts>
-constexpr void check(bool pred, T format_str, Ts... args) {
+template<typename Error = std::runtime_error, typename... Ts>
+constexpr void check(bool pred, const char* format_str, Ts... args) {
   if (!pred) {
-    throw Error(fmt::format(format_str, args...));
+    throw Error(fmt::format(fmt::runtime(format_str), args...));
   }
 }
 
