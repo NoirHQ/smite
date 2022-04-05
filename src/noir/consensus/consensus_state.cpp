@@ -255,6 +255,8 @@ void consensus_state::on_start() {
       check(load_wal_file(), "failed to load wal");
     }
   }
+
+  enter_new_round(rs.height, rs.round);
 }
 
 void consensus_state::on_stop() {
