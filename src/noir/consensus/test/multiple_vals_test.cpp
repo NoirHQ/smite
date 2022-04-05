@@ -32,6 +32,8 @@ public:
       cs_reactor_mq_channel(app.get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>()) {}
 };
 
+std::atomic_bool is_running = false;
+
 class test_node {
 public:
   test_node() = delete;
@@ -67,7 +69,7 @@ public:
     });
     monitor = status_monitor(node_, node_name_);
 
-    thread_ = std::make_unique<noir::named_thread_pool>("test_thread", 1);
+    thread_ = std::make_unique<noir::named_thread_pool>("test_thread", 2);
   }
 
   ~test_node() {
@@ -82,7 +84,12 @@ public:
       app_->startup();
       app_->exec();
     });
-    node_->on_start();
+    noir::async_thread_pool(thread_->get_executor(), [this]() {
+      while (!is_running.load(std::memory_order_acquire)) {
+        usleep(1000);
+      }
+      node_->on_start();
+    });
   }
 
   void stop() {
@@ -252,10 +259,13 @@ TEST_CASE("node: multiple validator test") {
   for (auto& test_node : test_nodes) {
     test_node->start();
   }
+  test_detail::is_running.store(true, std::memory_order_seq_cst);
 
   test_detail::ice_breaking(test_nodes);
 
   sleep(test_time);
+
+  test_detail::is_running.store(false, std::memory_order_relaxed);
 
   for (auto& test_node : test_nodes) {
     test_node->stop();
