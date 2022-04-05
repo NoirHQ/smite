@@ -180,9 +180,6 @@ struct node {
     }
 
     cs_reactor->on_start();
-    auto height = cs_reactor->cs_state->rs.height;
-    auto round = cs_reactor->cs_state->rs.round;
-    cs_reactor->cs_state->enter_new_round(height, round);
 
     bs_reactor->on_start(); // TODO: is this right place to start block_sync?
   }
