@@ -1,4 +1,5 @@
 add_library(noir_p2p STATIC
+  conn/merlin.cpp
   conn/secret_connection.cpp
   p2p.cpp
 )

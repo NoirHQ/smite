@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/p2p/conn/merlin.h>
 #include <noir/p2p/conn/secret_connection.h>
 
 #include <fc/crypto/base64.hpp>
@@ -65,6 +66,19 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(bytes32& receiv
     recv_secret = bytes32(std::span(key.data() + 32, 32));
   }
   chal_secret = bytes32(std::span(key.data() + 64, 32));
+
+  // Find challenge secret by applying merlin transcript
+  merlin_transcript mctx;
+  static char const* label = "TENDERMINT_SECRET_CONNECTION_TRANSCRIPT_HASH";
+  merlin_transcript_init(&mctx, reinterpret_cast<const uint8_t*>(label), strlen(label));
+  merlin_transcript_commit_bytes(&mctx, reinterpret_cast<const uint8_t*>("EPHEMERAL_LOWER_PUBLIC_KEY"),
+    strlen("EPHEMERAL_LOWER_PUBLIC_KEY"), reinterpret_cast<const uint8_t*>(lo_eph_pub.data()), lo_eph_pub.size());
+  merlin_transcript_commit_bytes(&mctx, reinterpret_cast<const uint8_t*>("EPHEMERAL_UPPER_PUBLIC_KEY"),
+    strlen("EPHEMERAL_UPPER_PUBLIC_KEY"), reinterpret_cast<const uint8_t*>(lo_eph_pub.data()), hi_eph_pub.size());
+  merlin_transcript_commit_bytes(&mctx, reinterpret_cast<const uint8_t*>("DH_SECRET"), strlen("DH_SECRET"),
+    reinterpret_cast<const uint8_t*>(dh_secret.data()), dh_secret.size());
+  merlin_transcript_challenge_bytes(&mctx, reinterpret_cast<const uint8_t*>("SECRET_CONNECTION_MAC"),
+    strlen("SECRET_CONNECTION_MAC"), reinterpret_cast<uint8_t*>(chal_secret.data()), chal_secret.size());
 
   // Sign challenge bytes for authentication
   uint8_t sm[32 + crypto_sign_BYTES];
