@@ -8,7 +8,7 @@
 
 namespace tendermint::node {
 
-Node::Node(appbase::application& app): app(app) {
+Node::Node(appbase::application& app): app(app), proxy_app("127.0.0.1:26658") {
   name = "Node";
 }
 
