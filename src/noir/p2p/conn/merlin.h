@@ -1,7 +1,7 @@
 // This file is part of NOIR.
 //
-// Copyright Henry de Valence <hdevalence@hdevalence.ca>.
-// License: CC0, attribution kindly requested. Blame taken too, but not liability.
+// Copyright (c) Henry de Valence
+// SPDX-License-Identifier: CC0-1.0
 //
 #pragma once
 #include <cstdint>

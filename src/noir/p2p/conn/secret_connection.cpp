@@ -12,7 +12,6 @@ extern "C" {
 #include <openssl/core_names.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
-
 #include <sodium.h>
 }
 

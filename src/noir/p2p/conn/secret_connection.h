@@ -13,6 +13,7 @@ struct nonce {
   bytes_n<NumBytes> bz{};
   bool overflow{}; // Indicates if an overflow occurred
 
+  /// Not thread safe
   void increment() {
     unsigned int carry = 1;
     for (int64_t i = bz.size() - 1; carry > 0; --i) {
@@ -52,7 +53,6 @@ struct secret_connection {
 
   bytes32 loc_eph_pub;
   bytes32 loc_eph_priv;
-
   bytes32 rem_eph_pub; // other's ephemeral pub key
 
   bytes32 recv_secret;
