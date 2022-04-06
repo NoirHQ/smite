@@ -9,7 +9,7 @@
 
 namespace noir::p2p {
 
-typedef struct merlin_strobe128_ {
+struct merlin_strobe128 {
   union {
     uint64_t state[25];
     uint8_t state_bytes[200];
@@ -17,11 +17,11 @@ typedef struct merlin_strobe128_ {
   uint8_t pos;
   uint8_t pos_begin;
   uint8_t cur_flags;
-} merlin_strobe128;
+};
 
-typedef struct merlin_transcript_ {
+struct merlin_transcript {
   merlin_strobe128 sctx;
-} merlin_transcript;
+};
 
 void merlin_transcript_init(merlin_transcript* mctx, const uint8_t* label, size_t label_len);
 

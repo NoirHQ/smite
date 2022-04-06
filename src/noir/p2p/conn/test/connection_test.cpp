@@ -7,6 +7,7 @@
 #include <noir/common/hex.h>
 #include <noir/common/types.h>
 #include <noir/crypto/hash.h>
+#include <noir/p2p/conn/merlin.h>
 #include <noir/p2p/conn/secret_connection.h>
 
 #include <fc/crypto/base64.hpp>
@@ -280,4 +281,19 @@ TEST_CASE("secret_connection: libsodium - chacha20", "[noir][p2p]") {
     reinterpret_cast<const unsigned char*>(key.data()));
 
   CHECK(std::string(decrypted, decrypted + 5) == msg);
+}
+
+TEST_CASE("secret_connection: merlin transcript", "[noir][p2p]") {
+  p2p::merlin_transcript mctx{};
+  static char const* init = "TEST";
+  static char const* item = "TEST";
+  static char const* challenge = "challenge";
+  bytes32 challenge_buf;
+  merlin_transcript_init(&mctx, reinterpret_cast<const uint8_t*>(init), strlen(init));
+  merlin_transcript_commit_bytes(
+    &mctx, reinterpret_cast<const uint8_t*>(item), strlen(item), reinterpret_cast<const uint8_t*>(item), strlen(item));
+  merlin_transcript_challenge_bytes(&mctx, reinterpret_cast<const uint8_t*>(challenge), strlen(challenge),
+    reinterpret_cast<uint8_t*>(challenge_buf.data()), challenge_buf.size());
+  std::cout << to_hex(challenge_buf) << std::endl;
+  CHECK(to_hex(challenge_buf) == "c8cc8d7b4b3320f6a7a813c480d8f1ebd9cfb6873417eb69a44b4ed91b27af10");
 }

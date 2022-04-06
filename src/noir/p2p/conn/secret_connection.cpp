@@ -68,7 +68,7 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(bytes32& receiv
   chal_secret = bytes32(std::span(key.data() + 64, 32));
 
   // Find challenge secret by applying merlin transcript
-  merlin_transcript mctx;
+  merlin_transcript mctx{};
   static char const* label = "TENDERMINT_SECRET_CONNECTION_TRANSCRIPT_HASH";
   merlin_transcript_init(&mctx, reinterpret_cast<const uint8_t*>(label), strlen(label));
   merlin_transcript_commit_bytes(&mctx, reinterpret_cast<const uint8_t*>("EPHEMERAL_LOWER_PUBLIC_KEY"),
