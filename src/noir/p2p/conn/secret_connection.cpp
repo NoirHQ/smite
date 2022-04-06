@@ -9,7 +9,6 @@
 #include <fc/crypto/base64.hpp>
 
 extern "C" {
-#include <openssl/core_names.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 #include <sodium.h>
@@ -113,9 +112,9 @@ bytes secret_connection::derive_secrets(bytes32& dh_secret) {
   kdf = EVP_KDF_fetch(nullptr, "HKDF", nullptr);
   kctx = EVP_KDF_CTX_new(kdf);
   EVP_KDF_free(kdf);
-  *p++ = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char*)digest, strlen(digest));
-  *p++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, (void*)dh_secret.data(), dh_secret.size());
-  *p++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_INFO, (void*)info, strlen(info));
+  *p++ = OSSL_PARAM_construct_utf8_string("digest", (char*)digest, strlen(digest));
+  *p++ = OSSL_PARAM_construct_octet_string("key", (void*)dh_secret.data(), dh_secret.size());
+  *p++ = OSSL_PARAM_construct_octet_string("info", (void*)info, strlen(info));
   *p = OSSL_PARAM_construct_end();
   auto kdf_res = (EVP_KDF_derive(kctx, key, sizeof(key), params) <= 0);
   EVP_KDF_CTX_free(kctx);

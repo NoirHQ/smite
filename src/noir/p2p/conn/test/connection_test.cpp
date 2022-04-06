@@ -12,7 +12,6 @@
 
 #include <fc/crypto/base64.hpp>
 
-#include <openssl/core_names.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 #include <sodium.h>
@@ -165,11 +164,11 @@ TEST_CASE("secret_connection: openssl - hkdf", "[noir][p2p]") {
   kctx = EVP_KDF_CTX_new(kdf);
   EVP_KDF_free(kdf);
 
-  *p++ = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, (char*)digest, strlen(digest));
+  *p++ = OSSL_PARAM_construct_utf8_string("digest", (char*)digest, strlen(digest));
   bytes32 secret{"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03"};
-  *p++ = OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_KEY, (void*)secret.data(), secret.size());
+  *p++ = OSSL_PARAM_construct_octet_string("key", (void*)secret.data(), secret.size());
   *p++ =
-    OSSL_PARAM_construct_octet_string(OSSL_KDF_PARAM_INFO, (void*)"TENDERMINT_SECRET_CONNECTION_KEY_AND_CHALLENGE_GEN",
+    OSSL_PARAM_construct_octet_string("info", (void*)"TENDERMINT_SECRET_CONNECTION_KEY_AND_CHALLENGE_GEN",
       strlen("TENDERMINT_SECRET_CONNECTION_KEY_AND_CHALLENGE_GEN"));
   *p = OSSL_PARAM_construct_end();
   if (EVP_KDF_derive(kctx, key, sizeof(key), params) <= 0) {
