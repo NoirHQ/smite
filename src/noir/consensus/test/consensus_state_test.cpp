@@ -98,7 +98,9 @@ TEST_CASE("consensus_state: Verify vote signature", "[noir][consensus]") {
   CHECK(result == true);
 }
 
+#include <noir/common/backtrace.h>
 TEST_CASE("consensus_state: Test State Full Round1", "[noir][consensus]") {
+  signal(SIGSEGV, noir::print_backtrace); // install our handler
   appbase::application app_;
   app_.register_plugin<test_plugin>();
   app_.initialize<test_plugin>();

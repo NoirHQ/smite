@@ -189,7 +189,9 @@ void ice_breaking(const std::vector<std::shared_ptr<test_node>>& test_nodes) {
 
 } // namespace test_detail
 
+#include <noir/common/backtrace.h>
 TEST_CASE("node: multiple validator test") {
+  signal(SIGSEGV, noir::print_backtrace); // install our handler
   fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
   int node_count = 2;
   int test_time = 60; // seconds
