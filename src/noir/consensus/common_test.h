@@ -407,9 +407,22 @@ private:
   bool ensure_events_internal(int timeout, int64_t height = -1, int32_t round = -1,
     p2p::signed_msg_type vote_type = p2p::signed_msg_type::Unknown) {
     process_msg_result ret;
-    while (ret = process_msg(), ret.index < 0) { // TODO: implement timeout
-    }
 
+    std::atomic<bool> is_timeout = false;
+    named_thread_pool thread_pool("status_monitor", 1);
+    boost::asio::steady_timer timeout_ticker(thread_pool.get_executor());
+    timeout_ticker.cancel();
+    timeout_ticker.expires_from_now(std::chrono::seconds{timeout});
+    timeout_ticker.async_wait([&is_timeout](const boost::system::error_code ec) {
+      // if (ec.failed()) {}
+      is_timeout = true;
+    });
+
+    while (ret = process_msg(), (is_timeout == false && ret.index < 0)) {
+    }
+    CHECKED_ELSE(is_timeout.load() == false) {
+      return false;
+    }
     CHECKED_ELSE(ret.index == get_message_type_index<T>()) {
       return false;
     }

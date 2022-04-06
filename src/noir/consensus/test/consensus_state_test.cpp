@@ -104,6 +104,18 @@ TEST_CASE("consensus_state: Test State Full Round1", "[noir][consensus]") {
   app_.initialize<test_plugin>();
 
   auto local_config = config_setup();
+  constexpr int timeout_new_round = 3; // TODO: check this time is correct
+  constexpr int timeout_propose = 3;
+  constexpr int timeout_prevote = 1;
+  constexpr int timeout_precommit = 1;
+  constexpr int timeout_commit = 3;
+  constexpr int timeout_delta = 1;
+
+  local_config.consensus.timeout_propose = std::chrono::seconds{timeout_propose};
+  local_config.consensus.timeout_prevote = std::chrono::seconds{timeout_prevote};
+  local_config.consensus.timeout_precommit = std::chrono::seconds{timeout_precommit};
+  local_config.consensus.timeout_commit = std::chrono::seconds{timeout_commit};
+
   auto [cs1, vss] = rand_cs(local_config, 1, app_);
   auto local_priv_validator = cs1->local_priv_validator;
   auto cs_monitor = status_monitor("test", cs1->event_bus_, cs1);
@@ -129,14 +141,14 @@ TEST_CASE("consensus_state: Test State Full Round1", "[noir][consensus]") {
   cs_monitor.subscribe_filtered_msg(event_message_filter);
   start_test_round(cs1, height, round);
 
-  CHECK(cs_monitor.ensure_new_round(10, height, round) == true);
-  CHECK(cs_monitor.ensure_new_proposal(10, height, round) == true);
+  CHECK(cs_monitor.ensure_new_round(timeout_new_round + timeout_delta, height, round) == true);
+  CHECK(cs_monitor.ensure_new_proposal(timeout_propose + timeout_delta, height, round) == true);
   auto prop_block_hash = cs1->get_round_state()->proposal_block->get_hash();
-  CHECK(cs_monitor.ensure_prevote(10, height, round) == true);
+  CHECK(cs_monitor.ensure_prevote(timeout_prevote + timeout_delta, height, round) == true);
 
   CHECK(validate_prevote(*cs1, round, vss[0], prop_block_hash) == true);
-  CHECK(cs_monitor.ensure_precommit(10, height, round) == true);
-  CHECK(cs_monitor.ensure_new_round(10, height + 1, 0) == true);
+  CHECK(cs_monitor.ensure_precommit(timeout_precommit + timeout_delta, height, round) == true);
+  CHECK(cs_monitor.ensure_new_round(timeout_commit + timeout_delta, height + 1, 0) == true);
   CHECK(validate_last_precommit(*cs1, vss[0], prop_block_hash) == true);
 
   app_.quit();
