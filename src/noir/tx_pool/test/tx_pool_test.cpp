@@ -385,6 +385,8 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
     size_t thread_num = 10;
     auto thread = std::make_unique<named_thread_pool>("test_thread", thread_num);
     uint tx_count = 100;
+    boost::asio::steady_timer timer(thread->get_executor());
+    auto wait_time = std::chrono::seconds(5);
 
     SECTION("multi thread add") {
       std::atomic<uint> token = thread_num;
@@ -423,19 +425,20 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
         }
       });
 
+      std::atomic_bool is_timeout = false;
+      timer.cancel();
+      timer.expires_from_now(wait_time);
+      timer.async_wait([&](const boost::system::error_code ec) { is_timeout = true; });
+
       std::future<uint> get_result;
       get_result = async_thread_pool(thread->get_executor(), [&]() {
         token.fetch_sub(1, std::memory_order_seq_cst);
         while (token.load(std::memory_order_seq_cst)) {
         } // wait other thread
         uint get_count = 0;
-        auto start_time = get_time();
-        while (get_count < tx_count) {
+        while (get_count < tx_count && !is_timeout) {
           auto txs = tp.reap_max_txs(tx_count - get_count);
           get_count += txs.size();
-          if (get_time() - start_time >= 5000000 /* 5sec */) {
-            break;
-          }
         }
         return get_count;
       });
@@ -463,6 +466,11 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
         });
       }
 
+      std::atomic_bool is_timeout = false;
+      timer.cancel();
+      timer.expires_from_now(wait_time);
+      timer.async_wait([&](const boost::system::error_code ec) { is_timeout = true; });
+
       std::future<uint> get_result[2];
       for (auto& res : get_result) {
         res = async_thread_pool(thread->get_executor(), [&]() {
@@ -470,13 +478,9 @@ TEST_CASE("tx_pool: Add/Get tx", "[noir][tx_pool]") {
           while (token.load(std::memory_order_seq_cst)) {
           } // wait other thread
           uint get_count = 0;
-          auto start_time = get_time();
-          while (get_count < tx_count) {
+          while (get_count < tx_count && !is_timeout) {
             auto txs = tp.reap_max_txs(tx_count - get_count);
             get_count += txs.size();
-            if (get_time() - start_time >= 5000000 /* 5sec */) {
-              break;
-            }
           }
           return get_count;
         });
