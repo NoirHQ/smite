@@ -111,7 +111,8 @@ std::tuple<state, std::vector<std::shared_ptr<priv_validator>>> rand_genesis_sta
   return {state_, priv_vals};
 }
 
-std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config& config_, int num_validators) {
+std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(
+  config& config_, int num_validators, appbase::application& app_ = app) {
   auto [state_, priv_vals] = rand_genesis_state(config_, num_validators, false, 10);
 
   validator_stub_list vss;
@@ -121,10 +122,10 @@ std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(config
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
-  auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
+  auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app_);
   auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls, ev_bus);
 
-  auto cs = consensus_state::new_state(app, config_.consensus, state_, block_exec, bls, ev_bus);
+  auto cs = consensus_state::new_state(app_, config_.consensus, state_, block_exec, bls, ev_bus);
   cs->set_priv_validator(priv_vals[0]); // todo - requires many other fields to be properly initialized
 
   for (auto i = 0; i < num_validators; i++) {
