@@ -5,8 +5,8 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
-#include <tendermint/common/bitarray.h>
 #include <noir/core/codec.h>
+#include <tendermint/common/bitarray.h>
 
 using namespace noir;
 using namespace tendermint;
@@ -93,7 +93,7 @@ TEST_CASE("bitarray", "[noir][consensus]") {
     {
       bitarray ba(60);
       bitarray bb(66);
-      ba.set(0, true); 
+      ba.set(0, true);
       ba.set(1, true);
       bb.set(1, true);
       bb.set(2, true);
