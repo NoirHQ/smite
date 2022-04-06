@@ -31,7 +31,7 @@ public:
       cs_reactor_mq_channel(app.get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>()) {}
 };
 
-std::atomic_bool is_running = false;
+std::atomic<int> node_tokens = 0;
 
 class test_node {
 public:
@@ -85,7 +85,8 @@ public:
       app_->exec();
     });
     noir::async_thread_pool(thread_->get_executor(), [this]() {
-      while (!is_running.load(std::memory_order_acquire)) {
+      node_tokens.fetch_sub(1, std::memory_order_acquire);
+      while (node_tokens.load(std::memory_order_acquire)) {
         usleep(1000);
       }
       node_->on_start();
@@ -164,6 +165,7 @@ std::vector<std::shared_ptr<test_node>> make_node_set(int count) {
   cfg.base.chain_id = "test_chain";
   auto [gen_doc, priv_vals] = rand_genesis_doc(cfg, count, false, 100 / count);
   auto gen_doc_ptr = std::make_shared<genesis_doc>(gen_doc);
+  node_tokens = count;
 
   std::vector<std::shared_ptr<test_node>> test_nodes;
   test_nodes.reserve(count);
@@ -190,7 +192,7 @@ void ice_breaking(const std::vector<std::shared_ptr<test_node>>& test_nodes) {
 TEST_CASE("node: multiple validator test") {
   fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
   int node_count = 2;
-  int test_time = 0; // seconds
+  int test_time = 60; // seconds
   int sleep_interval = 3; // seconds
 
   auto test_nodes = test_detail::make_node_set(node_count);
@@ -198,7 +200,6 @@ TEST_CASE("node: multiple validator test") {
   for (auto& test_node : test_nodes) {
     test_node->start();
   }
-  test_detail::is_running.store(true, std::memory_order_seq_cst);
 
   test_detail::ice_breaking(test_nodes);
 
@@ -212,8 +213,6 @@ TEST_CASE("node: multiple validator test") {
       }
     }
   }
-
-  test_detail::is_running.store(false, std::memory_order_relaxed);
 
   for (auto& test_node : test_nodes) {
     test_node->stop();
