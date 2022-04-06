@@ -58,8 +58,7 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
   auto to = info->broadcast ? "all" : info->to;
 
   if (wait_sync) {
-    dlog(fmt::format(
-      "ignore messages received during sync. from={}, to={}, broadcast={}", from, to, info->broadcast));
+    dlog(fmt::format("ignore messages received during sync. from={}, to={}, broadcast={}", from, to, info->broadcast));
     return;
   }
 
