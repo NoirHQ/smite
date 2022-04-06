@@ -60,7 +60,7 @@ struct req_res {
   void invoke_callback() {
     std::scoped_lock _(mutex);
     if (callback) {
-      callback(*res);
+      callback(res);
     }
   }
 };

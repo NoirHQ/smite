@@ -69,14 +69,14 @@ public:
     };
 
     auto rr_ptr = std::make_shared<req_res<response_check_tx>>();
-    rr_ptr->res = std::make_shared<response_check_tx>(res);
+    rr_ptr->res = res;
     rrs_.push_back(rr_ptr);
 
     return *rr_ptr;
   }
 
   response_check_tx& check_tx_sync() override {
-    return *new_rr().res;
+    return new_rr().res;
   }
 
   req_res<response_check_tx>& check_tx_async() override {
