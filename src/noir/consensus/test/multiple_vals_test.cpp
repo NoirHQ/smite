@@ -305,6 +305,7 @@ TEST_CASE("node: multiple validator test") {
   fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
   int node_count = 2;
   int test_time = 100; // seconds
+  int sleep_interval = 3; // seconds
 
   auto test_nodes = test_detail::make_node_set(node_count);
 
@@ -315,7 +316,13 @@ TEST_CASE("node: multiple validator test") {
 
   test_detail::ice_breaking(test_nodes);
 
-  sleep(test_time);
+  for (auto i = 0; i < test_time; i += sleep_interval) {
+    sleep(sleep_interval);
+    std::cout << "elapsed_time=" << i << std::endl;
+    for (auto& test_node : test_nodes) {
+      std::cout << test_node->monitor.to_string() << std::endl;
+    }
+  }
 
   test_detail::is_running.store(false, std::memory_order_relaxed);
 
