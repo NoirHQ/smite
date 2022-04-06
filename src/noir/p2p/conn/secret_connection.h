@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/p2p/types.h>
+#include <optional>
 
 namespace noir::p2p {
 

@@ -167,9 +167,8 @@ TEST_CASE("secret_connection: openssl - hkdf", "[noir][p2p]") {
   *p++ = OSSL_PARAM_construct_utf8_string("digest", (char*)digest, strlen(digest));
   bytes32 secret{"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03"};
   *p++ = OSSL_PARAM_construct_octet_string("key", (void*)secret.data(), secret.size());
-  *p++ =
-    OSSL_PARAM_construct_octet_string("info", (void*)"TENDERMINT_SECRET_CONNECTION_KEY_AND_CHALLENGE_GEN",
-      strlen("TENDERMINT_SECRET_CONNECTION_KEY_AND_CHALLENGE_GEN"));
+  *p++ = OSSL_PARAM_construct_octet_string("info", (void*)"TENDERMINT_SECRET_CONNECTION_KEY_AND_CHALLENGE_GEN",
+    strlen("TENDERMINT_SECRET_CONNECTION_KEY_AND_CHALLENGE_GEN"));
   *p = OSSL_PARAM_construct_end();
   if (EVP_KDF_derive(kctx, key, sizeof(key), params) <= 0) {
     std::cout << "Error: "
