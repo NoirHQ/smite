@@ -279,6 +279,7 @@ void consensus_state::update_round_step(int32_t round, round_step_type step) {
  */
 void consensus_state::schedule_round_0(round_state& rs_) {
   auto sleep_duration = rs_.start_time - get_time();
+  ilog(fmt::format("STH:: sleep for {}", sleep_duration));
   schedule_timeout(std::chrono::microseconds(sleep_duration), rs_.height, 0, round_step_type::NewHeight); // todo
 }
 
