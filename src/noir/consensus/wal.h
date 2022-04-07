@@ -305,14 +305,23 @@ public:
   base_wal(const base_wal&) = delete; // do not allow copy
   base_wal(const std::string& dir, const std::string& file_name, size_t num_file, size_t rotate_size)
     : file_manager_(std::make_unique<wal_file_manager>(dir, file_name, num_file, rotate_size)),
-      flush_interval(std::chrono::system_clock::duration(2000000)) { // 2seconds = 2000000 microseconds
+      flush_interval(std::chrono::seconds{2}) {
     thread_pool.emplace("consensus", thread_pool_size);
     {
       // std::scoped_lock g(flush_ticker_mtx);
       flush_ticker = std::make_unique<boost::asio::steady_timer>(thread_pool->get_executor());
     }
   }
-  ~base_wal() override = default;
+  ~base_wal() override {
+    if (flush_ticker) {
+      flush_ticker->cancel();
+      flush_ticker.reset();
+    }
+    file_manager_.reset();
+    if (thread_pool) {
+      thread_pool->stop();
+    }
+  }
 
   bool write(const wal_message& msg) override {
     size_t len;
@@ -447,6 +456,9 @@ private:
   std::optional<named_thread_pool> thread_pool;
 
   std::function<void(boost::system::error_code)> process_flush_ticks = [this](boost::system::error_code ec) {
+    if (ec == boost::asio::error::operation_aborted) {
+      return;
+    }
     if (ec.failed()) {
       wlog("wal flush ticker error: ${m}", ("m", ec.message()));
       // return;
