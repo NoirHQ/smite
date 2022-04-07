@@ -12,10 +12,42 @@
 
 namespace noir::codec::orderedcode {
 
+const char term[] = {0x00, 0x01};
+const char lit00[] = {0x00, char(0xff)};
+const char litff[] = {char(0xff), 0x00};
+const char inf[] = {char(0xff), char(0xff)};
+const char msb[] = {0x00, char(0x80), char(0xc0), char(0xe0), char(0xf0), char(0xf8), char(0xfc), char(0xfe)};
+
+const char increasing = 0x00;
+const char decreasing = 0xff;
+
+template<typename T>
+struct decr {
+  T val;
+
+  bool operator==(const decr<T>& o) const {
+    return val == o.val;
+  }
+
+  bool operator==(decr<T> o) {
+    return val == o.val;
+  }
+};
+
+struct infinity {};
+
+struct trailing_string : std::string {};
+
+struct string_or_infinity {
+  std::string s;
+  bool inf;
+};
+
 template<typename T>
 class datastream : public basic_datastream<T> {
 public:
   using basic_datastream<T>::basic_datastream;
+  unsigned char dir;
 };
 
 template<typename T>
@@ -70,10 +102,18 @@ std::vector<char> encode(const Ts&... vs) {
   return buffer;
 }
 
-template<typename Stream, typename T>
+template<typename T>
 void decode(std::span<const char> s, T& t) {
   datastream<const char> ds(s);
+  ds.dir = increasing;
   ds >> t;
+}
+
+template<typename T>
+void decode(std::span<const char> s, decr<T>& t) {
+  datastream<const char> ds(s);
+  ds.dir = decreasing;
+  ds >> t.val;
 }
 
 template<typename Stream, typename T>
@@ -81,42 +121,33 @@ void decode(datastream<Stream>& ds, T& t) {
   ds >> t;
 }
 
-template<typename... Ts>
-void decode(std::span<const char> s, Ts&... ts) {
-  datastream<const char> ds(s);
+template<typename Stream, typename T>
+void decode(datastream<Stream>& ds, decr<T>& t) {
+  ds.dir = decreasing;
+  ds >> t.val;
+  ds.dir = increasing;
+}
+
+template<typename Stream, typename T, typename... Ts>
+void decode(datastream<Stream>& ds, T& t, Ts&... ts) {
+  ds >> t;
   decode(ds, ts...);
 }
 
-const char term[] = {0x00, 0x01};
-const char lit00[] = {0x00, char(0xff)};
-const char litff[] = {char(0xff), 0x00};
-const char inf[] = {char(0xff), char(0xff)};
-const char msb[] = {0x00, char(0x80), char(0xc0), char(0xe0), char(0xf0), char(0xf8), char(0xfc), char(0xfe)};
+template<typename Stream, typename T, typename... Ts>
+void decode(datastream<Stream>& ds, decr<T>& t, Ts&... ts) {
+  ds.dir = decreasing;
+  ds >> t.val;
+  decode(ds, ts...);
+  ds.dir = increasing;
+}
 
-const char increasing = 0x00;
-const char decreasing = 0xff;
-
-template<typename T>
-struct decr {
-  T val;
-
-  bool operator==(const decr<T>& o) const {
-    return val == o.val;
-  }
-
-  bool operator==(decr<T> o) {
-    return val == o.val;
-  }
-};
-
-struct infinity {};
-
-struct trailing_string : std::string {};
-
-struct string_or_infinity {
-  std::string s;
-  bool inf;
-};
+template<typename... Ts>
+void decode(std::span<const char> s, Ts&... ts) {
+  datastream<const char> ds(s);
+  ds.dir = increasing;
+  decode(ds, ts...);
+}
 
 void invert(std::span<unsigned char>& s) {
   std::for_each(s.begin(), s.end(), [](unsigned char& c) { c ^= 0xff; });
@@ -249,18 +280,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, infinity& v) {
   if (ds.remaining() < 2) {
     throw std::runtime_error("orderedcode: corrupt input");
   }
-  if (ds.get() != inf[0] || ds.get() != inf[1]) {
-    throw std::runtime_error("orderedcode: corrupt input");
-  }
-  return ds;
-}
-
-template<typename Stream>
-datastream<Stream>& operator>>(datastream<Stream>& ds, decr<infinity>& v) {
-  if (ds.remaining() < 2) {
-    throw std::runtime_error("orderedcode: corrupt input");
-  }
-  if ((ds.get() ^ decreasing) != inf[0] || (ds.get() ^ decreasing) != inf[1]) {
+  if (static_cast<char>(ds.get() ^ ds.dir) != inf[0] || static_cast<char>(ds.get() ^ ds.dir) != inf[1]) {
     throw std::runtime_error("orderedcode: corrupt input");
   }
   return ds;
@@ -268,17 +288,19 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, decr<infinity>& v) {
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, trailing_string& v) {
-  ds.read(v, ds.remaining());
-  return ds;
-}
-
-template<typename Stream>
-datastream<Stream>& operator>>(datastream<Stream>& ds, decr<trailing_string>& v) {
-  std::vector<unsigned char> s;
-  ds.read(s, ds.remaining());
-  std::span<unsigned char> sp(s);
-  invert(sp);
-  v.val.insert(v.val.end(), s.begin(), s.end());
+  v.clear();
+  if (ds.dir) {
+    trailing_string ts;
+    ts.resize(ds.remaining());
+    ds.read(ts.data(), ds.remaining());
+    std::vector<unsigned char> b(ts.begin(), ts.end());
+    std::span<unsigned char> sp(b);
+    invert(sp);
+    v.insert(v.end(), b.begin(), b.end());
+  } else {
+    v.resize(ds.remaining());
+    ds.read(v.data(), ds.remaining());
+  }
   return ds;
 }
 
@@ -286,63 +308,30 @@ template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
   v.clear();
   for (; ds.remaining() > 0;) {
-    auto c = static_cast<const char>(ds.get());
-    switch (static_cast<unsigned char>(c)) {
+    auto c = static_cast<unsigned char>(ds.get() ^ ds.dir);
+    switch (c) {
     case 0x00:
       if (ds.remaining() <= 0) {
         throw std::runtime_error("orderedcode: corrupt input");
       }
-      switch (static_cast<unsigned char>(static_cast<const char>(ds.get()))) {
+      switch (static_cast<unsigned char>(ds.get() ^ ds.dir)) {
       case 0x01:
         return ds;
       case 0xff:
-        v.insert(v.end(), static_cast<char>(0x00));
+        v.insert(v.end(), 0x00);
         break;
       default:
         throw std::runtime_error("orderedcode: corrupt input");
       }
       break;
     case 0xff:
-      if (ds.remaining() <= 0 || ((static_cast<const char>(ds.get())) != static_cast<char>(0x00))) {
+      if (ds.remaining() <= 0 || ((static_cast<unsigned char>(ds.get()) ^ ds.dir) != 0x00)) {
         throw std::runtime_error("orderedcode: corrupt input");
       }
-      v.insert(v.end(), static_cast<char>(0xff));
+      v.insert(v.end(), 0xff);
       break;
     default:
       v.insert(v.end(), c);
-    }
-  }
-  throw std::runtime_error("orderedcode: corrupt input");
-}
-
-template<typename Stream>
-datastream<Stream>& operator>>(datastream<Stream>& ds, decr<std::string>& v) {
-  v.val.clear();
-  for (; ds.remaining() > 0;) {
-    auto c = static_cast<const char>(ds.get());
-    switch (static_cast<unsigned char>(c ^ decreasing)) {
-    case 0x00:
-      if (ds.remaining() <= 0) {
-        throw std::runtime_error("orderedcode: corrupt input");
-      }
-      switch (static_cast<unsigned char>(static_cast<const char>(ds.get()) ^ decreasing)) {
-      case 0x01:
-        return ds;
-      case 0xff:
-        v.val.insert(v.val.end(), static_cast<char>(0x00));
-        break;
-      default:
-        throw std::runtime_error("orderedcode: corrupt input");
-      }
-      break;
-    case 0xff:
-      if (ds.remaining() <= 0 || ((static_cast<const char>(ds.get()) ^ decreasing) != static_cast<char>(0x00))) {
-        throw std::runtime_error("orderedcode: corrupt input");
-      }
-      v.val.insert(v.val.end(), static_cast<char>(0xff));
-      break;
-    default:
-      v.val.insert(v.val.end(), static_cast<char>(c ^ decreasing));
     }
   }
   throw std::runtime_error("orderedcode: corrupt input");
@@ -362,37 +351,21 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, string_or_infinity& v) {
 }
 
 template<typename Stream>
-datastream<Stream>& operator>>(datastream<Stream>& ds, decr<string_or_infinity>& v) {
-  try {
-    decr<infinity> _{};
-    ds >> _;
-    v.val.inf = true;
-    return ds;
-  } catch (...) {
-    decr<std::string> s;
-    ds >> s;
-    v.val.s = s.val;
-  }
-  return ds;
-}
-
-template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, int64_t& v) {
-  char dir = increasing;
   v = 0;
-  auto c = static_cast<unsigned char>(ds.get() ^ dir);
+  auto c = static_cast<unsigned char>(ds.get() ^ ds.dir);
   if (c >= 0x40 && c < 0xc0) {
     v = int64_t(int8_t(c ^ 0x80));
     return ds;
   }
-  bool neg = (c & 0x80) == 0;
+  auto neg = (c & 0x80) == 0;
   if (neg) {
     c = ~c;
-    dir = ~dir;
+    ds.dir = ~ds.dir;
   }
   size_t n = 0;
   if (c == 0xff) {
-    c = static_cast<unsigned char>(ds.get() ^ dir);
+    c = static_cast<unsigned char>(ds.get() ^ ds.dir);
     if (c > 0xc0) {
       throw std::runtime_error("orderedcode: corrupt input");
     }
@@ -404,7 +377,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, int64_t& v) {
   }
   int64_t x = c;
   for (size_t i = 1; i < n; i++) {
-    c = static_cast<unsigned char>(ds.get() ^ dir);
+    c = ds.get() ^ ds.dir;
     x = x << 8 | c;
   }
   if (neg) {
@@ -415,59 +388,11 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, int64_t& v) {
 }
 
 template<typename Stream>
-datastream<Stream>& operator>>(datastream<Stream>& ds, decr<int64_t>& v) {
-  char dir = decreasing;
-  v.val = 0;
-  unsigned char c = ds.get() ^ dir;
-  if (c >= 0x40 && c < 0xc0) {
-    v.val = int64_t(int8_t(c ^ 0x80));
-    return ds;
-  }
-  bool neg = (c & 0x80) == 0;
-  if (neg) {
-    c = ~c;
-    dir = ~dir;
-  }
-  size_t n = 0;
-  if (c == 0xff) {
-    c = static_cast<unsigned char>(ds.get() ^ dir);
-    if (c > 0xc0) {
-      throw std::runtime_error("orderedcode: corrupt input");
-    }
-    n = 7;
-  }
-  for (unsigned char mask = 0x80; (c & mask) != 0; mask >>= 1) {
-    c &= ~mask;
-    n++;
-  }
-  int64_t x = c;
-  for (size_t i = 1; i < n; i++) {
-    c = ds.get() ^ dir;
-    x = x << 8 | static_cast<unsigned char>(c);
-  }
-  if (neg) {
-    x = ~x;
-  }
-  v.val = x;
-  return ds;
-}
-
-template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, uint64_t& v) {
-  unsigned char n = ds.get();
+  auto n = static_cast<unsigned char>(ds.get() ^ ds.dir);
   v = 0;
   for (size_t i = 0; i < n; i++) {
-    v = v << 8 | static_cast<unsigned char>(ds.get());
-  }
-  return ds;
-}
-
-template<typename Stream>
-datastream<Stream>& operator>>(datastream<Stream>& ds, decr<uint64_t>& v) {
-  unsigned char n = ds.get() ^ decreasing;
-  v.val = 0;
-  for (size_t i = 0; i < n; i++) {
-    v.val = v.val << 8 | static_cast<unsigned char>(ds.get() ^ decreasing);
+    v = v << 8 | static_cast<unsigned char>(ds.get() ^ ds.dir);
   }
   return ds;
 }
@@ -481,20 +406,6 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, double& v) {
   }
   memcpy(&v, &i, sizeof(i));
   if (isnan(v)) {
-    throw std::runtime_error("parse: NaN");
-  }
-  return ds;
-}
-
-template<typename Stream>
-datastream<Stream>& operator>>(datastream<Stream>& ds, decr<double>& v) {
-  decr<int64_t> i{int64_t(0)};
-  ds >> i;
-  if (i.val < 0) {
-    i.val = ((int64_t)-1 << 63) - i.val;
-  }
-  memcpy(&v.val, &i.val, sizeof(i.val));
-  if (isnan(v.val)) {
     throw std::runtime_error("parse: NaN");
   }
   return ds;
