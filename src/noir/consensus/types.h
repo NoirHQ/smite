@@ -17,7 +17,8 @@ struct round_vote_set {
 };
 
 inline p2p::tstamp get_time() {
-  return std::chrono::system_clock::now().time_since_epoch().count();
+  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch())
+    .count();
 }
 
 /**

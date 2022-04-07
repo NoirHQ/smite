@@ -416,7 +416,8 @@ void consensus_state::schedule_timeout(
 void consensus_state::tick(timeout_info_ptr ti) {
   std::scoped_lock g(timeout_ticker_mtx);
   dlog(fmt::format("received tick: old_ti=[duration={} {}/{}/{}], new_ti=[duration={} {}/{}/{}]",
-    old_ti->duration_.count(), old_ti->height, old_ti->round, round_step_to_str(old_ti->step), ti->duration_.count(),
+    std::chrono::duration_cast<std::chrono::microseconds>(old_ti->duration_).count(), old_ti->height, old_ti->round,
+    round_step_to_str(old_ti->step), std::chrono::duration_cast<std::chrono::microseconds>(ti->duration_).count(),
     ti->height, ti->round, round_step_to_str(old_ti->step)));
 
   // ignore tickers for old height/round/step

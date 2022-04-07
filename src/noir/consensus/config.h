@@ -116,7 +116,7 @@ struct consensus_config {
    * returns the amount of time to wait for straggler votes after receiving 2/3+ precommits
    */
   p2p::tstamp commit(p2p::tstamp t) {
-    return t + timeout_commit.count();
+    return t + duration_cast<std::chrono::microseconds>(timeout_commit).count();
   }
 };
 
