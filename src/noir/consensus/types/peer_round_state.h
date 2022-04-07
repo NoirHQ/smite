@@ -45,12 +45,12 @@ struct peer_round_state {
     proposal_pol_round = v.proposal_pol_round;
     last_commit_round = v.last_commit_round;
     catchup_commit_round = v.catchup_commit_round;
-    proposal_block_parts = v.proposal_block_parts->copy();
-    proposal_pol = v.proposal_pol->copy();
-    prevotes = v.prevotes->copy();
-    precommits = v.precommits->copy();
-    last_commit = v.last_commit->copy();
-    catchup_commit = v.catchup_commit->copy();
+    proposal_block_parts = bit_array::copy(v.proposal_block_parts);
+    proposal_pol = bit_array::copy(v.proposal_pol);
+    prevotes = bit_array::copy(v.prevotes);
+    precommits = bit_array::copy(v.precommits);
+    last_commit = bit_array::copy(v.last_commit);
+    catchup_commit = bit_array::copy(v.catchup_commit);
     return *this;
   }
 };

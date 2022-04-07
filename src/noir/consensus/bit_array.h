@@ -30,6 +30,13 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
     return ret;
   }
 
+  static std::shared_ptr<bit_array> copy(const std::shared_ptr<bit_array>& other) {
+    if (other == nullptr) {
+      return nullptr;
+    }
+    return new_bit_array(other->bits);
+  }
+
   int size() const {
     if (this == nullptr) { ///< NOT a very nice way of coding; need to refactor later
       return 0;
