@@ -120,8 +120,8 @@ jobs:
       - run: make test
         working-directory: ./build
       ## setup tmate session
-      #- name: Debugging with tmate
-      #  if: ${{ failure() }}
-      #  uses: mxschmitt/action-tmate@v3.11
-      #  timeout-minutes: 15
+      - name: Debugging with tmate
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3.11
+        timeout-minutes: 60
 
