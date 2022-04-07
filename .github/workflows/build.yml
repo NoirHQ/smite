@@ -29,7 +29,7 @@ jobs:
           platform_version: 20.04
           boost_install_dir: /opt
       # setup build dependencies
-      - run: sudo apt install -y libb2-dev libgflags-dev libprotobuf-dev protobuf-compiler xsltproc
+      - run: sudo apt install -y libb2-dev libgflags-dev libprotobuf-dev protobuf-compiler xsltproc gdb
       # checkout
       - uses: actions/checkout@v2
         with:
@@ -73,10 +73,10 @@ jobs:
       - run: make test
         working-directory: ./build
       ## setup tmate session
-      #- name: Debugging with tmate
-      #  if: ${{ failure() }}
-      #  uses: mxschmitt/action-tmate@v3.11
-      #  timeout-minutes: 15
+      - name: Debugging with tmate
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3.11
+        timeout-minutes: 60
 
   darwin_build:
     name: MacOS
