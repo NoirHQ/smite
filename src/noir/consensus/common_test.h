@@ -248,6 +248,7 @@ public:
     REQUIRE(ev != nullptr);
     handle = ev->subscribe(node_name, [&](const events::message msg) {
       if (cb(msg)) {
+        std::cout << "push : " << msg.data.index() << std::endl;
         msg_queue.push(msg);
       }
     });

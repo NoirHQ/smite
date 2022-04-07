@@ -101,6 +101,7 @@ TEST_CASE("consensus_state: Verify vote signature", "[noir][consensus]") {
 #include <noir/common/backtrace.h>
 TEST_CASE("consensus_state: Test State Full Round1", "[noir][consensus]") {
   signal(SIGSEGV, noir::print_backtrace); // install our handler
+  fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
   appbase::application app_;
   app_.register_plugin<test_plugin>();
   app_.initialize<test_plugin>();
