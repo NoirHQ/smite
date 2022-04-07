@@ -151,9 +151,10 @@ public:
 
     std::scoped_lock lock(mutex_);
     new_wrapped_tx.tx = codec::scale::encode(tx_id_++);
+    new_wrapped_tx.hash = get_tx_hash(new_wrapped_tx.tx);
     new_wrapped_tx.nonce = nonce_++;
     new_wrapped_tx.height = height_++;
-    return std::make_shared<wrapped_tx>(new_wrapped_tx);
+    return new_wrapped_tx;
   }
 
   void reset_tx_id() {
@@ -195,7 +196,7 @@ TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
   unapplied_tx_queue tx_queue;
 
   const uint64_t tx_count = 10;
-  wrapped_tx_ptrs wtxs;
+  std::vector<consensus::wrapped_tx> wtxs;
   wtxs.reserve(tx_count);
   for (auto i = 0; i < tx_count; i++) {
     wtxs.push_back(test_helper->make_random_wrapped_tx("user"));
@@ -209,33 +210,33 @@ TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
 
   SECTION("Add same tx hash") { // fail case
     auto wtx = wtxs[0];
-    wtx->nonce = wtxs[tx_count - 1]->nonce + 1;
+    wtx.nonce = wtxs[tx_count - 1].nonce + 1;
     CHECK(tx_queue.add_tx(wtx));
     CHECK(tx_queue.size() == tx_count);
-    CHECK(tx_queue.get_tx(wtxs[0]->hash()));
+    CHECK(tx_queue.get_tx(wtxs[0].hash));
   }
 
   SECTION("Has") {
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.has(wtx->hash()));
+      CHECK(tx_queue.has(wtx.hash));
     }
   }
 
   SECTION("Get") {
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.get_tx(wtx->hash()));
+      CHECK(tx_queue.get_tx(wtx.hash));
     }
   }
 
   SECTION("Erase tx") {
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.erase(wtx->hash()));
+      CHECK(tx_queue.erase(wtx.hash));
     }
     CHECK(tx_queue.empty());
 
     // fail case
     for (auto& wtx : wtxs) {
-      CHECK(tx_queue.erase(wtx->hash()) == false);
+      CHECK(tx_queue.erase(wtx.hash) == false);
     }
     CHECK(tx_queue.empty());
   }
@@ -253,9 +254,9 @@ TEST_CASE("unapplied_tx_queue: Tx queue basic test", "[noir][tx_pool]") {
 
 TEST_CASE("unapplied_tx_queue: Fully add/erase tx", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
-  uint64_t tx_count = 10000;
+  uint64_t tx_count = 10;
   uint64_t queue_size = 0;
-  wrapped_tx_ptrs wtxs;
+  std::vector<consensus::wrapped_tx> wtxs;
   wtxs.reserve(tx_count);
   for (uint64_t i = 0; i < tx_count; i++) {
     wtxs.push_back(test_helper->make_random_wrapped_tx("user"));
@@ -272,7 +273,7 @@ TEST_CASE("unapplied_tx_queue: Fully add/erase tx", "[noir][tx_pool]") {
   CHECK(tx_queue->size() == tx_count);
 
   for (auto& wtx : wtxs) {
-    CHECK(tx_queue->erase(wtx->hash()));
+    CHECK(tx_queue->erase(wtx.hash));
   }
   CHECK(tx_queue->empty());
 }
@@ -292,9 +293,9 @@ TEST_CASE("unapplied_tx_queue: Indexing", "[noir][tx_pool]") {
   SECTION("by nonce") {
     auto tx = test_helper->make_random_wrapped_tx("Alice");
     tx_queue->add_tx(tx);
-    auto tx_ptr = tx_queue->get_tx(tx->sender, tx->nonce);
+    auto tx_ptr = tx_queue->get_tx(tx.sender, tx.nonce);
     CHECKED_IF(tx_ptr) {
-      CHECK(tx_ptr->nonce == tx->nonce);
+      CHECK(tx_ptr->nonce == tx.nonce);
     }
   }
 
@@ -641,7 +642,7 @@ TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
 
   SECTION("invalid") {
     auto wrapped_tx = test_helper->make_random_wrapped_tx("user");
-    auto item = c.get(wrapped_tx->hash());
+    auto item = c.get(wrapped_tx.hash);
     CHECK(!item.has_value());
   }
 

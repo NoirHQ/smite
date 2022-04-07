@@ -16,32 +16,32 @@
 namespace noir::tx_pool {
 
 struct unapplied_tx {
-  const consensus::wrapped_tx_ptr tx_ptr;
+  consensus::wrapped_tx wtx;
 
   const uint64_t gas() const {
-    return tx_ptr->gas;
+    return wtx.gas;
   }
   const uint64_t nonce() const {
-    return tx_ptr->nonce;
+    return wtx.nonce;
   }
   const consensus::address_type sender() const {
-    return tx_ptr->sender;
+    return wtx.sender;
   }
   const std::string hash() const {
-    return tx_ptr->hash().to_string();
+    return wtx.hash.to_string();
   }
   const uint64_t height() const {
-    return tx_ptr->height;
+    return wtx.height;
   }
   const p2p::tstamp time_stamp() const {
-    return tx_ptr->time_stamp;
+    return wtx.time_stamp;
   }
 
   unapplied_tx(const unapplied_tx&) = delete;
   unapplied_tx() = delete;
   unapplied_tx& operator=(const unapplied_tx&) = delete;
   unapplied_tx(unapplied_tx&&) = default;
-  explicit unapplied_tx(const consensus::wrapped_tx_ptr& wtx): tx_ptr(wtx) {}
+  explicit unapplied_tx(const consensus::wrapped_tx& other): wtx(other) {}
 };
 
 class unapplied_tx_queue {
@@ -127,31 +127,31 @@ public:
     return queue_.get<by_hash>().find(tx_hash.to_string()) != queue_.get<by_hash>().end();
   }
 
-  consensus::wrapped_tx_ptr get_tx(const consensus::tx_hash& tx_hash) const {
+  std::optional<consensus::wrapped_tx> get_tx(const consensus::tx_hash& tx_hash) const {
     auto itr = queue_.get<by_hash>().find(tx_hash.to_string());
     if (itr == queue_.get<by_hash>().end()) {
       return {};
     }
-    return itr->tx_ptr;
+    return itr->wtx;
   }
 
-  consensus::wrapped_tx_ptr get_tx(const consensus::address_type& sender, uint64_t nonce) const {
+  std::optional<consensus::wrapped_tx> get_tx(const consensus::address_type& sender, uint64_t nonce) const {
     auto itr = queue_.get<by_nonce>().find(std::make_tuple(sender, nonce));
     if (itr == queue_.get<by_nonce>().end()) {
       return {};
     }
-    return itr->tx_ptr;
+    return itr->wtx;
   }
 
-  bool add_tx(const consensus::wrapped_tx_ptr& tx_ptr) {
-    auto size = bytes_size(tx_ptr);
+  bool add_tx(consensus::wrapped_tx wtx) {
+    auto size = bytes_size(wtx);
     if (size_in_bytes_ + size > max_tx_queue_bytes_size_) {
       return false;
     }
 
-    auto res = queue_.insert(unapplied_tx{tx_ptr});
+    auto res = queue_.insert(unapplied_tx{wtx});
     if (res.second) {
-      size_in_bytes_ += bytes_size(tx_ptr);
+      size_in_bytes_ += bytes_size(wtx);
       incoming_count_++;
     }
 
@@ -221,11 +221,7 @@ public:
     return reverse_iterator<Tag>(queue_.get<Tag>().lower_bound(val));
   }
 
-  bool erase(const consensus::wrapped_tx_ptr& tx_ptr) {
-    return erase(tx_ptr->hash().to_string());
-  }
-
-  bool erase(const consensus::tx_hash& tx_hash) {
+  bool erase(consensus::tx_hash& tx_hash) {
     return erase(tx_hash.to_string());
   }
 
@@ -236,13 +232,13 @@ public:
     }
 
     incoming_count_--;
-    size_in_bytes_ -= bytes_size(itr->tx_ptr);
+    size_in_bytes_ -= bytes_size(itr->wtx);
     queue_.get<by_hash>().erase(itr);
     return true;
   }
 
-  static uint64_t bytes_size(const consensus::wrapped_tx_ptr& tx_ptr) {
-    return sizeof(unapplied_tx) + tx_ptr->size();
+  static uint64_t bytes_size(const consensus::wrapped_tx& wtx) {
+    return sizeof(unapplied_tx) + wtx.size();
   }
 };
 
