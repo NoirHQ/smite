@@ -25,21 +25,14 @@ static tx_hash get_tx_hash(const tx& tx) {
 }
 
 struct wrapped_tx {
+  // TODO : constructor
   address_type sender;
-  std::optional<tx_hash> _hash;
-
+  tx_hash hash;
   consensus::tx tx;
   uint64_t gas;
   uint64_t nonce;
   uint64_t height;
   p2p::tstamp time_stamp;
-
-  tx_hash hash() {
-    if (!_hash.has_value()) {
-      _hash = get_tx_hash(tx);
-    }
-    return _hash.value();
-  }
 
   uint64_t size() const {
     return sizeof(*this) + tx.size();

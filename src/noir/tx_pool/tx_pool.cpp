@@ -106,9 +106,10 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
   }
 
   std::scoped_lock lock(mutex_);
-  auto old_tx = tx_queue_.get_tx(res.sender, res.nonce);
-  if (old_tx) {
-    if (res.gas_wanted < old_tx->gas + config_.gas_price_bump) {
+  auto old = tx_queue_.get_tx(res.sender, res.nonce);
+  if (old.has_value()) {
+    auto old_wtx = old.value();
+    if (res.gas_wanted < old_wtx.gas + config_.gas_price_bump) {
       if (!config_.keep_invalid_txs_in_cache) {
         tx_cache_.del(tx_hash);
       }
@@ -116,12 +117,12 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
         fmt::format(
           "gas price is not enough for nonce override (tx_hash: {}, nonce: {})", tx_hash.to_string(), res.nonce));
     }
-    tx_queue_.erase(old_tx);
+    tx_queue_.erase(old_wtx.hash);
   }
 
   auto wtx = consensus::wrapped_tx{
     .sender = res.sender,
-    ._hash = tx_hash,
+    .hash = tx_hash,
     .tx = tx,
     .gas = res.gas_wanted,
     .nonce = res.nonce,
@@ -129,7 +130,7 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
     .time_stamp = consensus::get_time(),
   };
 
-  if (!tx_queue_.add_tx(std::make_shared<consensus::wrapped_tx>(wtx))) {
+  if (!tx_queue_.add_tx(wtx)) {
     if (!config_.keep_invalid_txs_in_cache) {
       tx_cache_.del(tx_hash);
     }
@@ -148,9 +149,9 @@ std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, u
   uint64_t bytes = 0;
   uint64_t gas = 0;
   for (auto itr = rbegin; itr != rend; itr++) {
-    auto wtx = itr->tx_ptr;
-    auto tx = wtx->tx;
-    if (gas + wtx->gas > max_gas) {
+    auto wtx = itr->wtx;
+    auto tx = wtx.tx;
+    if (gas + wtx.gas > max_gas) {
       continue;
     }
 
@@ -159,7 +160,7 @@ std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, u
     }
 
     bytes += tx.size();
-    gas += wtx->gas;
+    gas += wtx.gas;
     txs.push_back(tx);
   }
 
@@ -176,7 +177,7 @@ std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
     if (txs.size() >= count) {
       break;
     }
-    txs.push_back(itr->tx_ptr->tx);
+    txs.push_back(itr->wtx.tx);
   }
 
   return txs;
@@ -209,16 +210,22 @@ void tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& bl
 
   if (config_.ttl_num_blocks > 0) {
     uint64_t expired_block_height = block_height_ > config_.ttl_num_blocks ? block_height_ - config_.ttl_num_blocks : 0;
-    std::for_each(tx_queue_.begin<unapplied_tx_queue::by_height>(0),
-      tx_queue_.end<unapplied_tx_queue::by_height>(expired_block_height),
-      [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->hash()); });
+    auto begin = tx_queue_.begin<unapplied_tx_queue::by_height>(0);
+    auto end = tx_queue_.end<unapplied_tx_queue::by_height>(expired_block_height);
+    for (auto& itr = begin; itr != end; itr++) {
+      auto wtx = itr->wtx;
+      tx_queue_.erase(wtx.hash);
+    }
   }
 
   if (config_.ttl_duration > 0) {
     auto expired_time = consensus::get_time() - config_.ttl_duration;
-    std::for_each(tx_queue_.begin<unapplied_tx_queue::by_time>(0),
-      tx_queue_.end<unapplied_tx_queue::by_time>(expired_time),
-      [&](auto& itr) { tx_queue_.erase(itr.tx_ptr->hash()); });
+    auto begin = tx_queue_.begin<unapplied_tx_queue::by_time>(0);
+    auto end = tx_queue_.end<unapplied_tx_queue::by_time>(expired_time);
+    for (auto& itr = begin; itr != end; itr++) {
+      auto wtx = itr->wtx;
+      tx_queue_.erase(wtx.hash);
+    }
   }
 
   if (config_.recheck) {
@@ -228,9 +235,9 @@ void tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& bl
 
 void tx_pool::update_recheck_txs() {
   for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
-    auto tx_ptr = itr->tx_ptr;
+    auto wtx = itr->wtx;
     proxy_app_->check_tx_async(consensus::request_check_tx{
-      .tx = tx_ptr->tx,
+      .tx = wtx.tx,
       .type = consensus::check_tx_type::recheck,
     });
     proxy_app_->flush_async();
