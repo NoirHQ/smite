@@ -37,7 +37,7 @@ TEST_CASE("orderedcode: append and parse uint64", "[noir][codec]") {
   std::vector<char> v2;
   decr<uint64_t> di;
   for (auto& t : testcase) {
-    v = encode(decr<std::uint64_t>{t.first});
+    v2 = encode(decr<std::uint64_t>{t.first});
     std::span<char> sp(v2);
     decode(sp, di);
     CHECK(decr<uint64_t>{t.first} == di);
@@ -256,6 +256,17 @@ TEST_CASE("orderedcode: append double", "[noir][codec]") {
 
 TEST_CASE("orderedcode: append infinity", "[noir][codec]") {
   CHECK(noir::to_hex(encode(infinity{})) == "ffff");
+  CHECK(noir::to_hex(encode(decr<infinity>{infinity{}})) == "0000");
+
+  std::vector<char> v = {char(0xff), char(0xff)};
+  std::span<char> s(v);
+  infinity i;
+  CHECK_NOTHROW(decode(s, i));
+
+  std::vector<char> v2 = {char(0x00), char(0x00)};
+  std::span<char> s2(v2);
+  decr<infinity> di{};
+  CHECK_NOTHROW(decode(s2, di));
 }
 
 TEST_CASE("orderedcode: increase decrease", "[noir][codec]") {
@@ -271,7 +282,7 @@ TEST_CASE("orderedcode: parse infinity", "[noir][codec]") {
   CHECK_NOTHROW(decode(sp, i));
 }
 
-TEST_CASE("orderedcode: append trailing string", "[noir][codec]") {
+TEST_CASE("orderedcode: append and parse trailing string", "[noir][codec]") {
   std::vector<std::string> testcase = {str_const(""), str_const("\x00"), str_const("\x00\x01"), str_const("a"),
     str_const("bcd"), str_const("foo\x00"), str_const("foo\x00bar"), str_const("foo\x00bar\x00"), str_const("\xff"),
     str_const("\xff\x00"), str_const("\xff\xfe"), str_const("\xff\xff")};
@@ -281,6 +292,24 @@ TEST_CASE("orderedcode: append trailing string", "[noir][codec]") {
     b.insert(b.end(), t.begin(), t.end());
     CHECK(noir::to_hex(encode(trailing_string{t})) == noir::to_hex(b));
     b.clear();
+  }
+
+  std::vector<char> b2;
+  trailing_string ts;
+  for (auto& t : testcase) {
+    b2 = encode(trailing_string{t});
+    decode(b2, ts);
+    CHECK(t == ts);
+    b2.clear();
+  }
+
+  std::vector<char> b3;
+  decr<trailing_string> dts;
+  for (auto& t : testcase) {
+    b3 = encode(decr<trailing_string>{trailing_string{t}});
+    decode(b3, dts);
+    CHECK(t == dts.val);
+    b3.clear();
   }
 }
 
