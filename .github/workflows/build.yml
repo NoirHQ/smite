@@ -14,7 +14,6 @@ jobs:
     env:
       CC: /usr/bin/gcc-10
       CXX: /usr/bin/g++-10
-      OPENSSL_DIR: /opt/openssl
     steps:
       # setup build dependencies
       # boost
@@ -31,17 +30,6 @@ jobs:
           boost_install_dir: /opt
       # setup build dependencies
       - run: sudo apt install -y libb2-dev libgflags-dev libprotobuf-dev libsodium-dev protobuf-compiler xsltproc
-      # openssl
-      - run: sudo apt remove -y libssl-dev
-      - name: Build OpenSSL
-        run: |
-          url="https://www.openssl.org/source/old/3.0/openssl-3.0.1.tar.gz"
-          mkdir /tmp/build
-          cd /tmp/build
-          curl -L $url | tar --strip-components=1 -xzf -
-          ./Configure -fPIC -g no-shared
-          make
-          sudo make install_sw
       # checkout
       - uses: actions/checkout@v2
         with:

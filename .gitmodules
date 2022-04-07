@@ -37,3 +37,6 @@
 [submodule "libs/spdlog"]
 	path = libs/spdlog
 	url = https://github.com/noir-protocol/spdlog
+[submodule "libs/openssl-cmake"]
+	path = libs/openssl-cmake
+	url = https://github.com/viaduck/openssl-cmake

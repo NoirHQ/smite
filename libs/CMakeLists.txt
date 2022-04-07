@@ -1,3 +1,11 @@
+if(APPLE)
+    message(STATUS "Configuring OpenSSL on OS X: Use SYSTEM_OPENSSL")
+else()
+    message(STATUS "Configuring OpenSSL on Linux")
+    set(OPENSSL_PREBUILT_VERSION "3.0.2")
+    add_subdirectory(openssl-cmake)
+endif()
+
 include(cmake/CachedLibs.cmake)
 
 # add subdirectories if cached libs not found

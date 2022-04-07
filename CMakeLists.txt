@@ -26,6 +26,8 @@ set(NOIR_UNITY_BUILD FALSE CACHE BOOL "unity build")
 if(APPLE)
   set(BOOST_ROOT "/usr/local/opt/boost" CACHE STRING "boost root directory")
   set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl" CACHE STRING "openssl root directory")
+else()
+  set(OPENSSL_ROOT_DIR "${CMAKE_BINARY_DIR}/libs/openssl-cmake/openssl-prefix/src/openssl/usr/local" CACHE STRING "openssl root directory")
 endif()
 
 add_subdirectory(libs)
