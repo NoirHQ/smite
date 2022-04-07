@@ -89,17 +89,17 @@ TEST_CASE("state_wal: catchup_replay", "[noir][consensus]") {
     {"wal should not contain #ENDHEIGHT_2", 1, 1000, 999, false},
   });
 
-  auto [temp_dir, cs] = prepare_consensus(1);
-  noir_defer([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
-  auto& wal_ = cs->wal_;
-
-  std::for_each(tests.begin(), tests.end(), [&, &cs = cs](const test_case& t) {
+  std::for_each(tests.begin(), tests.end(), [&](const test_case& t) {
+    auto [temp_dir, cs] = prepare_consensus(1);
+    noir_defer([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
+    auto& wal_ = cs->wal_;
     SECTION(t.name) {
       for (int64_t height = t.start_height; height < t.end_height; ++height) {
         process_block_wal_msg(*wal_, height);
       }
       CHECK(cs->catchup_replay(t.target_height) == t.expect_ret);
     }
+    cs->on_stop();
   });
 }
 
@@ -128,11 +128,11 @@ TEST_CASE("state_wal: repair_wal_file", "[noir][consensus]") {
     {"corrupted at the end of wal file", 1, 50, 50},
   });
 
-  auto [temp_dir, cs] = prepare_consensus(1);
-  auto wal_path = fs::path{(temp_dir->path() / cs->cs_config.wal_path / cs->wal_head_name).string()};
-  noir_defer([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
+  std::for_each(tests.begin(), tests.end(), [&](const test_case& t) {
+    auto [temp_dir, cs] = prepare_consensus(1);
+    auto wal_path = fs::path{(temp_dir->path() / cs->cs_config.wal_path / cs->wal_head_name).string()};
+    noir_defer([&temp_dir = temp_dir]() { fs::remove_all(temp_dir->path().string()); });
 
-  std::for_each(tests.begin(), tests.end(), [&, &cs = cs](const test_case& t) {
     SECTION(t.name) {
       for (int64_t height = t.start_height; height < t.corrupt_height; ++height) {
         process_block_wal_msg(*cs->wal_, height);
@@ -169,6 +169,7 @@ TEST_CASE("state_wal: repair_wal_file", "[noir][consensus]") {
         }
       }
     }
+    cs->on_stop();
   });
 }
 
