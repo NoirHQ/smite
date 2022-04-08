@@ -135,12 +135,20 @@ void from_hex(std::string_view s, uint128_t& v) {
     v = val;
   }
 #else
-  v = std::move(uint128_t(s));
+  if (!s.starts_with("0x")) {
+    v = std::move(uint128_t("0x" + std::string(s)));
+  } else {
+    v = std::move(uint128_t(s));
+  }
 #endif
 }
 
 void from_hex(std::string_view s, uint256_t& v) {
-  v = std::move(uint256_t(s));
+  if (!s.starts_with("0x")) {
+    v = std::move(uint256_t("0x" + std::string(s)));
+  } else {
+    v = std::move(uint256_t(s));
+  }
 }
 
 std::vector<char> from_hex(std::string_view s) {

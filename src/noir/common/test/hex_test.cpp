@@ -122,7 +122,9 @@ TEST_CASE("hex", "[noir][common]") {
   }
 
   SECTION("uint256_t") {
-    auto v = uint256_t("0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
+    auto hex_str = "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141";
+    uint256_t v;
+    CHECK_NOTHROW(from_hex(hex_str, v));
     CHECK(to_hex(v) == "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
   }
 }
