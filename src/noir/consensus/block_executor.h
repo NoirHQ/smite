@@ -263,13 +263,13 @@ struct block_executor {
       /* todo - verify if implementation is correct;
        *        basically removed the original callback func and directly applied it here */
       auto deliver_res = deliver_res_req.res;
-      if (deliver_res->code == code_type_ok) {
+      if (deliver_res.code == code_type_ok) {
         valid_txs++;
       } else {
-        dlog(fmt::format("invalid tx: code=", deliver_res->code));
+        dlog(fmt::format("invalid tx: code=", deliver_res.code));
         invalid_txs++;
       }
-      abci_responses_->deliver_txs.push_back(*deliver_res);
+      abci_responses_->deliver_txs.push_back(deliver_res);
     }
 
     abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_->header.height});

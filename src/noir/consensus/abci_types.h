@@ -50,7 +50,7 @@ template<typename T>
 struct req_res {
   std::mutex mutex;
   std::function<void(T&)> callback = nullptr;
-  std::shared_ptr<T> res;
+  T res;
 
   void set_callback(std::function<void(T&)> cb) {
     std::scoped_lock _(mutex);
@@ -60,7 +60,7 @@ struct req_res {
   void invoke_callback() {
     std::scoped_lock _(mutex);
     if (callback) {
-      callback(*res);
+      callback(res);
     }
   }
 };

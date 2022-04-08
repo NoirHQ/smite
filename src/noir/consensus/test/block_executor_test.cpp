@@ -24,6 +24,7 @@ make_state(int n_vals, int height) {
   genesis_doc gen_doc;
   gen_doc.chain_id = "execution_chain";
   gen_doc.validators = vals;
+  gen_doc.initial_height = 0;
   auto s = state::make_genesis_state(gen_doc);
 
   auto session = make_session();
@@ -50,5 +51,5 @@ TEST_CASE("block_executor: Apply block", "[noir][consensus]") {
   auto block_ = make_block(1, state_, commit{});
   auto block_id_ = p2p::block_id{block_->get_hash(), block_->make_part_set(65536)->header()};
 
-  block_exec->apply_block(state_, block_id_, block_);
+  CHECK(block_exec->apply_block(state_, block_id_, block_) != std::nullopt);
 }
