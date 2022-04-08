@@ -71,6 +71,11 @@ jobs:
       # test
       - run: make test
         working-directory: ./build
+      ## setup tmate session
+      - name: Debugging with tmate
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3.11
+        timeout-minutes: 60
 
   darwin_build:
     name: MacOS
@@ -112,3 +117,9 @@ jobs:
       # test
       - run: make test
         working-directory: ./build
+      ## setup tmate session
+      - name: Debugging with tmate
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3.11
+        timeout-minutes: 60
+
