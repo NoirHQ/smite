@@ -10,8 +10,6 @@ extern "C" {
 #include <KeccakHash.h>
 }
 
-#define Keccak_HashInitialize_Keccak256(hashInstance) Keccak_HashInitialize(hashInstance, 1088, 512, 256, 0x01)
-
 namespace noir::crypto {
 
 namespace unsafe {
