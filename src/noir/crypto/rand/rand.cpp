@@ -5,6 +5,7 @@
 //
 #include <noir/crypto/rand.h>
 #include <openssl/rand.h>
+#include <stdexcept>
 
 namespace noir::crypto {
 
