@@ -5,23 +5,19 @@
 //
 #pragma once
 #include <noir/crypto/hash/hash.h>
+#include <xxhash.h>
 
 namespace noir::crypto {
 
-namespace unsafe {
-  uint64_t xxh64(std::span<const char> in);
-}
-
 /// \brief generates xxh64 hash
 /// \ingroup crypto
-struct xxh64 : public hash {
-  xxh64();
+struct xxh64 : public hash<xxh64> {
   ~xxh64();
-  hash& init() override;
-  hash& update(std::span<const char> in) override;
-  void final(std::span<char> out) override;
+  hash<xxh64>& init();
+  hash<xxh64>& update(std::span<const char> in);
+  void final(std::span<char> out);
   uint64_t final();
-  size_t digest_size() override;
+  std::size_t digest_size() const;
 
   uint64_t operator()(std::span<const char> in) {
     init().update(in);
@@ -29,8 +25,7 @@ struct xxh64 : public hash {
   }
 
 private:
-  class xxh64_impl;
-  std::unique_ptr<xxh64_impl> impl;
+  XXH64_state_t* state = nullptr;
 };
 
 } // namespace noir::crypto

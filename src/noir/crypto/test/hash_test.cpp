@@ -17,6 +17,12 @@ TEST_CASE("hash: keccak256", "[noir][crypto]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(keccak256()(t.first)) == t.second); });
+
+  {
+    auto hash = keccak256();
+    hash.update(tests[1].first);
+    CHECK(to_hex(hash.final()) == tests[1].second);
+  }
 }
 
 TEST_CASE("hash: sha256", "[noir][crypto]") {
@@ -26,15 +32,27 @@ TEST_CASE("hash: sha256", "[noir][crypto]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(sha256()(t.first)) == t.second); });
+
+  {
+    auto hash = sha256();
+    hash.update(tests[1].first);
+    CHECK(to_hex(hash.final()) == tests[1].second);
+  }
 }
 
-TEST_CASE("hash blake2b_256", "[noir][crypto]") {
+TEST_CASE("hash: blake2b_256", "[noir][crypto]") {
   auto tests = std::to_array<std::pair<std::string, std::string>>({
     {"", "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8"},
     {"The quick brown fox jumps over the lazy dog", "01718cec35cd3d796dd00020e0bfecb473ad23457d063b75eff29c0ffa2e58a9"},
   });
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(blake2b_256()(t.first)) == t.second); });
+
+  {
+    auto hash = blake2b_256();
+    hash.update(tests[1].first);
+    CHECK(to_hex(hash.final()) == tests[1].second);
+  }
 }
 
 TEST_CASE("hash: ripemd160", "[noir][crypto]") {
@@ -44,6 +62,12 @@ TEST_CASE("hash: ripemd160", "[noir][crypto]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(ripemd160()(t.first)) == t.second); });
+
+  {
+    auto hash = ripemd160();
+    hash.update(tests[1].first);
+    CHECK(to_hex(hash.final()) == tests[1].second);
+  }
 }
 
 TEST_CASE("hash: sha3_256", "[noir][crypto]") {
@@ -53,6 +77,12 @@ TEST_CASE("hash: sha3_256", "[noir][crypto]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(to_hex(sha3_256()(t.first)) == t.second); });
+
+  {
+    auto hash = sha3_256();
+    hash.update(tests[1].first);
+    CHECK(to_hex(hash.final()) == tests[1].second);
+  }
 }
 
 TEST_CASE("hash: xxhash", "[noir][crypto]") {
@@ -62,4 +92,10 @@ TEST_CASE("hash: xxhash", "[noir][crypto]") {
   });
 
   std::for_each(tests.begin(), tests.end(), [&](auto& t) { CHECK(xxh64()(t.first) == t.second); });
+
+  {
+    auto hash = xxh64();
+    hash.update(tests[1].first);
+    CHECK(hash.final() == tests[1].second);
+  }
 }

@@ -1,14 +1,15 @@
 add_library(noir_crypto STATIC
-  blake2.cpp
-  keccak.cpp
-  openssl.cpp
-  rand.cpp
-  ripemd.cpp
-  sha2.cpp
-  sha3.cpp
-  xxhash.cpp
+  hash/blake2.cpp
+  hash/keccak.cpp
+  hash/ripemd.cpp
+  hash/sha2.cpp
+  hash/sha3.cpp
+  hash/xxhash.cpp
+  openssl/hash.cpp
+  openssl/openssl.cpp
+  rand/rand.cpp
 )
-target_include_directories(noir_crypto PRIVATE ${CMAKE_BINARY_DIR}/include)
+target_include_directories(noir_crypto PUBLIC ${CMAKE_BINARY_DIR}/include)
 target_link_libraries(noir_crypto
   noir_common
   b2

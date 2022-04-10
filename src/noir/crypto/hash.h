@@ -9,6 +9,7 @@
 /// \brief Cryptography
 
 #include <noir/crypto/hash/blake2.h>
+#include <noir/crypto/hash/keccak.h>
 #include <noir/crypto/hash/ripemd.h>
 #include <noir/crypto/hash/sha2.h>
 #include <noir/crypto/hash/sha3.h>

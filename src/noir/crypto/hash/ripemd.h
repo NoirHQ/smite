@@ -5,24 +5,19 @@
 //
 #pragma once
 #include <noir/crypto/hash/hash.h>
+#include <noir/crypto/openssl/hash.h>
 
 namespace noir::crypto {
 
 /// \brief generates ripemd160 hash
 /// \ingroup crypto
-struct ripemd160 : public hash {
-  using hash::final;
+struct ripemd160 : public hash<ripemd160>, openssl::hash {
+  using crypto::hash<ripemd160>::final;
 
-  ripemd160();
-  ~ripemd160();
-  hash& init() override;
-  hash& update(std::span<const char> in) override;
-  void final(std::span<char> out) override;
-  size_t digest_size() override;
-
-private:
-  class ripemd160_impl;
-  std::unique_ptr<ripemd160_impl> impl;
+  crypto::hash<ripemd160>& init();
+  crypto::hash<ripemd160>& update(std::span<const char> in);
+  void final(std::span<char> out);
+  std::size_t digest_size() const;
 };
 
 } // namespace noir::crypto

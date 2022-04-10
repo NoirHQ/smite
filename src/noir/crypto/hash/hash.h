@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/check.h>
 #include <memory>
 #include <span>
 #include <vector>
@@ -14,6 +13,7 @@
 namespace noir::crypto {
 
 /// \brief abstracts hash function interface
+template<typename Derived>
 struct hash {
   /// \brief calculates and stores the hash value of input data to output buffer
   /// \param in input data
@@ -30,13 +30,19 @@ struct hash {
   }
 
   /// \brief resets hash object context
-  virtual hash& init() = 0;
+  hash<Derived>& init() {
+    return static_cast<Derived*>(this)->init();
+  }
 
   /// \brief updates the hash object with byte array
-  virtual hash& update(std::span<const char> in) = 0;
+  hash<Derived>& update(std::span<const char> in) {
+    return static_cast<Derived*>(this)->update(in);
+  }
 
   /// \brief stores hash value to output buffer
-  virtual void final(std::span<char> out) = 0;
+  void final(std::span<char> out) {
+    static_cast<Derived*>(this)->final(out);
+  }
 
   /// \brief returns hash value
   /// \return byte array containing hash
@@ -47,28 +53,12 @@ struct hash {
   }
 
   /// \brief returns the size of hash value
-  virtual size_t digest_size() = 0;
+  std::size_t digest_size() const {
+    return static_cast<const Derived*>(this)->digest_size();
+  }
+
+protected:
+  hash() = default;
 };
 
 } // namespace noir::crypto
-
-#define NOIR_CRYPTO_HASH(name) \
-  namespace noir::crypto { \
-    name::name(): impl(new name##_impl) {} \
-    name::~name() = default; \
-    hash& name::init() { \
-      impl->init(); \
-      return *this; \
-    } \
-    hash& name::update(std::span<const char> in) { \
-      impl->update(in); \
-      return *this; \
-    } \
-    void name::final(std::span<char> out) { \
-      check(digest_size() <= out.size(), "insufficient output buffer"); \
-      impl->final(out); \
-    } \
-    size_t name::digest_size() { \
-      return impl->digest_size(); \
-    } \
-  }
