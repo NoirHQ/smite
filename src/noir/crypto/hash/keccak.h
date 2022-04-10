@@ -15,11 +15,11 @@ namespace noir::crypto {
 
 /// \brief generates keccak256 hash
 /// \ingroup crypto
-struct sha3_256 : public hash<sha3_256> {
+struct keccak256 : public hash<keccak256> {
   using hash::final;
 
-  hash<sha3_256>& init();
-  hash<sha3_256>& update(std::span<const char> in);
+  hash<keccak256>& init();
+  hash<keccak256>& update(std::span<const char> in);
   void final(std::span<char> out);
   std::size_t digest_size() const;
 

@@ -5,24 +5,19 @@
 //
 #pragma once
 #include <noir/crypto/hash/hash.h>
+#include <noir/crypto/openssl/hash.h>
 
 namespace noir::crypto {
 
 /// \brief generates sha256 hash
 /// \ingroup crypto
-struct sha256 : public hash {
-  using hash::final;
+struct sha256 : public hash<sha256>, openssl::hash {
+  using crypto::hash<sha256>::final;
 
-  sha256();
-  ~sha256();
-  hash& init() override;
-  hash& update(std::span<const char> in) override;
-  void final(std::span<char> out) override;
-  size_t digest_size() override;
-
-private:
-  class sha256_impl;
-  std::unique_ptr<sha256_impl> impl;
+  crypto::hash<sha256>& init();
+  crypto::hash<sha256>& update(std::span<const char> in);
+  void final(std::span<char> out);
+  std::size_t digest_size() const;
 };
 
 } // namespace noir::crypto
