@@ -8,7 +8,6 @@
 #include <noir/common/concepts.h>
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
-#include <noir/common/types/hash.h>
 #include <noir/crypto/hash/xxhash.h>
 #include <fmt/core.h>
 #include <optional>
@@ -236,19 +235,19 @@ inline size_t skip_common_prefix(nibble_path::nibble_iterator& x, nibble_path::n
 
 } // namespace noir::jmt
 
-namespace noir {
+namespace std {
 
 template<>
-struct hash<jmt::nibble> {
-  std::size_t operator()(jmt::nibble n) const {
+struct hash<noir::jmt::nibble> {
+  std::size_t operator()(noir::jmt::nibble n) const noexcept {
     return std::hash<decltype(n.value)>{}(n.value);
   }
 };
 
 template<>
-struct hash<jmt::nibble_path> {
-  std::size_t operator()(const jmt::nibble_path& n) const {
-    crypto::xxh64 hash;
+struct hash<noir::jmt::nibble_path> {
+  std::size_t operator()(const noir::jmt::nibble_path& n) const noexcept {
+    noir::crypto::xxh64 hash;
     hash.init()
       .update({(char*)&n.num_nibbles, sizeof(n.num_nibbles)})
       .update({(const char*)n.bytes.data(), n.bytes.size()});
@@ -256,6 +255,6 @@ struct hash<jmt::nibble_path> {
   }
 };
 
-} // namespace noir
+} // namespace std
 
 NOIR_REFLECT(noir::jmt::nibble, value);
