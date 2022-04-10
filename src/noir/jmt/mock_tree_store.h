@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/jmt/types/node.h>
 #include <shared_mutex>
+#include <unordered_map>
 
 namespace noir::jmt {
 
@@ -91,7 +92,7 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
 
   struct {
     std::shared_mutex lock;
-    unordered_map<node_key, node<T>> _0;
+    std::unordered_map<node_key, node<T>> _0;
     std::set<stale_node_index> _1;
   } data;
   bool allow_overwrite;

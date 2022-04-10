@@ -6,7 +6,6 @@
 #pragma once
 #include <noir/common/helper/rust.h>
 #include <noir/common/types/bytes_n.h>
-#include <noir/common/unordered_map.h>
 
 namespace noir::jmt {
 

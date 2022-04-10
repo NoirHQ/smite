@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/jmt/types/common.h>
 #include <noir/jmt/types/node.h>
+#include <unordered_map>
 
 namespace noir::jmt {
 
@@ -106,7 +107,7 @@ struct tree_cache {
 
   node_key root_node_key;
   version next_version;
-  unordered_map<node_key, node<T>> node_cache;
+  std::unordered_map<node_key, node<T>> node_cache;
   size_t num_new_leaves = 0;
   std::set<node_key> stale_node_index_cache;
   size_t num_stale_leaves = 0;

@@ -6,7 +6,6 @@
 #pragma once
 #include <noir/common/overloaded.h>
 #include <noir/common/types/bytes.h>
-#include <noir/common/types/hash.h>
 #include <noir/core/codec.h>
 #include <noir/crypto/hash/xxhash.h>
 #include <noir/jmt/types/common.h>
@@ -16,6 +15,7 @@
 #include <bit>
 #include <map>
 #include <set>
+#include <unordered_map>
 
 namespace noir::jmt {
 
@@ -123,7 +123,7 @@ struct child {
 };
 
 // for deterministic serialization
-using children = unordered_map<nibble, child>;
+using children = std::unordered_map<nibble, child>;
 
 inline bool operator==(const children::value_type& a, const children::value_type& b) {
   return std::tie(a.first, a.second) == std::tie(b.first, b.second);
@@ -524,18 +524,18 @@ struct tree_writer {
 
 } // namespace noir::jmt
 
-namespace noir {
+namespace std {
 
 template<>
-struct hash<jmt::node_key> {
-  std::size_t operator()(const jmt::node_key& key) const {
-    crypto::xxh64 hash;
-    auto nhash = noir::hash<jmt::nibble_path>()(key.nibble_path);
+struct hash<noir::jmt::node_key> {
+  std::size_t operator()(const noir::jmt::node_key& key) const noexcept {
+    noir::crypto::xxh64 hash;
+    auto nhash = std::hash<noir::jmt::nibble_path>()(key.nibble_path);
     hash.init().update({(char*)&key.version, 8}).update({(char*)&nhash, sizeof(nhash)});
     return hash.final();
   }
 };
 
-} // namespace noir
+} // namespace std
 
 NOIR_REFLECT(noir::jmt::internal_node, children, leaf_count);
