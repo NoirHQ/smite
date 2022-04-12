@@ -10,6 +10,7 @@ add_library(noir_consensus STATIC
   privval/file.cpp
   replay.cpp
   types/genesis.cpp
+  types/node_key.cpp
   validation.cpp
   validator.cpp
   vote.cpp
@@ -30,6 +31,7 @@ add_noir_test(block_executor_test test/block_executor_test.cpp DEPENDS noir_cons
 add_noir_test(block_test test/block_test.cpp DEPENDS noir_consensus)
 add_noir_test(consensus_state_test test/consensus_state_test.cpp DEPENDS noir_consensus)
 add_noir_test(events_test test/event_bus_test.cpp DEPENDS noir_consensus)
+add_noir_test(node_key_test types/test/node_key_test.cpp DEPENDS noir_consensus)
 add_noir_test(privval_test privval/test/file_test.cpp DEPENDS noir_consensus)
 add_noir_test(replay_test test/replay_test.cpp DEPENDS noir_consensus)
 add_noir_test(tree_test merkle/test/tree_test.cpp DEPENDS noir_consensus)
