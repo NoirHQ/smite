@@ -8,11 +8,11 @@
 #include <noir/consensus/block_executor.h>
 #include <noir/consensus/block_sync/reactor.h>
 #include <noir/consensus/consensus_reactor.h>
-#include <noir/consensus/node_key.h>
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types/genesis.h>
+#include <noir/consensus/types/node_key.h>
 
 namespace noir::consensus {
 
@@ -22,7 +22,7 @@ struct node {
   std::shared_ptr<genesis_doc> genesis_doc_{};
   std::shared_ptr<priv_validator> priv_validator_{};
 
-  node_key node_key_{};
+  std::shared_ptr<node_key> node_key_{};
   bool is_listening{};
 
   std::shared_ptr<db_store> store_{};
@@ -62,7 +62,7 @@ struct node {
   }
 
   static std::unique_ptr<node> make_node(appbase::application& app, const std::shared_ptr<config>& new_config,
-    const std::shared_ptr<priv_validator>& new_priv_validator, const node_key& new_node_key,
+    const std::shared_ptr<priv_validator>& new_priv_validator, const std::shared_ptr<node_key>& new_node_key,
     const std::shared_ptr<genesis_doc>& new_genesis_doc,
     const std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>& session) {
 
