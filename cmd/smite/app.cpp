@@ -3,7 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <tendermint/log/config.h>
+#include <noir/log/config.h>
 #include <tendermint/node/plugin.h>
 #include <appbase/application.hpp>
 
@@ -22,7 +22,7 @@ void init_app() {
 
   app.config().add_option("--log-level", log_level, "log level (default \"info\")");
 
-  tendermint::log::setup();
+  noir::log::setup();
   app.config().parse_complete_callback([]() { tendermint::log::set_level(log_level); });
 
   app.register_plugin<tendermint::NodePlugin>();

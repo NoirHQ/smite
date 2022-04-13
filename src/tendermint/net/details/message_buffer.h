@@ -5,7 +5,7 @@
 //
 #pragma once
 #include <noir/common/check.h>
-#include <tendermint/log/log.h>
+#include <noir/log/log.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/pool/singleton_pool.hpp>
 #include <fmt/core.h>

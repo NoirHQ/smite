@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <tendermint/log/log.h>
+#include <noir/log/log.h>
 #include <tendermint/net/details/verify_strand.h>
 
 // peer_[x]log must be called from thread in connection strand

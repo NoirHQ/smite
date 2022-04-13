@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/log/log.h>
 #include <tendermint/common/common.h>
-#include <tendermint/log/log.h>
 #include <atomic>
 
 namespace tendermint::service {
@@ -26,11 +26,11 @@ public:
     bool started_expected = false;
     if (started.compare_exchange_strong(started_expected, true)) {
       if (stopped.load()) {
-        tm_elog(logger.get(), "Not starting {} service -- already stopped", name);
+        noir_elog(logger.get(), "Not starting {} service -- already stopped", name);
         started.store(false);
         return make_unexpected(err_already_stopped);
       }
-      tm_ilog(logger.get(), "Starting {} service", name);
+      noir_ilog(logger.get(), "Starting {} service", name);
       auto res = static_cast<Derived*>(this)->on_start();
       if (!res) {
         started.store(false);
@@ -38,7 +38,7 @@ public:
       }
       return {};
     }
-    tm_dlog(logger.get(), "Not starting {} service -- already started", name);
+    noir_ilog(logger.get(), "Not starting {} service -- already started", name);
     return make_unexpected(err_already_started);
   }
 
@@ -46,23 +46,23 @@ public:
     bool stopped_expected = false;
     if (stopped.compare_exchange_strong(stopped_expected, true)) {
       if (!started.load()) {
-        tm_elog(logger.get(), "Not stopping {} service -- has not been started yet", name);
+        noir_elog(logger.get(), "Not stopping {} service -- has not been started yet", name);
         stopped.store(false);
         return make_unexpected(err_not_started);
       }
-      tm_ilog(logger.get(), "Stopping {} service", name);
+      noir_ilog(logger.get(), "Stopping {} service", name);
       static_cast<Derived*>(this)->on_stop();
       // quit
       return {};
     }
-    tm_dlog(logger.get(), "Stopping {} service (already stopped)", name);
+    noir_ilog(logger.get(), "Stopping {} service (already stopped)", name);
     return make_unexpected(err_already_stopped);
   }
 
   result<void> reset() noexcept {
     bool stopped_expected = true;
     if (!stopped.compare_exchange_strong(stopped_expected, false)) {
-      tm_dlog(logger.get(), "Can't reset {} service, Not stopped", name);
+      noir_ilog(logger.get(), "Can't reset {} service, Not stopped", name);
       return make_unexpected(fmt::format("can't reset running {}", name));
     }
 

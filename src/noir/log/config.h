@@ -7,10 +7,10 @@
 #include <spdlog/spdlog.h>
 #include <string>
 
-namespace tendermint::log {
+namespace noir::log {
 
 void set_level(const std::string& level);
 
 void setup(spdlog::logger* logger = nullptr);
 
-} // namespace tendermint::log
+} // namespace noir::log

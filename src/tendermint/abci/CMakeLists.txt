@@ -4,8 +4,8 @@ add_library(tendermint_abci STATIC
 )
 target_include_directories(tendermint_abci PUBLIC ${NOIR_SOURCE_DIR})
 target_link_libraries(tendermint_abci
+  noir::log
   tendermint::common
-  tendermint::log
   tendermint::net
   tendermint::proto
 )
