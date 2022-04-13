@@ -20,12 +20,12 @@ public:
       consensus(address, thread_pool.get_executor()), query(address, thread_pool.get_executor()),
       snapshot(address, thread_pool.get_executor()) {}
 
+  named_thread_pool thread_pool;
+
   AppConnMempool<Client> mempool;
   AppConnConsensus<Client> consensus;
   AppConnQuery<Client> query;
   AppConnSnapshot<Client> snapshot;
-
-  named_thread_pool thread_pool;
 };
 
 using TCPAppConns = AppConns<abci::SocketClient<net::TCPConn>>;
