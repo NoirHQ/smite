@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <tendermint/log/log.h>
+#include <noir/log/log.h>
 
 namespace tendermint::net::details {
 

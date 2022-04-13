@@ -3,9 +3,9 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <tendermint/log/log.h>
+#include <noir/log/log.h>
 
-namespace tendermint::log {
+namespace noir::log {
 
 void set_level(const std::string& level) {
   spdlog::set_level(spdlog::level::from_str(level));
@@ -20,4 +20,4 @@ void setup(spdlog::logger* logger) {
   }
 }
 
-} // namespace tendermint::log
+} // namespace noir::log

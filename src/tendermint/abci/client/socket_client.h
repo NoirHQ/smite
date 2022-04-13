@@ -360,9 +360,9 @@ private:
         this->err = err;
       }
     }
-    tm_elog(service_type::logger.get(), "Stopping SocketClient for error: {}", err);
+    noir_elog(service_type::logger.get(), "Stopping SocketClient for error: {}", err);
     if (auto err = service_type::stop(); !err) {
-      tm_elog(service_type::logger.get(), "Error stopping SocketClient: {}", err.error());
+      noir_elog(service_type::logger.get(), "Error stopping SocketClient: {}", err.error());
     }
   }
 

@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/log/log.h>
 #include <tendermint/common/common.h>
-#include <tendermint/log/log.h>
 #include <tendermint/net/details/message_buffer.h>
 #include <tendermint/net/details/queued_buffer.h>
 #include <boost/asio/io_context_strand.hpp>
