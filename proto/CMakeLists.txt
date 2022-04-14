@@ -26,6 +26,7 @@ list(APPEND PROTO_SOURCES
   tendermint/store/types.proto
 )
 
+set(Protobuf_USE_STATIC_LIBS ON)
 find_package(Protobuf REQUIRED)
 
 set(PROTO_PATH ${PROJECT_SOURCE_DIR}/proto)

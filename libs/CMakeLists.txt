@@ -1,10 +1,4 @@
-if(APPLE)
-    message(STATUS "Configuring OpenSSL on OS X: Use SYSTEM_OPENSSL")
-else()
-    message(STATUS "Configuring OpenSSL on Linux")
-    set(OPENSSL_PREBUILT_VERSION "3.0.2")
-    add_subdirectory(openssl-cmake)
-endif()
+find_package(OpenSSL 3 REQUIRED)
 
 include(cmake/CachedLibs.cmake)
 
@@ -25,6 +19,8 @@ set(SKIP_FC_TESTS ON)
 add_subdirectory(fc)
 
 add_subdirectory(fmt)
+target_compile_options(fmt PRIVATE -fPIC)
+
 add_subdirectory(scope-lite)
 add_subdirectory(range-v3)
 add_subdirectory(xxHash/cmake_unofficial)
@@ -32,6 +28,8 @@ add_subdirectory(xxHash/cmake_unofficial)
 include(cmake/rocksdb.cmake)
 include(cmake/b2.cmake)
 include(cmake/XKCP.cmake)
+
+set(sodium_USE_STATIC_LIBS ON)
 include(cmake/Findsodium.cmake)
 
 set(SPDLOG_FMT_EXTERNAL ON)

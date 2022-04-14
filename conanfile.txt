@@ -1,0 +1,8 @@
+[requires]
+boost/1.78.0
+openssl/3.0.2
+rocksdb/6.20.3
+
+[generators]
+CMakeDeps
+CMakeToolchain

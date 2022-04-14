@@ -15,32 +15,14 @@ jobs:
       CC: /usr/bin/gcc-10
       CXX: /usr/bin/g++-10
     steps:
-      # setup build dependencies
-      # boost
-      - uses: actions/cache@v2
-        id: cache-boost
-        with:
-          path: /opt/boost
-          key: ${{ runner.os }}-boost-1.77
-      - if: steps.cache-boost.outputs.cache-hit != 'true'
-        uses: MarkusJx/install-boost@v2.0.0
-        with:
-          boost_version: 1.77.0
-          platform_version: 20.04
-          boost_install_dir: /opt
+      # install conan
+      - uses: turtlebrowser/get-conan@main
       # setup build dependencies
       - run: sudo apt install -y libb2-dev libgflags-dev libprotobuf-dev libsodium-dev protobuf-compiler xsltproc
       # checkout
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      # restore cache (rocksdb)
-      - id: rocksdb-cache
-        run: echo "::set-output name=version::$(git submodule status | awk '/rocksdb/{ print $1 }')"
-      - uses: actions/cache@v2
-        with:
-          path: build/libs/rocksdb/librocksdb.a
-          key: ${{ runner.os }}-rocksdb-${{ steps.rocksdb-cache.outputs.version }}
       # restore cache (appbase)
       - id: appbase-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/appbase/{ print $1 }')"
@@ -66,7 +48,9 @@ jobs:
           key: ${{ runner.os }}-softfloat-${{ steps.softfloat-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
-      - run: BOOST_ROOT=/opt/boost cmake .. -DUSE_CACHED_LIBS=ON -DBUILD_SHARED_LIBS=OFF && make -j2
+      - run: conan install .. --profile ../conanprofile.txt --build missing
+        working-directory: ./build
+      - run: cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DUSE_CACHED_LIBS=ON -DBUILD_SHARED_LIBS=OFF && make -j2
         working-directory: ./build
       # test
       - run: make test
