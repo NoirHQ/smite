@@ -63,5 +63,5 @@ inline p2p::tstamp weighted_median(std::vector<weighted_time>& weight_times, int
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(std::chrono::system_clock::duration, )
-NOIR_REFLECT_DERIVED(noir::consensus::proposal, p2p::proposal_message)
+NOIR_REFLECT(std::chrono::system_clock::duration, );
+NOIR_REFLECT_DERIVED(noir::consensus::proposal, p2p::proposal_message);

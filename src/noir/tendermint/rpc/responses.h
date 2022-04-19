@@ -35,5 +35,5 @@ struct result_unconfirmed_txs {
 
 } // namespace noir::tendermint::rpc
 
-NOIR_REFLECT(tendermint::rpc::result_broadcast_tx, code, data, log, codespace, mempool_error, hash)
-NOIR_REFLECT(tendermint::rpc::result_unconfirmed_txs, count, total, total_bytes, txs)
+NOIR_REFLECT(tendermint::rpc::result_broadcast_tx, code, data, log, codespace, mempool_error, hash);
+NOIR_REFLECT(tendermint::rpc::result_unconfirmed_txs, count, total, total_bytes, txs);

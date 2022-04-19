@@ -291,4 +291,4 @@ struct vote_set_reader {
 
 } // namespace noir::consensus
 
-NOIR_REFLECT_DERIVED(noir::consensus::vote, noir::p2p::vote_message)
+NOIR_REFLECT_DERIVED(noir::consensus::vote, noir::p2p::vote_message);

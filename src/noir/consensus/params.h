@@ -79,8 +79,8 @@ struct consensus_params {
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(noir::consensus::block_params, max_bytes, max_gas)
-NOIR_REFLECT(noir::consensus::evidence_params, max_age_num_blocks, max_age_duration, max_bytes)
-NOIR_REFLECT(noir::consensus::validator_params, pub_key_types)
-NOIR_REFLECT(noir::consensus::version_params, app_version)
-NOIR_REFLECT(noir::consensus::consensus_params, block, evidence, validator, version)
+NOIR_REFLECT(noir::consensus::block_params, max_bytes, max_gas);
+NOIR_REFLECT(noir::consensus::evidence_params, max_age_num_blocks, max_age_duration, max_bytes);
+NOIR_REFLECT(noir::consensus::validator_params, pub_key_types);
+NOIR_REFLECT(noir::consensus::version_params, app_version);
+NOIR_REFLECT(noir::consensus::consensus_params, block, evidence, validator, version);

@@ -240,5 +240,5 @@ private:
 
 } // namespace noir::consensus::privval
 
-NOIR_REFLECT(noir::consensus::privval::file_pv_key, address, pub_key, priv_key)
-NOIR_REFLECT(noir::consensus::privval::file_pv_last_sign_state, height, round, step, signature, sign_bytes)
+NOIR_REFLECT(noir::consensus::privval::file_pv_key, address, pub_key, priv_key);
+NOIR_REFLECT(noir::consensus::privval::file_pv_last_sign_state, height, round, step, signature, sign_bytes);

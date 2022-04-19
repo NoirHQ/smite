@@ -49,5 +49,5 @@ struct canonical {
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(noir::consensus::canonical_vote, type, height, round, block_id_, timestamp, vote_extension_)
-NOIR_REFLECT(noir::consensus::canonical_proposal, type, height, round, pol_round, block_id_, timestamp)
+NOIR_REFLECT(noir::consensus::canonical_vote, type, height, round, block_id_, timestamp, vote_extension_);
+NOIR_REFLECT(noir::consensus::canonical_proposal, type, height, round, pol_round, block_id_, timestamp);

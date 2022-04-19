@@ -357,12 +357,12 @@ using block_ptr = std::shared_ptr<block>;
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(noir::consensus::commit_sig, flag, validator_address, timestamp, signature, vote_extension)
-NOIR_REFLECT(noir::consensus::part, index, bytes_, proof_)
-// NOIR_REFLECT(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size)
-NOIR_REFLECT(noir::consensus::block_data, txs, hash)
+NOIR_REFLECT(noir::consensus::commit_sig, flag, validator_address, timestamp, signature, vote_extension);
+NOIR_REFLECT(noir::consensus::part, index, bytes_, proof_);
+// NOIR_REFLECT(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size);
+NOIR_REFLECT(noir::consensus::block_data, txs, hash);
 NOIR_REFLECT(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash, data_hash,
-  validators_hash, next_validators_hash, consensus_hash, app_hash, last_results_hash, proposer_address)
+  validators_hash, next_validators_hash, consensus_hash, app_hash, last_results_hash, proposer_address);
 
 template<>
 struct noir::is_foreachable<noir::consensus::commit> : std::false_type {};

@@ -168,9 +168,9 @@ struct config {
 } // namespace noir::consensus
 
 NOIR_REFLECT(noir::consensus::base_config, chain_id, root_dir, proxy_app, moniker, mode, fast_sync_mode, db_backend,
-  db_path, log_level, log_format, genesis, node_key, abci, filter_peers)
+  db_path, log_level, log_format, genesis, node_key, abci, filter_peers);
 NOIR_REFLECT(noir::consensus::consensus_config, root_dir, wal_path, wal_file, timeout_propose, timeout_propose_delta,
   timeout_prevote, timeout_prevote_delta, timeout_precommit, timeout_precommit_delta, timeout_commit,
   skip_timeout_commit, create_empty_blocks, create_empty_blocks_interval, peer_gossip_sleep_duration,
-  peer_query_maj_23_sleep_duration, double_sign_check_height)
-NOIR_REFLECT(noir::consensus::config, base, consensus, priv_validator)
+  peer_query_maj_23_sleep_duration, double_sign_check_height);
+NOIR_REFLECT(noir::consensus::config, base, consensus, priv_validator);

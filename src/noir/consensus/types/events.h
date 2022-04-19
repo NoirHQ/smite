@@ -266,17 +266,17 @@ using tm_event_data = std::variant<event_data_new_block,
 
 } // namespace noir::consensus::events
 
-NOIR_REFLECT(noir::consensus::events::event_data_new_block, block, block_id, result_begin_block, result_end_block)
+NOIR_REFLECT(noir::consensus::events::event_data_new_block, block, block_id, result_begin_block, result_end_block);
 NOIR_REFLECT(
-  noir::consensus::events::event_data_new_block_header, header, num_txs, result_begin_block, result_end_block)
-NOIR_REFLECT(noir::consensus::events::event_data_new_evidence, /*evidence, */ height)
-NOIR_REFLECT(noir::consensus::events::event_data_tx, tx_result)
-NOIR_REFLECT(noir::consensus::events::event_data_round_state, height, round, step)
-NOIR_REFLECT(noir::consensus::events::validator_info, address, index)
-NOIR_REFLECT(noir::consensus::events::event_data_new_round, height, round, step, proposer)
-NOIR_REFLECT(noir::consensus::events::event_data_complete_proposal, height, round, step, block_id)
-NOIR_REFLECT(noir::consensus::events::event_data_vote, vote)
-NOIR_REFLECT(noir::consensus::events::event_data_string, string)
-NOIR_REFLECT(noir::consensus::events::event_data_validator_set_updates, validator_updates)
-NOIR_REFLECT(noir::consensus::events::event_data_block_sync_status, complete, height)
-NOIR_REFLECT(noir::consensus::events::event_data_state_sync_status, complete, height)
+  noir::consensus::events::event_data_new_block_header, header, num_txs, result_begin_block, result_end_block);
+NOIR_REFLECT(noir::consensus::events::event_data_new_evidence, /*evidence, */ height);
+NOIR_REFLECT(noir::consensus::events::event_data_tx, tx_result);
+NOIR_REFLECT(noir::consensus::events::event_data_round_state, height, round, step);
+NOIR_REFLECT(noir::consensus::events::validator_info, address, index);
+NOIR_REFLECT(noir::consensus::events::event_data_new_round, height, round, step, proposer);
+NOIR_REFLECT(noir::consensus::events::event_data_complete_proposal, height, round, step, block_id);
+NOIR_REFLECT(noir::consensus::events::event_data_vote, vote);
+NOIR_REFLECT(noir::consensus::events::event_data_string, string);
+NOIR_REFLECT(noir::consensus::events::event_data_validator_set_updates, validator_updates);
+NOIR_REFLECT(noir::consensus::events::event_data_block_sync_status, complete, height);
+NOIR_REFLECT(noir::consensus::events::event_data_state_sync_status, complete, height);
