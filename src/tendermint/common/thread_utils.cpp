@@ -3,8 +3,8 @@
 // Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
 // SPDX-License-Identifier: MIT
 //
+#include <noir/thread/thread_name.h>
 #include <tendermint/common/thread_utils.h>
-#include <spdlog/details/thread_name.h>
 
 namespace tendermint {
 
@@ -17,7 +17,7 @@ named_thread_pool::named_thread_pool(std::string name_prefix, size_t num_threads
   for (size_t i = 0; i < num_threads; ++i) {
     boost::asio::post(_thread_pool, [&ioc = _ioc, name_prefix, i]() {
       std::string tn = name_prefix + "-" + std::to_string(i);
-      spdlog::details::os::set_os_thread_name(tn);
+      noir::thread::set_os_thread_name(tn);
       ioc.run();
     });
   }
