@@ -36,4 +36,4 @@ SpaceAfterTemplateKeyword: false
 SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1
 UseTab: Never
-WhitespaceSensitiveMacros: ["NOIR_REFLECT"]
+WhitespaceSensitiveMacros: [NOIR_REFLECT]
