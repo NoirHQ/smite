@@ -143,7 +143,11 @@ struct part_set {
 
   part_set() = default;
   part_set(const part_set& p)
-    : total(p.total), hash(p.hash), parts(p.parts), parts_bit_array(p.parts_bit_array), count(p.count),
+    : total(p.total),
+      hash(p.hash),
+      parts(p.parts),
+      parts_bit_array(p.parts_bit_array),
+      count(p.count),
       byte_size(p.byte_size) {}
 
   static std::shared_ptr<part_set> new_part_set_from_header(const p2p::part_set_header& header);
@@ -211,8 +215,15 @@ struct block_header {
 
   bytes get_hash();
 
-  void populate(std::string& version_, std::string& chain_id_, p2p::tstamp timestamp_, p2p::block_id& last_block_id_,
-    bytes val_hash, bytes next_val_hash, bytes consensus_hash_, bytes& app_hash_, bytes& last_results_hash_,
+  void populate(std::string& version_,
+    std::string& chain_id_,
+    p2p::tstamp timestamp_,
+    p2p::block_id& last_block_id_,
+    bytes val_hash,
+    bytes next_val_hash,
+    bytes consensus_hash_,
+    bytes& app_hash_,
+    bytes& last_results_hash_,
     bytes& proposer_address_) {
     version = version_;
     chain_id = chain_id_;

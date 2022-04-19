@@ -9,13 +9,22 @@
 namespace noir::tx_pool {
 
 tx_pool::tx_pool(appbase::application& app)
-  : plugin(app), config_(config{}), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
+  : plugin(app),
+    config_(config{}),
+    tx_queue_(config_.max_tx_num * config_.max_tx_bytes),
+    tx_cache_(config_.max_tx_num),
     proxy_app_(std::make_shared<consensus::app_connection>()) {}
 
-tx_pool::tx_pool(appbase::application& app, const config& cfg,
-  std::shared_ptr<consensus::app_connection>& new_proxy_app, uint64_t block_height)
-  : plugin(app), config_(cfg), tx_queue_(config_.max_tx_num * config_.max_tx_bytes), tx_cache_(config_.max_tx_num),
-    proxy_app_(new_proxy_app), block_height_(block_height) {}
+tx_pool::tx_pool(appbase::application& app,
+  const config& cfg,
+  std::shared_ptr<consensus::app_connection>& new_proxy_app,
+  uint64_t block_height)
+  : plugin(app),
+    config_(cfg),
+    tx_queue_(config_.max_tx_num * config_.max_tx_bytes),
+    tx_cache_(config_.max_tx_num),
+    proxy_app_(new_proxy_app),
+    block_height_(block_height) {}
 
 void tx_pool::set_program_options(CLI::App& cfg) {
   auto tx_pool_options = cfg.add_section("tx_pool",
@@ -183,8 +192,11 @@ std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
   return txs;
 }
 
-void tx_pool::update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
-  std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck, postcheck_func* new_postcheck) {
+void tx_pool::update(uint64_t block_height,
+  const std::vector<consensus::tx>& block_txs,
+  std::vector<consensus::response_deliver_tx> responses,
+  precheck_func* new_precheck,
+  postcheck_func* new_postcheck) {
   std::scoped_lock lock(mutex_);
   block_height_ = block_height;
 

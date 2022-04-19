@@ -181,9 +181,17 @@ NOIR_REFLECT(complex_vector_type, a, b, c, d)
 
 namespace {
 
-TEMPLATE_TEST_CASE("variant: to/from_variant", "[noir][common]", signed_integral_type, unsigned_integral_type,
-  complex_integral_type, signed_enumeration_type, unsigned_enumeration_type, complex_enumeration_type,
-  nested_complex_type, vector_enumeration_type, complex_vector_type) {
+TEMPLATE_TEST_CASE("variant: to/from_variant",
+  "[noir][common]",
+  signed_integral_type,
+  unsigned_integral_type,
+  complex_integral_type,
+  signed_enumeration_type,
+  unsigned_enumeration_type,
+  complex_enumeration_type,
+  nested_complex_type,
+  vector_enumeration_type,
+  complex_vector_type) {
 
   TestType exp{};
 

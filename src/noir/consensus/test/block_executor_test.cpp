@@ -10,7 +10,9 @@
 using namespace noir;
 using namespace noir::consensus;
 
-std::tuple<state, std::shared_ptr<noir::consensus::db_store>, std::map<std::string, std::shared_ptr<priv_validator>>,
+std::tuple<state,
+  std::shared_ptr<noir::consensus::db_store>,
+  std::map<std::string, std::shared_ptr<priv_validator>>,
   std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>>
 make_state(int n_vals, int height) {
   std::vector<genesis_validator> vals;

@@ -136,7 +136,8 @@ concept reflection = refl::has_refl_v<T>;
     struct fields_count<TYPE> { \
       static constexpr size_t value = BOOST_PP_VARIADIC_SIZE(__VA_ARGS__); \
     }; \
-    BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD_GET, TYPE, \
+    BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD_GET, \
+      TYPE, \
       BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)) \
   }
 
@@ -159,7 +160,8 @@ concept reflection = refl::has_refl_v<T>;
     struct fields_count<TYPE> { \
       static constexpr size_t value = BOOST_PP_VARIADIC_SIZE(__VA_ARGS__); \
     }; \
-    BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD_GET, TYPE, \
+    BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD_GET, \
+      TYPE, \
       BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)) \
   }
 

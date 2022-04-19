@@ -50,7 +50,9 @@ private:
 
 public:
   tx_pool(appbase::application& app);
-  tx_pool(appbase::application& app, const config& cfg, std::shared_ptr<consensus::app_connection>& new_proxyApp,
+  tx_pool(appbase::application& app,
+    const config& cfg,
+    std::shared_ptr<consensus::app_connection>& new_proxyApp,
     uint64_t block_height);
 
   virtual ~tx_pool() = default;
@@ -70,8 +72,10 @@ public:
 
   std::vector<consensus::tx> reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
   std::vector<consensus::tx> reap_max_txs(uint64_t tx_count);
-  void update(uint64_t block_height, const std::vector<consensus::tx>& block_txs,
-    std::vector<consensus::response_deliver_tx> responses, precheck_func* new_precheck = nullptr,
+  void update(uint64_t block_height,
+    const std::vector<consensus::tx>& block_txs,
+    std::vector<consensus::response_deliver_tx> responses,
+    precheck_func* new_precheck = nullptr,
     postcheck_func* new_postcheck = nullptr);
 
   size_t size() const;

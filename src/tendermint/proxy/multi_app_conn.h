@@ -16,8 +16,10 @@ template<typename Client>
 class AppConns : public service::Service<AppConns<Client>> {
 public:
   AppConns(const std::string& address)
-    : thread_pool("proxy", 4), mempool(address, thread_pool.get_executor()),
-      consensus(address, thread_pool.get_executor()), query(address, thread_pool.get_executor()),
+    : thread_pool("proxy", 4),
+      mempool(address, thread_pool.get_executor()),
+      consensus(address, thread_pool.get_executor()),
+      query(address, thread_pool.get_executor()),
       snapshot(address, thread_pool.get_executor()) {}
 
   named_thread_pool thread_pool;

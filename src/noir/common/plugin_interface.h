@@ -35,8 +35,8 @@ namespace channels {
 } // namespace channels
 
 namespace methods {
-  using send_error_to_peer = appbase::method_decl<noir_plugin_interface,
-    void(const std::string&, std::span<const char>), appbase::first_provider_policy>;
+  using send_error_to_peer = appbase::
+    method_decl<noir_plugin_interface, void(const std::string&, std::span<const char>), appbase::first_provider_policy>;
 } // namespace methods
 
 namespace incoming {

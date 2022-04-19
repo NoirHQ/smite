@@ -61,8 +61,10 @@ struct node {
     return make_node(app, new_config, priv_validators[0], node_key_, gen_doc, session);
   }
 
-  static std::unique_ptr<node> make_node(appbase::application& app, const std::shared_ptr<config>& new_config,
-    const std::shared_ptr<priv_validator>& new_priv_validator, const node_key& new_node_key,
+  static std::unique_ptr<node> make_node(appbase::application& app,
+    const std::shared_ptr<config>& new_config,
+    const std::shared_ptr<priv_validator>& new_priv_validator,
+    const node_key& new_node_key,
     const std::shared_ptr<genesis_doc>& new_genesis_doc,
     const std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>& session) {
 
@@ -148,17 +150,23 @@ struct node {
     }
   }
 
-  static std::shared_ptr<block_sync::reactor> create_block_sync_reactor(appbase::application& app, state& state_,
-    const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store,
+  static std::shared_ptr<block_sync::reactor> create_block_sync_reactor(appbase::application& app,
+    state& state_,
+    const std::shared_ptr<block_executor>& block_exec_,
+    const std::shared_ptr<block_store>& new_block_store,
     bool block_sync_) {
     auto bs_reactor = block_sync::reactor::new_reactor(app, state_, block_exec_, new_block_store, block_sync_);
     return bs_reactor;
   }
 
   static std::tuple<std::shared_ptr<consensus_reactor>, std::shared_ptr<consensus_state>> create_consensus_reactor(
-    appbase::application& app, const std::shared_ptr<config>& config_, const std::shared_ptr<state>& state_,
-    const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& block_store_,
-    const std::shared_ptr<priv_validator>& priv_validator_, const std::shared_ptr<events::event_bus>& event_bus_,
+    appbase::application& app,
+    const std::shared_ptr<config>& config_,
+    const std::shared_ptr<state>& state_,
+    const std::shared_ptr<block_executor>& block_exec_,
+    const std::shared_ptr<block_store>& block_store_,
+    const std::shared_ptr<priv_validator>& priv_validator_,
+    const std::shared_ptr<events::event_bus>& event_bus_,
     bool wait_sync) {
     auto cs_state = consensus_state::new_state(app, config_->consensus, *state_, block_exec_, block_store_, event_bus_);
 

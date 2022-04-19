@@ -85,7 +85,8 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] priv_key
   /// \param[in] key_file_path
   /// \param[in] state_file_path
-  file_pv(/* const */ noir::consensus::priv_key& priv_key, const std::filesystem::path& key_file_path,
+  file_pv(/* const */ noir::consensus::priv_key& priv_key,
+    const std::filesystem::path& key_file_path,
     const std::filesystem::path& state_file_path)
     : key(file_pv_key{
         .address = priv_key.get_pub_key().address(),
@@ -106,7 +107,8 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] key_type
   /// \return shared_ptr of file_pv
   static std::shared_ptr<file_pv> gen_file_pv(const std::filesystem::path& key_file_path,
-    const std::filesystem::path& state_file_path, const std::string& key_type = "secp256k1");
+    const std::filesystem::path& state_file_path,
+    const std::string& key_type = "secp256k1");
 
   /// \brief loads a FilePV from the filePaths. The FilePV handles double signing prevention by persisting data to the
   /// stateFilePath. If either file path does not exist, the program will exit.

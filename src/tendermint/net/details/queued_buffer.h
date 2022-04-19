@@ -22,7 +22,8 @@ public:
   bool ready_to_send() const;
   // @param callback must not callback into queued_buffer
   bool add_write_queue(const std::shared_ptr<std::vector<char>>& buff,
-    std::function<void(boost::system::error_code, std::size_t)> callback, bool to_sync_queue);
+    std::function<void(boost::system::error_code, std::size_t)> callback,
+    bool to_sync_queue);
   void fill_out_buffer(std::vector<boost::asio::const_buffer>& bufs);
   void out_callback(boost::system::error_code ec, std::size_t w);
 

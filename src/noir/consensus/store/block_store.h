@@ -401,7 +401,9 @@ private:
   }
 
   using pre_deletion_hook_type = std::function<bool(const bytes& key, const bytes& val)>;
-  bool prune_range(const bytes& start, const bytes& end, std::optional<pre_deletion_hook_type> pre_deletion_hook,
+  bool prune_range(const bytes& start,
+    const bytes& end,
+    std::optional<pre_deletion_hook_type> pre_deletion_hook,
     uint64_t& total_pruned) {
     bytes start_ = start;
 
@@ -419,8 +421,11 @@ private:
     return true;
   }
 
-  bool batch_delete(const bytes& start, const bytes& end, std::optional<pre_deletion_hook_type> pre_deletion_hook,
-    uint64_t& total_pruned, bytes& new_end) {
+  bool batch_delete(const bytes& start,
+    const bytes& end,
+    std::optional<pre_deletion_hook_type> pre_deletion_hook,
+    uint64_t& total_pruned,
+    bytes& new_end) {
     uint64_t pruned = 0;
 
     auto begin_ = db_session_->lower_bound_from_bytes(start);

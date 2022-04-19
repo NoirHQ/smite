@@ -67,7 +67,8 @@ struct jellyfish_merkle_tree {
     std::optional<item_type> item;
   };
 
-  auto get_hash(const jmt::node_key& node_key, const jmt::node<T>& node,
+  auto get_hash(const jmt::node_key& node_key,
+    const jmt::node<T>& node,
     const std::optional<std::unordered_map<nibble_path, bytes32>>& hash_cache) -> bytes32 {
     if (hash_cache) {
       auto it = hash_cache->find(node_key.nibble_path);
@@ -113,8 +114,11 @@ struct jellyfish_merkle_tree {
     return tree_cache.deltas();
   }
 
-  auto batch_insert_at(jmt::node_key& node_key, jmt::version version, std::span<std::pair<bytes32, T>> kvs,
-    size_t depth, std::optional<std::reference_wrapper<std::unordered_map<nibble_path, bytes32>>> hash_cache,
+  auto batch_insert_at(jmt::node_key& node_key,
+    jmt::version version,
+    std::span<std::pair<bytes32, T>> kvs,
+    size_t depth,
+    std::optional<std::reference_wrapper<std::unordered_map<nibble_path, bytes32>>> hash_cache,
     jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, node<T>>> {
     check(kvs.size());
     auto node = noir_ok(tree_cache.get_node(node_key));
@@ -167,8 +171,11 @@ struct jellyfish_merkle_tree {
       node.data);
   }
 
-  auto batch_create_subtree_with_existing_leaf(const jmt::node_key& node_key, jmt::version version,
-    jmt::leaf_node<T> existing_leaf_node, std::span<std::pair<bytes32, T>> kvs, size_t depth,
+  auto batch_create_subtree_with_existing_leaf(const jmt::node_key& node_key,
+    jmt::version version,
+    jmt::leaf_node<T> existing_leaf_node,
+    std::span<std::pair<bytes32, T>> kvs,
+    size_t depth,
     std::optional<std::reference_wrapper<std::unordered_map<nibble_path, bytes32>>> hash_cache,
     jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, node<T>>> {
     auto existing_leaf_key = existing_leaf_node.account_key;
@@ -209,8 +216,11 @@ struct jellyfish_merkle_tree {
     }
   }
 
-  auto batch_create_subtree(const jmt::node_key& node_key, jmt::version version, std::span<std::pair<bytes32, T>> kvs,
-    size_t depth, std::optional<std::reference_wrapper<std::unordered_map<nibble_path, bytes32>>> hash_cache,
+  auto batch_create_subtree(const jmt::node_key& node_key,
+    jmt::version version,
+    std::span<std::pair<bytes32, T>> kvs,
+    size_t depth,
+    std::optional<std::reference_wrapper<std::unordered_map<nibble_path, bytes32>>> hash_cache,
     jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, node<T>>> {
     if (kvs.size() == 1) {
       auto new_leaf_node = node<T>::leaf(std::get<0>(kvs[0]), std::get<1>(kvs[0]));
@@ -244,8 +254,11 @@ struct jellyfish_merkle_tree {
     return {};
   }
 
-  auto insert_at(jmt::node_key& node_key, jmt::version version, nibble_path::nibble_iterator& nibble_iter,
-    const T& value, jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, jmt::node<T>>> {
+  auto insert_at(jmt::node_key& node_key,
+    jmt::version version,
+    nibble_path::nibble_iterator& nibble_iter,
+    const T& value,
+    jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, jmt::node<T>>> {
     auto node = noir_ok(tree_cache.get_node(node_key));
     return std::visit(overloaded{[&](jmt::internal_node& internal_node) {
                                    return insert_at_internal_node(
@@ -267,9 +280,12 @@ struct jellyfish_merkle_tree {
       node.data);
   }
 
-  auto insert_at_internal_node(jmt::node_key& node_key, jmt::internal_node& internal_node, jmt::version version,
-    nibble_path::nibble_iterator& nibble_iter, const T& value, jmt::tree_cache<R, T>& tree_cache)
-    -> result<std::pair<jmt::node_key, node<T>>> {
+  auto insert_at_internal_node(jmt::node_key& node_key,
+    jmt::internal_node& internal_node,
+    jmt::version version,
+    nibble_path::nibble_iterator& nibble_iter,
+    const T& value,
+    jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, node<T>>> {
     tree_cache.delete_node(node_key, false);
     auto child_index = expect(nibble_iter.next(), "ran out of nibbles");
     auto child = internal_node.child(child_index);
@@ -290,9 +306,12 @@ struct jellyfish_merkle_tree {
     return {{node_key, {new_internal_node}}};
   }
 
-  auto insert_at_leaf_node(jmt::node_key& node_key, jmt::leaf_node<T>& existing_leaf_node, jmt::version version,
-    nibble_path::nibble_iterator& nibble_iter, const T& value, jmt::tree_cache<R, T>& tree_cache)
-    -> result<std::pair<jmt::node_key, node<T>>> {
+  auto insert_at_leaf_node(jmt::node_key& node_key,
+    jmt::leaf_node<T>& existing_leaf_node,
+    jmt::version version,
+    nibble_path::nibble_iterator& nibble_iter,
+    const T& value,
+    jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, node<T>>> {
     tree_cache.delete_node(node_key, true);
     auto visited_nibble_iter = nibble_iter.visited_nibbles();
     auto existing_leaf_nibble_path = jmt::nibble_path(existing_leaf_node.account_key.to_span());
@@ -338,7 +357,9 @@ struct jellyfish_merkle_tree {
     return {{node_key, {next_internal_node}}};
   }
 
-  auto create_leaf_node(const jmt::node_key& node_key, nibble_path::nibble_iterator& nibble_iter, const T& value,
+  auto create_leaf_node(const jmt::node_key& node_key,
+    nibble_path::nibble_iterator& nibble_iter,
+    const T& value,
     jmt::tree_cache<R, T>& tree_cache) -> result<std::pair<jmt::node_key, node<T>>> {
     auto new_leaf_node = node<T>::leaf(nibble_iter.nibble_path.bytes, value);
     noir_ok(tree_cache.put_node(node_key, new_leaf_node));

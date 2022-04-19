@@ -147,7 +147,10 @@ void force_tick(std::shared_ptr<consensus_state>& cs) {
   cs->timeout_ticker_timer->cancel(); // forces tick
 }
 
-void sign_add_votes(config& config_, std::shared_ptr<consensus_state>& cs, p2p::signed_msg_type type, bytes hash,
+void sign_add_votes(config& config_,
+  std::shared_ptr<consensus_state>& cs,
+  p2p::signed_msg_type type,
+  bytes hash,
   p2p::part_set_header header) {}
 
 bool validate_votes(const std::shared_ptr<vote_set>& votes, const bytes& address, const bytes& block_hash) {
@@ -235,7 +238,8 @@ public:
   status_monitor() = default;
   status_monitor(status_monitor&&) = default;
   status_monitor& operator=(status_monitor&&) = default;
-  status_monitor(const std::string& node_name, const std::shared_ptr<events::event_bus>& ev_bus,
+  status_monitor(const std::string& node_name,
+    const std::shared_ptr<events::event_bus>& ev_bus,
     const std::shared_ptr<consensus_state>& cs_state)
     : node_name(node_name), ev_bus(ev_bus), cs_state_(cs_state) {}
   // copy is not permitted
@@ -404,7 +408,9 @@ private:
   static std::map<std::string, p2p::round_step_type> step_map_;
 
   template<typename T>
-  bool ensure_events_internal(int timeout, int64_t height = -1, int32_t round = -1,
+  bool ensure_events_internal(int timeout,
+    int64_t height = -1,
+    int32_t round = -1,
     p2p::signed_msg_type vote_type = p2p::signed_msg_type::Unknown) {
     process_msg_result ret;
 

@@ -215,7 +215,9 @@ struct event_data_complete_proposal {
   event_data_complete_proposal(const event_data_complete_proposal&) = default;
   event_data_complete_proposal(event_data_complete_proposal&&) = default;
   explicit event_data_complete_proposal(const round_state& rs)
-    : height(rs.height), round(rs.round), step(p2p::round_step_to_str(rs.step)),
+    : height(rs.height),
+      round(rs.round),
+      step(p2p::round_step_to_str(rs.step)),
       block_id(noir::p2p::block_id{.hash = rs.proposal_block->get_hash(), .parts = rs.proposal_block_parts->header()}) {
   }
   event_data_complete_proposal& operator=(const event_data_complete_proposal& other) = default;
@@ -249,9 +251,18 @@ struct event_data_state_sync_status {
 };
 
 /// TMEventData implements events.EventData.
-using tm_event_data = std::variant<event_data_new_block, event_data_new_block_header, event_data_new_evidence,
-  event_data_tx, event_data_round_state, event_data_new_round, event_data_complete_proposal, event_data_vote,
-  event_data_string, event_data_validator_set_updates, event_data_block_sync_status, event_data_state_sync_status>;
+using tm_event_data = std::variant<event_data_new_block,
+  event_data_new_block_header,
+  event_data_new_evidence,
+  event_data_tx,
+  event_data_round_state,
+  event_data_new_round,
+  event_data_complete_proposal,
+  event_data_vote,
+  event_data_string,
+  event_data_validator_set_updates,
+  event_data_block_sync_status,
+  event_data_state_sync_status>;
 
 } // namespace noir::consensus::events
 

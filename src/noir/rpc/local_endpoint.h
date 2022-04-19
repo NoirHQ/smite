@@ -223,9 +223,14 @@ namespace transport {
 #ifdef _WEBSOCKETPP_MOVE_SEMANTICS_
 
       local_endpoint(local_endpoint&& src)
-        : config::socket_type(std::move(src)), m_tcp_pre_init_handler(src.m_tcp_pre_init_handler),
-          m_tcp_post_init_handler(src.m_tcp_post_init_handler), m_io_service(src.m_io_service),
-          m_acceptor(src.m_acceptor), m_elog(src.m_elog), m_alog(src.m_alog), m_state(src.m_state) {
+        : config::socket_type(std::move(src)),
+          m_tcp_pre_init_handler(src.m_tcp_pre_init_handler),
+          m_tcp_post_init_handler(src.m_tcp_post_init_handler),
+          m_io_service(src.m_io_service),
+          m_acceptor(src.m_acceptor),
+          m_elog(src.m_elog),
+          m_alog(src.m_alog),
+          m_state(src.m_state) {
         src.m_io_service = NULL;
         src.m_acceptor = NULL;
         src.m_state = UNINITIALIZED;

@@ -247,7 +247,8 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
 }
 
 void consensus_reactor::gossip_data_for_catchup(const std::shared_ptr<round_state>& rs,
-  const std::shared_ptr<peer_round_state>& prs, const std::shared_ptr<peer_state>& ps) {
+  const std::shared_ptr<peer_round_state>& prs,
+  const std::shared_ptr<peer_state>& ps) {
   if (auto [index, ok] = prs->proposal_block_parts->not_op()->pick_random(); ok) {
     // Verify peer's part_set_header
     block_meta block_meta_;
@@ -314,7 +315,8 @@ void consensus_reactor::gossip_votes_routine(std::shared_ptr<peer_state> ps) {
 }
 
 bool consensus_reactor::gossip_votes_for_height(const std::shared_ptr<round_state>& rs,
-  const std::shared_ptr<peer_round_state>& prs, const std::shared_ptr<peer_state>& ps) {
+  const std::shared_ptr<peer_round_state>& prs,
+  const std::shared_ptr<peer_state>& ps) {
   // If there are last_commits to send
   if (prs->step == p2p::round_step_type::NewHeight) {
     if (pick_send_vote(ps, vote_set_reader(*rs->last_commit))) {
