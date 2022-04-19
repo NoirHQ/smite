@@ -36,4 +36,4 @@
 	url = https://github.com/Cyan4973/xxHash
 [submodule "libs/spdlog"]
 	path = libs/spdlog
-	url = https://github.com/noir-protocol/spdlog
+	url = https://github.com/gabime/spdlog
