@@ -10,8 +10,11 @@
 
 namespace noir::consensus {
 
-std::shared_ptr<vote_set> vote_set::new_vote_set(std::string& chain_id_, int64_t height_, int32_t round_,
-  p2p::signed_msg_type signed_msg_type, validator_set& val_set_) {
+std::shared_ptr<vote_set> vote_set::new_vote_set(std::string& chain_id_,
+  int64_t height_,
+  int32_t round_,
+  p2p::signed_msg_type signed_msg_type,
+  validator_set& val_set_) {
   if (height_ == 0)
     throw std::runtime_error("Cannot make vote_set for height = 0, doesn't make sense");
   auto ret = std::make_shared<vote_set>();

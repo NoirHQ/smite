@@ -240,9 +240,12 @@ inline session<rocksdb_t>::session(std::shared_ptr<rocksdb::DB> db, size_t max_i
 }
 
 inline session<rocksdb_t>::session(session<rocksdb_t>&& other)
-  : m_db(std::move(other.m_db)), m_column_family(std::move(other.m_column_family)),
-    m_read_options(std::move(other.m_read_options)), m_iterator_read_options(std::move(other.m_iterator_read_options)),
-    m_write_options(std::move(other.m_write_options)), m_iterators(std::move(other.m_iterators)) {
+  : m_db(std::move(other.m_db)),
+    m_column_family(std::move(other.m_column_family)),
+    m_read_options(std::move(other.m_read_options)),
+    m_iterator_read_options(std::move(other.m_iterator_read_options)),
+    m_write_options(std::move(other.m_write_options)),
+    m_iterators(std::move(other.m_iterators)) {
   std::scoped_lock lock(m_iterator_mtx);
   m_free_list = std::move(other.m_free_list);
 }
@@ -513,7 +516,8 @@ session<rocksdb_t>::rocks_iterator<Iterator_traits>::rocks_iterator(const rocks_
 template<typename Iterator_traits>
 session<rocksdb_t>::rocks_iterator<Iterator_traits>::rocks_iterator(rocks_iterator&& it)
   : m_session{std::exchange(it.m_session, nullptr)},
-    m_iterator{std::exchange(it.m_iterator, nullptr)}, m_index{std::exchange(it.m_index, -1)} {}
+    m_iterator{std::exchange(it.m_iterator, nullptr)},
+    m_index{std::exchange(it.m_index, -1)} {}
 
 template<typename Iterator_traits>
 session<rocksdb_t>::rocks_iterator<Iterator_traits>::rocks_iterator(

@@ -31,7 +31,10 @@ public:
   /// address. If must_connect is true, the client will throw an exception  upon start
   /// if it fails to connect.
   SocketClient(const std::string& address, bool must_connect, boost::asio::io_context& io_context)
-    : addr(address), must_connect(must_connect), conn(new Conn(address, io_context)), strand(io_context),
+    : addr(address),
+      must_connect(must_connect),
+      conn(new Conn(address, io_context)),
+      strand(io_context),
       flush_timer(io_context) {
     // set service name
     service_type::name = "SocketClient";

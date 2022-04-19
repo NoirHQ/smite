@@ -28,7 +28,8 @@ public:
   static internal_message_handler make_app_thread_message_handler(
     appbase::application& app, message_handler, int priority);
   static message_sender make_message_sender(appbase::application& app,
-    websocketpp::server<websocketpp::config::asio>::connection_ptr, int priority = appbase::priority::medium_low);
+    websocketpp::server<websocketpp::config::asio>::connection_ptr,
+    int priority = appbase::priority::medium_low);
   void handle_message(
     websocketpp::server<websocketpp::config::asio>::connection_ptr conn, ws_server_type::message_ptr msg);
 

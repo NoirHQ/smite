@@ -41,7 +41,8 @@ bool queued_buffer::ready_to_send() const {
 
 // @param callback must not callback into queued_buffer
 bool queued_buffer::add_write_queue(const std::shared_ptr<std::vector<char>>& buff,
-  std::function<void(boost::system::error_code, std::size_t)> callback, bool to_sync_queue) {
+  std::function<void(boost::system::error_code, std::size_t)> callback,
+  bool to_sync_queue) {
   std::scoped_lock<std::mutex> g(_mtx);
   if (to_sync_queue) {
     _sync_write_queue.push_back({buff, callback});

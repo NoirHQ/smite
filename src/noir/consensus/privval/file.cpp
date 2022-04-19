@@ -140,8 +140,10 @@ std::string file_pv::string() const {
     last_sign_state.round, static_cast<int8_t>(last_sign_state.step));
 }
 
-bool check_only_differ_by_timestamp(const noir::consensus::vote& obj, const bytes& last_sign_bytes,
-  const bytes& new_sign_bytes, noir::p2p::tstamp& timestamp) {
+bool check_only_differ_by_timestamp(const noir::consensus::vote& obj,
+  const bytes& last_sign_bytes,
+  const bytes& new_sign_bytes,
+  noir::p2p::tstamp& timestamp) {
   auto last_vote = decode<canonical_vote>(last_sign_bytes);
   auto new_vote = decode<canonical_vote>(new_sign_bytes);
   timestamp = last_vote.timestamp;
@@ -156,8 +158,10 @@ bool check_only_differ_by_timestamp(const noir::consensus::vote& obj, const byte
   return lhs == rhs;
 }
 
-bool check_only_differ_by_timestamp(const noir::consensus::proposal& obj, const bytes& last_sign_bytes,
-  const bytes& new_sign_bytes, noir::p2p::tstamp& timestamp) {
+bool check_only_differ_by_timestamp(const noir::consensus::proposal& obj,
+  const bytes& last_sign_bytes,
+  const bytes& new_sign_bytes,
+  noir::p2p::tstamp& timestamp) {
   auto last_vote = decode<canonical_proposal>(last_sign_bytes);
   auto new_vote = decode<canonical_proposal>(new_sign_bytes);
   timestamp = last_vote.timestamp;

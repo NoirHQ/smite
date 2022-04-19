@@ -113,8 +113,11 @@ struct vote_set {
   std::map<std::string, std::shared_ptr<block_votes>> votes_by_block;
   std::map<P2PID, p2p::block_id> peer_maj23s;
 
-  static std::shared_ptr<vote_set> new_vote_set(std::string& chain_id_, int64_t height_, int32_t round_,
-    p2p::signed_msg_type signed_msg_type, validator_set& val_set_);
+  static std::shared_ptr<vote_set> new_vote_set(std::string& chain_id_,
+    int64_t height_,
+    int32_t round_,
+    p2p::signed_msg_type signed_msg_type,
+    validator_set& val_set_);
 
   std::shared_ptr<bit_array> get_bit_array();
 

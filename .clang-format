@@ -8,6 +8,7 @@ AllowShortEnumsOnASingleLine: false
 AllowShortBlocksOnASingleLine: Never
 AllowShortFunctionsOnASingleLine: Empty
 AlwaysBreakTemplateDeclarations: Yes
+BinPackParameters: false
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon
@@ -29,8 +30,10 @@ IndentWidth: 2
 KeepEmptyLinesAtTheStartOfBlocks: true
 NamespaceMacros: [NOIR_CODEC]
 NamespaceIndentation: Inner
+PackConstructorInitializers: NextLine
 PointerAlignment: Left
 SpaceAfterTemplateKeyword: false
 SpaceBeforeCtorInitializerColon: false
 SpacesBeforeTrailingComments: 1
 UseTab: Never
+WhitespaceSensitiveMacros: ["NOIR_REFLECT"]

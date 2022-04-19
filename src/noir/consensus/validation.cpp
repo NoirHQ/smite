@@ -12,7 +12,9 @@
 namespace noir::consensus {
 
 std::optional<std::string> verify_basic_vals_and_commit(const std::shared_ptr<validator_set>& vals,
-  std::shared_ptr<commit> commit_, int64_t height, p2p::block_id block_id_) {
+  std::shared_ptr<commit> commit_,
+  int64_t height,
+  p2p::block_id block_id_) {
   if (!vals)
     return "verification failed: validator_set is not set";
   if (!commit_)
@@ -27,8 +29,12 @@ std::optional<std::string> verify_basic_vals_and_commit(const std::shared_ptr<va
 }
 
 /// \brief check all signatures included in a commit
-std::optional<std::string> verify_commit_single(std::string chain_id_, std::shared_ptr<validator_set> vals,
-  std::shared_ptr<commit> commit_, int64_t voting_power_needed, bool count_all_signatures, bool lookup_by_index) {
+std::optional<std::string> verify_commit_single(std::string chain_id_,
+  std::shared_ptr<validator_set> vals,
+  std::shared_ptr<commit> commit_,
+  int64_t voting_power_needed,
+  bool count_all_signatures,
+  bool lookup_by_index) {
 
   validator val{};
   int32_t val_idx{0};
@@ -76,8 +82,11 @@ std::optional<std::string> verify_commit_single(std::string chain_id_, std::shar
 
 /// \brief verifies +2/3 of set has signed given commit
 /// Used by the light client and does not check all signatures
-std::optional<std::string> verify_commit_light(std::string chain_id_, std::shared_ptr<validator_set> vals,
-  p2p::block_id block_id_, int64_t height, std::shared_ptr<commit> commit_) {
+std::optional<std::string> verify_commit_light(std::string chain_id_,
+  std::shared_ptr<validator_set> vals,
+  p2p::block_id block_id_,
+  int64_t height,
+  std::shared_ptr<commit> commit_) {
   // Validate params
   if (auto err = verify_basic_vals_and_commit(vals, commit_, height, block_id_); err.has_value())
     return err;

@@ -48,8 +48,10 @@ struct reactor {
 
   std::unique_ptr<named_thread_pool> thread_pool;
 
-  static std::shared_ptr<reactor> new_reactor(appbase::application& app, state& state_,
-    const std::shared_ptr<block_executor>& block_exec_, const std::shared_ptr<block_store>& new_block_store,
+  static std::shared_ptr<reactor> new_reactor(appbase::application& app,
+    state& state_,
+    const std::shared_ptr<block_executor>& block_exec_,
+    const std::shared_ptr<block_store>& new_block_store,
     bool block_sync_) {
 
     if (state_.last_block_height != new_block_store->height()) {

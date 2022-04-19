@@ -48,7 +48,8 @@ public:
 
   // @param callback must not callback into queued_buffer
   bool add_write_queue(const std::shared_ptr<std::vector<char>>& buff,
-    std::function<void(boost::system::error_code, std::size_t)> callback, bool to_sync_queue) {
+    std::function<void(boost::system::error_code, std::size_t)> callback,
+    bool to_sync_queue) {
     std::scoped_lock g(_mtx);
     if (to_sync_queue) {
       _sync_write_queue.push_back({buff, callback});

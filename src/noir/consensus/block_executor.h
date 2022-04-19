@@ -34,13 +34,18 @@ struct block_executor {
 
   std::map<std::string, bool> cache; // storing verification result for a single height
 
-  block_executor(std::shared_ptr<db_store> new_store, std::shared_ptr<app_connection> new_proxyApp,
-    std::shared_ptr<block_store> new_block_store, std::shared_ptr<events::event_bus> new_event_bus)
-    : store_(std::move(new_store)), block_store_(std::move(new_block_store)), proxyApp_(std::move(new_proxyApp)),
+  block_executor(std::shared_ptr<db_store> new_store,
+    std::shared_ptr<app_connection> new_proxyApp,
+    std::shared_ptr<block_store> new_block_store,
+    std::shared_ptr<events::event_bus> new_event_bus)
+    : store_(std::move(new_store)),
+      block_store_(std::move(new_block_store)),
+      proxyApp_(std::move(new_proxyApp)),
       event_bus_(new_event_bus) {}
 
   static std::shared_ptr<block_executor> new_block_executor(const std::shared_ptr<db_store>& new_store,
-    const std::shared_ptr<app_connection>& new_proxyApp, const std::shared_ptr<block_store>& new_block_store,
+    const std::shared_ptr<app_connection>& new_proxyApp,
+    const std::shared_ptr<block_store>& new_block_store,
     const std::shared_ptr<events::event_bus>& new_event_bus) {
     auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_block_store, new_event_bus);
     return res;
@@ -242,7 +247,9 @@ struct block_executor {
   }
 
   std::shared_ptr<abci_responses> exec_block_on_proxy_app(std::shared_ptr<app_connection> proxyAppConn,
-    std::shared_ptr<block> block_, std::shared_ptr<db_store> db_store, int64_t initial_height) {
+    std::shared_ptr<block> block_,
+    std::shared_ptr<db_store> db_store,
+    int64_t initial_height) {
     uint valid_txs = 0, invalid_txs = 0;
     auto abci_responses_ = std::make_shared<abci_responses>();
     std::vector<response_deliver_tx> dtxs;
@@ -318,8 +325,11 @@ struct block_executor {
     return true;
   }
 
-  std::optional<state> update_state(state& state_, p2p::block_id block_id_, block_header& header_,
-    std::shared_ptr<abci_responses> abci_responses_, std::vector<validator>& validator_updates) {
+  std::optional<state> update_state(state& state_,
+    p2p::block_id block_id_,
+    block_header& header_,
+    std::shared_ptr<abci_responses> abci_responses_,
+    std::vector<validator>& validator_updates) {
     // Copy val_set so that changes from end_block can be applied
     auto n_val_set = state_.next_validators;
 
@@ -373,7 +383,9 @@ struct block_executor {
   /// Fire NewBlock, NewBlockHeader.
   /// Fire TxEvent for every tx.
   /// \note if Tendermint crashes before commit, some or all of these events may be published again.
-  void fire_events(const block& block_, const p2p::block_id& block_id_, const abci_responses& abci_rsp,
+  void fire_events(const block& block_,
+    const p2p::block_id& block_id_,
+    const abci_responses& abci_rsp,
     const std::vector<validator> val_updates) {
     event_bus_->publish_event_new_block(events::event_data_new_block{
       .block = block_,

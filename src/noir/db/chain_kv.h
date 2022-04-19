@@ -318,7 +318,9 @@ bytes create_full_key(const bytes& prefix, uint64_t contract, const T& key) {
 struct database {
   std::unique_ptr<rocksdb::DB> rdb;
 
-  database(const char* db_path, bool create_if_missing, std::optional<uint32_t> threads = {},
+  database(const char* db_path,
+    bool create_if_missing,
+    std::optional<uint32_t> threads = {},
     std::optional<int> max_open_files = {}) {
 
     rocksdb::Options options;

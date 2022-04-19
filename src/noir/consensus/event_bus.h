@@ -26,8 +26,8 @@ public:
   using tm_pub_sub = appbase::channel_decl<struct event_bus_tag, message>;
 
   event_bus(appbase::application& app)
-    : event_bus_channel_(app.get_channel<tm_pub_sub>()), subscription_map_(std::make_shared<subscription_map_type_>()) {
-  }
+    : event_bus_channel_(app.get_channel<tm_pub_sub>()),
+      subscription_map_(std::make_shared<subscription_map_type_>()) {}
 
   bool has_subscribers() const {
     return event_bus_channel_.has_subscribers();
@@ -81,7 +81,9 @@ public:
     std::weak_ptr<handle_type_> handle_;
     std::weak_ptr<subscription_map_type_> map_;
 
-    subscription(std::string subscriber, std::string id, std::shared_ptr<tm_pub_sub::channel_type::handle> handle_,
+    subscription(std::string subscriber,
+      std::string id,
+      std::shared_ptr<tm_pub_sub::channel_type::handle> handle_,
       std::shared_ptr<subscription_map_type_> map_)
       : subscriber(subscriber), id(id), handle_(handle_), map_(map_) {}
   };

@@ -55,7 +55,8 @@ struct sparse_merkle_leaf_node {
 
 template<typename T>
 struct sparse_merkle_proof {
-  auto verify(const bytes32& expected_root_hash, const bytes32& element_key,
+  auto verify(const bytes32& expected_root_hash,
+    const bytes32& element_key,
     std::optional<std::remove_reference_t<T>> element_value) -> result<void> {
     noir_ensure(siblings.size() <= 256, "sparse merkle tree proof has more than 256 ({}) siblings", siblings.size());
     if (element_value) {

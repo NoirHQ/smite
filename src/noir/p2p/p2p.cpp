@@ -210,7 +210,8 @@ public:
   void fetch_timeout(boost::system::error_code ec);
 
   void queue_write(const std::shared_ptr<std::vector<char>>& buff,
-    std::function<void(boost::system::error_code, std::size_t)> callback, bool to_sync_queue = false);
+    std::function<void(boost::system::error_code, std::size_t)> callback,
+    bool to_sync_queue = false);
   void do_queue_write();
 
   static bool is_valid(const handshake_message& msg);
@@ -886,16 +887,24 @@ struct msg_handler {
 // connection
 //------------------------------------------------------------------------
 connection::connection(std::string endpoint)
-  : peer_addr(endpoint), strand(my_impl->thread_pool->get_executor()),
-    socket(new tcp::socket(my_impl->thread_pool->get_executor())), connection_id(++my_impl->current_connection_id),
-    response_expected_timer(my_impl->thread_pool->get_executor()), last_handshake_recv(), last_handshake_sent() {
+  : peer_addr(endpoint),
+    strand(my_impl->thread_pool->get_executor()),
+    socket(new tcp::socket(my_impl->thread_pool->get_executor())),
+    connection_id(++my_impl->current_connection_id),
+    response_expected_timer(my_impl->thread_pool->get_executor()),
+    last_handshake_recv(),
+    last_handshake_sent() {
   ilog("creating connection to ${n}", ("n", endpoint));
 }
 
 connection::connection()
-  : peer_addr(), strand(my_impl->thread_pool->get_executor()),
-    socket(new tcp::socket(my_impl->thread_pool->get_executor())), connection_id(++my_impl->current_connection_id),
-    response_expected_timer(my_impl->thread_pool->get_executor()), last_handshake_recv(), last_handshake_sent() {
+  : peer_addr(),
+    strand(my_impl->thread_pool->get_executor()),
+    socket(new tcp::socket(my_impl->thread_pool->get_executor())),
+    connection_id(++my_impl->current_connection_id),
+    response_expected_timer(my_impl->thread_pool->get_executor()),
+    last_handshake_recv(),
+    last_handshake_sent() {
   dlog("new connection object created");
 }
 
@@ -1338,7 +1347,8 @@ void connection::enqueue_buffer(
 }
 
 void connection::queue_write(const std::shared_ptr<vector<char>>& buff,
-  std::function<void(boost::system::error_code, std::size_t)> callback, bool to_sync_queue) {
+  std::function<void(boost::system::error_code, std::size_t)> callback,
+  bool to_sync_queue) {
   if (!buffer_queue.add_write_queue(buff, callback, to_sync_queue)) {
     wlog("write_queue full ${s} bytes, giving up on connection ${p}",
       ("s", buffer_queue.write_queue_size())("p", peer_name()));
