@@ -69,4 +69,4 @@ std::pair<bytes, std::vector<std::shared_ptr<proof>>> proofs_from_bytes_list(con
 
 } // namespace noir::consensus::merkle
 
-NOIR_REFLECT(noir::consensus::merkle::proof, total, index, leaf_hash, aunts)
+NOIR_REFLECT(noir::consensus::merkle::proof, total, index, leaf_hash, aunts);

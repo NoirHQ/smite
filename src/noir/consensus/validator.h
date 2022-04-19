@@ -434,5 +434,5 @@ struct validator_set {
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(noir::consensus::validator, address, pub_key_, voting_power, proposer_priority)
-NOIR_REFLECT(noir::consensus::validator_set, validators, proposer, total_voting_power)
+NOIR_REFLECT(noir::consensus::validator, address, pub_key_, voting_power, proposer_priority);
+NOIR_REFLECT(noir::consensus::validator_set, validators, proposer, total_voting_power);

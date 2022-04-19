@@ -120,4 +120,4 @@ struct state {
 
 NOIR_REFLECT(noir::consensus::state, version, chain_id, initial_height, last_block_height, last_block_id,
   last_block_time, validators, next_validators, last_validators, last_height_validators_changed, consensus_params_,
-  last_height_consensus_params_changed, last_result_hash, app_hash)
+  last_height_consensus_params_changed, last_result_hash, app_hash);

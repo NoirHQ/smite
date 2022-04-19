@@ -31,8 +31,8 @@ struct no_block_response {
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(noir::consensus::block_request, height)
-NOIR_REFLECT(noir::consensus::block_response, block_)
-NOIR_REFLECT(noir::consensus::status_request, )
-NOIR_REFLECT(noir::consensus::status_response, height, base)
-NOIR_REFLECT(noir::consensus::no_block_response, height)
+NOIR_REFLECT(noir::consensus::block_request, height);
+NOIR_REFLECT(noir::consensus::block_response, block_);
+NOIR_REFLECT(noir::consensus::status_request, );
+NOIR_REFLECT(noir::consensus::status_response, height, base);
+NOIR_REFLECT(noir::consensus::no_block_response, height);

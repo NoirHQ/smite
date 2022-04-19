@@ -17,7 +17,7 @@ struct signed_integral_type {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(signed_integral_type, a, b, c, d)
+NOIR_REFLECT(signed_integral_type, a, b, c, d);
 
 struct unsigned_integral_type {
   uint8_t a = 0xf;
@@ -29,7 +29,7 @@ struct unsigned_integral_type {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(unsigned_integral_type, a, b, c, d)
+NOIR_REFLECT(unsigned_integral_type, a, b, c, d);
 
 struct complex_integral_type {
   signed_integral_type a;
@@ -41,7 +41,7 @@ struct complex_integral_type {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(complex_integral_type, a, b, c, d)
+NOIR_REFLECT(complex_integral_type, a, b, c, d);
 
 enum class signed_enum_8 : int8_t {
   // workaround clang-format
@@ -69,7 +69,7 @@ struct signed_enumeration_type {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(signed_enumeration_type, a, b, c, d)
+NOIR_REFLECT(signed_enumeration_type, a, b, c, d);
 
 enum class unsigned_enum_8 : int8_t {
   // workaround clang-format
@@ -97,7 +97,7 @@ struct unsigned_enumeration_type {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(unsigned_enumeration_type, a, b, c, d)
+NOIR_REFLECT(unsigned_enumeration_type, a, b, c, d);
 
 struct complex_enumeration_type {
   signed_enumeration_type a;
@@ -109,7 +109,7 @@ struct complex_enumeration_type {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(complex_enumeration_type, a, b, c, d)
+NOIR_REFLECT(complex_enumeration_type, a, b, c, d);
 
 struct nested_complex_type {
   complex_integral_type a;
@@ -121,7 +121,7 @@ struct nested_complex_type {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(nested_complex_type, a, b, c, d)
+NOIR_REFLECT(nested_complex_type, a, b, c, d);
 
 struct vector_integral_type {
   std::vector<int8_t> a;
@@ -175,7 +175,7 @@ struct complex_vector_type {
     return (a == o.a) && (b == o.b) && (c == o.c) && (d == o.d);
   }
 };
-NOIR_REFLECT(complex_vector_type, a, b, c, d)
+NOIR_REFLECT(complex_vector_type, a, b, c, d);
 
 #include <noir/common/helper/variant.h>
 

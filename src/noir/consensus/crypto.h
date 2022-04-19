@@ -75,5 +75,5 @@ public:
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(noir::consensus::pub_key, key)
-NOIR_REFLECT(noir::consensus::priv_key, key)
+NOIR_REFLECT(noir::consensus::pub_key, key);
+NOIR_REFLECT(noir::consensus::priv_key, key);
