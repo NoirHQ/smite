@@ -19,7 +19,7 @@ target_link_libraries(noir_consensus
   noir_common
   noir_crypto
   noir_tx_pool
-  rocksdb
+  RocksDB::rocksdb
 )
 set_target_properties(noir_consensus PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 

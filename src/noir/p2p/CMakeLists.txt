@@ -4,7 +4,7 @@ add_library(noir_p2p STATIC
 target_link_libraries(noir_p2p
   noir_common
   noir_crypto
-  rocksdb
+  RocksDB::rocksdb
 )
 set_target_properties(noir_p2p PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 

@@ -12,9 +12,9 @@ add_library(noir_crypto STATIC
 target_include_directories(noir_crypto PUBLIC ${CMAKE_BINARY_DIR}/include)
 target_link_libraries(noir_crypto
   noir_common
-  b2
+  libb2::libb2
   XKCP
-  xxhash
+  xxHash::xxhash
 )
 set_target_properties(noir_crypto PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 

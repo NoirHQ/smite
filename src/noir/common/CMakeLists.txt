@@ -7,12 +7,12 @@ add_library(noir_common STATIC
 )
 target_include_directories(noir_common PUBLIC ${NOIR_SOURCE_DIR})
 target_link_libraries(noir_common
-  appbase
-  expected
-  fc
-  fmt
-  range-v3
-  scope-lite
+  optimized appbase
+  optimized fc
+  fmt::fmt
+  nonstd::scope-lite
+  range-v3::range-v3
+  tl::expected
 )
 set_target_properties(noir_common PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 

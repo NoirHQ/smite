@@ -3,7 +3,7 @@ target_include_directories(tendermint_common PUBLIC ${NOIR_SOURCE_DIR})
 target_link_libraries(tendermint_common
   noir::common
   noir::thread
-  spdlog
+  spdlog::spdlog
 )
 
 add_library(tendermint::common ALIAS tendermint_common)
