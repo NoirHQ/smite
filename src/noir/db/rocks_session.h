@@ -8,6 +8,7 @@
 #include <cassert>
 #include <iterator>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <vector>
 #include <forward_list>
