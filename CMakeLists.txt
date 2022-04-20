@@ -45,7 +45,6 @@ include(${CMAKE_CURRENT_BINARY_DIR}/conan.cmake)
 set(CONAN_PACKAGES
   fmt/8.1.1
   libb2/20190723
-  openssl/3.0.2
   rocksdb/6.20.3
   scope-lite/0.2.0
   spdlog/1.10.0
@@ -56,6 +55,7 @@ if(UNIX AND NOT APPLE)
   set(CONAN_PACKAGES
     ${CONAN_PACKAGES}
     boost/1.78.0
+    openssl/3.0.2
   )
 endif()
 
@@ -72,6 +72,7 @@ conan_cmake_install(PATH_OR_REFERENCE . BUILD missing REMOTE conancenter SETTING
 
 if(APPLE)
   set(BOOST_ROOT "/usr/local/opt/boost" CACHE STRING "boost root directory")
+  set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl" CACHE STRING "openssl root directory")
 endif()
 
 find_package(Boost REQUIRED)

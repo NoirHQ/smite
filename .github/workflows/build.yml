@@ -61,7 +61,7 @@ jobs:
       # install conan
       - uses: turtlebrowser/get-conan@main
       # setup build dependencies
-      - run: brew install boost gflags protobuf
+      - run: brew install boost gflags openssl@3 protobuf
       # checkout
       - uses: actions/checkout@v2
         with:
