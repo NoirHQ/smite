@@ -6,7 +6,6 @@ add_library(noir_crypto STATIC
   hash/sha3.cpp
   hash/xxhash.cpp
   openssl/hash.cpp
-  openssl/openssl.cpp
   rand/rand.cpp
 )
 target_include_directories(noir_crypto PUBLIC ${CMAKE_BINARY_DIR}/include)
