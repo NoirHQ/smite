@@ -7,6 +7,7 @@
 
 #include <noir/crypto/compat/common.h>
 
+// clang-format off
 // Internal implementation code.
 namespace
 {
@@ -232,11 +233,12 @@ void Transform(uint32_t* s, const unsigned char* chunk)
     s[4] = t + b1 + c2;
 }
 
-} // namespace ripemd160
+} // namespace impl
 
 } // namespace
 
 ////// RIPEMD160
+// clang-format on
 
 namespace noir::crypto {
 
