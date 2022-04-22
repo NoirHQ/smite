@@ -7,8 +7,8 @@ add_library(noir_common STATIC
 )
 target_include_directories(noir_common PUBLIC ${NOIR_SOURCE_DIR})
 target_link_libraries(noir_common
-  optimized appbase
-  optimized fc
+  appbase
+  fc
   fmt::fmt
   nonstd::scope-lite
   range-v3::range-v3

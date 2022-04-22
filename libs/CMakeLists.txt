@@ -26,3 +26,12 @@ add_subdirectory(range-v3)
 
 # TODO: remove if openssl release includes keccak hash functions (currently in master branch)
 include(cmake/XKCP.cmake)
+
+set_target_properties(appbase PROPERTIES DEBUG_POSTFIX "")
+set_target_properties(fc PROPERTIES DEBUG_POSTFIX "")
+if(TARGET Catch2)
+  set_target_properties(Catch2 PROPERTIES DEBUG_POSTFIX "")
+endif()
+if(TARGET Catch2WithMain)
+  set_target_properties(Catch2WithMain PROPERTIES DEBUG_POSTFIX "")
+endif()

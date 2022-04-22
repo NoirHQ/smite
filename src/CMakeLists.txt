@@ -5,7 +5,7 @@ function(add_noir_test TARGET)
       set(NOIR_TEST_DEPENDS noir)
     endif()
     add_executable(${TARGET} ${NOIR_TEST_UNPARSED_ARGUMENTS})
-    target_link_libraries(${TARGET} ${NOIR_TEST_DEPENDS} optimized Catch2::Catch2WithMain)
+    target_link_libraries(${TARGET} ${NOIR_TEST_DEPENDS} Catch2::Catch2WithMain)
     catch_discover_tests(${TARGET})
   endif()
 endfunction()
@@ -22,7 +22,7 @@ target_link_libraries(noir
   noir::rpc
   noir::tx_pool
   tendermint::proto
-  optimized softfloat
+  softfloat
 )
 
 add_subdirectory(noir)
