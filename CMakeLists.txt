@@ -8,6 +8,8 @@ endif(CCACHE_FOUND)
 
 project(noir)
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 option(NOIR_BUILD_TESTS "Build tests" OFF)
 option(NOIR_UNITY_BUILD "Enable unity build" OFF)
 
@@ -93,3 +95,6 @@ add_subdirectory(libs)
 add_subdirectory(src)
 add_subdirectory(proto)
 add_subdirectory(cmd)
+
+# temporary path, this will supersede src
+add_subdirectory(v1)
