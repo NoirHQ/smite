@@ -68,7 +68,6 @@ int main() {
         for (;;) {
           Result<std::shared_ptr<TcpConn>> result = co_await listener->accept();
           auto conn = result.value();
-          std::cout << conn->address << std::endl;
           co_await write(conn);
         }
       },
