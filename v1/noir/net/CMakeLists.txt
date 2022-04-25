@@ -8,3 +8,6 @@ add_library(noir::net::v1 ALIAS noir_net_v1)
 
 add_executable(tcp_echo_client test/tcp_echo_client.cpp)
 target_link_libraries(tcp_echo_client noir::net::v1)
+
+add_executable(tcp_echo_server test/tcp_echo_server.cpp)
+target_link_libraries(tcp_echo_server noir::net::v1)
