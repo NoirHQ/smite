@@ -58,12 +58,7 @@ public:
     if (ec)
       co_return ec;
 
-    boost::system::error_code ec2;
-    auto remote = socket.remote_endpoint(ec2);
-    auto host = ec2 ? "<unknown>" : remote.address().to_string();
-    auto port = ec2 ? "<unknown>" : std::to_string(remote.port());
-    auto conn = TcpConn::create(host + ":" + port, socket, strand.get_inner_executor().context());
-
+    auto conn = TcpConn::create(std::move(socket), strand.get_inner_executor().context());
     co_return conn;
   }
 

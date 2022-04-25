@@ -15,8 +15,15 @@ private:
   TcpConn(std::string_view address, boost::asio::io_context& io_context)
     : Conn(address, io_context), socket(new boost::asio::ip::tcp::socket(io_context.get_executor())) {}
 
-  TcpConn(std::string_view address, boost::asio::ip::tcp::socket& socket, boost::asio::io_context& io_context)
-    : Conn(address, io_context), socket(std::make_shared<boost::asio::ip::tcp::socket>(std::move(socket))) {}
+  TcpConn(boost::asio::ip::tcp::socket&& socket, boost::asio::io_context& io_context)
+    : Conn(io_context), socket(std::make_shared<boost::asio::ip::tcp::socket>(std::move(socket))) {
+    boost::system::error_code ec;
+
+    auto remote = this->socket->remote_endpoint(ec);
+    auto host = ec ? "<unknown>" : remote.address().to_string();
+    auto port = ec ? "<unknown>" : std::to_string(remote.port());
+    address = host + ":" + port;
+  }
 
 public:
   [[nodiscard]] static auto create(std::string_view address, boost::asio::io_context& io_context)
@@ -24,10 +31,9 @@ public:
     return std::shared_ptr<TcpConn>(new TcpConn(address, io_context));
   }
 
-  [[nodiscard]] static auto create(std::string_view address,
-    boost::asio::ip::tcp::socket& socket,
-    boost::asio::io_context& io_context) -> std::shared_ptr<TcpConn> {
-    return std::shared_ptr<TcpConn>(new TcpConn(address, socket, io_context));
+  [[nodiscard]] static auto create(boost::asio::ip::tcp::socket&& socket, boost::asio::io_context& io_context)
+    -> std::shared_ptr<TcpConn> {
+    return std::shared_ptr<TcpConn>(new TcpConn(std::move(socket), io_context));
   }
 
   auto connect() -> boost::asio::awaitable<Result<void>> {

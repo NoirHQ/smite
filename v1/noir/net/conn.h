@@ -26,6 +26,9 @@ class Conn : public std::enable_shared_from_this<Derived> {
 protected:
   Conn(std::string_view address, boost::asio::io_context& io_context)
     : address(address), strand(io_context.get_executor()) {}
+  explicit Conn(boost::asio::io_context& io_context): strand(io_context.get_executor()) {}
+
+  std::string address;
 
 public:
   template<typename Buffer>
@@ -101,7 +104,6 @@ public:
 
   boost::asio::strand<boost::asio::io_context::executor_type> strand;
   detail::message_buffer<1024 * 1024> message_buffer;
-  const std::string address;
 };
 
 } // namespace noir::net
