@@ -15,10 +15,19 @@ private:
   TcpConn(std::string_view address, boost::asio::io_context& io_context)
     : Conn(address, io_context), socket(new boost::asio::ip::tcp::socket(io_context.get_executor())) {}
 
+  TcpConn(std::string_view address, boost::asio::ip::tcp::socket& socket, boost::asio::io_context& io_context)
+    : Conn(address, io_context), socket(std::make_shared<boost::asio::ip::tcp::socket>(std::move(socket))) {}
+
 public:
   [[nodiscard]] static auto create(std::string_view address, boost::asio::io_context& io_context)
     -> std::shared_ptr<TcpConn> {
     return std::shared_ptr<TcpConn>(new TcpConn(address, io_context));
+  }
+
+  [[nodiscard]] static auto create(std::string_view address,
+    boost::asio::ip::tcp::socket& socket,
+    boost::asio::io_context& io_context) -> std::shared_ptr<TcpConn> {
+    return std::shared_ptr<TcpConn>(new TcpConn(address, socket, io_context));
   }
 
   auto connect() -> boost::asio::awaitable<Result<void>> {
