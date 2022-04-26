@@ -21,36 +21,52 @@ void print_error(const std::exception_ptr& eptr) {
   }
 }
 
-const std::string msg = std::string{"Hello!"};
+const std::string ping = "ping!";
+const std::string pong = "pong!";
 
-boost::asio::awaitable<void> write(std::shared_ptr<TcpConn> conn) {
-  auto send_buffer = boost::asio::buffer((const unsigned char*)msg.data(), msg.size());
+boost::asio::awaitable<void> send_routine(std::shared_ptr<TcpConn> conn) {
+  auto send_buffer = boost::asio::buffer((const unsigned char*)ping.data(), ping.size());
+  auto recv_buffer = std::array<unsigned char, 256>{};
   auto timer = boost::asio::steady_timer{conn->strand};
 
   for (;;) {
-    std::cout << "Write: " << msg << std::endl;
     if (auto ok = co_await conn->write(send_buffer); !ok) {
       std::cerr << ok.error().message() << std::endl;
+    } else {
+      std::string_view str{(const char*)send_buffer.data(), ping.size()};
+      std::cout << "Client Send: " << str << std::endl;
+
+      auto ok2 = co_await conn->read({recv_buffer.data(), pong.size()});
+      if (!ok2) {
+        std::cerr << ok2.error().message() << std::endl;
+      } else {
+        std::string_view str2{(const char*)recv_buffer.data(), pong.size()};
+        std::cout << "Client Receive: " << str2 << std::endl;
+      }
+
+      std::fill(recv_buffer.begin(), recv_buffer.end(), 0);
     }
+
     timer.expires_after(std::chrono::milliseconds(1000));
     co_await timer.async_wait(boost::asio::use_awaitable);
   }
 }
 
-boost::asio::awaitable<void> read(std::shared_ptr<TcpConn> conn) {
+boost::asio::awaitable<void> receive_routine(std::shared_ptr<TcpConn> conn) {
+  auto send_buffer = boost::asio::buffer((const unsigned char*)pong.data(), pong.size());
   auto recv_buffer = std::array<unsigned char, 256>{};
 
   for (;;) {
-    auto ok = co_await conn->read({recv_buffer.data(), msg.size()});
+    auto ok = co_await conn->read({recv_buffer.data(), ping.size()});
     if (!ok) {
       std::cerr << ok.error().message() << std::endl;
     } else {
-      std::string_view str{(const char*)recv_buffer.data(), msg.size()};
-      std::cout << "Read: " << str << std::endl;
+      if (auto ok2 = co_await conn->write(send_buffer); !ok2) {
+        std::cerr << ok2.error().message() << std::endl;
+      }
     }
     std::fill(recv_buffer.begin(), recv_buffer.end(), 0);
   }
-  co_return;
 }
 
 int main() {
@@ -59,17 +75,15 @@ int main() {
 
     auto listener = TcpListener::create(io_context);
     boost::asio::co_spawn(
-      listener->strand,
+      io_context,
       [listener, &io_context]() -> boost::asio::awaitable<void> {
         if (auto ok = co_await listener->listen("127.0.0.1:26658"); !ok) {
           std::cerr << ok.error().message() << std::endl;
           co_return;
         }
-        for (;;) {
-          Result<std::shared_ptr<TcpConn>> result = co_await listener->accept();
-          auto conn = result.value();
-          co_await write(conn);
-        }
+        Result<std::shared_ptr<TcpConn>> result = co_await listener->accept();
+        auto conn = result.value();
+        boost::asio::co_spawn(io_context, receive_routine(conn), print_error);
       },
       print_error);
     io_context.run();
@@ -79,13 +93,13 @@ int main() {
   boost::asio::io_context io_context{};
   auto conn = TcpConn::create("127.0.0.1:26658", io_context);
   boost::asio::co_spawn(
-    conn->strand,
+    io_context,
     [conn, &io_context]() -> boost::asio::awaitable<void> {
       if (auto ok = co_await conn->connect(); !ok) {
         std::cerr << ok.error().message() << std::endl;
         co_return;
       }
-      co_await read(conn);
+      boost::asio::co_spawn(io_context, send_routine(conn), print_error);
     },
     print_error);
   io_context.run();
