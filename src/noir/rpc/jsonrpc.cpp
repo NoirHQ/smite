@@ -13,7 +13,7 @@ using namespace noir::jsonrpc;
 
 class jsonrpc_impl : std::enable_shared_from_this<jsonrpc_impl> {
 public:
-  jsonrpc_impl(appbase::application& app): app(app) {}
+  explicit jsonrpc_impl(appbase::application& app): app(app) {}
 
   endpoint& get_or_create_endpoint(const std::string& url) {
     if (endpoints.find(url) != endpoints.end())
@@ -45,7 +45,7 @@ public:
 
     app.get_plugin<rpc>().add_ws_api({
       {url,
-        [&](std::string payload, message_sender sender) mutable {
+        [&](std::string url, std::string payload, message_sender sender) mutable {
           try {
             if (payload.empty())
               payload = "{}";

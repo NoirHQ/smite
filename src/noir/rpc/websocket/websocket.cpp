@@ -26,18 +26,19 @@ void websocket::add_message_handler(const std::string& path, message_handler& ha
 internal_message_handler websocket::make_app_thread_message_handler(
   appbase::application& app, message_handler next, int priority) {
   auto next_ptr = std::make_shared<message_handler>(std::move(next));
-  return
-    [&app, priority, next_ptr = std::move(next_ptr)](connection_ptr conn, const string& payload, message_sender then) {
-      message_sender wrapped_then = [then = std::move(then)](std::optional<fc::variant> msg) { then(std::move(msg)); };
+  return [&app, priority, next_ptr = std::move(next_ptr)](
+           connection_ptr conn, const string& url, const string& payload, message_sender then) {
+    message_sender wrapped_then = [then = std::move(then)](std::optional<fc::variant> msg) { then(std::move(msg)); };
 
-      app.post(priority, [next_ptr, conn = std::move(conn), payload, wrapped_then = std::move(wrapped_then)]() mutable {
+    app.post(
+      priority, [next_ptr, conn = std::move(conn), url, payload, wrapped_then = std::move(wrapped_then)]() mutable {
         try {
-          (*next_ptr)(payload, std::move(wrapped_then));
+          (*next_ptr)(url, payload, std::move(wrapped_then));
         } catch (...) {
           conn->send("Internal Server Error");
         }
       });
-    };
+  };
 }
 
 message_sender websocket::make_message_sender(appbase::application& app, connection_ptr conn, int priority) {
@@ -61,7 +62,7 @@ void websocket::handle_message(
   websocketpp::server<websocketpp::config::asio>::connection_ptr conn, ws_server_type::message_ptr msg) {
   std::string resource = conn->get_uri()->get_resource();
   if (message_handlers.contains(resource)) {
-    message_handlers[resource](conn, msg->get_payload(), make_message_sender(app, conn));
+    message_handlers[resource](conn, resource, msg->get_payload(), make_message_sender(app, conn));
   } else {
     conn->send("Unknown Endpoint");
   }

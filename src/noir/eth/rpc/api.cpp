@@ -11,7 +11,7 @@
 #include <noir/eth/rpc/api.h>
 #include <fmt/core.h>
 
-namespace noir::eth::api {
+namespace noir::eth::rpc {
 
 using namespace noir::codec;
 
@@ -197,4 +197,4 @@ fc::variant api::call(const fc::variant& req) {
   return fc::variant("0x0");
 }
 
-} // namespace noir::eth::api
+} // namespace noir::eth::rpc

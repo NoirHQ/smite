@@ -8,7 +8,7 @@
 #include <noir/tx_pool/tx_pool.h>
 #include <fc/variant.hpp>
 
-namespace noir::eth::api {
+namespace noir::eth::rpc {
 
 class api {
 public:
@@ -55,4 +55,4 @@ private:
   std::shared_ptr<noir::consensus::block_store> block_store_ptr;
 };
 
-} // namespace noir::eth::api
+} // namespace noir::eth::rpc

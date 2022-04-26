@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#pragma once
 #include <noir/common/helper/variant.h>
 #include <noir/common/refl.h>
 #include <tendermint/abci/types.pb.h>

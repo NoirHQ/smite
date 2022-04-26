@@ -7,7 +7,7 @@
 #include <noir/eth/rpc/api.h>
 
 using namespace std;
-using namespace noir::eth::api;
+using namespace noir::eth::rpc;
 
 TEST_CASE("eth:params: check_params_size", "[eth][api]") {
   fc::variants vs;
@@ -22,22 +22,22 @@ TEST_CASE("eth:params: check_params_size", "[eth][api]") {
 
 TEST_CASE("eth:params: send_raw_tx", "[eth][api]") {
   fc::variant params;
-  api a;
+  api api_;
 
   SECTION("check params fail") {
     params = fc::variant(1);
-    CHECK_THROWS_WITH(a.send_raw_tx(params), "invalid json request");
+    CHECK_THROWS_WITH(api_.send_raw_tx(params), "invalid json request");
     vector<string> v;
     params = fc::variant(v);
-    CHECK_THROWS_WITH(a.send_raw_tx(params), "missing value for required argument 0");
+    CHECK_THROWS_WITH(api_.send_raw_tx(params), "missing value for required argument 0");
     v = {"0x1", "0x2"};
     params = fc::variant(v);
-    CHECK_THROWS_WITH(a.send_raw_tx(params), "too many arguments, want at most 1");
+    CHECK_THROWS_WITH(api_.send_raw_tx(params), "too many arguments, want at most 1");
   }
 
   SECTION("check param fail") {
     vector<uint32_t> v = {0};
     params = fc::variant(v);
-    CHECK_THROWS_WITH(a.send_raw_tx(params), "invalid parameters: json: cannot unmarshal");
+    CHECK_THROWS_WITH(api_.send_raw_tx(params), "invalid parameters: json: cannot unmarshal");
   }
 }
