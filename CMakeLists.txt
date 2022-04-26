@@ -45,6 +45,8 @@ include(${CMAKE_CURRENT_BINARY_DIR}/conan.cmake)
 set(CONAN_PACKAGES
   fmt/8.1.1
   libb2/20190723
+  libpq/14.2
+  libpqxx/7.7.3
   rocksdb/6.20.3
   scope-lite/0.2.0
   spdlog/1.10.0
@@ -83,6 +85,7 @@ endif()
 find_package(Boost REQUIRED)
 find_package(fmt REQUIRED)
 find_package(libb2 REQUIRED)
+find_package(libpqxx REQUIRED)
 find_package(OpenSSL 3 REQUIRED)
 find_package(RocksDB REQUIRED)
 find_package(scope-lite REQUIRED)
