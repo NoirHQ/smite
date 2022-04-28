@@ -16,8 +16,7 @@ add_library(noir_consensus STATIC
   wal.cpp
 )
 target_link_libraries(noir_consensus
-  libpg
-  libpqxx::libpqxx
+  libpqxx::pqxx
   noir_common
   noir_crypto
   noir_tx_pool

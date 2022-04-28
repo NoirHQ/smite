@@ -45,7 +45,6 @@ include(${CMAKE_CURRENT_BINARY_DIR}/conan.cmake)
 set(CONAN_PACKAGES
   fmt/8.1.1
   libb2/20190723
-  libpq/14.2
   libpqxx/7.7.3
   rocksdb/6.20.3
   scope-lite/0.2.0
