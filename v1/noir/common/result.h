@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/error.h>
+#include <boost/asio/co_spawn.hpp>
 
 namespace noir {
 
@@ -24,18 +25,16 @@ class Result : public basic_result<T, E, NoValuePolicy> {
 public:
   using basic_result<T, E, NoValuePolicy>::basic_result;
 
-  Result(): basic_result<T, E, NoValuePolicy>(T()) {}
-
   template<typename U>
   Result(std::in_place_type_t<U> _): basic_result<T, E, NoValuePolicy>(_) {}
-};
 
-template<typename E, typename NoValuePolicy>
-class Result<void, E, NoValuePolicy> : public basic_result<void, E, NoValuePolicy> {
-public:
-  using basic_result<void, E, NoValuePolicy>::basic_result;
+private:
+  Result(): basic_result<T, E, NoValuePolicy>(E()) {}
 
-  Result(): basic_result<void, E, NoValuePolicy>(std::in_place_type<void>) {}
+  // HACK: workaround for making boost::asio::co_spawn work with boost::asio::awaitable<Result<T, E>>
+  template<typename U, typename Executor, typename F, typename Handler>
+  friend boost::asio::awaitable<boost::asio::detail::awaitable_thread_entry_point, Executor>
+  boost::asio::detail::co_spawn_entry_point(boost::asio::awaitable<U, Executor>*, Executor ex, F f, Handler handler);
 };
 
 } // namespace noir
