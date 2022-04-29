@@ -61,7 +61,7 @@ public:
       boost::asio::experimental::as_tuple(boost::asio::use_awaitable));
     if (ec)
       co_return ec;
-    co_return std::in_place_type<void>;
+    co_return success();
   }
 
 public:

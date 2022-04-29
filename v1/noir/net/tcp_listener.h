@@ -46,7 +46,7 @@ public:
     acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
     acceptor.bind(listen_endpoint);
     acceptor.listen();
-    co_return std::in_place_type<void>;
+    co_return success();
   }
 
   auto accept() -> boost::asio::awaitable<Result<std::shared_ptr<TcpConn>>> {
