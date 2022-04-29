@@ -34,14 +34,14 @@ public:
   template<typename Buffer>
   auto write(Buffer&& buffers) -> boost::asio::awaitable<Result<void>> {
     if (!buffers.size())
-      co_return std::in_place_type<void>;
+      co_return success();
 
     auto [ec, bytes_transferred] = co_await boost::asio::async_write(*static_cast<Derived*>(this)->socket,
       buffers,
       boost::asio::experimental::as_tuple(boost::asio::use_awaitable));
     if (ec)
       co_return ec;
-    co_return std::in_place_type<void>;
+    co_return success();
   }
 
   auto write(std::span<const unsigned char> buffer) -> boost::asio::awaitable<Result<void>> {
@@ -51,7 +51,7 @@ public:
   auto read(std::span<unsigned char> buffer) -> boost::asio::awaitable<Result<void>> {
     auto size = buffer.size();
     if (!size)
-      co_return std::in_place_type<void>;
+      co_return success();
 
     auto bytes_in_buffer = message_buffer.bytes_to_read();
 
@@ -59,7 +59,7 @@ public:
     if (bytes_in_buffer >= size) {
       std::memcpy(buffer.data(), message_buffer.read_ptr(), size);
       message_buffer.advance_read_ptr(size);
-      co_return std::in_place_type<void>;
+      co_return success();
     }
 
     auto bytes_to_read = size - bytes_in_buffer;
@@ -99,7 +99,7 @@ public:
     }
     std::memcpy(buffer.data(), conn->message_buffer.read_ptr(), size);
     conn->message_buffer.advance_read_ptr(size);
-    co_return std::in_place_type<void>;
+    co_return success();
   }
 
   boost::asio::strand<boost::asio::io_context::executor_type> strand;
