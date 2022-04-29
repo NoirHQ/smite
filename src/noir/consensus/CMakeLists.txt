@@ -4,6 +4,9 @@ add_library(noir_consensus STATIC
   block_sync/reactor.cpp
   consensus_reactor.cpp
   consensus_state.cpp
+  indexer/event_sink.h
+  indexer/sink/null/null.h
+  indexer/sink/psql/psql.h
   merkle/proof.cpp
   merkle/tree.cpp
   priv_validator.cpp
@@ -32,7 +35,7 @@ add_noir_test(block_test test/block_test.cpp DEPENDS noir_consensus)
 add_noir_test(consensus_state_test test/consensus_state_test.cpp DEPENDS noir_consensus)
 add_noir_test(events_test test/event_bus_test.cpp DEPENDS noir_consensus)
 add_noir_test(privval_test privval/test/file_test.cpp DEPENDS noir_consensus)
-add_noir_test(psql_test indexer/test/psql_test.cpp DEPENDS noir_consensus)
+add_noir_test(psql_test indexer/sink/psql/test/psql_test.cpp DEPENDS noir_consensus)
 add_noir_test(replay_test test/replay_test.cpp DEPENDS noir_consensus)
 add_noir_test(tree_test merkle/test/tree_test.cpp DEPENDS noir_consensus)
 add_noir_test(validator_test test/validator_test.cpp DEPENDS noir_consensus)
