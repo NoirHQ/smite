@@ -5,6 +5,8 @@
 //
 #pragma once
 #include <noir/consensus/indexer/event_sink.h>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <pqxx/pqxx>
 
 namespace noir::consensus::indexer {
@@ -26,13 +28,13 @@ struct psql_event_sink : public event_sink {
 
   result<void> index_block_events(events::event_data_new_block_header& h) override {
     return run_in_transaction([this, &h](pqxx::work& tx) -> result<void> {
-      auto ts = get_time();
-      std::string query = "INSERT INTO `blocks` (height, chain_id, created_at) VALUES ($1, $2, $3) ON CONFLICT DO "
+      auto ts = get_utc_ts();
+      std::string query = "INSERT INTO blocks (height, chain_id, created_at) VALUES ($1, $2, $3) ON CONFLICT DO "
                           "NOTHING RETURNING rowid;";
       std::vector<std::string> args;
       args.emplace_back(std::to_string(h.header.height));
       args.emplace_back(chain_id);
-      args.emplace_back("2022-04-28 10:04:46.671760 +00:00"); // TODO : properly set current time
+      args.emplace_back(ts);
       auto block_id = query_with_id(tx, query, args);
       if (!block_id)
         return make_unexpected(fmt::format("indexing block header: {}", block_id.error()));
@@ -52,25 +54,24 @@ struct psql_event_sink : public event_sink {
   }
 
   result<void> index_tx_events(std::vector<std::shared_ptr<tx_result>> txrs) override {
+    auto ts = get_utc_ts();
     for (const auto& txr : txrs) {
-      auto ts = get_time();
-
       crypto::sha3_256 hash;
       auto tx_hash = hash(txr->tx); // TODO : check if this is correct
 
-      auto ok = run_in_transaction([this, &txr](pqxx::work& tx) -> result<void> {
-        auto block_id = query_with_id(tx, "SELECT rowid FROM `blocks` WHERE height = $1 AND chain_id = $2;",
-          {std::to_string(txr->height), chain_id});
+      auto ok = run_in_transaction([this, &txr, &ts](pqxx::work& tx) -> result<void> {
+        auto block_id = query_with_id(
+          tx, "SELECT rowid FROM blocks WHERE height = $1 AND chain_id = $2;", {std::to_string(txr->height), chain_id});
         if (!block_id)
           return make_unexpected(fmt::format("finding block_id: {}", block_id.error()));
 
         // Insert for this tx_result and capture id for indexing events
-        std::string query = "INSERT INTO `tx_results` (block_id, index, created_at, tx_hash, tx_result) ";
+        std::string query = "INSERT INTO tx_results (block_id, index, created_at, tx_hash, tx_result) ";
         query.append("VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING rowid;");
         std::vector<std::string> args;
         args.emplace_back(std::to_string(block_id.value()));
         args.emplace_back(std::to_string(txr->index));
-        args.emplace_back("2022-04-28 10:04:46.671760 +00:00"); // TODO : properly set current time
+        args.emplace_back(ts);
         args.emplace_back("000"); // TODO : properly set tx_hash
         args.emplace_back("111"); // TODO : properly set raw result_data
         auto tx_id = query_with_id(tx, query, args);
@@ -124,7 +125,7 @@ private:
   result<void> run_in_transaction(const query_func& f) {
     pqxx::work tx(*C);
     if (auto ok = f(tx); !ok) {
-      tx.abort(); // Not actually needed but what the hey
+      tx.abort(); // Not actually needed but makes it more explicit
       return make_unexpected(ok.error());
     }
     tx.commit();
@@ -136,7 +137,7 @@ private:
       if (evt.type.empty())
         continue;
 
-      std::string query = "INSERT INTO `events` (block_id, tx_id, type) VALUES ($1, $2, $3) RETURNING rowid;";
+      std::string query = "INSERT INTO events (block_id, tx_id, type) VALUES ($1, $2, $3) RETURNING rowid;";
       std::vector<std::string> args;
       args.push_back(std::to_string(block_id));
       args.push_back(std::to_string(tx_id));
@@ -151,7 +152,7 @@ private:
           if (!attr.index)
             continue;
           auto composite_key = evt.type + "." + attr.key;
-          tx.exec_params("INSERT INTO `attributes` (event_id, key, composite_key, value) VALUES ($1, $2, $3, $4)",
+          tx.exec_params("INSERT INTO attributes (event_id, key, composite_key, value) VALUES ($1, $2, $3, $4)",
             eid.value(), attr.key, composite_key, attr.value);
         } catch (std::exception const& e) {
           return make_unexpected(e.what());
@@ -184,6 +185,18 @@ private:
     if (pos == std::string::npos)
       return {composite_key};
     return {composite_key.substr(0, pos), {{composite_key.substr(pos + 1), value, true}}};
+  }
+
+  std::string get_utc_ts() const {
+    /* use boost to get utc time for now
+     * Alternative method is to use gmtime:
+         auto now = std::chrono::system_clock::now();
+         std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
+         std::ostringstream os;
+         os << std::put_time(gmtime(&currentTime), "%F %T");
+     */
+    auto time_utc = boost::posix_time::microsec_clock::universal_time();
+    return to_iso_extended_string(time_utc);
   }
 
   std::unique_ptr<pqxx::connection_base> C{};
