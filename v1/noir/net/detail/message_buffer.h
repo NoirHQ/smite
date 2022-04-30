@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/common/common.h>
+#include <noir/core/core.h>
 
 #include <noir/log/log.h>
 #include <boost/asio/buffer.hpp>
