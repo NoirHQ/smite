@@ -4,7 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/result.h>
+#include <noir/core/result.h>
+#include <boost/asio/awaitable.hpp>
 #include <compare>
 
 namespace noir {
@@ -106,7 +107,7 @@ auto read_zigzag(Stream& ds, VarInt<T>& v) -> Result<size_t> {
 }
 
 template<typename Stream, typename T>
-auto read_uleb128_async(Stream& ds, VarInt<T>& v) -> boost::awaitable<Result<size_t>> {
+auto read_uleb128_async(Stream& ds, VarInt<T>& v) -> boost::asio::awaitable<Result<size_t>> {
   std::make_unsigned_t<T> val = 0;
   auto max_len = (sizeof(T) * 8 + 6) / 7;
   auto i = 0;
@@ -136,7 +137,7 @@ auto read_uleb128_async(Stream& ds, VarInt<T>& v) -> boost::awaitable<Result<siz
 }
 
 template<typename Stream, typename T>
-auto read_zigzag_async(Stream& ds, VarInt<T>& v) -> boost::awaitable<Result<size_t>> {
+auto read_zigzag_async(Stream& ds, VarInt<T>& v) -> boost::asio::awaitable<Result<size_t>> {
   VarInt<std::make_unsigned_t<T>> val = 0;
   auto size = co_await read_uleb128_async(ds, val);
   v.value = (val >> 1) ^ (-(val & 1));

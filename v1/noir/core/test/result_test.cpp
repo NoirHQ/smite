@@ -3,7 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/common/result.h>
+#include <noir/core/result.h>
 #include <boost/asio/io_context.hpp>
 #include <catch2/catch_all.hpp>
 
