@@ -9,6 +9,8 @@
 
 namespace noir::consensus::indexer {
 
+using query_func = std::function<result<void>(pqxx::work&)>;
+
 struct psql_event_sink : public event_sink {
 
   static result<std::shared_ptr<event_sink>> new_event_sink(const std::string& conn_str, const std::string& chain_id) {
@@ -22,11 +24,71 @@ struct psql_event_sink : public event_sink {
     return new_sink;
   }
 
-  result<void> index_block_events(events::event_data_new_block_header&) override {
-    return {};
+  result<void> index_block_events(events::event_data_new_block_header& h) override {
+    return run_in_transaction([this, &h](pqxx::work& tx) -> result<void> {
+      auto ts = get_time();
+      std::string query = "INSERT INTO `blocks` (height, chain_id, created_at) VALUES ($1, $2, $3) ON CONFLICT DO "
+                          "NOTHING RETURNING rowid;";
+      std::vector<std::string> args;
+      args.emplace_back(std::to_string(h.header.height));
+      args.emplace_back(chain_id);
+      args.emplace_back("2022-04-28 10:04:46.671760 +00:00"); // TODO : properly set current time
+      auto block_id = query_with_id(tx, query, args);
+      if (!block_id)
+        return make_unexpected(fmt::format("indexing block header: {}", block_id.error()));
+
+      // Insert special block meta-event
+      if (auto ok = insert_events(tx, block_id.value(), 0,
+            {make_indexed_event(std::string(events::block_height_key), std::to_string(h.header.height))});
+          !ok)
+        return make_unexpected(fmt::format("block meta-events: {}", ok.error()));
+      // Insert all block events
+      if (auto ok = insert_events(tx, block_id.value(), 0, h.result_begin_block.events); !ok)
+        return make_unexpected(fmt::format("begin-block events: {}", ok.error()));
+      if (auto ok = insert_events(tx, block_id.value(), 0, h.result_end_block.events); !ok)
+        return make_unexpected(fmt::format("end-block events: {}", ok.error()));
+      return {};
+    });
   }
 
-  result<void> index_tx_events(std::vector<std::shared_ptr<tx_result>>) override {
+  result<void> index_tx_events(std::vector<std::shared_ptr<tx_result>> txrs) override {
+    for (const auto& txr : txrs) {
+      auto ts = get_time();
+
+      crypto::sha3_256 hash;
+      auto tx_hash = hash(txr->tx); // TODO : check if this is correct
+
+      auto ok = run_in_transaction([this, &txr](pqxx::work& tx) -> result<void> {
+        auto block_id = query_with_id(tx, "SELECT rowid FROM `blocks` WHERE height = $1 AND chain_id = $2;",
+          {std::to_string(txr->height), chain_id});
+        if (!block_id)
+          return make_unexpected(fmt::format("finding block_id: {}", block_id.error()));
+
+        // Insert for this tx_result and capture id for indexing events
+        std::string query = "INSERT INTO `tx_results` (block_id, index, created_at, tx_hash, tx_result) ";
+        query.append("VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING rowid;");
+        std::vector<std::string> args;
+        args.emplace_back(std::to_string(block_id.value()));
+        args.emplace_back(std::to_string(txr->index));
+        args.emplace_back("2022-04-28 10:04:46.671760 +00:00"); // TODO : properly set current time
+        args.emplace_back("000"); // TODO : properly set tx_hash
+        args.emplace_back("111"); // TODO : properly set raw result_data
+        auto tx_id = query_with_id(tx, query, args);
+        if (!tx_id)
+          return make_unexpected(fmt::format("indexing tx_result: {}", tx_id.error()));
+
+        // Insert special transaction meta-events
+        if (auto ok = insert_events(tx, block_id.value(), tx_id.value(),
+              {make_indexed_event(std::string(events::tx_hash_key), "tx_hash" /* TODO : properly set tx_hash */),
+                make_indexed_event(std::string(events::tx_height_key), std::to_string(txr->height))});
+            !ok)
+          return make_unexpected(fmt::format("indexing transaction meta-events: {}", ok.error()));
+        // Insert events packaged with transaction
+        if (auto ok = insert_events(tx, block_id.value(), tx_id.value(), txr->result.events); !ok)
+          return make_unexpected(fmt::format("indexing transaction events: {}", ok.error()));
+        return {};
+      });
+    }
     return {};
   }
 
@@ -59,9 +121,17 @@ struct psql_event_sink : public event_sink {
   }
 
 private:
-  result<void> run_in_transaction() {}
+  result<void> run_in_transaction(const query_func& f) {
+    pqxx::work tx(*C);
+    if (auto ok = f(tx); !ok) {
+      tx.abort(); // Not actually needed but what the hey
+      return make_unexpected(ok.error());
+    }
+    tx.commit();
+    return {};
+  }
 
-  result<void> insert_events(uint32_t block_id, uint32_t tx_id, const std::vector<event>& evts) {
+  result<void> insert_events(pqxx::work& tx, uint32_t block_id, uint32_t tx_id, const std::vector<event>& evts) {
     for (const auto& evt : evts) {
       if (evt.type.empty())
         continue;
@@ -71,7 +141,7 @@ private:
       args.push_back(std::to_string(block_id));
       args.push_back(std::to_string(tx_id));
       args.push_back(evt.type);
-      auto eid = query_with_id(query, args);
+      auto eid = query_with_id(tx, query, args);
       if (!eid)
         return make_unexpected(eid.error());
 
@@ -81,8 +151,7 @@ private:
           if (!attr.index)
             continue;
           auto composite_key = evt.type + "." + attr.key;
-          pqxx::work w(*C);
-          w.exec_params("INSERT INTO `attributes` (event_id, key, composite_key, value) VALUES ($1, $2, $3, $4)",
+          tx.exec_params("INSERT INTO `attributes` (event_id, key, composite_key, value) VALUES ($1, $2, $3, $4)",
             eid.value(), attr.key, composite_key, attr.value);
         } catch (std::exception const& e) {
           return make_unexpected(e.what());
@@ -92,7 +161,7 @@ private:
     return {};
   }
 
-  result<uint32_t> query_with_id(const std::string& query, const std::vector<std::string>& args) {
+  result<uint32_t> query_with_id(pqxx::work& tx, const std::string& query, const std::vector<std::string>& args) {
     uint32_t id;
     try {
       std::string statement = query;
@@ -102,14 +171,19 @@ private:
         statement.append("$").append(std::to_string(pos));
       }
       statement.append(")");
-      pqxx::work w(*C);
-      pqxx::result r = w.exec_params(statement, pqxx::params(args));
-      w.commit();
-      id = r[0][0].as<uint32_t>();
+      pqxx::result r = tx.exec_params(statement, pqxx::params(args));
+      id = r[0][0].as<uint32_t>(); // Assume query always returns one rowid
     } catch (std::exception const& e) {
       return make_unexpected(e.what());
     }
     return id;
+  }
+
+  event make_indexed_event(const std::string& composite_key, std::string value) {
+    auto pos = composite_key.find('.');
+    if (pos == std::string::npos)
+      return {composite_key};
+    return {composite_key.substr(0, pos), {{composite_key.substr(pos + 1), value, true}}};
   }
 
   std::unique_ptr<pqxx::connection_base> C{};
