@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/common.h>
+#include <noir/core/core.h>
 
 #include <noir/net/detail/message_buffer.h>
 #include <boost/asio/awaitable.hpp>

@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/error.h>
+#include <noir/core/error.h>
 #include <boost/asio/co_spawn.hpp>
 
 namespace noir {
