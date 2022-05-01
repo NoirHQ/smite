@@ -4,9 +4,7 @@ add_library(noir_consensus STATIC
   block_sync/reactor.cpp
   consensus_reactor.cpp
   consensus_state.cpp
-  indexer/event_sink.h
-  indexer/sink/null/null.h
-  indexer/sink/psql/psql.h
+  indexer/sink/psql/psql.cpp
   merkle/proof.cpp
   merkle/tree.cpp
   priv_validator.cpp
