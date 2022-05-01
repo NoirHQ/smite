@@ -5,6 +5,7 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/indexer/sink/psql/psql.h>
+#include <pqxx/pqxx>
 #include <iostream>
 
 using namespace noir::consensus::indexer;

@@ -15,6 +15,8 @@ struct indexer_service {
     : sink(new_sink), bus(new_bus) {}
 
   result<void> on_start() {
+    if (sink->type() == event_sink_type::null)
+      return {};
     bus->subscribe("indexer", [&](const events::message msg) {
       std::visit(noir::overloaded{
                    [&](const events::event_data_new_block_header& msg) {},
