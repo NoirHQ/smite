@@ -10,10 +10,10 @@ namespace noir::consensus::indexer {
 
 struct null_event_sink : public event_sink {
 
-  result<void> index_block_events(events::event_data_new_block_header&) override {
+  result<void> index_block_events(const events::event_data_new_block_header&) override {
     return {};
   }
-  result<void> index_tx_events(std::vector<std::shared_ptr<tx_result>>) override {
+  result<void> index_tx_events(const std::vector<tx_result>&) override {
     return {};
   }
   result<std::vector<int64_t>> search_block_events(std::string query) override {

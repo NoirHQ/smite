@@ -15,7 +15,7 @@ using query_func = std::function<result<void>(pqxx::work&)>;
 
 struct psql_event_sink_impl {
 
-  result<void> index_block_events(events::event_data_new_block_header& h) {
+  result<void> index_block_events(const events::event_data_new_block_header& h) {
     return run_in_transaction([this, &h](pqxx::work& tx) -> result<void> {
       auto ts = get_utc_ts();
       std::string query = "INSERT INTO blocks (height, chain_id, created_at) VALUES ($1, $2, $3) ON CONFLICT DO "
@@ -42,15 +42,15 @@ struct psql_event_sink_impl {
     });
   }
 
-  result<void> index_tx_events(std::vector<std::shared_ptr<tx_result>> txrs) {
+  result<void> index_tx_events(const std::vector<tx_result>& txrs) {
     auto ts = get_utc_ts();
     for (const auto& txr : txrs) {
       crypto::sha3_256 hash;
-      auto tx_hash = hash(txr->tx); // TODO : check if this is correct
+      auto tx_hash = hash(txr.tx); // TODO : check if this is correct
 
       auto ok = run_in_transaction([this, &txr, &ts](pqxx::work& tx) -> result<void> {
         auto block_id = query_with_id(
-          tx, "SELECT rowid FROM blocks WHERE height = $1 AND chain_id = $2;", {std::to_string(txr->height), chain_id});
+          tx, "SELECT rowid FROM blocks WHERE height = $1 AND chain_id = $2;", {std::to_string(txr.height), chain_id});
         if (!block_id)
           return make_unexpected(fmt::format("finding block_id: {}", block_id.error()));
 
@@ -59,7 +59,7 @@ struct psql_event_sink_impl {
         query.append("VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING rowid;");
         std::vector<std::string> args;
         args.emplace_back(std::to_string(block_id.value()));
-        args.emplace_back(std::to_string(txr->index));
+        args.emplace_back(std::to_string(txr.index));
         args.emplace_back(ts);
         args.emplace_back("000"); // TODO : properly set tx_hash
         args.emplace_back("111"); // TODO : properly set raw result_data
@@ -70,11 +70,11 @@ struct psql_event_sink_impl {
         // Insert special transaction meta-events
         if (auto ok = insert_events(tx, block_id.value(), tx_id.value(),
               {make_indexed_event(std::string(events::tx_hash_key), "tx_hash" /* TODO : properly set tx_hash */),
-                make_indexed_event(std::string(events::tx_height_key), std::to_string(txr->height))});
+                make_indexed_event(std::string(events::tx_height_key), std::to_string(txr.height))});
             !ok)
           return make_unexpected(fmt::format("indexing transaction meta-events: {}", ok.error()));
         // Insert events packaged with transaction
-        if (auto ok = insert_events(tx, block_id.value(), tx_id.value(), txr->result.events); !ok)
+        if (auto ok = insert_events(tx, block_id.value(), tx_id.value(), txr.result.events); !ok)
           return make_unexpected(fmt::format("indexing transaction events: {}", ok.error()));
         return {};
       });
@@ -186,11 +186,11 @@ result<std::shared_ptr<event_sink>> psql_event_sink::new_event_sink(
   return new_sink;
 }
 
-result<void> psql_event_sink::index_block_events(events::event_data_new_block_header& h) {
+result<void> psql_event_sink::index_block_events(const events::event_data_new_block_header& h) {
   return my->index_block_events(h);
 }
 
-result<void> psql_event_sink::index_tx_events(std::vector<std::shared_ptr<tx_result>> txrs) {
+result<void> psql_event_sink::index_tx_events(const std::vector<tx_result>& txrs) {
   return my->index_tx_events(txrs);
 }
 

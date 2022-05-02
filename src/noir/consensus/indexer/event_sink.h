@@ -16,8 +16,8 @@ enum class event_sink_type {
 };
 
 struct event_sink {
-  virtual result<void> index_block_events(events::event_data_new_block_header&) = 0;
-  virtual result<void> index_tx_events(std::vector<std::shared_ptr<tx_result>>) = 0;
+  virtual result<void> index_block_events(const events::event_data_new_block_header&) = 0;
+  virtual result<void> index_tx_events(const std::vector<tx_result>&) = 0;
   virtual result<std::vector<int64_t>> search_block_events(std::string query) = 0;
   virtual result<std::vector<std::shared_ptr<tx_result>>> search_tx_events(std::string query) = 0;
   virtual result<std::shared_ptr<tx_result>> get_tx_by_hash(bytes hash) = 0;

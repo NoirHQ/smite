@@ -14,9 +14,9 @@ struct psql_event_sink : public event_sink {
 
   static result<std::shared_ptr<event_sink>> new_event_sink(const std::string& conn_str, const std::string& chain_id);
 
-  result<void> index_block_events(events::event_data_new_block_header& h) override;
+  result<void> index_block_events(const events::event_data_new_block_header& h) override;
 
-  result<void> index_tx_events(std::vector<std::shared_ptr<tx_result>> txrs) override;
+  result<void> index_tx_events(const std::vector<tx_result>& txrs) override;
 
   result<std::vector<int64_t>> search_block_events(std::string query) override {
     return make_unexpected("search_block_events is not supported for postgres event_sink");

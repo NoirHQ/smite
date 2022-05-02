@@ -17,10 +17,20 @@ struct indexer_service {
   result<void> on_start() {
     if (sink->type() == event_sink_type::null)
       return {};
-    bus->subscribe("indexer", [&](const events::message msg) {
+    handle = bus->subscribe("indexer", [&](const events::message msg) {
       std::visit(noir::overloaded{
-                   [&](const events::event_data_new_block_header& msg) {},
-                   [&](const events::event_data_tx& msg) {},
+                   [&](const events::event_data_new_block_header& msg) {
+                     sink->index_block_events(msg);
+                     required_num_txs = msg.num_txs;
+                   },
+                   [&](const events::event_data_tx& msg) {
+                     txs.emplace_back(msg.tx_result);
+                     if (txs.size() == required_num_txs) {
+                       sink->index_tx_events(txs);
+                       txs.clear();
+                       required_num_txs = 0;
+                     }
+                   },
                    [&](const auto& msg) {},
                  },
         msg.data);
@@ -30,6 +40,9 @@ struct indexer_service {
 
   std::shared_ptr<event_sink> sink;
   std::shared_ptr<events::event_bus> bus;
+  events::event_bus::subscription handle{};
+  std::vector<consensus::tx_result> txs;
+  int64_t required_num_txs{};
 };
 
 } // namespace noir::consensus::indexer
