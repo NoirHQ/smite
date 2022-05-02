@@ -20,10 +20,10 @@ struct psql_event_sink_impl {
       auto ts = get_utc_ts();
       std::string query = "INSERT INTO blocks (height, chain_id, created_at) VALUES ($1, $2, $3) ON CONFLICT DO "
                           "NOTHING RETURNING rowid;";
-      std::vector<std::string> args;
-      args.emplace_back(std::to_string(h.header.height));
-      args.emplace_back(chain_id);
-      args.emplace_back(ts);
+      pqxx::params args;
+      args.append(std::to_string(h.header.height));
+      args.append(chain_id);
+      args.append(ts);
       auto block_id = query_with_id(tx, query, args);
       if (!block_id)
         return make_unexpected(fmt::format("indexing block header: {}", block_id.error()));
@@ -57,12 +57,12 @@ struct psql_event_sink_impl {
         // Insert for this tx_result and capture id for indexing events
         std::string query = "INSERT INTO tx_results (block_id, index, created_at, tx_hash, tx_result) ";
         query.append("VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING rowid;");
-        std::vector<std::string> args;
-        args.emplace_back(std::to_string(block_id.value()));
-        args.emplace_back(std::to_string(txr.index));
-        args.emplace_back(ts);
-        args.emplace_back("000"); // TODO : properly set tx_hash
-        args.emplace_back("111"); // TODO : properly set raw result_data
+        pqxx::params args;
+        args.append(std::to_string(block_id.value()));
+        args.append(std::to_string(txr.index));
+        args.append(ts);
+        args.append("000"); // TODO : properly set tx_hash
+        args.append("111"); // TODO : properly set raw result_data
         auto tx_id = query_with_id(tx, query, args);
         if (!tx_id)
           return make_unexpected(fmt::format("indexing tx_result: {}", tx_id.error()));
@@ -90,7 +90,12 @@ struct psql_event_sink_impl {
     return {};
   }
 
-  // private:
+  void setup(const std::string& conn_str, const std::string& new_chain_id) {
+    C = std::make_unique<pqxx::connection>(conn_str);
+    chain_id = new_chain_id;
+  }
+
+private:
   result<void> run_in_transaction(const query_func& f) {
     pqxx::work tx(*C);
     if (auto ok = f(tx); !ok) {
@@ -107,10 +112,10 @@ struct psql_event_sink_impl {
         continue;
 
       std::string query = "INSERT INTO events (block_id, tx_id, type) VALUES ($1, $2, $3) RETURNING rowid;";
-      std::vector<std::string> args;
-      args.push_back(std::to_string(block_id));
-      args.push_back(std::to_string(tx_id));
-      args.push_back(evt.type);
+      pqxx::params args;
+      args.append(std::to_string(block_id));
+      tx_id > 0 ? args.append(std::to_string(tx_id)) : args.append();
+      args.append(evt.type);
       auto eid = query_with_id(tx, query, args);
       if (!eid)
         return make_unexpected(eid.error());
@@ -131,17 +136,10 @@ struct psql_event_sink_impl {
     return {};
   }
 
-  result<uint32_t> query_with_id(pqxx::work& tx, const std::string& query, const std::vector<std::string>& args) {
+  result<uint32_t> query_with_id(pqxx::work& tx, const std::string& query, const pqxx::params& args) {
     uint32_t id;
     try {
-      std::string statement = query;
-      for (auto pos = 1; pos < args.size(); ++pos) {
-        if (pos != 1)
-          statement.append(",");
-        statement.append("$").append(std::to_string(pos));
-      }
-      statement.append(")");
-      pqxx::result r = tx.exec_params(statement, pqxx::params(args));
+      pqxx::result r = tx.exec_params(query, args);
       id = r[0][0].as<uint32_t>(); // Assume query always returns one rowid
     } catch (std::exception const& e) {
       return make_unexpected(e.what());
@@ -178,8 +176,7 @@ result<std::shared_ptr<event_sink>> psql_event_sink::new_event_sink(
   const std::string& conn_str, const std::string& chain_id) {
   auto new_sink = std::make_shared<psql_event_sink>();
   try {
-    new_sink->my->C = std::make_unique<pqxx::connection>(conn_str);
-    new_sink->my->chain_id = chain_id;
+    new_sink->my->setup(conn_str, chain_id);
   } catch (std::exception const& e) {
     return make_unexpected(fmt::format("unable to create new_event_sink: {}", e.what()));
   }
