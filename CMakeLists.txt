@@ -11,6 +11,7 @@ project(noir)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 option(NOIR_BUILD_TESTS "Build tests" OFF)
+option(NOIR_BUILD_EXAMPLES "Build tests" ON)
 option(NOIR_UNITY_BUILD "Enable unity build" OFF)
 
 if(NOIR_BUILD_TESTS)
