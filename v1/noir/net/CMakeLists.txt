@@ -6,5 +6,4 @@ target_link_libraries(noir_net_v1 INTERFACE
 
 add_library(noir::net::v1 ALIAS noir_net_v1)
 
-add_executable(tcp_pingpong test/tcp_pingpong.cpp)
-target_link_libraries(tcp_pingpong noir::net::v1)
+add_noir_example(tcp_pingpong example/tcp_pingpong.cpp DEPENDS noir::net::v1)

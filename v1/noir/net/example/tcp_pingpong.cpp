@@ -76,31 +76,34 @@ int main() {
     auto listener = TcpListener::create(io_context);
     boost::asio::co_spawn(
       io_context,
-      [listener, &io_context]() -> boost::asio::awaitable<void> {
+      [listener]() -> boost::asio::awaitable<void> {
         if (auto ok = co_await listener->listen("127.0.0.1:26658"); !ok) {
           std::cerr << ok.error().message() << std::endl;
           co_return;
         }
         Result<std::shared_ptr<TcpConn>> result = co_await listener->accept();
         auto conn = result.value();
-        boost::asio::co_spawn(io_context, receive_routine(conn), print_error);
+        auto executor = co_await boost::asio::this_coro::executor;
+        boost::asio::co_spawn(executor, receive_routine(conn), print_error);
       },
       print_error);
     io_context.run();
   });
-  t1.joinable();
 
   boost::asio::io_context io_context{};
   auto conn = TcpConn::create("127.0.0.1:26658", io_context);
   boost::asio::co_spawn(
     io_context,
-    [conn, &io_context]() -> boost::asio::awaitable<void> {
+    [conn]() -> boost::asio::awaitable<void> {
       if (auto ok = co_await conn->connect(); !ok) {
         std::cerr << ok.error().message() << std::endl;
         co_return;
       }
-      boost::asio::co_spawn(io_context, send_routine(conn), print_error);
+      auto executor = co_await boost::asio::this_coro::executor;
+      boost::asio::co_spawn(executor, send_routine(conn), print_error);
     },
     print_error);
+
   io_context.run();
+  t1.join();
 }
