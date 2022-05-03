@@ -58,7 +58,7 @@ public:
     if (ec)
       co_return ec;
 
-    auto conn = TcpConn::create(std::move(socket), strand.get_inner_executor().context());
+    auto conn = TcpConn::create(std::move(socket));
     co_return conn;
   }
 
