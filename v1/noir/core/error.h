@@ -11,13 +11,32 @@
 
 namespace noir {
 
+class Error;
+
+class UserErrorRegistry {
+public:
+  std::string message(int condition);
+
+  // message is not copied, so it MUST point out statically allocated memory address.
+  Error register_error(std::string_view message);
+
+private:
+  std::map<int, std::string_view> messages;
+  int counter = 0;
+};
+
+inline UserErrorRegistry& user_error_registry() {
+  static UserErrorRegistry registry{};
+  return registry;
+}
+
 class UserErrorCategory : public std::error_category {
 public:
   const char* name() const noexcept override {
     return "user";
   }
   std::string message(int condition) const override {
-    return "unspecified error";
+    return user_error_registry().message(condition);
   }
 };
 
@@ -35,7 +54,7 @@ public:
   constexpr Error(int ec, const std::error_category& ecat): value_(ec), category_(&ecat) {}
 
   template<typename T>
-  requires std::is_convertible_v<T, std::error_code> // FIXME: clang-format 15 RequiresClausePosition: OwnLine
+  requires (!std::is_same_v<T, Error> && std::is_convertible_v<T, std::error_code>) // FIXME: clang-format 15 RequiresClausePosition: OwnLine
   constexpr Error(T&& err) {
     auto& ec = static_cast<const std::error_code&>(err);
     value_ = ec.value();
@@ -79,6 +98,13 @@ public:
     return value() != 0;
   }
 
+  /* explicit */ operator std::error_code() noexcept {
+    return std::error_code(value_, *category_);
+  }
+  /* explicit */ operator std::error_code() const noexcept {
+    return std::error_code(value_, *category_);
+  }
+
   bool operator==(const Error& err) const& noexcept {
     return category() == err.category() && value() == err.value() && message_ == err.message_;
   }
@@ -97,6 +123,18 @@ private:
   const std::error_category* category_ = &user_category();
   std::optional<std::string> message_{};
 };
+
+inline std::string UserErrorRegistry::message(int condition) {
+  if (messages.contains(condition)) {
+    return std::string{messages[condition]};
+  }
+  return "runtime error";
+}
+
+inline Error UserErrorRegistry::register_error(std::string_view message) {
+  messages[++counter] = message;
+  return Error(counter, user_category());
+}
 
 } // namespace noir
 
@@ -117,11 +155,11 @@ namespace policy::detail {
 
 template<>
 inline decltype(auto) exception_ptr<noir::Error&>(noir::Error& err) {
-  return std::make_exception_ptr(std::error_code(err.value(), err.category()));
+  return std::make_exception_ptr(std::error_code(err));
 }
 template<>
 inline decltype(auto) exception_ptr<const noir::Error&>(const noir::Error& err) {
-  return std::make_exception_ptr(std::error_code(err.value(), err.category()));
+  return std::make_exception_ptr(std::error_code(err));
 }
 
 } // namespace policy::detail
