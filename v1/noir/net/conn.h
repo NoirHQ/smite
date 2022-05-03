@@ -6,11 +6,11 @@
 #pragma once
 #include <noir/core/core.h>
 
+#include <noir/core/as_result.h>
 #include <noir/net/detail/message_buffer.h>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/completion_condition.hpp>
-#include <boost/asio/experimental/as_tuple.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/strand.hpp>
@@ -36,11 +36,11 @@ public:
     if (!buffers.size())
       co_return success();
 
-    auto [ec, bytes_transferred] = co_await boost::asio::async_write(*static_cast<Derived*>(this)->socket,
+    auto bytes_transferred = co_await boost::asio::async_write(*static_cast<Derived*>(this)->socket,
       buffers,
-      boost::asio::experimental::as_tuple(boost::asio::use_awaitable));
-    if (ec)
-      co_return ec;
+      as_result(boost::asio::use_awaitable));
+    if (!bytes_transferred)
+      co_return bytes_transferred.error();
     co_return success();
   }
 
@@ -85,15 +85,15 @@ public:
       co_return bufs.error();
     }
 
-    auto [ec, bytes_transferred] = co_await boost::asio::async_read(*static_cast<Derived*>(this)->socket,
+    auto bytes_transferred = co_await boost::asio::async_read(*static_cast<Derived*>(this)->socket,
       bufs.value(),
       completion_condition,
-      boost::asio::experimental::as_tuple(boost::asio::use_awaitable));
-    if (ec)
-      co_return ec;
+      as_result(boost::asio::use_awaitable));
+    if (!bytes_transferred)
+      co_return bytes_transferred.error();
 
     auto conn = weak_conn.lock();
-    conn->message_buffer.advance_write_ptr(bytes_transferred);
+    conn->message_buffer.advance_write_ptr(bytes_transferred.value());
     if (conn->message_buffer.bytes_to_read() < size) {
       co_return Error::format("failed to read requested bytes: {} < {}", conn->message_buffer.bytes_to_read(), size);
     }

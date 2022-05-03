@@ -47,20 +47,19 @@ public:
     auto port = address.substr(colon + 1);
 
     auto resolver = std::make_shared<boost::asio::ip::tcp::resolver>(strand);
-    auto [ec, endpoints] = co_await resolver->async_resolve(boost::asio::ip::tcp::v4(),
+    auto endpoints = co_await resolver->async_resolve(boost::asio::ip::tcp::v4(),
       host,
       port,
-      boost::asio::experimental::as_tuple(boost::asio::use_awaitable));
-    if (ec)
-      co_return ec;
+      as_result(boost::asio::use_awaitable));
+    if (!endpoints)
+      co_return endpoints.error();
 
-    boost::asio::ip::tcp::endpoint endpoint;
     auto conn = weak_conn.lock();
-    std::tie(ec, endpoint) = co_await boost::asio::async_connect(*conn->socket,
-      endpoints,
-      boost::asio::experimental::as_tuple(boost::asio::use_awaitable));
-    if (ec)
-      co_return ec;
+    auto endpoint = co_await boost::asio::async_connect(*conn->socket,
+      endpoints.value(),
+      as_result(boost::asio::use_awaitable));
+    if (!endpoint)
+      co_return endpoint.error();
     co_return success();
   }
 
