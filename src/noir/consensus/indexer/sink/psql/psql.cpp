@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/consensus/indexer/sink/psql/psql.h>
+#include <noir/core/codec.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <pqxx/pqxx>
@@ -46,9 +47,9 @@ struct psql_event_sink_impl {
     auto ts = get_utc_ts();
     for (const auto& txr : txrs) {
       crypto::sha3_256 hash;
-      auto tx_hash = hash(txr.tx); // TODO : check if this is correct
+      auto tx_hash = hash(txr.tx);
 
-      auto ok = run_in_transaction([this, &txr, &ts](pqxx::work& tx) -> result<void> {
+      auto ok = run_in_transaction([this, &txr, &ts, &tx_hash](pqxx::work& tx) -> result<void> {
         auto block_id = query_with_id(
           tx, "SELECT rowid FROM blocks WHERE height = $1 AND chain_id = $2;", {std::to_string(txr.height), chain_id});
         if (!block_id)
@@ -61,15 +62,15 @@ struct psql_event_sink_impl {
         args.append(std::to_string(block_id.value()));
         args.append(std::to_string(txr.index));
         args.append(ts);
-        args.append("000"); // TODO : properly set tx_hash
-        args.append("111"); // TODO : properly set raw result_data
+        args.append(to_hex(tx_hash));
+        args.append(to_string(encode(txr)));
         auto tx_id = query_with_id(tx, query, args);
         if (!tx_id)
           return make_unexpected(fmt::format("indexing tx_result: {}", tx_id.error()));
 
         // Insert special transaction meta-events
         if (auto ok = insert_events(tx, block_id.value(), tx_id.value(),
-              {make_indexed_event(std::string(events::tx_hash_key), "tx_hash" /* TODO : properly set tx_hash */),
+              {make_indexed_event(std::string(events::tx_hash_key), to_hex(tx_hash)),
                 make_indexed_event(std::string(events::tx_height_key), std::to_string(txr.height))});
             !ok)
           return make_unexpected(fmt::format("indexing transaction meta-events: {}", ok.error()));
