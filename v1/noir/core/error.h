@@ -98,10 +98,10 @@ public:
     return value() != 0;
   }
 
-  /* explicit */ operator std::error_code() noexcept {
+  explicit operator std::error_code() noexcept {
     return std::error_code(value_, *category_);
   }
-  /* explicit */ operator std::error_code() const noexcept {
+  explicit operator std::error_code() const noexcept {
     return std::error_code(value_, *category_);
   }
 
