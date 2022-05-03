@@ -9,7 +9,7 @@
 
 using namespace noir;
 
-TEST_CASE("Result", "[noir][common]") {
+TEST_CASE("Result", "[noir][core]") {
   SECTION("error propagation") {
     auto foo = []() -> Result<int> {
       return Error("error");
