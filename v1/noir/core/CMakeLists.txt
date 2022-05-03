@@ -8,3 +8,5 @@ add_library(noir::core::v1 ALIAS noir_core_v1)
 
 add_noir_test(error_test test/error_test.cpp DEPENDS noir::core::v1)
 add_noir_test(result_test test/result_test.cpp DEPENDS noir::core::v1)
+
+add_noir_example(channel_example example/channel_example.cpp DEPENDS noir::core::v1)
