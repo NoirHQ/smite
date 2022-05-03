@@ -1,7 +1,7 @@
 list(APPEND LEGACY_PROTO_SOURCES
   gogoproto/gogo.proto
   noir/abci/types.proto
-  noir/blocksync/message.proto
+  noir/blocksync/types.proto
   noir/consensus/types.proto
   noir/consensus/wal.proto
   noir/crypto/keys.proto
@@ -40,8 +40,8 @@ foreach(PROTO ${LEGACY_PROTO_SOURCES})
   endif()
 endforeach()
 
-#add_library(noir_proto STATIC ${LEGACY_PROTO_GENERATED})
-#target_include_directories(noir_proto PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-#target_link_libraries(noir_proto protobuf::libprotobuf)
-#
-#add_library(noir::proto ALIAS noir_proto)
+add_library(noir_proto STATIC ${LEGACY_PROTO_GENERATED})
+target_include_directories(noir_proto PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(noir_proto protobuf::libprotobuf)
+
+add_library(noir::proto ALIAS noir_proto)
