@@ -14,8 +14,6 @@ using namespace noir;
 using namespace boost::asio::experimental::awaitable_operators;
 using boost::asio::experimental::as_tuple;
 
-struct Done {};
-
 boost::asio::awaitable<void> recv(Chan<Done>& done, Chan<int>& value) {
   for (;;) {
     auto res =
