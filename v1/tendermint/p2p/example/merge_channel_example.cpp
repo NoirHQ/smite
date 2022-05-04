@@ -28,7 +28,7 @@ int main() {
   co_spawn(
     context,
     [&iter, &done]() -> awaitable<void> {
-      while (co_await iter->next(done)) {
+      while ((co_await iter->next(done)).value()) {
         auto current = iter->envelope();
         std::cout << current->channel_id << std::endl;
       }
@@ -37,11 +37,15 @@ int main() {
 
   co_spawn(
     context,
-    [&ch1, &context]() -> awaitable<void> {
+    [&ch1, &done, &context]() -> awaitable<void> {
       boost::system::error_code ec{};
       steady_timer timer{context};
       for (;;) {
-        co_await ch1.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{1}), use_awaitable);
+        auto res = co_await (done.async_receive(as_result(use_awaitable)) ||
+          ch1.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{1}), use_awaitable));
+        if (res.index() == 0) {
+          co_return;
+        }
         timer.expires_after(std::chrono::seconds(1));
         co_await timer.async_wait(use_awaitable);
       }
@@ -50,11 +54,15 @@ int main() {
 
   co_spawn(
     context,
-    [&ch2, &context]() -> awaitable<void> {
+    [&ch2, &done, &context]() -> awaitable<void> {
       boost::system::error_code ec{};
       steady_timer timer{context};
       for (;;) {
-        co_await ch2.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{2}), use_awaitable);
+        auto res = co_await (done.async_receive(as_result(use_awaitable)) ||
+          ch2.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{2}), use_awaitable));
+        if (res.index() == 0) {
+          co_return;
+        }
         timer.expires_after(std::chrono::seconds(2));
         co_await timer.async_wait(use_awaitable);
       }
@@ -63,11 +71,15 @@ int main() {
 
   co_spawn(
     context,
-    [&ch3, &context]() -> awaitable<void> {
+    [&ch3, &done, &context]() -> awaitable<void> {
       boost::system::error_code ec{};
       steady_timer timer{context};
       for (;;) {
-        co_await ch3.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{3}), use_awaitable);
+        auto res = co_await (done.async_receive(as_result(use_awaitable)) ||
+          ch3.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{3}), use_awaitable));
+        if (res.index() == 0) {
+          co_return;
+        }
         timer.expires_after(std::chrono::seconds(3));
         co_await timer.async_wait(use_awaitable);
       }
