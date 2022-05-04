@@ -4,10 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+//#include <noir/codec/proto3.h>
 #include <noir/codec/bcs.h>
 
 namespace noir {
 
+// using codec::proto3::datastream;
 using codec::bcs::datastream;
 
 template<typename T>

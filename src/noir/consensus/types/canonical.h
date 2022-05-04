@@ -14,7 +14,6 @@ struct canonical_vote {
   int32_t round{};
   p2p::block_id block_id_;
   p2p::tstamp timestamp{};
-  p2p::vote_extension vote_extension_;
 };
 
 struct canonical_proposal {
@@ -33,8 +32,7 @@ struct canonical {
       .height = vote_.height,
       .round = vote_.round,
       .block_id_ = vote_.block_id_,
-      .timestamp = vote_.timestamp,
-      .vote_extension_ = vote_.vote_extension_};
+      .timestamp = vote_.timestamp};
   }
 
   static canonical_proposal canonicalize_proposal(const p2p::proposal_message& proposal_) {
@@ -49,5 +47,5 @@ struct canonical {
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(noir::consensus::canonical_vote, type, height, round, block_id_, timestamp, vote_extension_);
+NOIR_REFLECT(noir::consensus::canonical_vote, type, height, round, block_id_, timestamp);
 NOIR_REFLECT(noir::consensus::canonical_proposal, type, height, round, pol_round, block_id_, timestamp);

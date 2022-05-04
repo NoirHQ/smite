@@ -40,7 +40,6 @@ struct commit_sig {
   bytes validator_address;
   p2p::tstamp timestamp;
   bytes signature;
-  p2p::vote_extension_to_sign vote_extension;
 
   static commit_sig new_commit_sig_absent() {
     return commit_sig{FlagAbsent};
@@ -357,7 +356,7 @@ using block_ptr = std::shared_ptr<block>;
 
 } // namespace noir::consensus
 
-NOIR_REFLECT(noir::consensus::commit_sig, flag, validator_address, timestamp, signature, vote_extension);
+NOIR_REFLECT(noir::consensus::commit_sig, flag, validator_address, timestamp, signature);
 NOIR_REFLECT(noir::consensus::part, index, bytes_, proof_);
 // NOIR_REFLECT(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size);
 NOIR_REFLECT(noir::consensus::block_data, txs, hash);

@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/common/overloaded.h>
 #include <noir/common/types/bytes.h>
-#include <noir/core/codec.h>
+#include <noir/codec/bcs.h>
 #include <noir/crypto/hash/xxhash.h>
 #include <noir/jmt/types/common.h>
 #include <noir/jmt/types/nibble.h>
@@ -19,9 +19,11 @@
 
 namespace noir::jmt {
 
+using codec::bcs::datastream;
+
 namespace detail {
   inline void serialize_u64_varint(uint64_t num, std::vector<uint8_t>& binary) {
-    auto encoded = noir::encode(varuint64(num));
+    auto encoded = codec::bcs::encode(varuint64(num));
     binary.insert(binary.end(), encoded.begin(), encoded.end());
   }
 
@@ -407,7 +409,7 @@ struct node {
       // TODO: metric
     } else if (std::holds_alternative<leaf_node<T>>(data)) {
       out.push_back(uint8_t(node_tag::leaf));
-      auto bytes = noir::encode(std::get<leaf_node<T>>(data));
+      auto bytes = codec::bcs::encode(std::get<leaf_node<T>>(data));
       out.insert(out.end(), bytes.begin(), bytes.end());
       // TODO: metric
     }
@@ -435,7 +437,7 @@ struct node {
     case node_tag::internal:
       return node<T>{internal_node::deserialize({(const char*)val.data() + 1, val.size() - 1})};
     case node_tag::leaf:
-      return node<T>{noir::decode<leaf_node<T>>({(const char*)val.data() + 1, val.size() - 1})};
+      return node<T>{codec::bcs::decode<leaf_node<T>>({(const char*)val.data() + 1, val.size() - 1})};
     default:
       return make_unexpected(fmt::format("lead tag byte is unknown: {}", tag));
     }
