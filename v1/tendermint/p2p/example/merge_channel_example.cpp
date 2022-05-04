@@ -74,5 +74,14 @@ int main() {
     },
     detached);
 
+  co_spawn(
+    context,
+    [&context, &done]() -> awaitable<void> {
+      steady_timer timer{context};
+      timer.expires_after(std::chrono::seconds(5));
+      co_await timer.async_wait(use_awaitable);
+      done.close();
+    },
+    detached);
   context.run();
 }
