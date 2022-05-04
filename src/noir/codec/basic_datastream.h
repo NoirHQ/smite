@@ -159,6 +159,10 @@ public:
     return std::distance(pos, buf.end());
   }
 
+  std::span<T> subspan(size_t offset, size_t count) {
+    return buf.subspan(offset, count);
+  }
+
   T* ptr() {
     return &*pos;
   }
