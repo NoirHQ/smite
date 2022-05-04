@@ -19,6 +19,7 @@ auto Channel::send(Chan<Done>& done, EnvelopePtr envelope) -> boost::asio::await
     }
     co_return success();
   }
+  co_return success();
 }
 
 auto Channel::send_error(Chan<Done>& done, PeerErrorPtr peer_error) -> awaitable<Result<void>> {
@@ -34,6 +35,7 @@ auto Channel::send_error(Chan<Done>& done, PeerErrorPtr peer_error) -> awaitable
     }
     co_return success();
   }
+  co_return success();
 }
 
 auto Channel::to_string() -> std::string {
@@ -80,6 +82,7 @@ auto ChannelIterator::next(Chan<Done>& done) -> awaitable<Result<bool>> {
     current = envelope.value();
     co_return true;
   }
+  co_return true;
 }
 
 auto ChannelIterator::envelope() -> EnvelopePtr {
