@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/core/error.h>
 #include <boost/asio/co_spawn.hpp>
+#include <boost/outcome/result.hpp>
 
 namespace noir {
 
