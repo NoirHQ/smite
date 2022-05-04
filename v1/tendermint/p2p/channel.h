@@ -89,11 +89,10 @@ template<typename... Ts>
 auto merged_channel_iterator(io_context& context, Chan<Done>& done, Ts&... chs) -> ChannelIteratorUptr {
   auto iter = std::make_unique<ChannelIterator>(context);
 
-  auto merged = detail::merge(context, done, iter->pipe, chs...);
   co_spawn(
     context,
-    [&done, merged{std::move(merged)}]() -> awaitable<void> {
-      co_await (done.async_receive(as_result(use_awaitable)) || merged);
+    [&]() -> awaitable<void> {
+      co_await (done.async_receive(as_result(use_awaitable)) || detail::merge(context, done, iter->pipe, chs...));
     },
     detached);
 
