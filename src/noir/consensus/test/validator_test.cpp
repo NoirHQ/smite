@@ -40,33 +40,74 @@ TEST_CASE("validator_set: Basic", "[noir][consensus]") {
 }
 
 TEST_CASE("validator_set: Proposer Selection 1", "[noir][consensus]") {
-  validator_set vals;
-  vals.validators.push_back(validator{from_hex("AAAA"), {}, 1000, 0});
-  vals.validators.push_back(validator{from_hex("BBBB"), {}, 300, 0});
-  vals.validators.push_back(validator{from_hex("CCCC"), {}, 330, 0});
-
-  std::vector<std::string> proposers;
+  auto vals = validator_set::new_validator_set({{validator{from_hex("aa"), {}, 1000, 0}},
+    {validator{from_hex("bb"), {}, 300, 0}}, {validator{from_hex("cc"), {}, 330, 0}}});
+  std::string proposers;
   for (auto i = 0; i < 99; i++) {
     auto val = vals.get_proposer();
-    //    std::cout << to_hex(val->address) << std::endl;
     if (val.has_value())
-      proposers.push_back(to_hex(val.value().address));
-    //    print_validator_set(vals);
+      proposers += to_hex(val.value().address) + " ";
+    // print_validator_set(vals);
     vals.increment_proposer_priority(1);
   }
+  std::string expected = "aa cc aa bb aa aa cc aa bb aa aa cc aa aa bb aa cc aa aa bb";
+  expected += " aa aa cc aa bb aa aa cc aa bb aa aa cc aa aa bb aa cc aa aa bb";
+  expected += " aa cc aa aa bb aa cc aa aa bb aa cc aa aa aa cc bb aa aa aa cc";
+  expected += " aa bb aa aa cc aa bb aa aa cc aa bb aa aa cc aa bb aa aa cc aa";
+  expected += " aa bb aa cc aa aa bb aa cc aa aa bb aa cc aa aa ";
+  CHECK(proposers == expected);
+}
 
-  //  std::cout << "Summary:" << std::endl;
-  int a{}, b{}, c{};
-  for (const auto& e : proposers) {
-    if (e == "aaaa")
-      a++;
-    if (e == "bbbb")
-      b++;
-    if (e == "cccc")
-      c++;
+TEST_CASE("validator_set: Proposer Selection 2", "[noir][consensus]") {
+  std::vector<bytes> addrs = {from_hex("0000000000000000000000000000000000000000"),
+    from_hex("0000000000000000000000000000000000000001"), from_hex("0000000000000000000000000000000000000002")};
+
+  SECTION("all validators have equal power") {
+    auto vals = validator_set::new_validator_set(
+      {{validator{addrs[0], {}, 100, 0}}, {validator{addrs[1], {}, 100, 0}}, {validator{addrs[2], {}, 100, 0}}});
+    for (auto i = 0; i < addrs.size() * 5; i++) {
+      auto val = vals.get_proposer();
+      vals.increment_proposer_priority(1);
+      CHECK(val.value().address == addrs[i % addrs.size()]);
+    }
   }
-  //  std::cout << "a=" << a << " b=" << b << " c=" << c << std::endl;
-  CHECK((a == 61 && b == 18 && c == 20));
+
+  SECTION("one validator has more than others") {
+    auto vals = validator_set::new_validator_set(
+      {{validator{addrs[0], {}, 100, 0}}, {validator{addrs[1], {}, 100, 0}}, {validator{addrs[2], {}, 400, 0}}});
+    CHECK(vals.get_proposer()->address == addrs[2]);
+    vals.increment_proposer_priority(1);
+    CHECK(vals.get_proposer()->address == addrs[0]);
+  }
+
+  SECTION("one validator has more than others, enough to propose twice in a row") {
+    auto vals = validator_set::new_validator_set(
+      {{validator{addrs[0], {}, 100, 0}}, {validator{addrs[1], {}, 100, 0}}, {validator{addrs[2], {}, 401, 0}}});
+    CHECK(vals.get_proposer()->address == addrs[2]);
+    vals.increment_proposer_priority(1);
+    CHECK(vals.get_proposer()->address == addrs[2]);
+    vals.increment_proposer_priority(1);
+    CHECK(vals.get_proposer()->address == addrs[0]);
+  }
+
+  SECTION("each validator should be the proposer a proportional number of times") {
+    auto vals = validator_set::new_validator_set(
+      {{validator{addrs[0], {}, 4, 0}}, {validator{addrs[1], {}, 5, 0}}, {validator{addrs[2], {}, 3, 0}}});
+    int count_addr0{}, count_addr1{}, count_addr2{};
+    for (auto i = 0; i < 120; i++) {
+      auto val = vals.get_proposer();
+      vals.increment_proposer_priority(1);
+      if (vals.get_proposer()->address == addrs[0])
+        count_addr0++;
+      if (vals.get_proposer()->address == addrs[1])
+        count_addr1++;
+      if (vals.get_proposer()->address == addrs[2])
+        count_addr2++;
+    }
+    CHECK(count_addr0 == 40);
+    CHECK(count_addr1 == 50);
+    CHECK(count_addr2 == 30);
+  }
 }
 
 TEST_CASE("validator_set: Apply update", "[noir][consensus]") {

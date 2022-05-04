@@ -39,10 +39,11 @@ struct validator {
       return other;
     if (address.empty() || other.address.empty())
       throw std::runtime_error("unable to compare validators as address is empty");
-    if (address < other.address) // todo - check vector comparison
+    auto cmp = std::memcmp(address.data(), other.address.data(), std::min(address.size(), other.address.size()));
+    if (cmp < 0) {
       return *this;
-    else
-      return other;
+    }
+    return other;
   }
 
   static validator new_validator(pub_key key, int64_t voting_power) {
@@ -55,7 +56,7 @@ struct validator_set {
   std::optional<validator> proposer;
   int64_t total_voting_power = 0;
 
-  static validator_set new_validator_set(std::vector<validator>& validator_list) {
+  static validator_set new_validator_set(const std::vector<validator>& validator_list) {
     validator_set vals;
     vals.update_with_change_set(validator_list, false);
     if (!validator_list.empty())
