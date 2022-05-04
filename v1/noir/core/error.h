@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <boost/outcome/result.hpp>
 #include <fmt/core.h>
+#include <map>
 #include <optional>
 #include <system_error>
 
@@ -136,6 +136,10 @@ inline Error UserErrorRegistry::register_error(std::string_view message) {
   return Error(counter, user_category());
 }
 
+inline std::exception_ptr make_exception_ptr(Error err) {
+  return make_exception_ptr(std::error_code(err));
+}
+
 } // namespace noir
 
 namespace std {
@@ -148,20 +152,3 @@ struct hash<noir::Error> {
 };
 
 } // namespace std
-
-BOOST_OUTCOME_V2_NAMESPACE_BEGIN
-
-namespace policy::detail {
-
-template<>
-inline decltype(auto) exception_ptr<noir::Error&>(noir::Error& err) {
-  return std::make_exception_ptr(std::error_code(err));
-}
-template<>
-inline decltype(auto) exception_ptr<const noir::Error&>(const noir::Error& err) {
-  return std::make_exception_ptr(std::error_code(err));
-}
-
-} // namespace policy::detail
-
-BOOST_OUTCOME_V2_NAMESPACE_END
