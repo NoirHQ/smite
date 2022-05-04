@@ -84,19 +84,6 @@ struct block_id {
   }
 };
 
-struct vote_extension_to_sign {
-  bytes add_data_to_sign;
-};
-
-struct vote_extension {
-  bytes app_data_to_sign;
-  bytes app_data_self_authenticating;
-
-  vote_extension_to_sign to_sign() {
-    return vote_extension_to_sign{app_data_to_sign};
-  }
-};
-
 ///< consensus message starts
 struct new_round_step_message {
   int64_t height;
@@ -147,7 +134,6 @@ struct vote_message {
   bytes validator_address;
   int32_t validator_index;
   bytes signature;
-  vote_extension vote_extension_;
 };
 
 struct has_vote_message {
@@ -247,7 +233,6 @@ using internal_msg_info_ptr = std::shared_ptr<internal_msg_info>;
 
 NOIR_REFLECT(noir::p2p::block_id, hash, parts);
 NOIR_REFLECT(noir::p2p::part_set_header, total, hash);
-NOIR_REFLECT(noir::p2p::vote_extension, app_data_to_sign, app_data_self_authenticating);
 NOIR_REFLECT(noir::p2p::handshake_message, network_version, node_id, time, p2p_address, head_num, head_id, generation);
 NOIR_REFLECT(noir::p2p::go_away_message, reason, node_id);
 NOIR_REFLECT(noir::p2p::time_message, org, rec, xmt, dst);
@@ -257,7 +242,7 @@ NOIR_REFLECT(noir::p2p::proposal_message, type, height, round, pol_round, block_
 NOIR_REFLECT(noir::p2p::proposal_pol_message, height, proposal_pol_round, proposal_pol);
 NOIR_REFLECT(noir::p2p::block_part_message, height, round, index, bytes_, proof);
 NOIR_REFLECT(noir::p2p::vote_message, type, height, round, block_id_, timestamp, validator_address, validator_index,
-  signature, vote_extension_);
+  signature);
 NOIR_REFLECT(noir::p2p::has_vote_message, height, round, type, index);
 NOIR_REFLECT(noir::p2p::vote_set_maj23_message, height, round, type, block_id_);
 NOIR_REFLECT(noir::p2p::vote_set_bits_message, height, round, type, block_id_, votes);

@@ -91,22 +91,6 @@ struct response_commit {
   int64_t retain_height;
 };
 
-struct request_extend_vote {
-  vote vote_;
-};
-
-struct response_extend_vote {
-  p2p::vote_extension vote_extension_;
-};
-
-struct request_verify_vote_extension {
-  vote vote_;
-};
-
-struct response_verify_vote_extension {
-  int32_t result;
-};
-
 struct request_init_chain {
   p2p::tstamp time;
   std::string chain_id;
@@ -198,10 +182,6 @@ NOIR_REFLECT(noir::consensus::response_begin_block, events);
 NOIR_REFLECT(noir::consensus::request_end_block, height);
 NOIR_REFLECT(noir::consensus::response_end_block, validator_updates, consensus_param_updates, events);
 NOIR_REFLECT(noir::consensus::response_commit, data, retain_height);
-NOIR_REFLECT(noir::consensus::request_extend_vote, vote_);
-NOIR_REFLECT(noir::consensus::response_extend_vote, vote_extension_);
-NOIR_REFLECT(noir::consensus::request_verify_vote_extension, vote_);
-NOIR_REFLECT(noir::consensus::response_verify_vote_extension, result);
 NOIR_REFLECT(
   noir::consensus::request_init_chain, time, chain_id, consensus_params_, validators, app_state_bytes, initial_height);
 NOIR_REFLECT(noir::consensus::response_init_chain, consensus_params_, validators, app_hash);

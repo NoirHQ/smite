@@ -18,8 +18,6 @@ class base_application {
   consensus::response_check_tx response_check_tx_;
   consensus::response_end_block response_end_block_;
   consensus::response_commit response_commit_;
-  consensus::response_extend_vote response_extend_vote_;
-  consensus::response_verify_vote_extension response_verify_vote_extension_;
 
   consensus::req_res<consensus::response_deliver_tx> req_res_deliver_tx_;
   consensus::req_res<consensus::response_check_tx> req_res_check_tx_;
@@ -55,12 +53,6 @@ public:
   }
   virtual consensus::response_commit& commit() {
     return response_commit_;
-  }
-  virtual consensus::response_extend_vote& extend_vote() {
-    return response_extend_vote_;
-  }
-  virtual consensus::response_verify_vote_extension& verify_vote_extension() {
-    return response_verify_vote_extension_;
   }
 
   virtual void list_snapshots() {}

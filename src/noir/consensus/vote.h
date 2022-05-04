@@ -28,7 +28,7 @@ struct vote : p2p::vote_message {
       flag = FlagNil;
     else
       throw std::runtime_error(fmt::format("Invalid vote - expected block_id to be either empty or complete"));
-    return commit_sig{flag, validator_address, timestamp, signature, vote_extension_.to_sign()};
+    return commit_sig{flag, validator_address, timestamp, signature};
   }
 };
 

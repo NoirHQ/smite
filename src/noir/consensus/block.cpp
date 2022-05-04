@@ -22,8 +22,6 @@ std::shared_ptr<vote> commit::get_vote(int32_t val_idx) {
   ret->validator_address = commit_sig.validator_address;
   ret->validator_index = val_idx;
   ret->signature = commit_sig.signature;
-  ret->vote_extension_ = {
-    .app_data_to_sign = commit_sig.vote_extension.add_data_to_sign}; // FIXME: app_data_self_authenticating is missing
 
   return std::move(ret);
 }

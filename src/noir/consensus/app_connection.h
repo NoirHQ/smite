@@ -64,17 +64,6 @@ struct app_connection {
     return res;
   }
 
-  response_extend_vote& extend_vote_sync(request_extend_vote req) {
-    std::scoped_lock g(mtx);
-    auto& res = application->extend_vote();
-    return res;
-  }
-  response_verify_vote_extension& verify_vote_extension_sync(request_verify_vote_extension req) {
-    std::scoped_lock g(mtx);
-    auto& res = application->verify_vote_extension();
-    return res;
-  }
-
   void flush_async() {
     std::scoped_lock g(mtx);
   }

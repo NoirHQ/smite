@@ -234,18 +234,6 @@ struct block_executor {
     return new_state_.value();
   }
 
-  p2p::vote_extension extend_vote(vote& vote_) {
-    auto req = request_extend_vote{vote_};
-    auto res = proxyApp_->extend_vote_sync(req);
-    return res.vote_extension_;
-  }
-
-  std::optional<std::string> verify_vote_extension(vote& vote_) {
-    auto req = request_verify_vote_extension{vote_};
-    auto res = proxyApp_->verify_vote_extension_sync(req); // todo - check error
-    return {};
-  }
-
   std::shared_ptr<abci_responses> exec_block_on_proxy_app(std::shared_ptr<app_connection> proxyAppConn,
     std::shared_ptr<block> block_,
     std::shared_ptr<db_store> db_store,
