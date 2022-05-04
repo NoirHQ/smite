@@ -19,7 +19,6 @@ auto Channel::send(Chan<Done>& done, EnvelopePtr envelope) -> boost::asio::await
     }
     co_return success();
   }
-  co_return success();
 }
 
 auto Channel::send_error(Chan<Done>& done, PeerErrorPtr peer_error) -> awaitable<Result<void>> {
@@ -35,7 +34,6 @@ auto Channel::send_error(Chan<Done>& done, PeerErrorPtr peer_error) -> awaitable
     }
     co_return success();
   }
-  co_return success();
 }
 
 auto Channel::to_string() -> std::string {
@@ -45,16 +43,16 @@ auto Channel::to_string() -> std::string {
 namespace detail {
   auto iterator_worker(Chan<Done>& done, Channel& ch, Chan<EnvelopePtr>& pipe) -> awaitable<Result<void>> {
     for (;;) {
-      auto res = co_await (done.async_receive(as_result(use_awaitable)) || ch.in_ch.async_receive(use_awaitable));
-      switch (res.index()) {
+      auto in_res = co_await (done.async_receive(as_result(use_awaitable)) || ch.in_ch.async_receive(use_awaitable));
+      switch (in_res.index()) {
       case 0:
-        co_return std::get<0>(res).error();
+        co_return std::get<0>(in_res).error();
       case 1:
-        auto envelope = std::get<1>(res);
-        auto res2 = co_await (done.async_receive(as_result(use_awaitable)) ||
+        auto envelope = std::get<1>(in_res);
+        auto pipe_res = co_await (done.async_receive(as_result(use_awaitable)) ||
           pipe.async_send(boost::system::error_code{}, envelope, use_awaitable));
-        if (res2.index() == 0) {
-          co_return std::get<0>(res2).error();
+        if (pipe_res.index() == 0) {
+          co_return std::get<0>(pipe_res).error();
         }
       }
     }
@@ -82,7 +80,6 @@ auto ChannelIterator::next(Chan<Done>& done) -> awaitable<Result<bool>> {
     current = envelope.value();
     co_return true;
   }
-  co_return true;
 }
 
 auto ChannelIterator::envelope() -> EnvelopePtr {
