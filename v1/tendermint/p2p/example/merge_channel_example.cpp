@@ -51,7 +51,7 @@ int main() {
   co_spawn(
     io_context,
     [&ch1, &done, &io_context]() -> asio::awaitable<void> {
-      system::error_code ec{};
+      boost::system::error_code ec{};
       asio::steady_timer timer{io_context};
       for (;;) {
         auto res = co_await (done.async_receive(as_result(asio::use_awaitable)) ||
@@ -70,7 +70,7 @@ int main() {
   co_spawn(
     io_context,
     [&ch2, &done, &io_context]() -> asio::awaitable<void> {
-      system::error_code ec{};
+      boost::system::error_code ec{};
       asio::steady_timer timer{io_context};
       for (;;) {
         auto res = co_await (done.async_receive(as_result(asio::use_awaitable)) ||
@@ -89,7 +89,7 @@ int main() {
   co_spawn(
     io_context,
     [&ch3, &done, &io_context]() -> asio::awaitable<void> {
-      system::error_code ec{};
+      boost::system::error_code ec{};
       asio::steady_timer timer{io_context};
       for (;;) {
         auto res = co_await (done.async_receive(as_result(asio::use_awaitable)) ||
