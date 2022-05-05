@@ -94,6 +94,7 @@ auto merged_channel_iterator(asio::io_context& io_context, Chan<Done>& done, Ts&
     [&]() -> asio::awaitable<void> {
       co_await (
         done.async_receive(as_result(asio::use_awaitable)) || detail::merge(io_context, done, iter->pipe, chs...));
+      iter->pipe.close();
     },
     asio::detached);
 
