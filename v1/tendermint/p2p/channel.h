@@ -18,7 +18,7 @@ struct Envelope {
   std::string from;
   std::string to;
   bool broadcast;
-  // Message messgae;
+  // Message message;
   ChannelId channel_id;
 };
 
