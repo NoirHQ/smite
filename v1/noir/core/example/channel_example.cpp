@@ -1,23 +1,20 @@
-#include <noir/core/channel.h>
+#include <noir/core/core.h>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/experimental/awaitable_operators.hpp>
-#include <boost/asio/experimental/as_tuple.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <chrono>
 #include <iostream>
 
-
 using namespace noir;
 using namespace boost::asio::experimental::awaitable_operators;
-using boost::asio::experimental::as_tuple;
 
 boost::asio::awaitable<void> recv(Chan<Done>& done, Chan<int>& value) {
   for (;;) {
-    auto res =
-      co_await(done.async_receive(as_tuple(boost::asio::use_awaitable)) || value.async_receive(boost::asio::use_awaitable));
+    auto res = co_await (
+      done.async_receive(as_result(boost::asio::use_awaitable)) || value.async_receive(boost::asio::use_awaitable));
     switch (res.index()) {
     case 0:
       co_return;
