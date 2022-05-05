@@ -1,6 +1,8 @@
-add_library(noir_core_v1 INTERFACE)
-target_include_directories(noir_core_v1 INTERFACE ${NOIR_SOURCE_DIR} ${Boost_INCLUDE_DIR})
-target_link_libraries(noir_core_v1 INTERFACE
+add_library(noir_core_v1 STATIC
+  basic_errors.cpp
+)
+target_include_directories(noir_core_v1 PUBLIC ${NOIR_SOURCE_DIR} ${Boost_INCLUDE_DIR})
+target_link_libraries(noir_core_v1
   fmt::fmt
 )
 
