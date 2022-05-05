@@ -8,7 +8,7 @@
 
 using namespace noir;
 
-Error custom_error = user_error_registry().register_error("custom error");
+const Error custom_error = user_error_registry().register_error("custom error");
 
 TEST_CASE("Error", "[noir][core]") {
   SECTION("custom error") {
@@ -17,7 +17,7 @@ TEST_CASE("Error", "[noir][core]") {
 
   SECTION("convert to system error") {
     try {
-      throw std::system_error(custom_error);
+      throw std::system_error(std::error_code(custom_error));
     } catch (const std::exception& e) {
       CHECK(std::string(e.what()) == "custom error");
     }
