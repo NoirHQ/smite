@@ -15,9 +15,9 @@ namespace tendermint::p2p {
 using namespace noir;
 
 struct Envelope {
-  // std::string from;
-  // std::string to;
-  // bool broadcast;
+  std::string from;
+  std::string to;
+  bool broadcast;
   // Message messgae;
   ChannelId channel_id;
 };
