@@ -18,9 +18,9 @@ using namespace tendermint;
 int main() {
   boost::asio::io_context context{};
 
-  Channel ch1(context, 1, Chan<EnvelopePtr>{context}, Chan<EnvelopePtr>{context}, Chan<PeerErrorPtr>{context});
-  Channel ch2(context, 2, Chan<EnvelopePtr>{context}, Chan<EnvelopePtr>{context}, Chan<PeerErrorPtr>{context});
-  Channel ch3(context, 3, Chan<EnvelopePtr>{context}, Chan<EnvelopePtr>{context}, Chan<PeerErrorPtr>{context});
+  Channel ch1(context, 1, Chan<EnvelopePtr>{context, 1}, Chan<EnvelopePtr>{context, 1}, Chan<PeerErrorPtr>{context, 1});
+  Channel ch2(context, 2, Chan<EnvelopePtr>{context, 1}, Chan<EnvelopePtr>{context, 1}, Chan<PeerErrorPtr>{context, 1});
+  Channel ch3(context, 3, Chan<EnvelopePtr>{context, 1}, Chan<EnvelopePtr>{context, 1}, Chan<PeerErrorPtr>{context, 1});
 
   Chan<Done> done{context};
   auto iter = merged_channel_iterator(context, done, ch1, ch2, ch3);
@@ -30,7 +30,8 @@ int main() {
     [&iter, &done]() -> awaitable<void> {
       while ((co_await iter->next(done)).value()) {
         auto current = iter->envelope();
-        std::cout << current->channel_id << std::endl;
+        std::cout << fmt::format("channel_id: {}, from: {}, to: {}", current->channel_id, current->from, current->to)
+                  << std::endl;
       }
     },
     detached);
@@ -42,7 +43,9 @@ int main() {
       steady_timer timer{context};
       for (;;) {
         auto res = co_await (done.async_receive(as_result(use_awaitable)) ||
-          ch1.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{1}), use_awaitable));
+          ch1.in_ch.async_send(ec,
+            std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
+            use_awaitable));
         if (res.index() == 0) {
           co_return;
         }
@@ -59,7 +62,9 @@ int main() {
       steady_timer timer{context};
       for (;;) {
         auto res = co_await (done.async_receive(as_result(use_awaitable)) ||
-          ch2.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{2}), use_awaitable));
+          ch2.in_ch.async_send(ec,
+            std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 2}),
+            use_awaitable));
         if (res.index() == 0) {
           co_return;
         }
@@ -76,7 +81,9 @@ int main() {
       steady_timer timer{context};
       for (;;) {
         auto res = co_await (done.async_receive(as_result(use_awaitable)) ||
-          ch3.in_ch.async_send(ec, std::make_shared<Envelope>(Envelope{3}), use_awaitable));
+          ch3.in_ch.async_send(ec,
+            std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 3}),
+            use_awaitable));
         if (res.index() == 0) {
           co_return;
         }
