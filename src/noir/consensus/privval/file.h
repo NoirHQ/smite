@@ -115,7 +115,7 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] key_file_path
   /// \param[in] state_file_path
   /// \return shared_ptr of file_pv
-  static inline std::shared_ptr<file_pv> load_file_pv(
+  static inline result<std::shared_ptr<file_pv>> load_file_pv(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
     return load_file_pv_internal(key_file_path, state_file_path, true);
   }
@@ -125,7 +125,7 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] key_file_path
   /// \param[in] state_file_path
   /// \return shared_ptr of file_pv
-  static inline std::shared_ptr<file_pv> load_file_pv_empty_state(
+  static inline result<std::shared_ptr<file_pv>> load_file_pv_empty_state(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
     return load_file_pv_internal(key_file_path, state_file_path, false);
   }
@@ -137,11 +137,11 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] key_file_path
   /// \param[in] state_file_path
   /// \return shared_ptr of file_pv
-  static std::shared_ptr<file_pv> load_or_gen_file_pv(
+  static result<std::shared_ptr<file_pv>> load_or_gen_file_pv(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
     std::shared_ptr<file_pv> ret;
     if (std::filesystem::exists(key_file_path)) {
-      ret = load_file_pv(key_file_path, state_file_path);
+      return load_file_pv(key_file_path, state_file_path);
     } else {
       ret = gen_file_pv(key_file_path, state_file_path);
       check(ret != nullptr);
@@ -218,7 +218,7 @@ private:
   /// \param[in] state_file_path
   /// \param[in] load_state if true, we load from the stateFilePath. Otherwise, we use an empty LastSignState
   /// \return shared_ptr of file_pv
-  static std::shared_ptr<file_pv> load_file_pv_internal(
+  static result<std::shared_ptr<file_pv>> load_file_pv_internal(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path, bool load_state);
 
   /// \brief signVote checks if the vote is good to sign and sets the vote signature. It may need to set the timestamp
