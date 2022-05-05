@@ -4,6 +4,7 @@ add_library(tendermint_p2p STATIC
 )
 target_include_directories(tendermint_p2p PUBLIC ${NOIR_SOURCE_DIR} ${Boost_INCLUDE_DIR})
 target_link_libraries(tendermint_p2p
+  noir::core::v1
   noir::common::v1
 )
 
