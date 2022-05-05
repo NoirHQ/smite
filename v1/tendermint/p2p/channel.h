@@ -33,9 +33,9 @@ using PeerErrorPtr = std::shared_ptr<PeerError>;
 
 class ChannelIterator {
 public:
-  explicit ChannelIterator(io_context& context): pipe(context) {}
+  explicit ChannelIterator(asio::io_context& io_context): pipe(io_context) {}
 
-  auto next(Chan<Done>& done) -> awaitable<Result<bool>>;
+  auto next(Chan<Done>& done) -> asio::awaitable<Result<bool>>;
   auto envelope() -> EnvelopePtr;
 
 public:
@@ -53,12 +53,12 @@ public:
   auto receive(Chan<Done>& done) -> ChannelIteratorUptr;
 
 public:
-  Channel(io_context& context,
+  Channel(asio::io_context& io_context,
     ChannelId id,
     Chan<EnvelopePtr>&& in_ch,
     Chan<EnvelopePtr>&& out_ch,
     Chan<PeerErrorPtr>&& err_ch)
-    : context(context), id(id), in_ch(std::move(in_ch)), out_ch(std::move(out_ch)), err_ch(std::move(err_ch)) {}
+    : io_context(io_context), id(id), in_ch(std::move(in_ch)), out_ch(std::move(out_ch)), err_ch(std::move(err_ch)) {}
 
   ChannelId id;
   Chan<EnvelopePtr> in_ch;
@@ -68,33 +68,34 @@ public:
   // messageType
   std::string name;
 
-  io_context& context;
+  asio::io_context& io_context;
 };
 
 namespace detail {
-  auto iterator_worker(Chan<Done>& done, Channel& ch, Chan<EnvelopePtr>& pipe) -> awaitable<Result<void>>;
+  auto iterator_worker(Chan<Done>& done, Channel& ch, Chan<EnvelopePtr>& pipe) -> asio::awaitable<Result<void>>;
 
   template<typename T>
-  auto merge(io_context& context, Chan<Done>& done, Chan<EnvelopePtr>& pipe, T& ch) {
+  auto merge(asio::io_context& io_context, Chan<Done>& done, Chan<EnvelopePtr>& pipe, T& ch) {
     return iterator_worker(done, ch, pipe);
   }
 
   template<typename T, typename... Ts>
-  auto merge(io_context& context, Chan<Done>& done, Chan<EnvelopePtr>& pipe, T& ch, Ts&... chs) {
-    return merge(context, done, pipe, ch) && merge(context, done, pipe, chs...);
+  auto merge(asio::io_context& io_context, Chan<Done>& done, Chan<EnvelopePtr>& pipe, T& ch, Ts&... chs) {
+    return merge(io_context, done, pipe, ch) && merge(io_context, done, pipe, chs...);
   }
 } //namespace detail
 
 template<typename... Ts>
-auto merged_channel_iterator(io_context& context, Chan<Done>& done, Ts&... chs) -> ChannelIteratorUptr {
-  auto iter = std::make_unique<ChannelIterator>(context);
+auto merged_channel_iterator(asio::io_context& io_context, Chan<Done>& done, Ts&... chs) -> ChannelIteratorUptr {
+  auto iter = std::make_unique<ChannelIterator>(io_context);
 
   co_spawn(
-    context,
-    [&]() -> awaitable<void> {
-      co_await (done.async_receive(as_result(use_awaitable)) || detail::merge(context, done, iter->pipe, chs...));
+    io_context,
+    [&]() -> asio::awaitable<void> {
+      co_await (
+        done.async_receive(as_result(asio::use_awaitable)) || detail::merge(io_context, done, iter->pipe, chs...));
     },
-    detached);
+    asio::detached);
 
   return iter;
 }

@@ -16,17 +16,21 @@ using tendermint::p2p::PeerErrorPtr;
 using namespace tendermint;
 
 int main() {
-  boost::asio::io_context context{};
+  asio::io_context io_context{};
 
-  Channel ch(context, 1, Chan<EnvelopePtr>{context, 1}, Chan<EnvelopePtr>{context, 1}, Chan<PeerErrorPtr>{context, 1});
+  Channel ch(io_context,
+    1,
+    Chan<EnvelopePtr>{io_context, 1},
+    Chan<EnvelopePtr>{io_context, 1},
+    Chan<PeerErrorPtr>{io_context, 1});
 
-  Chan<Done> done{context};
+  Chan<Done> done{io_context};
 
   auto iter = ch.receive(done);
 
   co_spawn(
-    context,
-    [&iter, &done]() -> awaitable<void> {
+    io_context,
+    [&iter, &done]() -> asio::awaitable<void> {
       while ((co_await iter->next(done)).value()) {
         auto current = iter->envelope();
 
@@ -34,35 +38,35 @@ int main() {
                   << std::endl;
       }
     },
-    detached);
+    asio::detached);
 
   co_spawn(
-    context,
-    [&ch, &done, &context]() -> awaitable<void> {
+    io_context,
+    [&ch, &done, &io_context]() -> asio::awaitable<void> {
       boost::system::error_code ec{};
-      steady_timer timer{context};
+      asio::steady_timer timer{io_context};
       for (;;) {
-        auto res = co_await (done.async_receive(as_result(use_awaitable)) ||
+        auto res = co_await (done.async_receive(as_result(asio::use_awaitable)) ||
           ch.in_ch.async_send(ec,
             std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
-            use_awaitable));
+            asio::use_awaitable));
         if (res.index() == 0) {
           co_return;
         }
         timer.expires_after(std::chrono::seconds(1));
-        co_await timer.async_wait(use_awaitable);
+        co_await timer.async_wait(asio::use_awaitable);
       }
     },
-    detached);
+    asio::detached);
 
   co_spawn(
-    context,
-    [&context, &done]() -> awaitable<void> {
-      steady_timer timer{context};
+    io_context,
+    [&io_context, &done]() -> asio::awaitable<void> {
+      asio::steady_timer timer{io_context};
       timer.expires_after(std::chrono::seconds(5));
-      co_await timer.async_wait(use_awaitable);
+      co_await timer.async_wait(asio::use_awaitable);
       done.close();
     },
-    detached);
-  context.run();
+    asio::detached);
+  io_context.run();
 }
