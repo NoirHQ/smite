@@ -148,14 +148,14 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
           auto ret = file_pv::load_file_pv_empty_state(key_file_path, lss_file_path);
           REQUIRE(ret != nullptr);
           // load_file_pv_empty_state() does not load last_sign_state
-          compare_file_pv_key(ret->key, file_pv_ptr->key);
+          compare_file_pv_key(ret.value()->key, file_pv_ptr->key);
         }
       }
 
       SECTION("load_file_pv") {
         {
           auto ret = file_pv::load_file_pv(key_file_path, lss_file_path);
-          REQUIRE(!ret);
+          REQUIRE(ret);
           compare_file_pv_key(ret.value()->key, file_pv_ptr->key);
           compare_file_pv_last_sign_state(ret.value()->last_sign_state, file_pv_ptr->last_sign_state);
         }

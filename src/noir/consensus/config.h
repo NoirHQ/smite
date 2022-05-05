@@ -90,7 +90,7 @@ struct consensus_config {
     cfg.timeout_prevote_delta = std::chrono::milliseconds{500};
     cfg.timeout_precommit = std::chrono::milliseconds{1000};
     cfg.timeout_precommit_delta = std::chrono::milliseconds{500};
-    cfg.timeout_commit = std::chrono::milliseconds{20000}; // default: 1000
+    cfg.timeout_commit = std::chrono::milliseconds{3000}; // default: 1000
     cfg.skip_timeout_commit = false;
     cfg.create_empty_blocks = true;
     cfg.create_empty_blocks_interval = std::chrono::seconds{0};
