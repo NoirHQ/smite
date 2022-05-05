@@ -40,11 +40,13 @@ struct node {
     std::filesystem::path pv_root_dir = new_config->priv_validator.root_dir;
     auto priv_val = noir::consensus::privval::file_pv::load_or_gen_file_pv(
       pv_root_dir / new_config->priv_validator.key, pv_root_dir / new_config->priv_validator.state);
+    if (!priv_val)
+      check(false, priv_val.error());
 
     auto vote_power = 10;
-    auto val = validator{priv_val->get_address(), priv_val->get_pub_key(), vote_power, 0};
+    auto val = validator{priv_val.value()->get_address(), priv_val.value()->get_pub_key(), vote_power, 0};
     validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
-    priv_validators.push_back(std::move(priv_val));
+    priv_validators.push_back(std::move(priv_val.value()));
 
     auto gen_doc = genesis_doc::genesis_doc_from_file(new_config->consensus.root_dir + "/config/genesis.json");
     if (!gen_doc) {

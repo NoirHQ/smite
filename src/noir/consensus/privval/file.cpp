@@ -117,22 +117,18 @@ std::shared_ptr<file_pv> file_pv::gen_file_pv(
   return std::make_shared<file_pv>(priv_key_, key_file_path, state_file_path);
 }
 
-std::shared_ptr<file_pv> file_pv::load_file_pv_internal(
+result<std::shared_ptr<file_pv>> file_pv::load_file_pv_internal(
   const fs::path& key_file_path, const fs::path& state_file_path, bool load_state) {
   auto ret = std::make_shared<file_pv>();
-  check(ret != nullptr);
-  {
-    check(file_pv_key::load(key_file_path, ret->key) == true, "error reading PrivValidator key from {}",
-      key_file_path.string());
-    // overwrite pubkey and address for convenience, TODO: Is this needed?
-    ret->key.pub_key = ret->key.priv_key.get_pub_key();
-    ret->key.address = ret->key.pub_key.address();
-  }
+  if (!file_pv_key::load(key_file_path, ret->key))
+    return make_unexpected(fmt::format("error reading PrivValidator key from {}", key_file_path.string()));
+  // Overwrite pubkey and address for convenience
+  ret->key.pub_key = ret->key.priv_key.get_pub_key();
+  ret->key.address = ret->key.pub_key.address();
   if (load_state) {
-    check(file_pv_last_sign_state::load(state_file_path, ret->last_sign_state) == true,
-      "error reading PrivValidator state from {}", state_file_path.string());
+    if (!file_pv_last_sign_state::load(state_file_path, ret->last_sign_state))
+      return make_unexpected(fmt::format("error reading PrivValidator state from {}", state_file_path.string()));
   }
-
   return ret;
 }
 
