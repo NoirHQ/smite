@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/helper/rust.h>
 #include <noir/consensus/params.h>
 #include <noir/consensus/protocol.h>
 #include <noir/consensus/types/genesis.h>
