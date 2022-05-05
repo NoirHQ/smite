@@ -62,7 +62,7 @@ public:
     if (ec)
     {
       BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
-          BOOST_OUTCOME_V2_NAMESPACE::failure(BOOST_ASIO_MOVE_CAST(std::error_code)(ec)));
+          BOOST_OUTCOME_V2_NAMESPACE::failure(static_cast<std::error_code>(ec)));
     } 
     else
     {
@@ -77,7 +77,7 @@ public:
     if (ec)
     {
       BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
-          BOOST_OUTCOME_V2_NAMESPACE::failure(BOOST_ASIO_MOVE_CAST(std::error_code)(ec)));
+          BOOST_OUTCOME_V2_NAMESPACE::failure(static_cast<std::error_code>(ec)));
     } 
     else
     {
@@ -92,7 +92,7 @@ public:
       BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
           BOOST_OUTCOME_V2_NAMESPACE::failure(
               BOOST_ASIO_MOVE_CAST(std::error_code)(BOOST_OUTCOME_V2_NAMESPACE::error_from_exception(
-                  BOOST_ASIO_MOVE_CAST(std::exception_ptr)(eptr)))));
+                  std::move(eptr)))));
     }
     else
     {
@@ -109,7 +109,7 @@ public:
       BOOST_ASIO_MOVE_OR_LVALUE(Handler)(handler_)(
           BOOST_OUTCOME_V2_NAMESPACE::failure(
               BOOST_ASIO_MOVE_CAST(std::error_code)(BOOST_OUTCOME_V2_NAMESPACE::error_from_exception(
-                  BOOST_ASIO_MOVE_CAST(std::exception_ptr)(eptr)))));
+                  std::move(eptr)))));
     }
     else
     {
