@@ -65,7 +65,13 @@ namespace detail {
 
 auto Channel::receive(Chan<Done>& done) -> ChannelIteratorUptr {
   auto iter = std::make_unique<ChannelIterator>(io_context);
-  co_spawn(io_context, detail::iterator_worker(done, *this, iter->pipe), asio::detached);
+  co_spawn(
+    io_context,
+    [&]() -> asio::awaitable<void> {
+      co_await detail::iterator_worker(done, *this, iter->pipe);
+      iter->pipe.close();
+    },
+    asio::detached);
   return iter;
 }
 
