@@ -194,7 +194,7 @@ void ice_breaking(const std::vector<std::shared_ptr<test_node>>& test_nodes) {
 TEST_CASE("node: multiple validator test") {
   fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::debug);
   int node_count = 2;
-  int test_time = 60; // seconds
+  int test_time = 6; // seconds
   int sleep_interval = 3; // seconds
 
   auto test_nodes = test_detail::make_node_set(node_count);
