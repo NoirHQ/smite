@@ -6,7 +6,8 @@ target_link_libraries(noir_core_v1
   fmt::fmt
 )
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+  set(THREADS_PREFER_PTHREAD_FLAG TRUE)
   find_package(Threads REQUIRED)
   target_link_libraries(noir_core_v1
     Threads::Threads
