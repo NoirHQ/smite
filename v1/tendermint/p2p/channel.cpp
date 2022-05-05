@@ -8,7 +8,7 @@
 namespace tendermint::p2p {
 
 auto Channel::send(Chan<Done>& done, EnvelopePtr envelope) -> asio::awaitable<Result<void>> {
-  system::error_code ec{};
+  boost::system::error_code ec{};
   auto res = co_await (
     done.async_receive(as_result(asio::use_awaitable)) || out_ch.async_send(ec, envelope, asio::use_awaitable));
   switch (res.index()) {
@@ -24,7 +24,7 @@ auto Channel::send(Chan<Done>& done, EnvelopePtr envelope) -> asio::awaitable<Re
 }
 
 auto Channel::send_error(Chan<Done>& done, PeerErrorPtr peer_error) -> asio::awaitable<Result<void>> {
-  system::error_code ec{};
+  boost::system::error_code ec{};
   auto res = co_await (
     done.async_receive(as_result(asio::use_awaitable)) || err_ch.async_send(ec, peer_error, asio::use_awaitable));
   switch (res.index()) {
