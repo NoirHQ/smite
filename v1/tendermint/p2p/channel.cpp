@@ -7,9 +7,10 @@
 
 namespace tendermint::p2p {
 
-auto Channel::send(Chan<Done>& done, EnvelopePtr envelope) -> boost::asio::awaitable<Result<void>> {
-  boost::system::error_code ec{};
-  auto res = co_await (done.async_receive(as_result(use_awaitable)) || out_ch.async_send(ec, envelope, use_awaitable));
+auto Channel::send(Chan<Done>& done, EnvelopePtr envelope) -> asio::awaitable<Result<void>> {
+  system::error_code ec{};
+  auto res = co_await (
+    done.async_receive(as_result(asio::use_awaitable)) || out_ch.async_send(ec, envelope, asio::use_awaitable));
   switch (res.index()) {
   case 0:
     co_return std::get<0>(res).error();
@@ -22,10 +23,10 @@ auto Channel::send(Chan<Done>& done, EnvelopePtr envelope) -> boost::asio::await
   co_return err_unreachable;
 }
 
-auto Channel::send_error(Chan<Done>& done, PeerErrorPtr peer_error) -> awaitable<Result<void>> {
-  boost::system::error_code ec{};
-  auto res =
-    co_await (done.async_receive(as_result(use_awaitable)) || err_ch.async_send(ec, peer_error, use_awaitable));
+auto Channel::send_error(Chan<Done>& done, PeerErrorPtr peer_error) -> asio::awaitable<Result<void>> {
+  system::error_code ec{};
+  auto res = co_await (
+    done.async_receive(as_result(asio::use_awaitable)) || err_ch.async_send(ec, peer_error, asio::use_awaitable));
   switch (res.index()) {
   case 0:
     co_return std::get<0>(res).error();
@@ -43,16 +44,17 @@ auto Channel::to_string() -> std::string {
 }
 
 namespace detail {
-  auto iterator_worker(Chan<Done>& done, Channel& ch, Chan<EnvelopePtr>& pipe) -> awaitable<Result<void>> {
+  auto iterator_worker(Chan<Done>& done, Channel& ch, Chan<EnvelopePtr>& pipe) -> asio::awaitable<Result<void>> {
     for (;;) {
-      auto in_res = co_await (done.async_receive(as_result(use_awaitable)) || ch.in_ch.async_receive(use_awaitable));
+      auto in_res =
+        co_await (done.async_receive(as_result(asio::use_awaitable)) || ch.in_ch.async_receive(asio::use_awaitable));
       switch (in_res.index()) {
       case 0:
         co_return std::get<0>(in_res).error();
       case 1:
         auto envelope = std::get<1>(in_res);
-        auto pipe_res = co_await (done.async_receive(as_result(use_awaitable)) ||
-          pipe.async_send(boost::system::error_code{}, envelope, use_awaitable));
+        auto pipe_res = co_await (done.async_receive(as_result(asio::use_awaitable)) ||
+          pipe.async_send(system::error_code{}, envelope, asio::use_awaitable));
         if (pipe_res.index() == 0) {
           co_return std::get<0>(pipe_res).error();
         }
@@ -62,13 +64,14 @@ namespace detail {
 } //namespace detail
 
 auto Channel::receive(Chan<Done>& done) -> ChannelIteratorUptr {
-  auto iter = std::make_unique<ChannelIterator>(context);
-  co_spawn(context, detail::iterator_worker(done, *this, iter->pipe), detached);
+  auto iter = std::make_unique<ChannelIterator>(io_context);
+  co_spawn(io_context, detail::iterator_worker(done, *this, iter->pipe), asio::detached);
   return iter;
 }
 
-auto ChannelIterator::next(Chan<Done>& done) -> awaitable<Result<bool>> {
-  auto res = co_await (done.async_receive(as_result(use_awaitable)) || pipe.async_receive(as_result(use_awaitable)));
+auto ChannelIterator::next(Chan<Done>& done) -> asio::awaitable<Result<bool>> {
+  auto res =
+    co_await (done.async_receive(as_result(asio::use_awaitable)) || pipe.async_receive(as_result(asio::use_awaitable)));
   switch (res.index()) {
   case 0:
     current.reset();
