@@ -61,7 +61,7 @@ struct file_pv_last_sign_state {
   /// \param[in] step
   /// \return indicates whether the last Signature should be reused - true if the HRS matches the arguments and the
   /// SignBytes are not empty (indicating we have already signed for this HRS, and can reuse the existing signature)
-  bool check_hrs(int64_t height_, int32_t round_, sign_step step_) const;
+  result<bool> check_hrs(int64_t height_, int32_t round_, sign_step step_) const;
 
   /// \brief persists the FilePvLastSignState to its filePath.
   void save();

@@ -45,13 +45,19 @@ bool file_pv_key::load(const fs::path& key_file_path, file_pv_key& priv_key) {
   return true;
 }
 
-bool file_pv_last_sign_state::check_hrs(int64_t height_, int32_t round_, sign_step step_) const {
-  check(height <= height_, "height regression. Got {}, last height {}", height_, height);
+result<bool> file_pv_last_sign_state::check_hrs(int64_t height_, int32_t round_, sign_step step_) const {
+  if (height > height_)
+    return make_unexpected(fmt::format("height regression. Got {}, last height {}", height_, height));
+
   if (height == height_) {
-    check(round <= round_, "round regression at height {}. Got {}, last round {}", height_, round_, round);
+    if (round > round_)
+      return make_unexpected(
+        fmt::format("round regression at height {}. Got {}, last round {}", height_, round_, round));
+
     if (round == round_) {
-      check(step <= step_, "step regression at height {} round {}. Got {}, last step {}", height_, round_,
-        static_cast<int8_t>(step_), static_cast<int8_t>(step));
+      if (step > step_)
+        return make_unexpected(fmt::format("step regression at height {} round {}. Got {}, last step {}", height_,
+          round_, static_cast<int8_t>(step_), static_cast<int8_t>(step)));
       if (step == step_) {
         check(!sign_bytes.empty(), "no sign_bytes found");
         if (signature.empty()) {
@@ -183,7 +189,11 @@ bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step)
   auto height = obj.height;
   auto round = obj.round;
 
-  auto same_hrs = lss.check_hrs(height, round, step); // throw exception if error
+  auto same_hrs = lss.check_hrs(height, round, step);
+  if (!same_hrs) {
+    elog(same_hrs.error());
+    return false;
+  }
   p2p::tstamp timestamp;
 
   // We might crash before writing to the wal,
@@ -191,7 +201,7 @@ bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step)
   // If signbytes are the same, use the last signature.
   // If they only differ by timestamp, use last timestamp and signature
   // Otherwise, return error
-  if (same_hrs) {
+  if (same_hrs.value()) {
     if (sign_bytes == lss.sign_bytes) {
       obj.signature = lss.signature;
     } else if (check_only_differ_by_timestamp(obj, lss.sign_bytes, sign_bytes, timestamp)) {
