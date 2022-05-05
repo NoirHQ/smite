@@ -18,99 +18,99 @@ using tendermint::p2p::PeerErrorPtr;
 
 TEST_CASE("Channel", "[tendermint][p2p]") {
   SECTION("Send") {
-    boost::asio::io_context context{};
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         auto send_res =
           co_await ch.send(done, std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}));
         CHECK(!send_res.has_error());
       },
-      detached);
+      asio::detached);
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
-        auto receive_res = co_await ch.out_ch.async_receive(use_awaitable);
+      io_context,
+      [&]() -> asio::awaitable<void> {
+        auto receive_res = co_await ch.out_ch.async_receive(asio::use_awaitable);
         CHECK(receive_res->from == "alice");
         CHECK(receive_res->to == "bob");
       },
-      detached);
+      asio::detached);
 
-    context.run();
+    io_context.run();
   }
 
   SECTION("SendError") {
-    boost::asio::io_context context{};
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         auto send_res =
           co_await ch.send_error(done, std::make_shared<p2p::PeerError>(PeerError{"alice", Error{"bob"}}));
         CHECK(!send_res.has_error());
       },
-      detached);
+      asio::detached);
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
-        auto receive_res = co_await ch.err_ch.async_receive(use_awaitable);
+      io_context,
+      [&]() -> asio::awaitable<void> {
+        auto receive_res = co_await ch.err_ch.async_receive(asio::use_awaitable);
         CHECK(receive_res->node_id == "alice");
         CHECK(receive_res->err.message() == "bob");
       },
-      detached);
+      asio::detached);
 
-    context.run();
+    io_context.run();
   }
 
-  SECTION("SendWithCanceledContext") {
-    boost::asio::io_context context{};
+  SECTION("SendWithCanceledio_context") {
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         done.close();
         auto res =
           co_await ch.send(done, std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}));
         CHECK(res.has_error());
       },
-      detached);
+      asio::detached);
 
-    context.run();
+    io_context.run();
   }
 
   SECTION("ReceiveEmptyIteratorBlocks") {
-    boost::asio::io_context context{};
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
@@ -119,34 +119,34 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
 
     auto res = iter->envelope();
     CHECK((!res ? true : false));
-    context.run();
+    io_context.run();
   }
 
   SECTION("ReceiveWithData") {
-    boost::asio::io_context context{};
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
-        co_await ch.in_ch.async_send(boost::system::error_code{},
+      io_context,
+      [&]() -> asio::awaitable<void> {
+        co_await ch.in_ch.async_send(system::error_code{},
           std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
-          use_awaitable);
+          asio::use_awaitable);
       },
-      detached);
+      asio::detached);
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         CHECK((co_await iter->next(done)).value());
 
         auto envelope = iter->envelope();
@@ -155,41 +155,45 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
 
         done.close();
       },
-      detached);
-    context.run();
+      asio::detached);
+    io_context.run();
   }
 
-  SECTION("ReceiveWithCanceledContext") {
-    boost::asio::io_context context{};
+  SECTION("ReceiveWithCanceledio_context") {
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
     done.close();
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         CHECK_FALSE((co_await iter->next(done)).value());
 
         auto envelope = iter->envelope();
         CHECK((!envelope ? true : false));
       },
-      detached);
-    context.run();
+      asio::detached);
+    io_context.run();
   }
 
-  SECTION("IteratorWithCanceledContext") {
-    boost::asio::io_context context{};
+  SECTION("IteratorWithCanceledio_context") {
+    asio::io_context io_context{};
 
-    Channel ch(context, 1, Chan<EnvelopePtr>{context}, Chan<EnvelopePtr>{context}, Chan<PeerErrorPtr>{context});
-    Chan<Done> done{context};
+    Channel ch(io_context,
+      1,
+      Chan<EnvelopePtr>{io_context},
+      Chan<EnvelopePtr>{io_context},
+      Chan<PeerErrorPtr>{io_context});
+    Chan<Done> done{io_context};
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
@@ -197,42 +201,42 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
     done.close();
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         CHECK_FALSE((co_await iter->next(done)).value());
 
         auto envelope = iter->envelope();
         CHECK((!envelope ? true : false));
       },
-      detached);
-    context.run();
+      asio::detached);
+    io_context.run();
   }
 
   SECTION("IteratorCanceledAfterFirstUseBecomesNil") {
-    boost::asio::io_context context{};
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
-        co_await ch.in_ch.async_send(boost::system::error_code{},
+      io_context,
+      [&]() -> asio::awaitable<void> {
+        co_await ch.in_ch.async_send(system::error_code{},
           std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
-          use_awaitable);
+          asio::use_awaitable);
       },
-      detached);
+      asio::detached);
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         CHECK((co_await iter->next(done)).value());
 
         auto envelope = iter->envelope();
@@ -244,35 +248,35 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
         CHECK_FALSE((co_await iter->next(done)).value());
         CHECK(!(iter->envelope() ? true : false));
       },
-      detached);
-    context.run();
+      asio::detached);
+    io_context.run();
   }
 
   SECTION("IteratorMultipleNextCalls") {
-    boost::asio::io_context context{};
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
-        co_await ch.in_ch.async_send(boost::system::error_code{},
+      io_context,
+      [&]() -> asio::awaitable<void> {
+        co_await ch.in_ch.async_send(system::error_code{},
           std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
-          use_awaitable);
+          asio::use_awaitable);
       },
-      detached);
+      asio::detached);
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         CHECK((co_await iter->next(done)).value());
 
         auto res = iter->envelope();
@@ -284,36 +288,36 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
 
         done.close();
       },
-      detached);
-    context.run();
+      asio::detached);
+    io_context.run();
   }
 
   SECTION("IteratorProducesNilObjectBeforeNext") {
-    boost::asio::io_context context{};
+    asio::io_context io_context{};
 
-    Channel ch(context,
+    Channel ch(io_context,
       1,
-      Chan<EnvelopePtr>{context, 1},
-      Chan<EnvelopePtr>{context, 1},
-      Chan<PeerErrorPtr>{context, 1});
-    Chan<Done> done{context};
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<EnvelopePtr>{io_context, 1},
+      Chan<PeerErrorPtr>{io_context, 1});
+    Chan<Done> done{io_context};
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
     CHECK(!(iter->envelope() ? true : false));
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
-        co_await ch.in_ch.async_send(boost::system::error_code{},
+      io_context,
+      [&]() -> asio::awaitable<void> {
+        co_await ch.in_ch.async_send(system::error_code{},
           std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
-          use_awaitable);
+          asio::use_awaitable);
       },
-      detached);
+      asio::detached);
 
     co_spawn(
-      context,
-      [&]() -> awaitable<void> {
+      io_context,
+      [&]() -> asio::awaitable<void> {
         CHECK((iter ? true : false));
         CHECK((co_await iter->next(done)).value());
 
@@ -324,7 +328,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
 
         done.close();
       },
-      detached);
-    context.run();
+      asio::detached);
+    io_context.run();
   }
 }
