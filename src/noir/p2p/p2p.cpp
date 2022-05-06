@@ -112,7 +112,7 @@ public:
   block_id_type fork_head;
   uint32_t fork_head_num{0};
   fc::time_point last_close;
-  bytes32 conn_node_id;
+  bytes20 conn_node_id;
   std::string remote_endpoint_ip;
   std::string remote_endpoint_port;
   std::string local_endpoint_ip;
@@ -287,7 +287,7 @@ public:
   const std::chrono::system_clock::duration peer_authentication_interval{std::chrono::seconds{1}};
 
   //  chain_id_type chain_id;
-  bytes32 node_id;
+  bytes20 node_id;
   std::string user_agent_name;
 
   // External plugins
@@ -653,17 +653,6 @@ void p2p::plugin_initialize(const CLI::App& config) {
     // my->p2p_server_address = "0.0.0.0:9876"; // An externally accessible host:port for identifying this node.
     // Defaults to p2p-listen-endpoint
     my->thread_pool_size = 2; // number of threads to use
-
-    // my->user_agent_name = ""; // The name supplied to identify this node amongst the peers
-
-    //    my->chain_plug = app().find_plugin<chain_plugin>();
-    //    my->chain_id = my->chain_plug->get_chain_id();
-    fc::rand_pseudo_bytes(my->node_id.data(), my->node_id.size());
-    //    const controller &cc = my->chain_plug->chain();
-
-    //    if (my->p2p_accept_transactions) {
-    //      my->chain_plug->enable_accept_transactions();
-    //    }
   }
   FC_LOG_AND_RETHROW()
 }
@@ -671,18 +660,16 @@ void p2p::plugin_initialize(const CLI::App& config) {
 void p2p::plugin_startup() {
   ilog("Start p2p");
   try {
-    ilog("my node_id is ${id}", ("id", my->node_id.to_string()));
-
-    //    my->producer_plug = app().find_plugin<producer_plugin>();
     if (auto plug = app.find_plugin<consensus::abci>(); plug->get_state() == started) {
       ilog("abci_plugin is up and running; p2p <--> abci");
       my->abci_plug = plug;
-      // TODO: initialize channels between p2p and abci
-      /// done: incoming channel : p2p ---> consensus
-      /// todo: outgoing channel : consensus ---> p2p
+      auto node_id = from_hex(my->abci_plug->node_->node_key_->node_id);
+      std::copy(node_id.begin(), node_id.end(), my->node_id.begin());
     } else {
       ilog("abci_plugin is not running; will be simply testing p2p activities");
+      fc::rand_pseudo_bytes(my->node_id.data(), my->node_id.size());
     }
+    ilog("my node_id is ${id}", ("id", my->node_id.to_string()));
 
     my->thread_pool.emplace("p2p", my->thread_pool_size);
 
@@ -1096,7 +1083,7 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
     self->last_handshake_recv = handshake_message();
     self->last_handshake_sent = handshake_message();
     self->last_close = fc::time_point::now();
-    self->conn_node_id = bytes32();
+    self->conn_node_id = bytes20();
   }
   if (has_last_req && !shutdown) {
     //    my_impl->dispatcher->retry_fetch( self->shared_from_this() );

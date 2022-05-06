@@ -54,8 +54,9 @@ struct node {
       *gen_doc = genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators};
     }
 
-    // Load or generate node_key - todo
-    auto node_key_ = node_key::gen_node_key();
+    // Load or generate node_key
+    auto node_key_dir = std::filesystem::path{new_config->consensus.root_dir} / "config";
+    auto node_key_ = node_key::load_or_gen_node_key(node_key_dir / new_config->base.node_key);
 
     auto db_dir = std::filesystem::path{new_config->consensus.root_dir} / "db";
     auto session = make_session(false, db_dir);

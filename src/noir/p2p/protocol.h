@@ -18,7 +18,7 @@ struct handshake_message {
   uint16_t network_version = 0; ///< incremental value above a computed base
   //  chain_id_type chain_id; ///< used to identify chain bytes32 node_id; ///< used to identify peers and prevent
   //  self-connect
-  bytes32 node_id; ///< used to identify peers and prevent self-connect
+  bytes20 node_id; ///< used to identify peers and prevent self-connect
   tstamp time{0};
   std::string p2p_address;
   uint32_t head_num = 0;
@@ -197,7 +197,7 @@ struct go_away_message {
   go_away_message(go_away_reason r = no_reason): reason(r), node_id() {}
 
   go_away_reason reason{no_reason};
-  bytes32 node_id; ///< for duplicate notification
+  bytes20 node_id; ///< for duplicate notification
 };
 
 /// \brief network messages that will be exchanged between peers
