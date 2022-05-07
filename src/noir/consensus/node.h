@@ -8,6 +8,8 @@
 #include <noir/consensus/block_executor.h>
 #include <noir/consensus/block_sync/reactor.h>
 #include <noir/consensus/consensus_reactor.h>
+#include <noir/consensus/indexer/indexer_service.h>
+#include <noir/consensus/indexer/sink/sink.h>
 #include <noir/consensus/priv_validator.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/state.h>
@@ -28,6 +30,8 @@ struct node {
   std::shared_ptr<db_store> store_{};
   std::shared_ptr<block_store> block_store_{};
   std::shared_ptr<events::event_bus> event_bus_{};
+  std::shared_ptr<indexer::event_sink> event_sink_{};
+  std::shared_ptr<indexer::indexer_service> indexer_service_{};
   bool state_sync_on{};
 
   std::shared_ptr<consensus_reactor> cs_reactor{};
@@ -85,6 +89,11 @@ struct node {
     // but before it indexed the txs, or, endblocker panicked)
     auto event_bus_ = std::make_shared<events::event_bus>(app);
     // indexer
+    auto event_sinks_ = indexer::sink::event_sink_from_config(new_config);
+    if (!event_sinks_)
+      check(false, "unable to start node: check event_sink");
+    auto indexer_service_ = std::make_shared<indexer::indexer_service>(event_sinks_, event_bus_);
+    indexer_service_->on_start();
 
     // Setup pub_key_
     pub_key pub_key_;
@@ -114,6 +123,8 @@ struct node {
     node_->store_ = dbs;
     node_->block_store_ = bls;
     node_->event_bus_ = event_bus_;
+    node_->event_sink_ = event_sinks_;
+    node_->indexer_service_ = indexer_service_;
     node_->state_sync_on = new_state_sync_on;
     node_->bs_reactor = new_bs_reactor;
     node_->cs_reactor = new_cs_reactor;

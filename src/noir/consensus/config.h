@@ -155,13 +155,24 @@ struct priv_validator_config {
   static constexpr std::string_view default_priv_val_state_name = "priv_validator_state.json";
 };
 
+struct tx_index_config {
+  std::string indexer;
+  std::string psql_conn;
+
+  static tx_index_config get_default() {
+    return {"null", ""};
+  }
+};
+
 struct config {
   base_config base;
   consensus_config consensus;
   priv_validator_config priv_validator;
+  tx_index_config tx_index;
 
   static config get_default() {
-    return {base_config::get_default(), consensus_config::get_default(), priv_validator_config::get_default()};
+    return {base_config::get_default(), consensus_config::get_default(), priv_validator_config::get_default(),
+      tx_index_config::get_default()};
   }
 };
 
