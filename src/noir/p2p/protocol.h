@@ -11,6 +11,7 @@
 #include <noir/p2p/types.h>
 #include <tendermint/types/types.pb.h>
 
+#include <google/protobuf/util/time_util.h>
 #include <variant>
 
 namespace noir::p2p {

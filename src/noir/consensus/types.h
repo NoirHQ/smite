@@ -37,12 +37,6 @@ struct proposal : p2p::proposal_message {
   }
 };
 
-/// \brief SignedHeader is a header along with the commits that prove it.
-struct signed_header {
-  noir::consensus::block_header header;
-  std::optional<noir::consensus::commit> commit;
-};
-
 struct weighted_time {
   p2p::tstamp time;
   int64_t weight;

@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/consensus/merkle/tree.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/light_block.h>
 #include <tendermint/abci/types.pb.h>
 #include <tendermint/types/evidence.pb.h>
 
@@ -124,6 +125,26 @@ struct duplicate_vote_evidence : public evidence {
     auto ret = std::make_shared<duplicate_vote_evidence>();
     return ret;
   }
+};
+
+struct light_client_attack_evidence : public evidence {
+  std::shared_ptr<light_block> conflicting_block;
+  int64_t common_height;
+
+  // ABCI specific info
+  std::vector<std::shared_ptr<validator>> byzantine_validators;
+  int64_t total_voting_power;
+  p2p::tstamp timestamp;
+
+  std::shared_ptr<::tendermint::abci::Evidence> get_abci() override {}
+  bytes get_bytes() override {}
+  bytes get_hash() override {}
+  int64_t get_height() override {}
+  std::string get_string() override {}
+  p2p::tstamp get_time() override {}
+  result<void> validate_basic() override {}
+
+  std::shared_ptr<::tendermint::types::LightClientAttackEvidence> to_proto() {}
 };
 
 struct evidence_list {
