@@ -8,6 +8,13 @@
 
 namespace tendermint {
 
-using namespace noir;
+using noir::Chan;
+using noir::Error;
+using noir::Result;
+
+using noir::success;
+using noir::failure;
+
+namespace asio = noir::asio;
 
 } // namespace tendermint
