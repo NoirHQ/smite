@@ -8,4 +8,5 @@
 #include <noir/common/bytes_n.h>
 #include <noir/common/inttypes.h>
 #include <noir/common/string.h>
+#include <noir/common/time.h>
 #include <noir/common/varint.h>
