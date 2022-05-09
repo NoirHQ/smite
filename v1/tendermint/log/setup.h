@@ -4,13 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/log/log.h>
-#include <string>
+#include <tendermint/log/log.h>
 
-namespace noir::log {
-
-void set_level(const std::string& level);
+namespace tendermint::log {
 
 void setup(Logger* logger = nullptr);
 
-} // namespace noir::log
+} // namespace tendermint::log
