@@ -10,6 +10,7 @@
 #include <noir/p2p/types.h>
 
 #include <fmt/core.h>
+#include <google/protobuf/util/time_util.h>
 
 namespace noir::consensus {
 
@@ -29,6 +30,20 @@ struct vote : p2p::vote_message {
     else
       throw std::runtime_error(fmt::format("Invalid vote - expected block_id to be either empty or complete"));
     return commit_sig{flag, validator_address, timestamp, signature};
+  }
+
+  std::shared_ptr<::tendermint::types::Vote> to_proto() {
+    auto ret = std::make_shared<::tendermint::types::Vote>();
+    ret->set_type((::tendermint::types::SignedMsgType)type);
+    ret->set_height(height);
+    ret->set_round(round);
+    *ret->mutable_block_id() = block_id_.to_proto();
+    auto ts = ret->mutable_timestamp();
+    *ts = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp); // TODO
+    *ret->mutable_validator_address() = std::string(validator_address.begin(), validator_address.end());
+    ret->set_validator_index(validator_index);
+    *ret->mutable_signature() = std::string(signature.begin(), signature.end());
+    return ret;
   }
 };
 

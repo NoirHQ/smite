@@ -2,8 +2,9 @@ add_library(noir_tx_pool STATIC
   tx_pool.cpp
 )
 target_link_libraries(noir_tx_pool
-  noir_common
-  noir_crypto
+  noir::common
+  noir::crypto
+  noir::proto_legacy
 )
 set_target_properties(noir_tx_pool PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 

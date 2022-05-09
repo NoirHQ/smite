@@ -9,6 +9,7 @@
 #include <noir/consensus/block_sync/types.h>
 #include <noir/consensus/merkle/proof.h>
 #include <noir/p2p/types.h>
+#include <tendermint/types/types.pb.h>
 
 #include <variant>
 
@@ -59,6 +60,13 @@ struct part_set_header {
   bool is_zero() {
     return (total == 0) && (hash.empty());
   }
+
+  ::tendermint::types::PartSetHeader to_proto() {
+    ::tendermint::types::PartSetHeader ret;
+    ret.set_total(total);
+    *ret.mutable_hash() = std::string(hash.begin(), hash.end());
+    return ret;
+  }
 };
 
 struct block_id {
@@ -81,6 +89,13 @@ struct block_id {
     // returns a machine-readable string representation of the block_id
     // todo
     return to_hex(hash) + to_hex(parts.hash) + std::to_string(parts.total);
+  }
+
+  ::tendermint::types::BlockID to_proto() {
+    ::tendermint::types::BlockID ret;
+    *ret.mutable_hash() = std::string(hash.begin(), hash.end());
+    *ret.mutable_part_set_header() = parts.to_proto();
+    return ret;
   }
 };
 
