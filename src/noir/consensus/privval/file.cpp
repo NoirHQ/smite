@@ -145,7 +145,7 @@ std::string file_pv::string() const {
 bool check_only_differ_by_timestamp(const noir::consensus::vote& obj,
   const bytes& last_sign_bytes,
   const bytes& new_sign_bytes,
-  noir::p2p::tstamp& timestamp) {
+  noir::tstamp& timestamp) {
   auto last_vote = decode<canonical_vote>(last_sign_bytes);
   auto new_vote = decode<canonical_vote>(new_sign_bytes);
   timestamp = last_vote.timestamp;
@@ -163,7 +163,7 @@ bool check_only_differ_by_timestamp(const noir::consensus::vote& obj,
 bool check_only_differ_by_timestamp(const noir::consensus::proposal& obj,
   const bytes& last_sign_bytes,
   const bytes& new_sign_bytes,
-  noir::p2p::tstamp& timestamp) {
+  noir::tstamp& timestamp) {
   auto last_vote = decode<canonical_proposal>(last_sign_bytes);
   auto new_vote = decode<canonical_proposal>(new_sign_bytes);
   timestamp = last_vote.timestamp;
@@ -190,7 +190,7 @@ bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step)
     elog(same_hrs.error());
     return false;
   }
-  p2p::tstamp timestamp;
+  tstamp timestamp;
 
   // We might crash before writing to the wal,
   // causing us to try to re-sign for the same HRS.

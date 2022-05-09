@@ -61,7 +61,7 @@ TEST_CASE("block_store: save/load_block", "[noir][consensus]") {
   for (auto height = 1; height < 100; ++height) {
     auto bl_ = make_block(height, genesis_state, commit_);
     auto p_set_ = bl_->make_part_set(64); // make parts more than one
-    auto seen_commit_ = noir::consensus::make_commit(10, noir::p2p::tstamp{});
+    auto seen_commit_ = noir::consensus::make_commit(10, noir::tstamp{});
     REQUIRE(bl_ != nullptr);
     REQUIRE(p_set_ != nullptr);
 
@@ -141,7 +141,7 @@ TEST_CASE("block_store: prune_block", "[noir][consensus]") {
   for (auto height = 1; height <= 1500; ++height) {
     auto bl_ = make_block(height, genesis_state, commit_);
     auto p_set_ = bl_->make_part_set(64); // make parts more than one
-    auto seen_commit_ = noir::consensus::make_commit(10, noir::p2p::tstamp{});
+    auto seen_commit_ = noir::consensus::make_commit(10, noir::tstamp{});
 
     CHECK(bls.save_block(*bl_, *p_set_, seen_commit_) == true);
     CHECK(bls.base() == 1ll);

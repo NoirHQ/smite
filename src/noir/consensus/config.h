@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/for_each.h>
+#include <noir/common/time.h>
 #include <noir/p2p/types.h>
 #include <appbase/application.hpp>
 
@@ -115,7 +116,7 @@ struct consensus_config {
   /**
    * returns the amount of time to wait for straggler votes after receiving 2/3+ precommits
    */
-  p2p::tstamp commit(p2p::tstamp t) {
+  tstamp commit(tstamp t) {
     return t + duration_cast<std::chrono::microseconds>(timeout_commit).count();
   }
 };

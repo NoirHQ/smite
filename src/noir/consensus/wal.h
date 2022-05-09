@@ -34,7 +34,7 @@ struct wal_message {
 
 /// \brief TimedWALMessage wraps WALMessage and adds Time for debugging purposes
 struct timed_wal_message {
-  noir::p2p::tstamp time;
+  noir::tstamp time;
   wal_message msg;
 };
 

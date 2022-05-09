@@ -21,7 +21,7 @@ std::shared_ptr<vote> make_vote(mock_pv& val,
   int32_t round,
   int step,
   const p2p::block_id& block_id_,
-  p2p::tstamp time) {
+  tstamp time) {
   auto pub_key = val.get_pub_key();
   auto ret = std::make_shared<vote>();
   ret->validator_address = pub_key.address();

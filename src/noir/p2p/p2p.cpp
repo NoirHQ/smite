@@ -176,19 +176,6 @@ public:
    */
   void send_time(const time_message& msg);
 
-  /** \brief Read system time and convert to a 64 bit integer.
-   *
-   * There are only two calls on this routine in the program.  One
-   * when a packet arrives from the network and the other when a
-   * packet is placed on the send queue.  Calls the kernel time of
-   * day routine and converts to a (at least) 64 bit integer.
-   */
-  static tstamp get_time() {
-    return std::chrono::system_clock::now().time_since_epoch().count();
-  }
-
-  /** @} */
-
   const std::string peer_name();
 
   void blk_send_branch(const block_id_type& msg_head_id);
@@ -549,7 +536,7 @@ void p2p_impl::ticker() {
       wlog("Peer keepalive ticked sooner than expected: ${m}", ("m", ec.message()));
     }
 
-    tstamp current_time = connection::get_time();
+    tstamp current_time = get_time();
     for_each_connection([current_time](auto& c) {
       if (c->socket_is_open()) {
         c->strand.post([c, current_time]() { c->check_heartbeat(current_time); });

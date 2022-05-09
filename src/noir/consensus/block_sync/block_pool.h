@@ -30,7 +30,7 @@ struct bp_peer;
 struct block_pool : std::enable_shared_from_this<block_pool> {
   appbase::application& app;
 
-  p2p::tstamp last_advance{};
+  tstamp last_advance{};
 
   std::mutex mtx;
   std::map<int64_t, std::shared_ptr<bp_requester>> requesters;
@@ -40,7 +40,7 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
 
   int32_t num_pending{};
   int64_t start_height{};
-  p2p::tstamp last_hundred_block_timestamp{};
+  tstamp last_hundred_block_timestamp{};
   double last_sync_rate{};
 
   std::atomic_bool is_running = false;

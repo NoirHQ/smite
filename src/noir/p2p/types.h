@@ -7,15 +7,12 @@
 #include <noir/common/refl.h>
 #include <noir/common/types/bytes_n.h>
 
-#include <chrono>
 #include <cinttypes>
 #include <memory>
 #include <mutex>
 #include <vector>
 
 namespace noir::p2p {
-
-using tstamp = std::chrono::system_clock::duration::rep;
 
 using block_id_type = bytes32;
 

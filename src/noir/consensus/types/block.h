@@ -38,7 +38,7 @@ enum block_id_flag {
 struct commit_sig {
   block_id_flag flag;
   bytes validator_address;
-  p2p::tstamp timestamp;
+  tstamp timestamp;
   bytes signature;
 
   static commit_sig new_commit_sig_absent() {
@@ -212,7 +212,7 @@ struct block_header {
   std::string version;
   std::string chain_id;
   int64_t height{};
-  p2p::tstamp time{};
+  tstamp time{};
 
   // Previous block info
   p2p::block_id last_block_id;
@@ -235,7 +235,7 @@ struct block_header {
 
   void populate(std::string& version_,
     std::string& chain_id_,
-    p2p::tstamp timestamp_,
+    tstamp timestamp_,
     p2p::block_id& last_block_id_,
     bytes val_hash,
     bytes next_val_hash,

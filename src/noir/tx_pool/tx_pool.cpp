@@ -49,7 +49,7 @@ void tx_pool::plugin_initialize(const CLI::App& config) {
 
     config_.max_tx_num = tx_pool_options->get_option("--max_tx_num")->as<uint64_t>();
     config_.max_tx_bytes = tx_pool_options->get_option("--max_tx_bytes")->as<uint64_t>();
-    config_.ttl_duration = tx_pool_options->get_option("--ttl_duration")->as<p2p::tstamp>();
+    config_.ttl_duration = tx_pool_options->get_option("--ttl_duration")->as<tstamp>();
     config_.ttl_num_blocks = tx_pool_options->get_option("--ttl_num_blocks")->as<uint64_t>();
     config_.gas_price_bump = tx_pool_options->get_option("--gas_price_bump")->as<uint64_t>();
   }
@@ -136,7 +136,7 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
     .gas = res.gas_wanted,
     .nonce = res.nonce,
     .height = block_height_,
-    .time_stamp = consensus::get_time(),
+    .time_stamp = get_time(),
   };
 
   if (!tx_queue_.add_tx(wtx)) {
@@ -231,7 +231,7 @@ void tx_pool::update(uint64_t block_height,
   }
 
   if (config_.ttl_duration > 0) {
-    auto expired_time = consensus::get_time() - config_.ttl_duration;
+    auto expired_time = get_time() - config_.ttl_duration;
     auto begin = tx_queue_.begin<unapplied_tx_queue::by_time>(0);
     auto end = tx_queue_.end<unapplied_tx_queue::by_time>(expired_time);
     for (auto& itr = begin; itr != end; itr++) {

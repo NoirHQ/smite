@@ -25,7 +25,7 @@ struct config {
   uint64_t max_batch_bytes;
   uint32_t max_tx_num = 10000;
   bool keep_invalid_txs_in_cache = false;
-  p2p::tstamp ttl_duration{0};
+  tstamp ttl_duration{0};
   uint64_t ttl_num_blocks = 0;
   uint64_t gas_price_bump = 1000;
 };

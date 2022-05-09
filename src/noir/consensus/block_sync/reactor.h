@@ -32,7 +32,7 @@ struct reactor {
 
   std::atomic_bool block_sync;
 
-  p2p::tstamp sync_start_time;
+  tstamp sync_start_time;
 
   std::function<void(state&, bool)> callback_switch_to_cs_sync{};
 

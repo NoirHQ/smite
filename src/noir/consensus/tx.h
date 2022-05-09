@@ -32,7 +32,7 @@ struct wrapped_tx {
   uint64_t gas;
   uint64_t nonce;
   uint64_t height;
-  p2p::tstamp time_stamp;
+  tstamp time_stamp;
 
   uint64_t size() const {
     return sizeof(*this) + tx.size();

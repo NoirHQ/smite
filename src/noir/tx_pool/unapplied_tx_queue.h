@@ -33,7 +33,7 @@ struct unapplied_tx {
   const uint64_t height() const {
     return wtx.height;
   }
-  const p2p::tstamp time_stamp() const {
+  const tstamp time_stamp() const {
     return wtx.time_stamp;
   }
 
@@ -83,7 +83,7 @@ private:
       >,
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<by_time>,
-        boost::multi_index::const_mem_fun<unapplied_tx, const p2p::tstamp, &unapplied_tx::time_stamp>
+        boost::multi_index::const_mem_fun<unapplied_tx, const tstamp, &unapplied_tx::time_stamp>
       >
     >
   > unapplied_tx_queue_type;

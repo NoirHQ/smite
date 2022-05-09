@@ -16,7 +16,7 @@ struct peer_round_state {
   int32_t round{};
   p2p::round_step_type step{};
 
-  p2p::tstamp start_time{};
+  tstamp start_time{};
 
   bool proposal{};
   p2p::part_set_header proposal_block_part_set_header;

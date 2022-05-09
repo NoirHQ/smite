@@ -3,6 +3,7 @@ add_library(noir_common STATIC
   hex.cpp
   log.cpp
   thread_pool.cpp
+  time.cpp
   types.cpp
 )
 target_include_directories(noir_common PUBLIC ${NOIR_SOURCE_DIR})

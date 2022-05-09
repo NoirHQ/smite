@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
+#include <noir/common/time.h>
 #include <noir/common/types.h>
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/block_sync/types.h>

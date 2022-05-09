@@ -213,7 +213,7 @@ inline std::shared_ptr<noir::consensus::part_set> make_part_set(const noir::cons
   return p_set;
 }
 
-inline noir::consensus::commit make_commit(int64_t height, noir::p2p::tstamp timestamp) {
+inline noir::consensus::commit make_commit(int64_t height, noir::tstamp timestamp) {
   static const std::string sig_s("Signature");
   noir::consensus::commit_sig sig_{
     .flag = noir::consensus::block_id_flag::FlagCommit,
