@@ -6,8 +6,8 @@
 #pragma once
 #include <noir/common/refl.h>
 #include <noir/consensus/crypto.h>
-#include <noir/consensus/params.h>
 #include <noir/consensus/protocol.h>
+#include <noir/consensus/types/params.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 

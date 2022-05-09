@@ -5,11 +5,11 @@
 //
 #pragma once
 #include <noir/consensus/consensus_state.h>
-#include <noir/consensus/event_bus.h>
 #include <noir/consensus/peer_state.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/store/store_test.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/types/events.h>
 
 namespace noir::consensus {

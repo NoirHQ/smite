@@ -5,9 +5,9 @@
 //
 #pragma once
 #include <noir/common/for_each.h>
-#include <noir/consensus/block.h>
 #include <noir/consensus/tx.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/block.h>
 
 namespace noir::consensus {
 

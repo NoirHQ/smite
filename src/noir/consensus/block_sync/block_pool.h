@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
-#include <noir/consensus/block.h>
+#include <noir/consensus/types/block.h>
 
 #include <memory>
 #include <utility>

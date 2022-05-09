@@ -3,7 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/consensus/validator.h>
+#include <noir/consensus/types/validator.h>
 #include <noir/p2p/protocol.h>
 
 namespace noir::consensus {

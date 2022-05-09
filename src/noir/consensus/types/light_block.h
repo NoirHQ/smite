@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/consensus/block.h>
+#include <noir/consensus/types/block.h>
 
 namespace noir::consensus {
 

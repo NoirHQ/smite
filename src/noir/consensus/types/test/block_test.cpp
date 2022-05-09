@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/consensus/block.h>
+#include <noir/consensus/types/block.h>
 #include <noir/core/codec.h>
 //#include <noir/consensus/common_test.h>
 

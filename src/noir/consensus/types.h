@@ -5,10 +5,10 @@
 //
 #pragma once
 #include <noir/common/helper/rust.h>
-#include <noir/consensus/params.h>
 #include <noir/consensus/protocol.h>
 #include <noir/consensus/types/genesis.h>
-#include <noir/consensus/vote.h>
+#include <noir/consensus/types/params.h>
+#include <noir/consensus/types/vote.h>
 
 namespace noir::consensus {
 

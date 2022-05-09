@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/consensus/node_id.h>
-#include <noir/consensus/validator.h>
-#include <noir/consensus/vote.h>
+#include <noir/consensus/types/node_id.h>
+#include <noir/consensus/types/validator.h>
+#include <noir/consensus/types/vote.h>
 #include <noir/p2p/types.h>
 
 namespace noir::consensus {

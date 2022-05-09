@@ -10,11 +10,11 @@
 #include <noir/consensus/consensus_reactor.h>
 #include <noir/consensus/indexer/indexer_service.h>
 #include <noir/consensus/indexer/sink/sink.h>
-#include <noir/consensus/priv_validator.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types/genesis.h>
 #include <noir/consensus/types/node_key.h>
+#include <noir/consensus/types/priv_validator.h>
 
 namespace noir::consensus {
 

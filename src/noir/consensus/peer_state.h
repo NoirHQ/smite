@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/consensus/node_id.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/node_id.h>
 #include <noir/consensus/types/peer_round_state.h>
 
 #include <utility>

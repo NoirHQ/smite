@@ -6,9 +6,9 @@
 #pragma once
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
-#include <noir/consensus/block.h>
-#include <noir/consensus/block_meta.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/block.h>
+#include <noir/consensus/types/block_meta.h>
 #include <noir/consensus/types/light_block.h>
 #include <noir/core/codec.h>
 #include <noir/db/rocks_session.h>

@@ -4,8 +4,8 @@
 //
 #pragma once
 #include <noir/common/overloaded.h>
-#include <noir/consensus/event_bus.h>
 #include <noir/consensus/indexer/event_sink.h>
+#include <noir/consensus/types/event_bus.h>
 
 namespace noir::consensus::indexer {
 

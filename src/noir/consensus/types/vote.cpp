@@ -5,7 +5,7 @@
 //
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/types/canonical.h>
-#include <noir/consensus/vote.h>
+#include <noir/consensus/types/vote.h>
 #include <noir/core/codec.h>
 
 namespace noir::consensus {

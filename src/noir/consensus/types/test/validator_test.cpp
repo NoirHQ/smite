@@ -5,7 +5,7 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
-#include <noir/consensus/validator.h>
+#include <noir/consensus/types/validator.h>
 
 using namespace noir;
 using namespace noir::consensus;

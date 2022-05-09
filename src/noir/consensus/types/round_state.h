@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/consensus/block.h>
+#include <noir/consensus/types/block.h>
 #include <noir/consensus/types/height_vote_set.h>
 #include <noir/p2p/types.h>
 

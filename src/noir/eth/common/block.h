@@ -5,7 +5,7 @@
 //
 #pragma once
 #include <noir/common/hex.h>
-#include <noir/consensus/block.h>
+#include <noir/consensus/types/block.h>
 #include <noir/eth/common/transaction.h>
 #include <fc/variant_object.hpp>
 

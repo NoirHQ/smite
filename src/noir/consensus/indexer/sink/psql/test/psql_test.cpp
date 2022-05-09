@@ -6,9 +6,9 @@
 #include <catch2/catch_all.hpp>
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/common_test.h>
-#include <noir/consensus/event_bus.h>
 #include <noir/consensus/indexer/indexer_service.h>
 #include <noir/consensus/indexer/sink/psql/psql.h>
+#include <noir/consensus/types/event_bus.h>
 
 #include <appbase/application.hpp>
 #include <pqxx/pqxx>
