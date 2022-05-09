@@ -28,20 +28,18 @@ protected:
     : address(address), strand(io_context.get_executor()) {}
   explicit Conn(boost::asio::io_context& io_context): strand(io_context.get_executor()) {}
 
-  std::string address;
-
 public:
   template<typename Buffer>
-  auto write(Buffer&& buffers) -> boost::asio::awaitable<Result<void>> {
+  auto write(Buffer&& buffers) -> boost::asio::awaitable<Result<std::size_t>> {
     if (!buffers.size())
-      co_return success();
+      co_return 0;
 
     auto bytes_transferred = co_await boost::asio::async_write(*static_cast<Derived*>(this)->socket,
       buffers,
       as_result(boost::asio::use_awaitable));
     if (!bytes_transferred)
       co_return bytes_transferred.error();
-    co_return success();
+    co_return bytes_transferred.value();
   }
 
   auto write(std::span<const unsigned char> buffer) -> boost::asio::awaitable<Result<void>> {
@@ -104,6 +102,7 @@ public:
 
   boost::asio::strand<boost::asio::io_context::executor_type> strand;
   detail::message_buffer<1024 * 1024> message_buffer;
+  std::string address;
 };
 
 } // namespace noir::net
