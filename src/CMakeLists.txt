@@ -19,10 +19,10 @@ target_link_libraries(noir
   noir::crypto
   noir::jmt
   noir::p2p
-  noir::proto_legacy
+#  noir::proto_legacy
   noir::rpc
   noir::tx_pool
-#  tendermint::proto
+  tendermint::proto
   softfloat
 )
 
