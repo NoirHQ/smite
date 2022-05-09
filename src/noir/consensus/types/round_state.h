@@ -18,10 +18,10 @@ struct round_state {
   int64_t height;
   int32_t round;
   p2p::round_step_type step;
-  p2p::tstamp start_time;
+  tstamp start_time;
 
   // Subjective time when +2/3 precommits for Block at Round were found
-  p2p::tstamp commit_time;
+  tstamp commit_time;
   std::shared_ptr<validator_set> validators{};
   std::shared_ptr<p2p::proposal_message> proposal{};
   std::shared_ptr<block> proposal_block{};

@@ -92,7 +92,7 @@ struct response_commit {
 };
 
 struct request_init_chain {
-  p2p::tstamp time;
+  tstamp time;
   std::string chain_id;
   consensus_params consensus_params_;
   std::vector<validator_update> validators;

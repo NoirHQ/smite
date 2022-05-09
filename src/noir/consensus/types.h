@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/helper/rust.h>
+#include <noir/common/time.h>
 #include <noir/consensus/protocol.h>
 #include <noir/consensus/types/genesis.h>
 #include <noir/consensus/types/params.h>
@@ -16,11 +17,6 @@ struct round_vote_set {
   std::shared_ptr<vote_set> prevotes;
   std::shared_ptr<vote_set> precommits;
 };
-
-inline p2p::tstamp get_time() {
-  return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch())
-    .count();
-}
 
 /**
  * Proposal defines a block proposal for the consensus.
@@ -38,23 +34,9 @@ struct proposal : p2p::proposal_message {
 };
 
 struct weighted_time {
-  p2p::tstamp time;
+  tstamp time;
   int64_t weight;
 };
-
-inline p2p::tstamp weighted_median(std::vector<weighted_time>& weight_times, int64_t total_voting_power) {
-  auto median = total_voting_power / 2;
-  sort(weight_times.begin(), weight_times.end(), [](weighted_time a, weighted_time b) { return a.time < b.time; });
-  p2p::tstamp res = 0;
-  for (auto t : weight_times) {
-    if (median <= t.weight) {
-      res = t.time;
-      break;
-    }
-    median -= t.weight;
-  }
-  return res;
-}
 
 } // namespace noir::consensus
 

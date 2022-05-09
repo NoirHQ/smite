@@ -13,7 +13,7 @@ struct canonical_vote {
   int64_t height{};
   int32_t round{};
   p2p::block_id block_id_;
-  p2p::tstamp timestamp{};
+  tstamp timestamp{};
 };
 
 struct canonical_proposal {
@@ -22,7 +22,7 @@ struct canonical_proposal {
   int32_t round{};
   int32_t pol_round{};
   p2p::block_id block_id_;
-  p2p::tstamp timestamp{};
+  tstamp timestamp{};
 };
 
 struct canonical {

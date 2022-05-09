@@ -24,7 +24,7 @@ struct state {
 
   int64_t last_block_height{0}; // set to 0 at genesis
   p2p::block_id last_block_id;
-  p2p::tstamp last_block_time;
+  tstamp last_block_time;
 
   validator_set validators; // persisted to the database separately every time they change, so we can query for
                             // historical validator sets.
@@ -81,7 +81,7 @@ struct state {
     auto block_ = block::make_block(height, txs, commit_);
 
     // Set time
-    p2p::tstamp timestamp;
+    tstamp timestamp;
     if (height == initial_height) {
       timestamp = last_block_time; // genesis_time;
     } else {
@@ -96,7 +96,7 @@ struct state {
     return {block_, block_->make_part_set(block_part_size_bytes)};
   }
 
-  p2p::tstamp get_median_time(commit& commit_, validator_set& validators) {
+  tstamp get_median_time(commit& commit_, validator_set& validators) {
     std::vector<weighted_time> weighted_times;
     int64_t total_voting_power{};
     for (auto commit_sig : commit_.signatures) {
@@ -109,6 +109,20 @@ struct state {
       }
     }
     return weighted_median(weighted_times, total_voting_power);
+  }
+
+  tstamp weighted_median(std::vector<weighted_time>& weight_times, int64_t total_voting_power) {
+    auto median = total_voting_power / 2;
+    sort(weight_times.begin(), weight_times.end(), [](weighted_time a, weighted_time b) { return a.time < b.time; });
+    tstamp res = 0;
+    for (auto t : weight_times) {
+      if (median <= t.weight) {
+        res = t.time;
+        break;
+      }
+      median -= t.weight;
+    }
+    return res;
   }
 
   bool is_empty() const {

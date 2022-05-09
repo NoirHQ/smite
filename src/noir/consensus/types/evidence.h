@@ -20,7 +20,7 @@ struct evidence {
   virtual bytes get_hash() = 0;
   virtual int64_t get_height() = 0;
   virtual std::string get_string() = 0;
-  virtual p2p::tstamp get_time() = 0;
+  virtual tstamp get_timestamp() = 0;
   virtual result<void> validate_basic() = 0;
 };
 
@@ -29,12 +29,12 @@ struct duplicate_vote_evidence : public evidence {
   std::shared_ptr<vote> vote_b{};
   int64_t total_voting_power{};
   int64_t validator_power{};
-  p2p::tstamp timestamp{};
+  tstamp timestamp{};
 
   static result<std::shared_ptr<duplicate_vote_evidence>> new_duplicate_vote_evidence(
     const std::shared_ptr<vote>& vote1,
     const std::shared_ptr<vote>& vote2,
-    p2p::tstamp block_time,
+    tstamp block_time,
     const std::shared_ptr<validator_set>& val_set) {
     if (!vote1 || !vote2)
       return make_unexpected("missing vote");
@@ -92,7 +92,7 @@ struct duplicate_vote_evidence : public evidence {
     return fmt::format("duplicate_vote_evidence{vote_a, vote_b}");
   }
 
-  p2p::tstamp get_time() override {
+  tstamp get_timestamp() override {
     return timestamp;
   }
 
@@ -134,14 +134,14 @@ struct light_client_attack_evidence : public evidence {
   // ABCI specific info
   std::vector<std::shared_ptr<validator>> byzantine_validators;
   int64_t total_voting_power;
-  p2p::tstamp timestamp;
+  tstamp timestamp;
 
   std::shared_ptr<::tendermint::abci::Evidence> get_abci() override {}
   bytes get_bytes() override {}
   bytes get_hash() override {}
   int64_t get_height() override {}
   std::string get_string() override {}
-  p2p::tstamp get_time() override {}
+  tstamp get_timestamp() override {}
   result<void> validate_basic() override {}
 
   std::shared_ptr<::tendermint::types::LightClientAttackEvidence> to_proto() {}

@@ -23,7 +23,7 @@ struct genesis_validator {
 };
 
 struct genesis_doc {
-  p2p::tstamp genesis_time;
+  tstamp genesis_time;
   std::string chain_id;
   int64_t initial_height;
   std::optional<consensus_params> cs_params;

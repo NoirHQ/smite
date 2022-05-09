@@ -1332,7 +1332,7 @@ std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, by
  * any vote from this validator will have time at least time T + 1ms.
  * This is needed, as monotonicity of time is a guarantee that BFT time provides.
  */
-p2p::tstamp consensus_state::vote_time() {
+tstamp consensus_state::vote_time() {
   auto now = get_time();
   auto min_vote_time = now;
   // Minimum time increment between blocks
