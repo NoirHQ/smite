@@ -68,6 +68,14 @@ struct commit_sig {
     }
     }
   }
+
+  std::shared_ptr<::tendermint::types::CommitSig> to_proto() {
+    auto ret = std::make_shared<::tendermint::types::CommitSig>();
+    *ret->mutable_validator_address() = std::string(validator_address.begin(), validator_address.end());
+    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp); // TODO
+    *ret->mutable_signature() = std::string(signature.begin(), signature.end());
+    return ret;
+  }
 };
 
 struct commit {
@@ -103,6 +111,17 @@ struct commit {
         bit_array_->set_index(i, !signatures[i].absent());
     }
     return bit_array_;
+  }
+
+  std::shared_ptr<::tendermint::types::Commit> to_proto() {
+    auto ret = std::make_shared<::tendermint::types::Commit>();
+    auto sigs = ret->mutable_signatures();
+    for (auto& sig : signatures)
+      *sigs->Add() = *sig.to_proto();
+    ret->set_height(height);
+    ret->set_round(round);
+    *ret->mutable_block_id() = my_block_id.to_proto();
+    return ret;
   }
 
   template<typename T>
@@ -209,7 +228,7 @@ struct block_header {
   bytes app_hash;
   bytes last_results_hash; // root hash of all results from txs of previous block
 
-  // bytes evidence_hash;
+  bytes evidence_hash;
   bytes proposer_address; // todo - use address type?
 
   bytes get_hash();
@@ -249,6 +268,25 @@ struct block_header {
     // validate_hash(evidence_hash);
     // todo - add more
     return {};
+  }
+
+  std::shared_ptr<::tendermint::types::Header> to_proto() {
+    auto ret = std::make_shared<::tendermint::types::Header>();
+    *ret->mutable_version(); // TODO
+    *ret->mutable_chain_id() = chain_id;
+    ret->set_height(height);
+    *ret->mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(time); // TODO
+    *ret->mutable_last_block_id() = last_block_id.to_proto();
+    *ret->mutable_validators_hash() = std::string(validators_hash.begin(), validators_hash.end());
+    *ret->mutable_next_validators_hash() = std::string(next_validators_hash.begin(), next_validators_hash.end());
+    *ret->mutable_consensus_hash() = std::string(consensus_hash.begin(), consensus_hash.end());
+    *ret->mutable_app_hash() = std::string(app_hash.begin(), app_hash.end());
+    *ret->mutable_data_hash() = std::string(data_hash.begin(), data_hash.end());
+    *ret->mutable_evidence_hash() = std::string(evidence_hash.begin(), evidence_hash.end());
+    *ret->mutable_last_results_hash() = std::string(last_results_hash.begin(), last_results_hash.end());
+    *ret->mutable_last_commit_hash() = std::string(last_commit_hash.begin(), last_commit_hash.end());
+    *ret->mutable_proposer_address() = std::string(proposer_address.begin(), proposer_address.end());
+    return ret;
   }
 };
 

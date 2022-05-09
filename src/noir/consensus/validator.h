@@ -4,9 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/helper/rust.h>
 #include <noir/common/log.h>
 #include <noir/consensus/crypto.h>
 #include <noir/p2p/types.h>
+#include <tendermint/types/types.pb.h>
 
 namespace noir::consensus {
 
@@ -48,6 +50,18 @@ struct validator {
 
   static validator new_validator(pub_key key, int64_t voting_power) {
     return validator{key.address(), key, voting_power, 0};
+  }
+
+  result<std::shared_ptr<::tendermint::types::Validator>> to_proto() {
+    if (this == nullptr)
+      return make_unexpected("null validator");
+    auto ret = std::make_shared<::tendermint::types::Validator>();
+    // auto pk = pub_key_to_proto(); // FIXME
+    *ret->mutable_address() = std::string(address.begin(), address.end());
+    // ret->mutable_pub_key() // FIXME
+    ret->set_voting_power(voting_power);
+    ret->set_proposer_priority(proposer_priority);
+    return ret;
   }
 };
 
@@ -430,6 +444,26 @@ struct validator_set {
         val.proposer_priority -= avg; // todo - check safe sub
       }
     }
+  }
+
+  result<std::shared_ptr<::tendermint::types::ValidatorSet>> to_proto() {
+    auto ret = std::make_shared<::tendermint::types::ValidatorSet>();
+    if (validators.empty())
+      return ret;
+    auto vals_proto = ret->mutable_validators();
+    for (auto& val : validators) {
+      auto val_p = val.to_proto();
+      if (!val_p)
+        return make_unexpected(val_p.error());
+      *vals_proto->Add() = *val_p.value();
+    }
+
+    auto val_proposer = proposer->to_proto();
+    if (!val_proposer)
+      return make_unexpected(val_proposer.error());
+    *ret->mutable_proposer() = *val_proposer.value();
+    ret->set_total_voting_power(0);
+    return ret;
   }
 };
 

@@ -10,7 +10,6 @@
 #include <noir/p2p/types.h>
 
 #include <fmt/core.h>
-#include <google/protobuf/util/time_util.h>
 
 namespace noir::consensus {
 

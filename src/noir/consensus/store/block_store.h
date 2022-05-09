@@ -4,12 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
 #include <noir/consensus/block.h>
 #include <noir/consensus/block_meta.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/light_block.h>
 #include <noir/core/codec.h>
 #include <noir/db/rocks_session.h>
 #include <noir/db/session.h>
