@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/consensus/priv_validator.h>
 #include <noir/consensus/types/evidence.h>
+#include <noir/consensus/types/priv_validator.h>
 
 using namespace noir;
 using namespace noir::consensus;

@@ -7,7 +7,7 @@
 #include <noir/common/overloaded.h>
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/common_test.h>
-#include <noir/consensus/event_bus.h>
+#include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/types/events.h>
 #include <appbase/application.hpp>
 #include <fmt/core.h>

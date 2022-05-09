@@ -5,7 +5,7 @@
 //
 #include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/reactor.h>
-#include <noir/consensus/validation.h>
+#include <noir/consensus/types/validation.h>
 
 #include <utility>
 

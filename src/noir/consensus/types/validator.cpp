@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/consensus/merkle/tree.h>
-#include <noir/consensus/validator.h>
+#include <noir/consensus/types/validator.h>
 #include <noir/core/codec.h>
 
 namespace noir::consensus {

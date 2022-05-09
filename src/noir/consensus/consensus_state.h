@@ -9,11 +9,11 @@
 #include <noir/consensus/block_executor.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/crypto.h>
-#include <noir/consensus/event_bus.h>
-#include <noir/consensus/node_id.h>
-#include <noir/consensus/priv_validator.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/types.h>
+#include <noir/consensus/types/event_bus.h>
+#include <noir/consensus/types/node_id.h>
+#include <noir/consensus/types/priv_validator.h>
 #include <noir/consensus/types/round_state.h>
 #include <noir/consensus/wal.h>
 

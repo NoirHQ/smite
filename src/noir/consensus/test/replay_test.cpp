@@ -7,7 +7,7 @@
 #include <noir/common/helper/go.h>
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/consensus_state.h>
-#include <noir/consensus/event_bus.h>
+#include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/wal.h>
 #include <noir/crypto/rand.h>
 #include <filesystem>

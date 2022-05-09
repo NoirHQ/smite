@@ -3,10 +3,9 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/consensus/block.h>
+#include <noir/consensus/types/block.h>
 #include <noir/consensus/types/canonical.h>
-#include <noir/consensus/validation.h>
-#include <noir/consensus/vote.h>
+#include <noir/consensus/types/validation.h>
 #include <noir/core/codec.h>
 
 namespace noir::consensus {

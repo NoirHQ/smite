@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 
-#include <noir/consensus/block.h>
-#include <noir/consensus/vote.h>
+#include <noir/consensus/types/block.h>
+#include <noir/consensus/types/vote.h>
 #include <noir/core/codec.h>
 #include <fmt/core.h>
 
