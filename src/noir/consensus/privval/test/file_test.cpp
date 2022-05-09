@@ -164,7 +164,7 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
       SECTION("Verify proposal signature") {
         // Copy of consensus_state_test
         proposal proposal_{};
-        proposal_.timestamp = get_time();
+        proposal_.timestamp = noir::get_time();
 
         auto data_proposal1 = noir::encode(canonical::canonicalize_proposal(proposal_));
         // std::cout << "data_proposal1=" << to_hex(data_proposal1) << std::endl;
@@ -182,7 +182,7 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
       SECTION("Verify vote signature") {
         // Copy of consensus_state_test
         vote vote_{};
-        vote_.timestamp = get_time();
+        vote_.timestamp = noir::get_time();
 
         struct signature_test_case {
           noir::p2p::signed_msg_type type;

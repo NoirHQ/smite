@@ -13,7 +13,7 @@ using namespace noir;
 using namespace noir::p2p;
 
 TEST_CASE("serialization: net_message - scale", "[noir][p2p]") {
-  internal_message m{proposal_message{Proposal, 1, 2, 3, block_id{}, consensus::get_time(), {}}};
+  internal_message m{proposal_message{Proposal, 1, 2, 3, block_id{}, get_time(), {}}};
 
   // Encode
   const uint32_t payload_size = codec::scale::encode_size(m);
