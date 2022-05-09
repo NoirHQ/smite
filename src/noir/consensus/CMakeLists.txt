@@ -21,10 +21,9 @@ target_link_libraries(noir_consensus
   libpqxx::pqxx
   noir::common
   noir::crypto
-#  noir::proto
+  noir::proto_legacy
   noir::tx_pool
   RocksDB::rocksdb
-  tendermint::proto
 )
 set_target_properties(noir_consensus PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 

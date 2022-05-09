@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/abci/types.pb.h>
 #include <noir/consensus/types.h>
-#include <noir/types/evidence.pb.h>
+#include <tendermint/abci/types.pb.h>
+#include <tendermint/types/evidence.pb.h>
 
 #include <google/protobuf/util/time_util.h>
 
