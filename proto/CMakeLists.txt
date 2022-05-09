@@ -45,6 +45,3 @@ target_include_directories(tendermint_proto PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(tendermint_proto protobuf::libprotobuf)
 
 add_library(tendermint::proto ALIAS tendermint_proto)
-
-# build legacy(version 0.35.4) proto definitions
-include(noir/ProtoNoir.cmake)
