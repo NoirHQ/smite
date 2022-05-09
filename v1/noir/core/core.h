@@ -15,7 +15,7 @@
 
 namespace noir {
 
-using namespace boost;
-using namespace boost::asio::experimental::awaitable_operators;
+namespace asio = boost::asio;
+using namespace asio::experimental::awaitable_operators;
 
 } //namespace noir

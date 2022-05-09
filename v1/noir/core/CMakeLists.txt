@@ -9,9 +9,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
   set(THREADS_PREFER_PTHREAD_FLAG TRUE)
   find_package(Threads REQUIRED)
-  target_link_libraries(noir_core_v1
-    Threads::Threads
-  )
+  target_link_libraries(noir_core_v1 Threads::Threads)
 endif()
 
 add_library(noir::core::v1 ALIAS noir_core_v1)
