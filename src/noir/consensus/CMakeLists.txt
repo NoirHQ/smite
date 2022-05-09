@@ -18,12 +18,13 @@ add_library(noir_consensus STATIC
   wal.cpp
 )
 target_link_libraries(noir_consensus
+  RocksDB::rocksdb # Must come before proto
   libpqxx::pqxx
   noir::common
   noir::crypto
-#  noir::proto_legacy
+  noir::proto_legacy
   noir::tx_pool
-  RocksDB::rocksdb
+#  tendermint::proto
 )
 set_target_properties(noir_consensus PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
@@ -34,7 +35,7 @@ add_noir_test(block_executor_test test/block_executor_test.cpp DEPENDS noir_cons
 add_noir_test(block_test test/block_test.cpp DEPENDS noir_consensus)
 add_noir_test(consensus_state_test test/consensus_state_test.cpp DEPENDS noir_consensus)
 add_noir_test(events_test test/event_bus_test.cpp DEPENDS noir_consensus)
-#add_noir_test(evidence_test types/test/evidence_test.cpp DEPENDS noir_consensus)
+add_noir_test(evidence_test types/test/evidence_test.cpp DEPENDS noir_consensus)
 add_noir_test(node_key_test types/test/node_key_test.cpp DEPENDS noir_consensus)
 add_noir_test(privval_test privval/test/file_test.cpp DEPENDS noir_consensus)
 add_noir_test(psql_test indexer/sink/psql/test/psql_test.cpp DEPENDS noir_consensus)
