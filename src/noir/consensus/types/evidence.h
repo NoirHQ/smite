@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/consensus/merkle/tree.h>
 #include <noir/consensus/types.h>
 #include <tendermint/abci/types.pb.h>
 #include <tendermint/types/evidence.pb.h>
@@ -29,7 +30,8 @@ struct duplicate_vote_evidence : public evidence {
   int64_t validator_power{};
   p2p::tstamp timestamp{};
 
-  result<std::shared_ptr<duplicate_vote_evidence>> new_duplicate_vote_evidence(const std::shared_ptr<vote>& vote1,
+  static result<std::shared_ptr<duplicate_vote_evidence>> new_duplicate_vote_evidence(
+    const std::shared_ptr<vote>& vote1,
     const std::shared_ptr<vote>& vote2,
     p2p::tstamp block_time,
     const std::shared_ptr<validator_set>& val_set) {
@@ -72,7 +74,7 @@ struct duplicate_vote_evidence : public evidence {
 
   bytes get_bytes() override {
     auto pbe = to_proto();
-    bytes ret;
+    bytes ret(pbe->ByteSizeLong());
     pbe->SerializeToArray(ret.data(), pbe->ByteSizeLong());
     return ret;
   }
@@ -105,6 +107,13 @@ struct duplicate_vote_evidence : public evidence {
 
   std::shared_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto() {
     auto ret = std::make_shared<::tendermint::types::DuplicateVoteEvidence>();
+    if (vote_b)
+      *ret->mutable_vote_b() = *vote_b->to_proto();
+    if (vote_a)
+      *ret->mutable_vote_a() = *vote_a->to_proto();
+    ret->set_total_voting_power(total_voting_power);
+    ret->set_validator_power(validator_power);
+    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp);
     return ret;
   }
 
@@ -118,9 +127,29 @@ struct duplicate_vote_evidence : public evidence {
 };
 
 struct evidence_list {
-  std::vector<evidence> list;
+  std::vector<std::shared_ptr<evidence>> list;
 
-  bytes hash() {}
+  bytes hash() {
+    std::vector<bytes> bytes_list;
+    for (auto& e : list)
+      bytes_list.emplace_back(e->get_hash());
+    return consensus::merkle::hash_from_bytes_list(bytes_list);
+  }
+
+  std::string to_string() {
+    std::string ret;
+    for (auto& e : list)
+      ret += fmt::format("{}\t\t", e->get_string());
+    return ret;
+  }
+
+  bool has(const std::shared_ptr<evidence>& ev) {
+    for (auto& e : list) {
+      if (e->get_hash() == ev->get_hash())
+        return true;
+    }
+    return false;
+  }
 };
 
 } // namespace noir::consensus
