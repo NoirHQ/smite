@@ -255,7 +255,7 @@ public:
   /// \param[in] block_id_ block_id object to save
   /// \return true on success, false otherwise
   bool save_signed_header(const signed_header& header, const noir::p2p::block_id& block_id_) {
-    auto height_ = header.header.height;
+    auto height_ = header.header->height;
     auto tmp = db_session_->find_from_bytes(encode_key<prefix::block_meta>(height_));
     if (tmp == db_session_->end()) {
       return false;
@@ -268,7 +268,7 @@ public:
     block_meta bm{
       .bl_id = block_id_,
       .bl_size = -1,
-      .header = header.header,
+      .header = *header.header,
       .num_txs = -1,
     };
 
