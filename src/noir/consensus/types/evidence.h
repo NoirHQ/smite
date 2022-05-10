@@ -5,7 +5,6 @@
 //
 #pragma once
 #include <noir/consensus/common.h>
-#include <noir/consensus/merkle/tree.h>
 #include <noir/consensus/types/light_block.h>
 #include <noir/consensus/types/vote.h>
 #include <tendermint/abci/types.pb.h>
@@ -16,7 +15,7 @@
 namespace noir::consensus {
 
 struct evidence {
-  virtual std::shared_ptr<::tendermint::abci::Evidence> get_abci() = 0;
+  virtual std::vector<std::shared_ptr<::tendermint::abci::Evidence>> get_abci() = 0;
   virtual bytes get_bytes() = 0;
   virtual bytes get_hash() = 0;
   virtual int64_t get_height() = 0;
@@ -61,17 +60,16 @@ struct duplicate_vote_evidence : public evidence {
     return ret;
   }
 
-  std::shared_ptr<::tendermint::abci::Evidence> get_abci() override {
-    auto ret = std::make_shared<::tendermint::abci::Evidence>();
-    ret->set_type(::tendermint::abci::DUPLICATE_VOTE);
-    auto val = ret->mutable_validator();
+  std::vector<std::shared_ptr<::tendermint::abci::Evidence>> get_abci() override {
+    auto ev = std::make_shared<::tendermint::abci::Evidence>();
+    ev->set_type(::tendermint::abci::DUPLICATE_VOTE);
+    auto val = ev->mutable_validator();
     *val->mutable_address() = std::string(vote_a->validator_address.begin(), vote_a->validator_address.end());
     val->set_power(validator_power);
-    ret->set_height(vote_a->height);
-    auto ts = ret->mutable_time();
-    *ts = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp); // TODO: check if this is right
-    ret->set_total_voting_power(total_voting_power);
-    return ret;
+    ev->set_height(vote_a->height);
+    *ev->mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp);
+    ev->set_total_voting_power(total_voting_power);
+    return {ev};
   }
 
   bytes get_bytes() override {
@@ -124,7 +122,7 @@ struct duplicate_vote_evidence : public evidence {
     if (!pb)
       return make_unexpected("null duplicate vote evidence");
     auto ret = std::make_shared<duplicate_vote_evidence>();
-    return ret;
+    return ret; // TODO
   }
 };
 
@@ -137,15 +135,76 @@ struct light_client_attack_evidence : public evidence {
   int64_t total_voting_power;
   tstamp timestamp;
 
-  std::shared_ptr<::tendermint::abci::Evidence> get_abci() override {}
-  bytes get_bytes() override {}
-  bytes get_hash() override {}
-  int64_t get_height() override {}
-  std::string get_string() override {}
-  tstamp get_timestamp() override {}
-  result<void> validate_basic() override {}
+  std::vector<std::shared_ptr<::tendermint::abci::Evidence>> get_abci() override;
 
-  std::shared_ptr<::tendermint::types::LightClientAttackEvidence> to_proto() {}
+  bytes get_bytes() override {
+    auto pbe = to_proto();
+    if (!pbe)
+      check(false, fmt::format("converting light client attack evidence to proto", pbe.error()));
+    bytes ret(pbe.value()->ByteSizeLong());
+    pbe.value()->SerializeToArray(ret.data(), pbe.value()->ByteSizeLong());
+    return ret;
+  }
+
+  bytes get_hash() override;
+
+  int64_t get_height() override {
+    return common_height;
+  }
+
+  std::string get_string() override {
+    return fmt::format("light_client_attack_evidence{}#{}", to_hex(get_hash()));
+  }
+
+  tstamp get_timestamp() override {
+    return timestamp;
+  }
+
+  result<void> validate_basic() override {
+    if (!conflicting_block)
+      return make_unexpected("conflicting block is null");
+    if (!conflicting_block->s_header)
+      return make_unexpected("conflicting block is missing header");
+    if (total_voting_power <= 0)
+      return make_unexpected("negative or zero total voting power");
+    if (common_height <= 0)
+      return make_unexpected("negative or zero common height");
+    if (common_height > conflicting_block->s_header->header->height)
+      return make_unexpected("common height is ahead of conflicting block height");
+    auto ok = conflicting_block->validate_basic(conflicting_block->s_header->header->chain_id);
+    if (!ok)
+      return make_unexpected(fmt::format("invalid conflicting light block: {}", ok.error()));
+    return {};
+  }
+
+  result<std::shared_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto() {
+    auto cb = conflicting_block->to_proto();
+    if (!cb)
+      return make_unexpected(cb.error());
+    auto ret = std::make_shared<::tendermint::types::LightClientAttackEvidence>();
+    *ret->mutable_conflicting_block() = *cb.value();
+    ret->set_common_height(common_height);
+    auto byz_vals = ret->mutable_byzantine_validators();
+    for (auto& val : byzantine_validators) {
+      auto pb = val->to_proto();
+      if (!pb)
+        return make_unexpected(pb.error());
+      *byz_vals->Add() = *pb.value();
+    }
+    ret->set_total_voting_power(total_voting_power);
+    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp);
+    return ret;
+  }
+
+  result<std::shared_ptr<light_client_attack_evidence>> from_proto(
+    std::shared_ptr<::tendermint::types::LightClientAttackEvidence> pb) {
+    return {}; // TODO
+  }
+
+  std::vector<std::shared_ptr<validator>> get_byzantine_validators(
+    const std::shared_ptr<validator_set>& common_vals, const std::shared_ptr<signed_header>& trusted);
+
+  bool conflicting_header_is_invalid(const std::shared_ptr<block_header>& trusted_header);
 };
 
 struct evidence_list {

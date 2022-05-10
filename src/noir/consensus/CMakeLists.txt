@@ -9,6 +9,7 @@ add_library(noir_consensus STATIC
   privval/file.cpp
   replay.cpp
   types/block.cpp
+  types/evidence.cpp
   types/genesis.cpp
   types/priv_validator.cpp
   types/node_key.cpp

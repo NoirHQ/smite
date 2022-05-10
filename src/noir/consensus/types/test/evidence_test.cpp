@@ -6,12 +6,13 @@
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/priv_validator.h>
+#include <utility>
 
 using namespace noir;
 using namespace noir::consensus;
 
 p2p::block_id make_block_id(bytes hash, uint32_t part_set_size, bytes part_set_hash) {
-  return {.hash = hash, .parts = {.total = part_set_size, .hash = part_set_hash}};
+  return {.hash = std::move(hash), .parts = {.total = part_set_size, .hash = std::move(part_set_hash)}};
 }
 
 std::shared_ptr<vote> make_vote(mock_pv& val,
@@ -78,4 +79,12 @@ TEST_CASE("evidence: duplicate vote", "[noir][consensus]") {
     CHECK(ev);
     CHECK(!ev.value()->validate_basic());
   }
+}
+
+TEST_CASE("evidence: verify generated hash", "[noir][consensus]") {
+  auto val = mock_pv();
+
+  // TODO: requires ed25519 to finish; come back later to implement after ed25519 is available
+  /// duplicateVoteEvidence = a9ce28d13bb31001fc3e5b7927051baf98f86abdbd64377643a304164c826923
+  /// LightClientAttackEvidence = 2f8782163c3905b26e65823ababc977fe54e97b94e60c0360b1e4726b668bb8e
 }

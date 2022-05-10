@@ -446,6 +446,10 @@ struct validator_set {
     }
   }
 
+  result<void> validate_basic() {
+    return {}; // TODO
+  }
+
   result<std::shared_ptr<::tendermint::types::ValidatorSet>> to_proto() {
     auto ret = std::make_shared<::tendermint::types::ValidatorSet>();
     if (validators.empty())
