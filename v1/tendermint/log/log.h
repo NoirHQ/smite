@@ -21,17 +21,13 @@ private:
   detail::Fields fields{};
 };
 
-auto message_with_fields(std::string message, auto&&... keyvals) -> std::string {
-  detail::Fields fs{};
-  return detail::message_with_fields(message, fs, keyvals...);
-}
-
 template<typename LOGGER, typename T, typename... Ts>
 auto message_with_fields(LOGGER* logger, T&& message, Ts&&... keyvals) -> std::string {
-  if constexpr (std::is_same_v<LOGGER, Logger>) {
+  if constexpr (std::is_base_of_v<Logger, LOGGER>) {
     return logger->message_with_fields(std::forward<T>(message), std::forward<Ts>(keyvals)...);
   } else {
-    return message_with_fields(std::forward<T>(message), std::forward<Ts>(keyvals)...);
+    detail::Fields fs{};
+    return detail::message_with_fields(message, fs, keyvals...);
   }
 }
 
