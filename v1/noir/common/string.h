@@ -8,16 +8,24 @@
 
 namespace noir {
 
+namespace detail {
+  template<typename T>
+  std::string to_str(T&& v) {
+    using namespace std;
+    return to_string(std::forward<T>(v));
+  }
+} // namespace detail
+
 template<typename T>
-std::string to_string(const T& v) {
-  constexpr bool has_to_string = requires(const T& t) {
-    t.to_string();
+std::string to_string(T&& v) {
+  constexpr bool has_to_string = requires(T v) {
+    v.to_string();
   };
   // clang-format off
   if constexpr (has_to_string) {
     return v.to_string();
   } else {
-    return std::to_string(v);
+    return detail::to_str(std::forward<T>(v));
   }
   // clang-format on
 }
