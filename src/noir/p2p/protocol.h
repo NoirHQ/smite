@@ -248,6 +248,7 @@ using internal_msg_info_ptr = std::shared_ptr<internal_msg_info>;
 
 } // namespace noir::p2p
 
+NOIR_REFLECT(std::chrono::system_clock::duration, );
 NOIR_REFLECT(noir::p2p::block_id, hash, parts);
 NOIR_REFLECT(noir::p2p::part_set_header, total, hash);
 NOIR_REFLECT(noir::p2p::handshake_message, network_version, node_id, time, p2p_address, head_num, head_id, generation);

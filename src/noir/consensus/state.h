@@ -5,11 +5,17 @@
 //
 #pragma once
 #include <noir/common/for_each.h>
+#include <noir/consensus/common.h>
 #include <noir/consensus/tx.h>
-#include <noir/consensus/types.h>
 #include <noir/consensus/types/block.h>
+#include <noir/consensus/types/genesis.h>
 
 namespace noir::consensus {
+
+struct weighted_time {
+  tstamp time;
+  int64_t weight;
+};
 
 /**
  * State is a short description of the latest committed block of the Tendermint consensus.

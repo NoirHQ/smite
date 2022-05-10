@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/common/for_each.h>
 #include <noir/common/hex.h>
-#include <noir/consensus/types.h>
+#include <noir/consensus/common.h>
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/block_meta.h>
 #include <noir/consensus/types/light_block.h>

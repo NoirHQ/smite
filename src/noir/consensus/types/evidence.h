@@ -4,9 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/consensus/common.h>
 #include <noir/consensus/merkle/tree.h>
-#include <noir/consensus/types.h>
 #include <noir/consensus/types/light_block.h>
+#include <noir/consensus/types/vote.h>
 #include <tendermint/abci/types.pb.h>
 #include <tendermint/types/evidence.pb.h>
 

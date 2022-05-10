@@ -18,7 +18,7 @@ std::optional<std::string> mock_pv::sign_vote(vote& vote_) {
   return {};
 }
 
-std::optional<std::string> mock_pv::sign_proposal(proposal& proposal_) {
+std::optional<std::string> mock_pv::sign_proposal(noir::p2p::proposal_message& proposal_) {
   // TODO: add some validation checks
 
   auto proposal_sign_bytes = encode(canonical::canonicalize_proposal(proposal_));

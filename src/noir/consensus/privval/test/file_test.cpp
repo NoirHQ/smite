@@ -7,8 +7,8 @@
 #include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
 #include <noir/common/scope_exit.h>
+#include <noir/consensus/common.h>
 #include <noir/consensus/privval/file.h>
-#include <noir/consensus/types.h>
 #include <noir/consensus/types/canonical.h>
 #include <noir/core/codec.h>
 #include <noir/crypto/rand.h>
@@ -163,7 +163,7 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
 
       SECTION("Verify proposal signature") {
         // Copy of consensus_state_test
-        proposal proposal_{};
+        noir::p2p::proposal_message proposal_{};
         proposal_.timestamp = noir::get_time();
 
         auto data_proposal1 = noir::encode(canonical::canonicalize_proposal(proposal_));

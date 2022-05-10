@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/codec/datastream.h>
 #include <noir/common/hex.h>
-#include <noir/consensus/types.h>
+#include <noir/consensus/common.h>
 #include <regex>
 
 namespace noir::consensus {

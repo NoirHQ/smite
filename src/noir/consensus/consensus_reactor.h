@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/consensus/common.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/peer_state.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/store/store_test.h>
-#include <noir/consensus/types.h>
 #include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/types/events.h>
 

@@ -4,7 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/consensus/types.h>
+#include <noir/consensus/common.h>
+#include <noir/consensus/types/vote.h>
 
 namespace noir::consensus {
 
@@ -22,7 +23,7 @@ struct priv_validator {
   virtual pub_key get_pub_key() const = 0;
   virtual priv_key get_priv_key() const = 0;
   virtual std::optional<std::string> sign_vote(vote& vote_) = 0;
-  virtual std::optional<std::string> sign_proposal(proposal& proposal_) = 0;
+  virtual std::optional<std::string> sign_proposal(noir::p2p::proposal_message& proposal_) = 0;
 };
 
 struct mock_pv : public priv_validator {
@@ -39,7 +40,7 @@ struct mock_pv : public priv_validator {
     return priv_key_;
   }
   std::optional<std::string> sign_vote(vote& vote_) override;
-  std::optional<std::string> sign_proposal(proposal& proposal_) override;
+  std::optional<std::string> sign_proposal(noir::p2p::proposal_message& proposal_) override;
 };
 
 } // namespace noir::consensus

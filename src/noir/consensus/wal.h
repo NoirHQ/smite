@@ -6,7 +6,8 @@
 #pragma once
 
 #include <noir/common/thread_pool.h>
-#include <noir/consensus/types.h>
+#include <noir/consensus/common.h>
+#include <noir/consensus/protocol.h>
 #include <noir/consensus/types/events.h>
 #include <noir/p2p/protocol.h>
 #include <boost/asio/steady_timer.hpp>
