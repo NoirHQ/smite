@@ -6,7 +6,7 @@
 #pragma once
 
 #include <noir/consensus/abci_types.h>
-#include <noir/consensus/types.h>
+#include <noir/consensus/common.h>
 #include <noir/consensus/types/round_state.h>
 
 namespace noir::consensus::events {

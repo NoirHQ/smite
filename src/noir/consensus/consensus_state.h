@@ -7,10 +7,10 @@
 #include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/block_executor.h>
+#include <noir/consensus/common.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/crypto.h>
 #include <noir/consensus/state.h>
-#include <noir/consensus/types.h>
 #include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/types/node_id.h>
 #include <noir/consensus/types/priv_validator.h>

@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/consensus/types/block.h>
+#include <noir/consensus/types/validator.h>
 
 namespace noir::consensus {
 

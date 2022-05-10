@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/application/app.h>
 #include <noir/consensus/abci_types.h>
-#include <noir/consensus/types.h>
+#include <noir/consensus/common.h>
 
 namespace noir::consensus {
 

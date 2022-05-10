@@ -160,7 +160,7 @@ bool check_only_differ_by_timestamp(const noir::consensus::vote& obj,
   return lhs == rhs;
 }
 
-bool check_only_differ_by_timestamp(const noir::consensus::proposal& obj,
+bool check_only_differ_by_timestamp(const noir::p2p::proposal_message& obj,
   const bytes& last_sign_bytes,
   const bytes& new_sign_bytes,
   noir::tstamp& timestamp) {
@@ -222,8 +222,8 @@ bool file_pv::sign_vote_internal(noir::consensus::vote& vote) {
     vote, encode(canonical::canonicalize_vote(vote)), *this, vote_to_step(vote));
 }
 
-bool file_pv::sign_proposal_internal(noir::consensus::proposal& proposal) {
-  return sign_internal<noir::consensus::proposal>(
+bool file_pv::sign_proposal_internal(noir::p2p::proposal_message& proposal) {
+  return sign_internal<noir::p2p::proposal_message>(
     proposal, encode(canonical::canonicalize_proposal(proposal)), *this, sign_step::propose);
 }
 

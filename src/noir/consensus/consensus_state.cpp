@@ -667,7 +667,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
 
   // Make proposal
   auto prop_block_id = p2p::block_id{block_->get_hash(), block_parts_->header()};
-  auto proposal_ = proposal::new_proposal(height, round, rs.valid_round, prop_block_id);
+  auto proposal_ = p2p::proposal_message{p2p::Proposal, height, round, rs.valid_round, prop_block_id, get_time()};
 
   if (auto err = local_priv_validator->sign_proposal(proposal_); !err.has_value()) {
     // proposal_.signature = p.signature; // TODO: no need; already updated proposal_.signature

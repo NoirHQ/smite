@@ -187,7 +187,7 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \brief signs a canonical representation of the proposal, along with the chainID
   /// \param[in] proposal_
   /// \return
-  std::optional<std::string> sign_proposal(noir::consensus::proposal& proposal) override {
+  std::optional<std::string> sign_proposal(noir::p2p::proposal_message& proposal) override {
     if (!sign_proposal_internal(proposal)) {
       return "error signing proposal";
     }
@@ -233,7 +233,7 @@ private:
   /// a previously signed proposal ie. we crashed after signing but before the proposal hit the WAL).
   /// \param[in] proposal
   /// \return true on success, false otherwise
-  bool sign_proposal_internal(noir::consensus::proposal& proposal);
+  bool sign_proposal_internal(noir::p2p::proposal_message& proposal);
 };
 
 /// \}

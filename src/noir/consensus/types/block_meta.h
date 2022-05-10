@@ -5,7 +5,7 @@
 //
 #pragma once
 
-#include <noir/consensus/types.h>
+#include <noir/consensus/common.h>
 #include <noir/core/codec.h>
 
 namespace noir::consensus {

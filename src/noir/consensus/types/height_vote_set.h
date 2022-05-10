@@ -11,6 +11,11 @@
 
 namespace noir::consensus {
 
+struct round_vote_set {
+  std::shared_ptr<vote_set> prevotes;
+  std::shared_ptr<vote_set> precommits;
+};
+
 /**
  * Keeps track of all VoteSets from round 0 to round 'round'.
  * Also keeps track of up to one RoundVoteSet greater than

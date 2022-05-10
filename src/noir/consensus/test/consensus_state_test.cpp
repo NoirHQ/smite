@@ -61,7 +61,7 @@ TEST_CASE("consensus_state: Verify proposal signature", "[noir][consensus]") {
   auto [cs1, vss] = rand_cs(local_config, 1);
   auto local_priv_validator = cs1->local_priv_validator;
 
-  proposal proposal_{};
+  noir::p2p::proposal_message proposal_{};
   proposal_.timestamp = get_time();
 
   auto data_proposal1 = encode(canonical::canonicalize_proposal(proposal_));

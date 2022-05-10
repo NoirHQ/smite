@@ -7,10 +7,10 @@
 #include <noir/common/helper/go.h>
 #include <noir/common/hex.h>
 #include <noir/common/overloaded.h>
+#include <noir/consensus/common.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/consensus_state.h>
 #include <noir/consensus/store/store_test.h>
-#include <noir/consensus/types.h>
 
 #include <appbase/application.hpp>
 #include <fc/crypto/base58.hpp>
