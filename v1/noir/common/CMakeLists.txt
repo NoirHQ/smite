@@ -8,4 +8,5 @@ target_link_libraries(noir_common_v1
 
 add_library(noir::common::v1 ALIAS noir_common_v1)
 
+add_noir_test(string_test_v1 test/string_test.cpp DEPENDS noir::common::v1)
 add_noir_test(varint_test_v1 test/varint_test.cpp DEPENDS noir::common::v1)
