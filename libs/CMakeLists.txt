@@ -27,6 +27,9 @@ add_subdirectory(range-v3)
 # TODO: remove if openssl release includes keccak hash functions (currently in master branch)
 include(cmake/XKCP.cmake)
 
+set(sodium_USE_STATIC_LIBS ON)
+include(cmake/Findsodium.cmake)
+
 set_target_properties(appbase PROPERTIES DEBUG_POSTFIX "")
 set_target_properties(fc PROPERTIES DEBUG_POSTFIX "")
 if(TARGET Catch2)

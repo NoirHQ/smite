@@ -18,7 +18,7 @@ jobs:
       # install conan
       - uses: turtlebrowser/get-conan@main
       # setup build dependencies
-      - run: sudo apt install -y libgflags-dev libprotobuf-dev protobuf-compiler xsltproc
+      - run: sudo apt install -y libgflags-dev libprotobuf-dev libsodium-dev protobuf-compiler xsltproc
       # checkout
       - uses: actions/checkout@v2
         with:
@@ -61,7 +61,7 @@ jobs:
       # install conan
       - uses: turtlebrowser/get-conan@main
       # setup build dependencies
-      - run: brew install boost gflags openssl@3 protobuf
+      - run: brew install boost gflags libsodium openssl@3 protobuf
       # checkout
       - uses: actions/checkout@v2
         with:
