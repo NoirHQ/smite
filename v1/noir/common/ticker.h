@@ -18,7 +18,7 @@ namespace noir {
 class Ticker {
 public:
   Ticker(boost::asio::io_context& io_context, std::chrono::seconds duration)
-    : io_context(io_context), duration(duration), time_ch({io_context, 1}), done_ch({io_context, 1}) {}
+    : io_context(io_context), duration(duration), time_ch(io_context, 1), done_ch(io_context, 1) {}
 
   [[nodiscard]] static auto create(boost::asio::io_context& io_context, std::chrono::seconds duration)
     -> std::unique_ptr<Ticker> {
@@ -56,7 +56,5 @@ private:
   Chan<Done> done_ch;
   std::chrono::seconds duration;
 };
-
-using TickerUptr = std::unique_ptr<Ticker>;
 
 } //namespace noir
