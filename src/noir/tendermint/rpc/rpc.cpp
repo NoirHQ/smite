@@ -5,6 +5,7 @@
 //
 #include <noir/rpc/jsonrpc.h>
 #include <noir/tendermint/rpc/rpc.h>
+#include <fc/crypto/base64.hpp>
 
 namespace noir::tendermint::rpc {
 using namespace appbase;

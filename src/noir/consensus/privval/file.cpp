@@ -102,14 +102,9 @@ bool file_pv_last_sign_state::load(const fs::path& state_file_path, file_pv_last
 
 std::shared_ptr<file_pv> file_pv::gen_file_pv(
   const fs::path& key_file_path, const fs::path& state_file_path, const std::string& key_type) {
-  noir::consensus::priv_key priv_key_{};
-  // TODO: connect appropriate key_type
-  if (key_type == "secp256k1") {
-    // priv_key_.type = "secp256k1";
-    priv_key_.key = fc::from_base58(fc::crypto::private_key::generate().to_string());
-  } else if (key_type == "ed25519") {
+  auto priv_key_ = priv_key::new_priv_key();
+  if (key_type == "ed25519") {
     // priv_key_.type = "ed25519";
-    priv_key_.key = fc::from_base58(fc::crypto::private_key::generate_r1().to_string());
   } else {
     elog(fmt::format("key type: {} is not supported", key_type)); // return err
     return nullptr;
