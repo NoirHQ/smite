@@ -15,3 +15,4 @@ add_noir_test(varint_test_v1 test/varint_test.cpp DEPENDS noir::common::v1)
 add_noir_test(buffered_writer_test test/buffered_writer_test.cpp DEPENDS noir::common::v1)
 
 add_noir_example(ticker_example example/ticker_example.cpp DEPENDS noir::common::v1)
+add_noir_example(timer_example example/timer_example.cpp DEPENDS noir::common::v1)
