@@ -3,6 +3,7 @@ add_library(noir_consensus STATIC
   block_sync/reactor.cpp
   consensus_reactor.cpp
   consensus_state.cpp
+  crypto.cpp
   indexer/sink/psql/psql.cpp
   merkle/proof.cpp
   merkle/tree.cpp
@@ -26,6 +27,7 @@ target_link_libraries(noir_consensus
   noir::proto_legacy
   noir::tx_pool
 #  tendermint::proto
+  sodium
 )
 set_target_properties(noir_consensus PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
@@ -35,6 +37,7 @@ add_noir_test(bit_array_test test/bit_array_test.cpp DEPENDS noir_consensus)
 add_noir_test(block_executor_test test/block_executor_test.cpp DEPENDS noir_consensus)
 add_noir_test(block_test types/test/block_test.cpp DEPENDS noir_consensus)
 add_noir_test(consensus_state_test test/consensus_state_test.cpp DEPENDS noir_consensus)
+add_noir_test(crypto_ed25519_test test/crypto_ed25519_test.cpp DEPENDS noir_consensus)
 add_noir_test(events_test types/test/event_bus_test.cpp DEPENDS noir_consensus)
 add_noir_test(evidence_test types/test/evidence_test.cpp DEPENDS noir_consensus)
 add_noir_test(node_key_test types/test/node_key_test.cpp DEPENDS noir_consensus)

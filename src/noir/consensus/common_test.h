@@ -80,10 +80,8 @@ std::tuple<validator, std::shared_ptr<priv_validator>> rand_validator(bool rand_
   static int i = 0;
   auto priv_val = std::make_shared<mock_pv>();
 
-  // Randomly generate a private key // TODO: use a different PKI algorithm
-  auto new_key = fc::crypto::private_key::generate<fc::ecc::private_key_shim>(); // randomly generate a private key
-  //  fc::crypto::private_key new_key("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3"); // TODO: read from a file
-  priv_val->priv_key_.key = fc::from_base58(new_key.to_string());
+  // Randomly generate a private key
+  priv_val->priv_key_ = priv_key::new_priv_key();
   priv_val->pub_key_ = priv_val->priv_key_.get_pub_key();
 
   auto vote_power = min_power;

@@ -117,14 +117,13 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
     std::string key_type; // TODO: connect key_type
   };
   auto tests = std::to_array<struct test_case>({
-    test_case{"priv key_type: secp256k1", "secp256k1"},
     test_case{"priv key_type: ed25519", "ed25519"},
   });
 
   std::for_each(tests.begin(), tests.end(), [&](const test_case& t) {
     SECTION(t.name) {
 
-      auto file_pv_ptr = file_pv::gen_file_pv(key_file_path, lss_file_path, "secp256k1");
+      auto file_pv_ptr = file_pv::gen_file_pv(key_file_path, lss_file_path);
       REQUIRE(file_pv_ptr != nullptr);
 
       SECTION("gen_file_pv") {
