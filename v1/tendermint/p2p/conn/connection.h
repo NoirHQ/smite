@@ -62,7 +62,7 @@ namespace detail {
     auto is_send_pending() -> bool;
     auto write_packet_msg_to(noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>& w)
       -> asio::awaitable<Result<std::size_t>>;
-    auto next_packet_msg() -> PacketMsg;
+    void next_packet_msg(PacketMsg* msg);
     auto recv_packet_msg(PacketMsg packet) -> Result<noir::Bytes>;
     void update_stats();
 
@@ -118,8 +118,8 @@ public:
   void start(Chan<noir::Done>& done);
   void set_recv_last_msg_at(noir::Time&& t);
   auto get_last_message_at() -> noir::Time;
-  auto stop_services() -> asio::awaitable<Result<bool>>;
-  auto stop() -> boost::asio::awaitable<Result<bool>>;
+  auto stop_services() -> bool;
+  void stop();
   auto string() -> std::string;
   auto flush() -> asio::awaitable<void>;
   auto send(ChannelId ch_id, BytesPtr msg_bytes) -> asio::awaitable<Result<bool>>;
@@ -133,9 +133,7 @@ public:
     PacketMsg msg{};
     msg.set_channel_id(1);
     msg.set_eof(true);
-    std::string s;
-    s.resize(max_packet_msg_payload_size);
-    msg.set_allocated_data(&s);
+    msg.set_data(std::string(max_packet_msg_payload_size, ' '));
     return msg.ByteSizeLong();
   }
 
