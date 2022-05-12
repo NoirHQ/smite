@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/foreachable.h>
 #include <boost/preprocessor/if.hpp>
 #include <boost/preprocessor/seq/for_each_i.hpp>
 #include <boost/preprocessor/stringize.hpp>
@@ -24,76 +25,72 @@ namespace noir::refl {
 
 /// \brief check whether T has type reflection
 template<typename T>
-struct has_refl : std::false_type {};
+struct HasRefl : std::false_type {};
 
 template<typename T>
-inline constexpr bool has_refl_v = has_refl<T>::value;
+inline constexpr bool has_refl_v = HasRefl<T>::value;
 
 /// \brief provides the number how many fields T has
 template<typename T>
-struct fields_count;
+struct FieldsCount;
 
 template<typename T>
-inline constexpr size_t fields_count_v = fields_count<T>::value;
+inline constexpr size_t fields_count_v = FieldsCount<T>::value;
 
 /// \brief field descriptor
 template<size_t I, typename T>
-struct field;
+struct Field;
 
 template<size_t I, typename T>
-using field_t = typename field<I, T>::type;
+using FieldT = typename Field<I, T>::type;
 
 /// \breif gets the field reference of T by index
 template<size_t I, typename T>
-field_t<I, T>& get(T&);
+FieldT<I, T>& get(T&);
 
 /// \breif gets the constant field reference of T by index
 template<size_t I, typename T>
-const field_t<I, T>& get(const T&);
+const FieldT<I, T>& get(const T&);
 
 /// \brief base class of T, when T is derived class
 template<typename T>
-struct base {
-  using type = void;
-};
+struct Base;
 
 template<typename T>
-using base_t = typename base<T>::type;
-
-/// \cond PRIVATE
-template<size_t I, typename F, typename T>
-void _for_each_field(F&& f, T& v) {
-  if constexpr (I < fields_count_v<T>) {
-    f(field<I, T>{}, get<I>(v));
-    _for_each_field<I + 1>(f, v);
-  }
-}
-
-template<size_t I, typename F, typename T>
-void _for_each_field(F&& f, const T& v) {
-  if constexpr (I < fields_count_v<T>) {
-    f(field<I, T>{}, get<I>(v));
-    _for_each_field<I + 1>(f, v);
-  }
-}
-/// \endcond
+using BaseT = typename Base<T>::type;
 
 /// \brief iterates fields of T
-template<typename F, typename T>
-void for_each_field(F&& f, T& v) {
-  if constexpr (!std::is_void_v<base_t<T>>) {
-    _for_each_field<0>(f, (base_t<T>&)v);
+template<size_t I = 0, typename F, typename T>
+bool for_each_field(F&& f, T& v) {
+  if constexpr (!I && !std::is_void_v<BaseT<T>>) {
+    if (!for_each_field(f, (BaseT<T>&)v)) {
+      return false;
+    }
   }
-  _for_each_field<0>(f, v);
+  if constexpr (I < fields_count_v<T>) {
+    if (!f(Field<I, T>{}, get<I>(v))) {
+      return false;
+    }
+    return for_each_field<I + 1>(f, v);
+  }
+  return true;
 }
 
 /// \brief iterates const fields of const T
-template<typename F, typename T>
-void for_each_field(F&& f, const T& v) {
-  if constexpr (!std::is_void_v<base_t<T>>) {
-    _for_each_field<0>(f, (const base_t<T>&)v);
+template<size_t I = 0, typename F, typename T>
+bool for_each_field(F&& f, const T& v) {
+  if constexpr (!I && !std::is_void_v<BaseT<T>>) {
+    if (!for_each_field(f, (const BaseT<T>&)v)) {
+      return false;
+    }
   }
-  _for_each_field<0>(f, v);
+  if constexpr (I < fields_count_v<T>) {
+    if (!f(Field<I, T>{}, get<I>(v))) {
+      return false;
+    }
+    return for_each_field<I + 1>(f, v);
+  }
+  return true;
 }
 
 /// \}
@@ -104,69 +101,62 @@ namespace noir {
 
 /// \brief helper Concepts to check whether T has reflection
 template<typename T>
-concept reflection = refl::has_refl_v<T>;
+concept Reflected = refl::has_refl_v<T>;
 
 } // namespace noir
 
-#define _NOIR_REFLECT_FIELD(r, TYPE, INDEX, FIELD) \
+#define NOIR_REFLECT_FIELD(r, TYPE, INDEX, FIELD) \
   namespace noir::refl { \
     template<> \
-    struct field<INDEX, TYPE> { \
+    struct Field<INDEX, TYPE> { \
       using type = decltype(TYPE::FIELD); \
       std::string_view name = BOOST_PP_STRINGIZE(FIELD); \
+      uint32_t tag = (INDEX + 1); \
     }; \
   }
 
-#define _NOIR_REFLECT_FIELD_GET(r, TYPE, INDEX, FIELD) \
-  template<> \
-  inline field_t<INDEX, TYPE>& get<INDEX>(TYPE & v) { \
-    return v.FIELD; \
-  } \
-  template<> \
-  inline const field_t<INDEX, TYPE>& get<INDEX>(const TYPE& v) { \
-    return v.FIELD; \
-  }
-
-/// \brief helper macro for type reflection without field descriptors
-#define NOIR_REFLECT_NO_DESC(TYPE, ...) \
+#define NOIR_REFLECT_FIELD_GET(r, TYPE, INDEX, FIELD) \
   namespace noir::refl { \
     template<> \
-    struct has_refl<TYPE> : std::true_type {}; \
+    inline FieldT<INDEX, TYPE>& get<INDEX>(TYPE & v) { \
+      return v.FIELD; \
+    } \
     template<> \
-    struct fields_count<TYPE> { \
-      static constexpr size_t value = BOOST_PP_VARIADIC_SIZE(__VA_ARGS__); \
-    }; \
-    BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD_GET, \
-      TYPE, \
-      BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)) \
+    inline const FieldT<INDEX, TYPE>& get<INDEX>(const TYPE& v) { \
+      return v.FIELD; \
+    } \
   }
 
-/// \brief helper macro for type reflection with field descriptors
-#define NOIR_REFLECT(TYPE, ...) \
-  BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD, TYPE, \
-    BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)) \
-  NOIR_REFLECT_NO_DESC(TYPE, __VA_ARGS__)
+#define NOIR_VARIADIC_TO_SEQ(...) \
+  BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)
 
 /// \brief helper macro for reflection of derived type without field descriptors
 #define NOIR_REFLECT_DERIVED_NO_DESC(TYPE, BASE, ...) \
+  namespace noir { \
+    template<> \
+    struct IsForeachable<TYPE> : std::true_type {}; \
+  } \
   namespace noir::refl { \
     template<> \
-    struct has_refl<TYPE> : std::true_type {}; \
+    struct HasRefl<TYPE> : std::true_type {}; \
     template<> \
-    struct base<TYPE> { \
+    struct FieldsCount<TYPE> : std::integral_constant<size_t, BOOST_PP_VARIADIC_SIZE(__VA_ARGS__)> {}; \
+    template<> \
+    struct Base<TYPE> { \
       using type = BASE; \
     }; \
-    template<> \
-    struct fields_count<TYPE> { \
-      static constexpr size_t value = BOOST_PP_VARIADIC_SIZE(__VA_ARGS__); \
-    }; \
-    BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD_GET, \
-      TYPE, \
-      BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)) \
-  }
+  } \
+  BOOST_PP_SEQ_FOR_EACH_I(NOIR_REFLECT_FIELD_GET, TYPE, NOIR_VARIADIC_TO_SEQ(__VA_ARGS__))
 
 /// \brief helper macro for reflection of derived type with field descriptors
 #define NOIR_REFLECT_DERIVED(TYPE, BASE, ...) \
-  BOOST_PP_SEQ_FOR_EACH_I(_NOIR_REFLECT_FIELD, TYPE, \
-    BOOST_PP_IF(BOOST_PP_VARIADIC_SIZE(__VA_ARGS__), BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__), BOOST_PP_SEQ_NIL)) \
+  BOOST_PP_SEQ_FOR_EACH_I(NOIR_REFLECT_FIELD, TYPE, NOIR_VARIADIC_TO_SEQ(__VA_ARGS__)) \
   NOIR_REFLECT_DERIVED_NO_DESC(TYPE, BASE, __VA_ARGS__)
+
+/// \brief helper macro for type reflection without field descriptors
+#define NOIR_REFLECT_NO_DESC(TYPE, ...) NOIR_REFLECT_DERIVED_NO_DESC(TYPE, void, __VA_ARGS__)
+
+/// \brief helper macro for type reflection with field descriptors
+#define NOIR_REFLECT(TYPE, ...) \
+  BOOST_PP_SEQ_FOR_EACH_I(NOIR_REFLECT_FIELD, TYPE, NOIR_VARIADIC_TO_SEQ(__VA_ARGS__)) \
+  NOIR_REFLECT_NO_DESC(TYPE, __VA_ARGS__)

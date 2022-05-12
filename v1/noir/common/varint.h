@@ -50,8 +50,8 @@ using VarUint32 = VarInt<uint32_t>;
 using VarUint64 = VarInt<uint64_t>;
 
 // TODO: error handling for ds.put()
-template<typename Stream, typename T>
-auto write_uleb128(Stream& ds, const VarInt<T>& v) -> Result<size_t> {
+template<typename DataStream, typename T>
+auto write_uleb128(DataStream& ds, const VarInt<T>& v) -> Result<size_t> {
   std::make_unsigned_t<T> val = v.value;
   auto max_len = (sizeof(T) * 8 + 6) / 7;
   auto i = 0;
@@ -67,8 +67,8 @@ auto write_uleb128(Stream& ds, const VarInt<T>& v) -> Result<size_t> {
 }
 
 // TODO: error handling for ds.get()
-template<typename Stream, typename T>
-auto read_uleb128(Stream& ds, VarInt<T>& v) -> Result<size_t> {
+template<typename DataStream, typename T>
+auto read_uleb128(DataStream& ds, VarInt<T>& v) -> Result<size_t> {
   std::make_unsigned_t<T> val = 0;
   auto max_len = (sizeof(T) * 8 + 6) / 7;
   auto i = 0;
@@ -91,23 +91,23 @@ auto read_uleb128(Stream& ds, VarInt<T>& v) -> Result<size_t> {
   return max_len;
 }
 
-template<typename Stream, typename T>
-auto write_zigzag(Stream& ds, const VarInt<T>& v) -> Result<size_t> {
+template<typename DataStream, typename T>
+auto write_zigzag(DataStream& ds, const VarInt<T>& v) -> Result<size_t> {
   auto val = v.value;
   val = (val >> (sizeof(T) * 8 - 1)) ^ (val << 1);
   return write_uleb128(ds, VarInt<decltype(val)>(val));
 }
 
-template<typename Stream, typename T>
-auto read_zigzag(Stream& ds, VarInt<T>& v) -> Result<size_t> {
+template<typename DataStream, typename T>
+auto read_zigzag(DataStream& ds, VarInt<T>& v) -> Result<size_t> {
   VarInt<std::make_unsigned_t<T>> val = 0;
   auto ret = read_uleb128(ds, val);
   v.value = (val >> 1) ^ (-(val & 1));
   return ret;
 }
 
-template<typename Stream, typename T>
-auto read_uleb128_async(Stream& ds, VarInt<T>& v) -> boost::asio::awaitable<Result<size_t>> {
+template<typename DataStream, typename T>
+auto read_uleb128_async(DataStream& ds, VarInt<T>& v) -> boost::asio::awaitable<Result<size_t>> {
   std::make_unsigned_t<T> val = 0;
   auto max_len = (sizeof(T) * 8 + 6) / 7;
   auto i = 0;
@@ -136,8 +136,8 @@ auto read_uleb128_async(Stream& ds, VarInt<T>& v) -> boost::asio::awaitable<Resu
   co_return max_len;
 }
 
-template<typename Stream, typename T>
-auto read_zigzag_async(Stream& ds, VarInt<T>& v) -> boost::asio::awaitable<Result<size_t>> {
+template<typename DataStream, typename T>
+auto read_zigzag_async(DataStream& ds, VarInt<T>& v) -> boost::asio::awaitable<Result<size_t>> {
   VarInt<std::make_unsigned_t<T>> val = 0;
   auto size = co_await read_uleb128_async(ds, val);
   v.value = (val >> 1) ^ (-(val & 1));
