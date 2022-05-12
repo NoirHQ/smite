@@ -28,8 +28,6 @@ enum class sign_step : int8_t {
 
 /// \brief stores the immutable part of PrivValidator.
 struct file_pv_key {
-  bytes address;
-  noir::consensus::pub_key pub_key;
   noir::consensus::priv_key priv_key;
   std::string file_path;
 
@@ -89,8 +87,6 @@ struct file_pv : public noir::consensus::priv_validator {
     const std::filesystem::path& key_file_path,
     const std::filesystem::path& state_file_path)
     : key(file_pv_key{
-        .address = priv_key.get_pub_key().address(),
-        .pub_key = priv_key.get_pub_key(),
         .priv_key = priv_key,
         .file_path = key_file_path,
       }),
@@ -159,13 +155,13 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \brief returns the address of the validator
   /// \return address
   bytes get_address() const {
-    return key.address;
+    return get_pub_key().address();
   }
 
   /// \brief returns the public key of the validator
   /// \return the public key of the validator
   pub_key get_pub_key() const override {
-    return key.pub_key;
+    return get_priv_key().get_pub_key();
   }
 
   /// \brief returns the private key of the validator
@@ -238,7 +234,20 @@ private:
 
 /// \}
 
+struct key_json_obj {
+  std::string data;
+  std::string key;
+};
+
+struct file_pv_key_json_obj {
+  std::string address;
+  key_json_obj pub_key;
+  key_json_obj priv_key;
+};
+
 } // namespace noir::consensus::privval
 
-NOIR_REFLECT(noir::consensus::privval::file_pv_key, address, pub_key, priv_key);
+NOIR_REFLECT(noir::consensus::privval::file_pv_key, priv_key);
 NOIR_REFLECT(noir::consensus::privval::file_pv_last_sign_state, height, round, step, signature, sign_bytes);
+NOIR_REFLECT(noir::consensus::privval::key_json_obj, data, key);
+NOIR_REFLECT(noir::consensus::privval::file_pv_key_json_obj, address, pub_key, priv_key);

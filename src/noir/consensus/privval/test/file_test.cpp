@@ -33,8 +33,6 @@ inline noir::bytes gen_random_bytes(size_t num) {
 }
 
 auto compare_file_pv_key = [](const file_pv_key& exp, const file_pv_key& ret) {
-  CHECK(exp.address == ret.address);
-  CHECK(exp.pub_key == ret.pub_key);
   CHECK(exp.priv_key == ret.priv_key);
   CHECK(exp.file_path == ret.file_path);
 };
@@ -56,14 +54,9 @@ TEST_CASE("priv_val_file: save/load priv_key", "[noir][consensus]") {
   json_file_path.replace_extension("json");
 
   auto exp = file_pv_key{
-    .address = gen_random_bytes(32),
-    .pub_key =
-      {
-        .key = gen_random_bytes(32),
-      },
     .priv_key =
       {
-        .key = gen_random_bytes(32),
+        .key = gen_random_bytes(64),
       },
     .file_path = json_file_path,
   };
@@ -129,7 +122,6 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
       SECTION("gen_file_pv") {
         {
           auto& file_pv_key_ = file_pv_ptr->key;
-          CHECK(file_pv_key_.pub_key.empty() == false);
           CHECK(file_pv_key_.priv_key.key.empty() == false);
           CHECK(file_pv_key_.file_path == key_file_path);
         }
