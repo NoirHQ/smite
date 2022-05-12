@@ -49,26 +49,24 @@ namespace detail {
     return true;
   }
 
-  auto Channel::next_packet_msg() -> PacketMsg {
-    PacketMsg packet{};
-    packet.set_channel_id(desc->id);
+  void Channel::next_packet_msg(PacketMsg* msg) {
+    msg->set_channel_id(desc->id);
     auto packet_size = sending.size() < max_packet_msg_payload_size ? sending.size() : max_packet_msg_payload_size;
-    packet.set_data({sending.begin(), sending.begin() + packet_size});
+    msg->set_data({sending.begin(), sending.begin() + packet_size});
     if (sending.size() <= max_packet_msg_payload_size) {
-      packet.set_eof(true);
+      msg->set_eof(true);
       sending.clear();
     } else {
-      packet.set_eof(false);
+      msg->set_eof(false);
       sending = Bytes{sending.begin() + packet_size, sending.end()};
     }
-    return packet;
   }
 
   auto Channel::write_packet_msg_to(BufferedWriter<net::Conn<net::TcpConn>>& w)
     -> asio::awaitable<Result<std::size_t>> {
-    PacketMsg msg = next_packet_msg();
     Packet packet{};
-    packet.set_allocated_packet_msg(&msg);
+    PacketMsg* msg = packet.mutable_packet_msg();
+    next_packet_msg(msg);
     auto bytes = detail::packet_to_bytes(packet);
 
     auto res = co_await w.write(bytes);
@@ -188,8 +186,7 @@ auto MConnection::send_routine(Chan<Done>& done) -> asio::awaitable<void> {
 
 auto MConnection::send_ping() -> asio::awaitable<Result<void>> {
   Packet packet{};
-  PacketPing ping{};
-  packet.set_allocated_packet_ping(&ping);
+  packet.mutable_packet_ping();
   auto bytes = detail::packet_to_bytes(packet);
   auto res = co_await conn.write(boost::asio::buffer(bytes.data(), bytes.size()));
   if (res.has_error()) {
@@ -201,8 +198,7 @@ auto MConnection::send_ping() -> asio::awaitable<Result<void>> {
 
 auto MConnection::send_pong() -> asio::awaitable<Result<void>> {
   Packet packet{};
-  PacketPong pong{};
-  packet.set_allocated_packet_pong(&pong);
+  packet.mutable_packet_pong();
   auto bytes = detail::packet_to_bytes(packet);
   auto res = co_await conn.write(boost::asio::buffer(bytes.data(), bytes.size()));
   if (res.has_error()) {
@@ -248,14 +244,34 @@ auto MConnection::send_packet_msg(Chan<Done>& done) -> asio::awaitable<Result<bo
   co_return false;
 }
 
-void MConnection::stop_for_error(Chan<Done>& done) {}
+void MConnection::stop_for_error(Chan<Done>& done) {
+  stop();
 
-auto MConnection::stop() -> boost::asio::awaitable<Result<bool>> {
-  std::scoped_lock _{stop_mtx};
-  quit_send_routine_ch.close();
+  // TODO: handle error
 }
 
-auto MConnection::stop_services() -> asio::awaitable<Result<bool>> {}
+void MConnection::stop() {
+  if (stop_services()) {
+    return;
+  }
+  conn.close();
+}
+
+auto MConnection::stop_services() -> bool {
+  std::scoped_lock _{stop_mtx};
+
+  if (!quit_send_routine_ch.is_open() || !quit_recv_routine_ch.is_open()) {
+    return true;
+  }
+
+  flush_timer.stop();
+  ping_timer.stop();
+  ch_stats_timer.stop();
+
+  quit_recv_routine_ch.close();
+  quit_send_routine_ch.close();
+  return false;
+}
 
 //auto MConnection::recv_routine(Chan<Done>& done) -> asio::awaitable<void>;
 
