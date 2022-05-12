@@ -88,7 +88,7 @@ struct duplicate_vote_evidence : public evidence {
   }
 
   std::string get_string() override {
-    return fmt::format("duplicate_vote_evidence{vote_a, vote_b}");
+    return fmt::format("duplicate_vote_evidence(vote_a, vote_b)");
   }
 
   tstamp get_timestamp() override {
@@ -140,7 +140,7 @@ struct light_client_attack_evidence : public evidence {
   bytes get_bytes() override {
     auto pbe = to_proto();
     if (!pbe)
-      check(false, fmt::format("converting light client attack evidence to proto", pbe.error()));
+      check(false, fmt::format("converting light client attack evidence to proto: {}", pbe.error()));
     bytes ret(pbe.value()->ByteSizeLong());
     pbe.value()->SerializeToArray(ret.data(), pbe.value()->ByteSizeLong());
     return ret;
@@ -153,7 +153,7 @@ struct light_client_attack_evidence : public evidence {
   }
 
   std::string get_string() override {
-    return fmt::format("light_client_attack_evidence{}#{}", to_hex(get_hash()));
+    return fmt::format("light_client_attack_evidence #{}", to_hex(get_hash()));
   }
 
   tstamp get_timestamp() override {
