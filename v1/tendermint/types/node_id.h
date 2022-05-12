@@ -1,8 +1,8 @@
 #pragma once
 #include <string>
 
-namespace tendermint {
+namespace tendermint::types {
 
 using NodeId = std::string;
 
-} // namespace tendermint
+} // namespace tendermint::types
