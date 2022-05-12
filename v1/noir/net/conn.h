@@ -100,6 +100,10 @@ public:
     co_return success();
   }
 
+  auto close() -> Result<void> {
+    return static_cast<Derived*>(this)->close();
+  }
+
   boost::asio::strand<boost::asio::io_context::executor_type> strand;
   detail::message_buffer<1024 * 1024> message_buffer;
   std::string address;
