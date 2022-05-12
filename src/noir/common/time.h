@@ -5,6 +5,7 @@
 //
 #pragma once
 
+#include <noir/common/helper/rust.h>
 #include <chrono>
 
 namespace noir {
@@ -12,5 +13,6 @@ namespace noir {
 using tstamp = std::chrono::system_clock::duration::rep;
 
 tstamp get_time();
+result<std::time_t> parse_genesis_time(const char* time_str);
 
 } // namespace noir

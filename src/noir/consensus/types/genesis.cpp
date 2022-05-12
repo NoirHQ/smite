@@ -22,11 +22,11 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
     fc::from_variant(obj, *gen_doc);
     std::string dt;
     fc::from_variant(obj["genesis_time"], dt);
-    struct tm tm_info {};
-    if (strptime(dt.c_str(), "%Y-%m-%dT%H:%M:%S", &tm_info)) {
-      std::time_t tt = std::mktime(&tm_info);
-      std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t(tt);
+    auto tt = parse_genesis_time(dt.c_str());
+    if (tt) {
+      std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t(tt.value());
       gen_doc->genesis_time = tp.time_since_epoch().count();
+      ilog(fmt::format("genesis time : {}", gen_doc->genesis_time));
     } else {
       elog(fmt::format("error reading genesis from {}: unable to parse genesis_time", gen_doc_file));
       return {};
