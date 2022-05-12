@@ -30,6 +30,12 @@ public:
     }
   }
 
+  void stop() {
+    quit_ch.close();
+    std::scoped_lock _{mtx};
+    timer.stop();
+  }
+
 public:
   std::string name;
   Chan<noir::Done> event_ch;
