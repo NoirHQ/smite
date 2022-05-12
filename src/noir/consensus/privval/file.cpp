@@ -34,14 +34,14 @@ void file_pv_key::save() {
   // TODO: save file in thread safe context (eg.tendermint tempfile)
   // https://pkg.go.dev/github.com/tendermint/tendermint/internal/libs/tempfile
   file_pv_key_json_obj json_obj;
-  json_obj.priv_key.key = fc::base64_encode(priv_key.key.data(), priv_key.key.size());
+  json_obj.priv_key.value = fc::base64_encode(priv_key.key.data(), priv_key.key.size());
   auto pub_key_ = priv_key.get_pub_key();
-  json_obj.pub_key.key = fc::base64_encode(pub_key_.key.data(), pub_key_.key.size());
+  json_obj.pub_key.value = fc::base64_encode(pub_key_.key.data(), pub_key_.key.size());
   std::string addr = to_hex(pub_key_.address());
   std::transform(addr.begin(), addr.end(), addr.begin(), ::toupper);
   json_obj.address = addr;
-  json_obj.priv_key.data = "tendermint/PrivKeyEd25519";
-  json_obj.pub_key.data = "tendermint/PubKeyEd25519";
+  json_obj.priv_key.type = "tendermint/PrivKeyEd25519";
+  json_obj.pub_key.type = "tendermint/PubKeyEd25519";
   fc::variant vo;
   fc::to_variant<file_pv_key_json_obj>(json_obj, vo);
   fc::json::save_to_file(vo, file_path);
@@ -51,7 +51,7 @@ bool file_pv_key::load(const fs::path& key_file_path, file_pv_key& priv_key) {
   fc::variant obj = fc::json::from_file(key_file_path.string());
   file_pv_key_json_obj json_obj;
   fc::from_variant(obj, json_obj);
-  auto priv_key_str = fc::base64_decode(json_obj.priv_key.key);
+  auto priv_key_str = fc::base64_decode(json_obj.priv_key.value);
   priv_key.priv_key.key = bytes(priv_key_str.begin(), priv_key_str.end());
   priv_key.file_path = key_file_path.string();
   return true;

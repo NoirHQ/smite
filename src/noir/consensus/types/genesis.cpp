@@ -6,6 +6,7 @@
 #include <noir/common/helper/variant.h>
 #include <noir/consensus/types/genesis.h>
 
+#include <fc/crypto/base64.hpp>
 #include <fc/io/json.hpp>
 #include <fc/variant_object.hpp>
 #include <fmt/core.h>
@@ -29,6 +30,15 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
     } else {
       elog(fmt::format("error reading genesis from {}: unable to parse genesis_time", gen_doc_file));
       return {};
+    }
+    std::vector<json::genesis_validator_json_obj> vals;
+    fc::from_variant(obj["validators"], vals);
+    for (auto& val : vals) {
+      auto addr = from_hex(val.address);
+      auto pub_key_str = fc::base64_decode(val.pub_key.value);
+      ::noir::consensus::pub_key pub_key_{.key = bytes{pub_key_str.begin(), pub_key_str.end()}};
+      gen_doc->validators.push_back(
+        {.address = bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});
     }
   } catch (std::exception const& ex) {
     elog(fmt::format("error reading genesis from {}: {}", gen_doc_file, ex.what()));
