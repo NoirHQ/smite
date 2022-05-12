@@ -14,7 +14,11 @@ extern const std::unordered_map<std::string_view, std::chrono::nanoseconds> unit
 
 template<typename Duration>
 auto parse_duration(std::string_view s) -> Result<Duration> {
-  std::chrono::nanoseconds duration{};
+  if (s == "0") {
+    return Duration{0};
+  }
+
+  std::chrono::nanoseconds duration{0};
 
   auto it = s.begin();
   auto end = s.end();
