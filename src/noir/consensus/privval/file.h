@@ -235,8 +235,8 @@ private:
 /// \}
 
 struct key_json_obj {
-  std::string data;
-  std::string key;
+  std::string type;
+  std::string value;
 };
 
 struct file_pv_key_json_obj {
@@ -249,5 +249,5 @@ struct file_pv_key_json_obj {
 
 NOIR_REFLECT(noir::consensus::privval::file_pv_key, priv_key);
 NOIR_REFLECT(noir::consensus::privval::file_pv_last_sign_state, height, round, step, signature, sign_bytes);
-NOIR_REFLECT(noir::consensus::privval::key_json_obj, data, key);
+NOIR_REFLECT(noir::consensus::privval::key_json_obj, type, value);
 NOIR_REFLECT(noir::consensus::privval::file_pv_key_json_obj, address, pub_key, priv_key);

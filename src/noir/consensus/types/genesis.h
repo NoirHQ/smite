@@ -15,6 +15,19 @@ namespace noir::consensus {
 
 constexpr size_t max_chain_id_len{50};
 
+namespace json {
+  struct key_json_obj {
+    std::string type;
+    std::string value;
+  };
+  struct genesis_validator_json_obj {
+    std::string address;
+    key_json_obj pub_key;
+    int64_t power;
+    std::string name;
+  };
+} // namespace json
+
 struct genesis_validator {
   bytes address;
   ::noir::consensus::pub_key pub_key;
@@ -39,4 +52,6 @@ struct genesis_doc {
 } // namespace noir::consensus
 
 NOIR_REFLECT(noir::consensus::genesis_validator, address, pub_key, power, name);
-NOIR_REFLECT(noir::consensus::genesis_doc, chain_id, initial_height, /*cs_params, */ validators, app_hash, app_state);
+NOIR_REFLECT(noir::consensus::genesis_doc, chain_id, initial_height, /*cs_params, validators,*/ app_hash, app_state);
+NOIR_REFLECT(noir::consensus::json::key_json_obj, type, value);
+NOIR_REFLECT(noir::consensus::json::genesis_validator_json_obj, address, pub_key, power, name);
