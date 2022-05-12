@@ -3,11 +3,11 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-
 #include <noir/common/check.h>
 #include <noir/common/hex.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/types/canonical.h>
+#include <fc/crypto/base64.hpp>
 #include <fc/variant_object.hpp>
 
 #include <noir/common/helper/variant.h>
@@ -33,14 +33,26 @@ void file_pv_key::save() {
 
   // TODO: save file in thread safe context (eg.tendermint tempfile)
   // https://pkg.go.dev/github.com/tendermint/tendermint/internal/libs/tempfile
+  file_pv_key_json_obj json_obj;
+  json_obj.priv_key.key = fc::base64_encode(priv_key.key.data(), priv_key.key.size());
+  auto pub_key_ = priv_key.get_pub_key();
+  json_obj.pub_key.key = fc::base64_encode(pub_key_.key.data(), pub_key_.key.size());
+  std::string addr = to_hex(pub_key_.address());
+  std::transform(addr.begin(), addr.end(), addr.begin(), ::toupper);
+  json_obj.address = addr;
+  json_obj.priv_key.data = "tendermint/PrivKeyEd25519";
+  json_obj.pub_key.data = "tendermint/PubKeyEd25519";
   fc::variant vo;
-  fc::to_variant<file_pv_key>(*this, vo);
+  fc::to_variant<file_pv_key_json_obj>(json_obj, vo);
   fc::json::save_to_file(vo, file_path);
 }
 
 bool file_pv_key::load(const fs::path& key_file_path, file_pv_key& priv_key) {
   fc::variant obj = fc::json::from_file(key_file_path.string());
-  fc::from_variant(obj, priv_key);
+  file_pv_key_json_obj json_obj;
+  fc::from_variant(obj, json_obj);
+  auto priv_key_str = fc::base64_decode(json_obj.priv_key.key);
+  priv_key.priv_key.key = bytes(priv_key_str.begin(), priv_key_str.end());
   priv_key.file_path = key_file_path.string();
   return true;
 }
@@ -118,8 +130,6 @@ result<std::shared_ptr<file_pv>> file_pv::load_file_pv_internal(
   if (!file_pv_key::load(key_file_path, ret->key))
     return make_unexpected(fmt::format("error reading PrivValidator key from {}", key_file_path.string()));
   // Overwrite pubkey and address for convenience
-  ret->key.pub_key = ret->key.priv_key.get_pub_key();
-  ret->key.address = ret->key.pub_key.address();
   if (load_state) {
     if (!file_pv_last_sign_state::load(state_file_path, ret->last_sign_state))
       return make_unexpected(fmt::format("error reading PrivValidator state from {}", state_file_path.string()));
@@ -133,7 +143,7 @@ void file_pv::save() {
 }
 
 std::string file_pv::string() const {
-  return fmt::format("PrivValidator {} LH:{}, LR:{}, LS:{}", to_hex(key.address), last_sign_state.height,
+  return fmt::format("PrivValidator {} LH:{}, LR:{}, LS:{}", to_hex(get_address()), last_sign_state.height,
     last_sign_state.round, static_cast<int8_t>(last_sign_state.step));
 }
 
