@@ -63,6 +63,15 @@ public:
     co_return success();
   }
 
+  auto close() -> Result<void> {
+    boost::system::error_code ec{};
+    socket->close(ec);
+    if (ec) {
+      return ec;
+    }
+    return success();
+  }
+
 public:
   std::shared_ptr<boost::asio::ip::tcp::socket> socket;
 };
