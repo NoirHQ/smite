@@ -25,7 +25,7 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
     auto tt = parse_genesis_time(dt.c_str());
     if (tt) {
       std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t(tt.value());
-      gen_doc->genesis_time = tp.time_since_epoch().count();
+      gen_doc->genesis_time = std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
       ilog(fmt::format("genesis time : {}", gen_doc->genesis_time));
     } else {
       elog(fmt::format("error reading genesis from {}: unable to parse genesis_time", gen_doc_file));
