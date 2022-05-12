@@ -54,7 +54,7 @@ namespace detail {
       case 1:
         auto envelope = std::get<1>(in_res);
         auto pipe_res = co_await (done.async_receive(as_result(asio::use_awaitable)) ||
-          pipe.async_send(system::error_code{}, envelope, asio::use_awaitable));
+          pipe.async_send(boost::system::error_code{}, envelope, asio::use_awaitable));
         if (pipe_res.index() == 0) {
           co_return std::get<0>(pipe_res).error();
         }
