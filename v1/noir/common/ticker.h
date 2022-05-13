@@ -17,12 +17,12 @@ namespace noir {
 
 class Ticker {
 public:
-  Ticker(boost::asio::io_context& io_context, std::chrono::seconds duration)
-    : io_context(io_context), duration(duration), time_ch(io_context, 1), done_ch(io_context, 1) {}
+  Ticker(boost::asio::io_context& io_context, std::chrono::milliseconds dur)
+    : io_context(io_context), dur(dur), time_ch(io_context, 1), done_ch(io_context, 1) {}
 
-  [[nodiscard]] static auto create(boost::asio::io_context& io_context, std::chrono::seconds duration)
+  [[nodiscard]] static auto create(boost::asio::io_context& io_context, std::chrono::milliseconds dur)
     -> std::unique_ptr<Ticker> {
-    return std::make_unique<Ticker>(io_context, duration);
+    return std::make_unique<Ticker>(io_context, dur);
   }
 
   void start() {
@@ -36,11 +36,11 @@ public:
   auto tick_routine() -> boost::asio::awaitable<Result<void>> {
     for (;;) {
       boost::asio::steady_timer t{io_context};
-      t.expires_after(duration);
+      t.expires_after(dur);
       co_await t.async_wait(boost::asio::use_awaitable);
       boost::system::error_code ec{};
       auto res = co_await (done_ch.async_receive(as_result(boost::asio::use_awaitable)) ||
-        time_ch.async_send(ec, std::chrono::system_clock::now(), boost::asio::use_awaitable));
+        time_ch.async_send(ec, std::chrono::steady_clock::now(), boost::asio::use_awaitable));
       if (res.index() == 0) {
         co_return std::get<0>(res).error();
       }
@@ -54,7 +54,7 @@ public:
 private:
   boost::asio::io_context& io_context;
   Chan<Done> done_ch;
-  std::chrono::seconds duration;
+  std::chrono::milliseconds dur;
 };
 
 } //namespace noir
