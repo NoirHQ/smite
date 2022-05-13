@@ -49,6 +49,7 @@ endif()
 include(${CMAKE_CURRENT_BINARY_DIR}/conan.cmake)
 
 set(CONAN_PACKAGES
+  cppcodec/0.2
   fmt/8.1.1
   libb2/20190723
   rocksdb/6.20.3
@@ -87,6 +88,7 @@ if(APPLE)
 endif()
 
 find_package(Boost REQUIRED)
+find_package(cppcodec REQUIRED)
 find_package(fmt REQUIRED)
 find_package(libb2 REQUIRED)
 find_package(OpenSSL 3 REQUIRED)
