@@ -13,7 +13,7 @@ using namespace noir;
 
 int main() {
   boost::asio::io_context io_context{};
-  Ticker t(io_context, std::chrono::seconds{1});
+  Ticker t(io_context, std::chrono::milliseconds{1000});
   t.start();
 
   boost::asio::co_spawn(
