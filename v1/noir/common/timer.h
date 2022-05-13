@@ -15,7 +15,7 @@ namespace noir {
 
 class Timer {
 public:
-  Timer(boost::asio::io_context& io_context, std::chrono::seconds dur)
+  Timer(boost::asio::io_context& io_context, std::chrono::milliseconds dur)
     : io_context(io_context), timer(io_context), dur(dur), trigger_ch(io_context), stop_ch(io_context) {
     timer_routine();
   }
@@ -29,7 +29,7 @@ public:
     trigger_func();
   }
 
-  auto reset(std::chrono::seconds dur) {
+  auto reset(std::chrono::milliseconds dur) {
     if (!f)
       throw std::runtime_error("time: Reset called on uninitialized Timer");
     this->dur = dur;
@@ -76,7 +76,7 @@ private:
 private:
   boost::asio::io_context& io_context;
   boost::asio::steady_timer timer;
-  std::chrono::seconds dur;
+  std::chrono::milliseconds dur;
   std::function<boost::asio::awaitable<Result<void>>()> f;
   Chan<Done> trigger_ch;
   Chan<Done> stop_ch;

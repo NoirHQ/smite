@@ -8,6 +8,6 @@
 
 namespace noir {
 
-using Time = std::chrono::system_clock::time_point;
+using Time = std::chrono::steady_clock::time_point;
 
 } // namespace noir

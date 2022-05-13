@@ -16,7 +16,7 @@ namespace noir {
 
 class ThrottleTimer {
 public:
-  ThrottleTimer(boost::asio::io_context& io_context, std::chrono::seconds dur)
+  ThrottleTimer(boost::asio::io_context& io_context, std::chrono::milliseconds dur)
     : io_context(io_context), event_ch(io_context), quit_ch(io_context), dur(dur), timer(io_context, dur) {
     std::scoped_lock _{mtx};
     timer.set_func(fire_routine());
@@ -46,7 +46,7 @@ private:
       std::scoped_lock _{mtx};
 
       boost::asio::steady_timer t{io_context};
-      t.expires_after(std::chrono::microseconds{100});
+      t.expires_after(std::chrono::milliseconds{100});
       auto res = co_await (event_ch.async_send(boost::system::error_code{}, {}, boost::asio::use_awaitable) ||
         quit_ch.async_receive(as_result(boost::asio::use_awaitable)) || t.async_wait(boost::asio::use_awaitable));
       switch (res.index()) {
@@ -68,7 +68,7 @@ private:
   boost::asio::io_context& io_context;
 
   Chan<noir::Done> quit_ch;
-  std::chrono::seconds dur;
+  std::chrono::milliseconds dur;
   Timer timer;
   std::mutex mtx;
   bool is_set{false};
