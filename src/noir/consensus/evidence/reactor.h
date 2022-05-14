@@ -8,7 +8,7 @@
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/evidence/evidence_pool.h>
 
-namespace noir::consensus::evidence {
+namespace noir::consensus::ev {
 
 struct reactor {
 
@@ -47,4 +47,4 @@ struct reactor {
   }
 };
 
-} // namespace noir::consensus::evidence
+} // namespace noir::consensus::ev

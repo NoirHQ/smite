@@ -22,6 +22,9 @@ struct evidence {
   virtual std::string get_string() = 0;
   virtual tstamp get_timestamp() = 0;
   virtual result<void> validate_basic() = 0;
+
+  static std::shared_ptr<::tendermint::types::Evidence> evidence_to_proto(std::shared_ptr<evidence>);
+  static std::shared_ptr<evidence> evidence_from_proto(std::shared_ptr<::tendermint::types::Evidence>);
 };
 
 struct duplicate_vote_evidence : public evidence {

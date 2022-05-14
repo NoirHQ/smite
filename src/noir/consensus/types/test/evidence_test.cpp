@@ -11,6 +11,10 @@
 using namespace noir;
 using namespace noir::consensus;
 
+bytes string_to_bytes(std::string_view s) {
+  return {s.begin(), s.end()};
+}
+
 p2p::block_id make_block_id(bytes hash, uint32_t part_set_size, bytes part_set_hash) {
   return {.hash = std::move(hash), .parts = {.total = part_set_size, .hash = std::move(part_set_hash)}};
 }
@@ -83,8 +87,29 @@ TEST_CASE("evidence: duplicate vote", "[noir][consensus]") {
 
 TEST_CASE("evidence: verify generated hash", "[noir][consensus]") {
   auto val = mock_pv();
+  val.priv_key_.key = from_hex("9D834D3FCAC4EE25536B70E15376FEBB697861AB573405D8B89290417FD16070556A436F1218D30942EFE79"
+                               "8420F51DC9B6A311B929C578257457D05C5FCF230");
+  val.pub_key_ = val.priv_key_.get_pub_key();
+  auto block_id = make_block_id(crypto::sha256()(string_to_bytes("blockhash")), std::numeric_limits<int32_t>::max(),
+    crypto::sha256()(string_to_bytes("partshash")));
+  auto block_id2 = make_block_id(crypto::sha256()(string_to_bytes("blockhash2")), std::numeric_limits<int32_t>::max(),
+    crypto::sha256()(string_to_bytes("partshash")));
+  std::string chain_id = "mychain";
+  auto v = make_vote(
+    val, chain_id, std::numeric_limits<int32_t>::max(), std::numeric_limits<int64_t>::max(), 1, 1, block_id, 1000000);
+  auto v2 = make_vote(
+    val, chain_id, std::numeric_limits<int32_t>::max(), std::numeric_limits<int64_t>::max(), 2, 1, block_id2, 1000000);
 
-  // TODO: requires ed25519 to finish; come back later to implement after ed25519 is available
-  /// duplicateVoteEvidence = a9ce28d13bb31001fc3e5b7927051baf98f86abdbd64377643a304164c826923
-  /// LightClientAttackEvidence = 2f8782163c3905b26e65823ababc977fe54e97b94e60c0360b1e4726b668bb8e
+  // Data for light_client_attack_evidence
+  int64_t height{5};
+  auto common_height = height - 1;
+  int n_validators = 10;
+  // TODO: requires many more helper functions to continue
+
+  auto dup = std::make_shared<duplicate_vote_evidence>();
+  dup->vote_a = v2;
+  dup->vote_b = v;
+  evidence_list ev_list{{dup}};
+  // std::cout << to_hex(ev_list.hash()) << std::endl;
+  CHECK(ev_list.hash() == from_hex("b34b4bb0b31dba1c38185ea0e09b70fa8cd451431dfc3d15f4a234c3e9c0bd23"));
 }
