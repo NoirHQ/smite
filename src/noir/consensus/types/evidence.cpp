@@ -10,6 +10,25 @@
 
 namespace noir::consensus {
 
+std::shared_ptr<::tendermint::types::Evidence> evidence::evidence_to_proto(std::shared_ptr<evidence> ev) {
+  if (!ev) {
+    elog("evidence_to_proto failed: null evidence");
+    return {};
+  }
+  auto ret = std::make_shared<::tendermint::types::Evidence>();
+  if (auto ev_d = dynamic_cast<duplicate_vote_evidence*>(ev.get()); ev_d) {
+    *ret->mutable_duplicate_vote_evidence() = *ev_d->to_proto();
+    return ret;
+  } else if (auto ev_l = dynamic_cast<light_client_attack_evidence*>(ev.get()); ev_l) {
+    *ret->mutable_light_client_attack_evidence() = *ev_l->to_proto().value();
+    return ret;
+  }
+  elog("evidence_to_proto failed: unknown evidence");
+  return {};
+}
+
+std::shared_ptr<evidence> evidence::evidence_from_proto(std::shared_ptr<::tendermint::types::Evidence> ev) {}
+
 std::vector<std::shared_ptr<::tendermint::abci::Evidence>> light_client_attack_evidence::get_abci() {
   std::vector<std::shared_ptr<::tendermint::abci::Evidence>> ret;
   for (auto& b_val : byzantine_validators) {
