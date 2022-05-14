@@ -28,12 +28,15 @@ using BytesView = std::span<const unsigned char>;
 // not-owned mutable byte sequence
 using BytesViewMut = std::span<unsigned char>;
 
-// concept for convertible to bytes view (no implicit)
 template<typename T>
-concept BytesViewConstructible = !std::is_convertible_v<T, BytesView> && requires (T v) {
+concept ByteSequence = requires (T v) {
   { v.data() } -> BytePtr;
   { v.size() } -> ConvertibleTo<size_t>;
 };
+
+// concept for convertible to bytes view (no implicit)
+template<typename T>
+concept BytesViewConstructible = !std::is_convertible_v<T, BytesView> && ByteSequence<T>;
 
 auto bytes_view(BytesViewConstructible auto& bytes) -> BytesView {
   return {reinterpret_cast<BytesView::pointer>(bytes.data()), bytes.size()};
@@ -182,7 +185,7 @@ public:
   const_pointer data() const noexcept {
     return backend.data();
   }
-  size_type size() const noexcept {
+  constexpr size_type size() const noexcept {
     return backend.size();
   }
   [[nodiscard]] bool empty() const noexcept {
@@ -208,6 +211,66 @@ public:
 
   void clear() {
     std::fill(backend.begin(), backend.end(), 0);
+  }
+
+  template<size_t S>
+  constexpr bool operator==(const BytesN<S>& rhs) const {
+    if (size() != rhs.size()) {
+      return false;
+    }
+    return !std::memcmp(data(), rhs.data(), size());
+  }
+
+  template<size_t S>
+  constexpr bool operator!=(const BytesN<S>& rhs) const {
+    if (size() != rhs.size()) {
+      return true;
+    }
+    return std::memcmp(data(), rhs.data(), size());
+  }
+
+  template<size_t S>
+  constexpr bool operator<(const BytesN<S>& rhs) const {
+    auto cmp = std::memcmp(data(), rhs.data(), std::min(size(), rhs.size()));
+    if (cmp < 0) {
+      return true;
+    } else if (!cmp) {
+      return size() < rhs.size();
+    }
+    return false;
+  }
+
+  template<size_t S>
+  constexpr bool operator<=(const BytesN<S>& rhs) const {
+    auto cmp = std::memcmp(data(), rhs.data(), std::min(size(), rhs.size()));
+    if (cmp < 0) {
+      return true;
+    } else if (!cmp) {
+      return size() <= rhs.size();
+    }
+    return false;
+  }
+
+  template<size_t S>
+  constexpr bool operator>(const BytesN<S>& rhs) const {
+    auto cmp = std::memcmp(data(), rhs.data(), std::min(size(), rhs.size()));
+    if (cmp > 0) {
+      return true;
+    } else if (!cmp) {
+      return size() > rhs.size();
+    }
+    return false;
+  }
+
+  template<size_t S>
+  constexpr bool operator>=(const BytesN<S>& rhs) const {
+    auto cmp = std::memcmp(data(), rhs.data(), std::min(size(), rhs.size()));
+    if (cmp > 0) {
+      return true;
+    } else if (!cmp) {
+      return size() >= rhs.size();
+    }
+    return false;
   }
 };
 
