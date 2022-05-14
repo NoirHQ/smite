@@ -1,6 +1,12 @@
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
 #pragma once
+#include <noir/common/concepts.h>
+#include <noir/common/hex.h>
 #include <noir/common/mem_clr.h>
-#include <cppcodec/hex_lower.hpp>
 #include <array>
 #include <span>
 #include <string>
@@ -8,8 +14,39 @@
 
 namespace noir {
 
-template<size_t N = std::dynamic_extent>
-class Bytes {
+// concept for byte compatible type
+template<typename T, typename U = Deref<T>>
+concept Byte = std::is_same_v<U, unsigned char> || std::is_same_v<U, char> || std::is_same_v<U, std::byte>;
+
+// concept for a pointer to byte compatible type
+template<typename T>
+concept BytePtr = Byte<T> && std::is_pointer_v<T>;
+
+// not-owned readonly byte sequence
+using BytesView = std::span<const unsigned char>;
+
+// not-owned mutable byte sequence
+using BytesViewMut = std::span<unsigned char>;
+
+// concept for convertible to bytes view (no implicit)
+template<typename T>
+concept BytesViewConstructible = !std::is_convertible_v<T, BytesView> && requires (T v) {
+  { v.data() } -> BytePtr;
+  { v.size() } -> ConvertibleTo<size_t>;
+};
+
+auto bytes_view(BytesViewConstructible auto& bytes) -> BytesView {
+  return {reinterpret_cast<BytesView::pointer>(bytes.data()), bytes.size()};
+}
+
+auto bytes_view_mut(BytesViewConstructible auto& bytes) -> BytesViewMut {
+  return {reinterpret_cast<BytesViewMut::pointer>(bytes.data()), bytes.size()};
+}
+
+
+// fixed or dynamic sized byte sequence
+template<size_t N>
+class BytesN {
 private:
   template<size_t S>
   struct Backend {
@@ -20,6 +57,7 @@ private:
     using type = std::vector<unsigned char>;
   };
 
+  // array used for fixed, vector used for dynamic
   typename Backend<N>::type backend;
 
 public:
@@ -36,11 +74,11 @@ public:
   using reverse_iterator = typename raw_type::reverse_iterator;
   using const_reverse_iterator = typename raw_type::const_reverse_iterator;
 
-  Bytes() = default;
+  BytesN() = default;
 
-  Bytes(std::string_view s, bool canonical = true) {
+  BytesN(std::string_view s, bool canonical = true) {
     if constexpr (N != std::dynamic_extent) {
-      auto size = cppcodec::hex_lower::decode(backend.data(), backend.size(), s);
+      auto size = hex::decode(backend.data(), backend.size(), s);
       if (canonical && size != N) {
         throw std::runtime_error("invalid bytes length");
       }
@@ -48,13 +86,14 @@ public:
         std::fill(backend.begin() + size, backend.end(), 0);
       }
     } else {
-      auto vec = cppcodec::hex_lower::decode(s);
+      auto vec = hex::decode(s);
       std::swap(backend, vec);
     }
   }
 
-  template<typename T, size_t S>
-  Bytes(std::span<T, S> bytes, bool canonical = true) {
+  template<typename T>
+  requires (ConvertibleTo<T, BytesView> || BytesViewConstructible<T>)
+  BytesN(T&& bytes, bool canonical = true) {
     if constexpr (N != std::dynamic_extent) {
       auto size = bytes.size();
       if (canonical && size != N) {
@@ -69,13 +108,13 @@ public:
     }
   }
 
-  Bytes(std::vector<unsigned char>& vec, bool canonical = true): Bytes(std::span(vec), canonical) {}
+  BytesN(std::vector<unsigned char>& vec, bool canonical = true): BytesN(std::span(vec), canonical) {}
 
-  Bytes(std::vector<unsigned char>&& vec) requires (N == std::dynamic_extent) {
+  BytesN(std::vector<unsigned char>&& vec) requires (N == std::dynamic_extent) {
     std::swap(backend, vec);
   }
 
-  Bytes(size_t size) requires (N == std::dynamic_extent)
+  BytesN(size_t size) requires (N == std::dynamic_extent)
     : backend(size) {}
 
   raw_type& raw() {
@@ -164,7 +203,7 @@ public:
   }
 
   std::string to_string() const {
-    return cppcodec::hex_lower::encode(backend);
+    return hex::encode(backend);
   }
 
   void clear() {
@@ -172,15 +211,22 @@ public:
   }
 };
 
-template<size_t N = std::dynamic_extent>
-class SecureBytes : public Bytes<N> {
+// byte sequence clearing storage during destruction
+template<size_t N>
+class SecureBytesN : public BytesN<N> {
 private:
-  using super = Bytes<N>;
+  using super = BytesN<N>;
 
 public:
-  ~SecureBytes() {
+  ~SecureBytesN() {
     mem_cleanse(super::data(), super::size());
   }
 };
+
+// alias name for dynamic byte sequence
+using Bytes = BytesN<std::dynamic_extent>;
+
+// alias name for secure dynamic byte sequence
+using SecureBytes = SecureBytesN<std::dynamic_extent>;
 
 } // namespace noir
