@@ -19,7 +19,7 @@ using namespace BOOST_OUTCOME_V2_NAMESPACE;
 //
 // However, `boost::outcome_v2::result` doesn't have a default constructor by its design,
 // so it cannot be used as a return type of `boost::asio::awaitable<R>` function.
-// `boost::asio::co_spawn` calls completion token with `void(std::exception_ptr, R>` and
+// `boost::asio::co_spawn` calls completion token with `void(std::exception_ptr, R)` and
 // `R` must be default constructible.
 template<typename T, typename E = Error, typename NoValuePolicy = policy::default_policy<T, E, void>>
 class Result : public basic_result<T, E, NoValuePolicy> {

@@ -1,5 +1,10 @@
-#include <catch2/catch_all.hpp>
+// This file is part of NOIR.
+//
+// Copyright (c) 2022 Haderech Pte. Ltd.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
 #include <noir/common/chrono.h>
+#include <catch2/catch_all.hpp>
 
 const auto parse_duration = noir::parse_duration<std::chrono::nanoseconds>;
 
@@ -9,7 +14,7 @@ TEST_CASE("parse time duration", "[noir][common]") {
   CHECK(parse_duration("1m").value() == std::chrono::seconds(60));
   CHECK(parse_duration("1s").value() == std::chrono::milliseconds(1000));
   CHECK(parse_duration("1ms").value() == std::chrono::microseconds(1000));
-  CHECK(parse_duration("1us").value()  == std::chrono::nanoseconds(1000));
+  CHECK(parse_duration("1us").value() == std::chrono::nanoseconds(1000));
 
   CHECK(parse_duration("1m40s").value() == std::chrono::seconds(100));
   CHECK(parse_duration("2s50ms").value() == std::chrono::milliseconds(2050));

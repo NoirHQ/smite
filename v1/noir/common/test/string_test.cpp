@@ -3,8 +3,8 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <catch2/catch_all.hpp>
 #include <noir/common/string.h>
+#include <catch2/catch_all.hpp>
 
 struct foo {
   std::string to_string() const {
@@ -13,12 +13,11 @@ struct foo {
 };
 
 namespace baz {
-struct bar {
-};
+struct bar {};
 std::string to_string(bar b) {
   return "bar";
 }
-} // namespace bar
+} // namespace baz
 
 TEST_CASE("to_string", "[noir][common]") {
   CHECK(noir::to_string(foo{}) == "foo");
