@@ -20,6 +20,8 @@ using P2PID = std::string;
  */
 struct vote : p2p::vote_message {
 
+  static bytes vote_sign_bytes(std::string chain_id, std::shared_ptr<::tendermint::types::Vote> vote_);
+
   commit_sig to_commit_sig() {
     block_id_flag flag;
     if (block_id_.is_complete())

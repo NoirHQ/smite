@@ -108,6 +108,23 @@ struct duplicate_vote_evidence : public evidence {
     return {};
   }
 
+  result<void> validate_abci(
+    std::shared_ptr<validator> val, std::shared_ptr<validator_set> val_set, tstamp evidence_time) {
+    if (timestamp != evidence_time)
+      return make_unexpected("evidence has a different time to the block it is associated with");
+    if (val->voting_power != validator_power)
+      return make_unexpected("validator power from evidence and our validator set does not match");
+    if (val_set->total_voting_power != total_voting_power)
+      return make_unexpected("total voting power from the evidence and our validator set does not match");
+    return {};
+  }
+
+  void generate_abci(std::shared_ptr<validator> val, std::shared_ptr<validator_set> val_set, tstamp evidence_time) {
+    validator_power = val->voting_power;
+    total_voting_power = val_set->total_voting_power;
+    timestamp = evidence_time;
+  }
+
   std::shared_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto() {
     auto ret = std::make_shared<::tendermint::types::DuplicateVoteEvidence>();
     if (vote_b)
@@ -178,6 +195,40 @@ struct light_client_attack_evidence : public evidence {
     if (!ok)
       return make_unexpected(fmt::format("invalid conflicting light block: {}", ok.error()));
     return {};
+  }
+
+  result<void> validate_abci(
+    std::shared_ptr<validator_set> common_vals, std::shared_ptr<signed_header> trusted_header, tstamp evidence_time) {
+    auto ev_total = total_voting_power;
+    auto vals_total = common_vals->total_voting_power;
+    if (ev_total != vals_total)
+      return make_unexpected("total voting power from evidence and our validator set does not match");
+    if (timestamp != evidence_time)
+      return make_unexpected("evidence has a different time to the block it is associated with");
+
+    auto validators = get_byzantine_validators(common_vals, trusted_header);
+    if (validators.empty() && !byzantine_validators.empty())
+      return make_unexpected("expected zero validators from an amnesia light client attack but got some");
+
+    if (validators.size() != byzantine_validators.size())
+      return make_unexpected("unexpected number of byzantine validators from evidence");
+
+    int idx{0};
+    for (auto& val : validators) {
+      if (byzantine_validators[idx]->address != val->address)
+        return make_unexpected("evidence contained an unexpected byzantine validator address");
+      if (byzantine_validators[idx]->voting_power != val->voting_power)
+        return make_unexpected("evidence contained an unexpected byzantine validator power");
+      idx++;
+    }
+    return {};
+  }
+
+  void generate_abci(
+    std::shared_ptr<validator_set> common_vals, std::shared_ptr<signed_header> trusted_header, tstamp evidence_time) {
+    timestamp = evidence_time;
+    total_voting_power = common_vals->total_voting_power;
+    byzantine_validators = get_byzantine_validators(common_vals, trusted_header);
   }
 
   result<std::shared_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto() {

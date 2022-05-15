@@ -282,12 +282,13 @@ struct evidence_pool {
 
   /// verify
   result<void> verify(std::shared_ptr<evidence> ev);
+  result<void> verify_duplicate_vote(
+    std::shared_ptr<duplicate_vote_evidence> ev, std::string chain_id, std::shared_ptr<validator_set> val_set);
   result<void> verify_light_client_attack(std::shared_ptr<light_client_attack_evidence> ev,
     std::shared_ptr<signed_header> common_header,
     std::shared_ptr<signed_header> trusted_header,
     std::shared_ptr<validator_set> common_vals);
-  result<void> verify_duplicate_vote(
-    std::shared_ptr<duplicate_vote_evidence> ev, std::string chain_id, std::shared_ptr<validator_set> val_set);
+  result<std::shared_ptr<signed_header>> get_signed_header(int64_t height);
 };
 
 } // namespace noir::consensus::ev
