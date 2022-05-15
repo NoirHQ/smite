@@ -27,7 +27,7 @@ struct canonical_proposal {
 
 struct canonical {
 
-  static canonical_vote canonicalize_vote(const vote& vote_) {
+  static canonical_vote canonicalize_vote(const vote& vote_) { // TODO: add chain_id
     return {.type = vote_.type,
       .height = vote_.height,
       .round = vote_.round,

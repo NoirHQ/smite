@@ -7,6 +7,7 @@
 #include <noir/common/helper/rust.h>
 #include <noir/common/log.h>
 #include <noir/consensus/crypto.h>
+#include <noir/consensus/types/block.h>
 #include <noir/p2p/types.h>
 #include <tendermint/types/types.pb.h>
 
@@ -468,6 +469,17 @@ struct validator_set {
     *ret->mutable_proposer() = *val_proposer.value();
     ret->set_total_voting_power(0);
     return ret;
+  }
+
+  result<void> verify_commit_light(
+    std::string chain_id, p2p::block_id block_id_, int64_t height, std::shared_ptr<commit> commit_) {
+    // FIXME: implement
+    return {};
+  }
+
+  result<void> verify_commit_light_trusting(std::string chain_id, std::shared_ptr<commit> commit_) {
+    // FIXME: implement
+    return {};
   }
 };
 

@@ -10,6 +10,11 @@
 
 namespace noir::consensus {
 
+bytes vote::vote_sign_bytes(std::string chain_id, std::shared_ptr<::tendermint::types::Vote> vote_) {
+  // auto pb = canonical::canonicalize_vote(*vote_);
+  return {}; // TODO: requires converting every serialization to proto
+}
+
 std::shared_ptr<vote_set> vote_set::new_vote_set(std::string& chain_id_,
   int64_t height_,
   int32_t round_,
@@ -89,8 +94,8 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     elog("add_vote() failed: invalid validator address");
     return false;
   }
-  auto vote_sign_bytes = encode(canonical::canonicalize_vote(*vote_));
-  if (!val->pub_key_.verify_signature(vote_sign_bytes, vote_->signature)) {
+  auto vote_sign_bytes_ = encode(canonical::canonicalize_vote(*vote_));
+  if (!val->pub_key_.verify_signature(vote_sign_bytes_, vote_->signature)) {
     elog("add_vote() failed: invalid signature");
     return false;
   }
