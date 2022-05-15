@@ -9,9 +9,10 @@
 namespace tendermint::p2p::conn {
 
 using namespace noir;
+using namespace std::chrono;
 
 namespace detail {
-  auto packet_to_bytes(Packet& msg) -> Bytes {
+  auto serialize_packet(Packet& msg) -> Bytes {
     VarInt64 message_length = msg.ByteSizeLong();
     codec::datastream<size_t> ss(0);
     auto message_header_size = write_uleb128(ss, message_length).value();
@@ -25,51 +26,54 @@ namespace detail {
 
   auto Channel::send_bytes(BytesPtr bytes) -> asio::awaitable<Result<bool>> {
     asio::steady_timer timer{io_context};
-    timer.expires_after(std::chrono::seconds{10});
+    timer.expires_after(default_send_timeout);
     boost::system::error_code ec{};
     auto res =
-      co_await (timer.async_wait(asio::use_awaitable) || send_queue.async_send(ec, bytes, asio::use_awaitable));
+      co_await (send_queue.async_send(ec, bytes, asio::use_awaitable) || timer.async_wait(asio::use_awaitable));
     switch (res.index()) {
     case 0:
-      co_return false;
-    case 1:
-      // TODO: if ec is true, how to handle?
-      send_queue_size++;
+      if (ec) {
+        co_return false;
+      }
       co_return true;
+    case 1:
+      co_return false;
     }
     co_return err_unreachable;
   }
 
   auto Channel::is_send_pending() -> bool {
-    if (sending.empty()) {
+    if (!sending) {
       return send_queue.try_receive([&](boost::system::error_code ec, BytesPtr bytes) mutable {
-        sending.insert(sending.end(), bytes->begin(), bytes->end());
+        sending = bytes;
+        sent_pos = 0;
       });
     }
     return true;
   }
 
-  void Channel::next_packet_msg(PacketMsg* msg) {
+  void Channel::set_next_packet_msg(PacketMsg* msg) {
     msg->set_channel_id(desc->id);
-    auto packet_size = sending.size() < max_packet_msg_payload_size ? sending.size() : max_packet_msg_payload_size;
-    msg->set_data({sending.begin(), sending.begin() + packet_size});
-    if (sending.size() <= max_packet_msg_payload_size) {
+    auto remaining = sending->size() - sent_pos;
+    auto packet_size = remaining < max_packet_msg_payload_size ? remaining : max_packet_msg_payload_size;
+    msg->set_data({sending->begin() + sent_pos, sending->begin() + sent_pos + packet_size});
+    if (remaining <= max_packet_msg_payload_size) {
       msg->set_eof(true);
-      sending.clear();
+      sending.reset();
     } else {
       msg->set_eof(false);
-      sending = Bytes{sending.begin() + packet_size, sending.end()};
+      sent_pos += packet_size;
     }
   }
 
-  auto Channel::write_packet_msg_to(BufferedWriter<net::Conn<net::TcpConn>>& w)
+  auto Channel::write_packet_msg_to(BufferedWriter<net::Conn<net::TcpConn>>& writer)
     -> asio::awaitable<Result<std::size_t>> {
     Packet packet{};
     PacketMsg* msg = packet.mutable_packet_msg();
-    next_packet_msg(msg);
-    auto bytes = detail::packet_to_bytes(packet);
+    set_next_packet_msg(msg);
+    auto serialized = detail::serialize_packet(packet);
 
-    auto res = co_await w.write(bytes);
+    auto res = co_await writer.write(serialized);
     if (res.has_value()) {
       recently_sent += res.value();
     }
@@ -99,10 +103,10 @@ namespace detail {
 void MConnection::start(Chan<Done>& done) {
   ping_timer.start();
   ch_stats_timer.start();
-  set_recv_last_msg_at(std::chrono::system_clock::now());
+  set_recv_last_msg_at(steady_clock::now());
 
   asio::co_spawn(io_context, send_routine(done), asio::detached);
-  asio::co_spawn(io_context, recv_routine(done), asio::detached);
+  //  asio::co_spawn(io_context, recv_routine(done), asio::detached);
 }
 
 void MConnection::set_recv_last_msg_at(Time&& t) {
@@ -116,7 +120,7 @@ auto MConnection::get_last_message_at() -> Time {
 }
 
 auto MConnection::string() -> std::string {
-  return fmt::format("MConn{{}}", conn.address);
+  return fmt::format("MConn{{}}", conn->address);
 }
 
 auto MConnection::flush() -> boost::asio::awaitable<void> {
@@ -127,12 +131,17 @@ auto MConnection::send(ChannelId ch_id, BytesPtr msg_bytes) -> asio::awaitable<R
   if (!channels_idx.contains(ch_id)) {
     co_return false;
   }
-
-  auto success = (co_await channels_idx[ch_id]->send_bytes(msg_bytes)).value();
+  auto res = co_await channels_idx[ch_id]->send_bytes(msg_bytes);
+  if (!res.has_error()) {
+    co_return res.error();
+  }
+  auto success = res.value();
   if (success) {
     boost::system::error_code ec{};
     co_await send_ch.async_send(ec, {}, asio::use_awaitable);
-    // TODO: how to handle ec?
+    if (ec) {
+      co_return ec;
+    }
   }
   co_return success;
 }
@@ -142,53 +151,66 @@ auto MConnection::send_routine(Chan<Done>& done) -> asio::awaitable<void> {
   pong_timeout.start();
 
   for (;;) {
+    Error err{};
+
     auto res = co_await (flush_timer.event_ch.async_receive(boost::asio::use_awaitable) ||
       ch_stats_timer.time_ch.async_receive(asio::use_awaitable) ||
       ping_timer.time_ch.async_receive(asio::use_awaitable) || pong_ch.async_receive(asio::use_awaitable) ||
       done.async_receive(as_result(asio::use_awaitable)) || quit_send_routine_ch.async_receive(asio::use_awaitable) ||
       pong_timeout.time_ch.async_receive(asio::use_awaitable) || send_ch.async_receive(asio::use_awaitable));
 
-    switch (res.index()) {
-    case 0:
+    if (res.index() == 0) {
       co_await flush();
-      break;
-    case 1:
+    } else if (res.index() == 1) {
       for (auto& channel : channels_idx) {
         channel.second->update_stats();
       }
-    case 2:
-      if (!(co_await send_ping()).has_error()) {
+    } else if (res.index() == 2) {
+      auto ping_res = co_await send_ping();
+      if (!ping_res.has_error()) {
+        err = ping_res.error();
+      } else {
         co_await flush();
       }
-      break;
-    case 3:
-      if (!(co_await send_pong()).has_error()) {
+    } else if (res.index() == 3) {
+      auto pong_res = co_await send_pong();
+      if (pong_res.has_error()) {
+        err = pong_res.error();
+      } else {
         co_await flush();
       }
+    } else if (res.index() == 4 || res.index() == 5) {
       break;
-    case 4:
-    case 5:
-      co_return;
-    case 6:
-      break;
-    case 7:
-      auto send_packet_res = co_await send_some_packet_msgs(done);
-      if (!send_packet_res.has_error()) {
-        auto eof = send_packet_res.value();
+    } else if (res.index() == 6) {
+    } else {
+      auto msg_res = co_await send_some_packet_msgs(done);
+      if (!msg_res.has_error()) {
+        auto eof = msg_res.value();
         if (!eof) {
           co_await send_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
         }
       }
+    }
+    if (duration_cast<milliseconds>(steady_clock::now() - get_last_message_at()).count() >
+      config.pong_timeout.count()) {
+      err = Error("pong timeout");
+    }
+
+    if (err) {
+      stop_for_error(done, err);
       break;
-    };
+    }
   }
+
+  done_send_routine_ch.close();
+  ping_timer.stop();
 }
 
 auto MConnection::send_ping() -> asio::awaitable<Result<void>> {
   Packet packet{};
   packet.mutable_packet_ping();
-  auto bytes = detail::packet_to_bytes(packet);
-  auto res = co_await conn.write(boost::asio::buffer(bytes.data(), bytes.size()));
+  auto serialized = detail::serialize_packet(packet);
+  auto res = co_await buf_conn_writer.write(serialized);
   if (res.has_error()) {
     co_return res.error();
   } else {
@@ -199,8 +221,8 @@ auto MConnection::send_ping() -> asio::awaitable<Result<void>> {
 auto MConnection::send_pong() -> asio::awaitable<Result<void>> {
   Packet packet{};
   packet.mutable_packet_pong();
-  auto bytes = detail::packet_to_bytes(packet);
-  auto res = co_await conn.write(boost::asio::buffer(bytes.data(), bytes.size()));
+  auto serialized = detail::serialize_packet(packet);
+  auto res = co_await buf_conn_writer.write(serialized);
   if (res.has_error()) {
     co_return res.error();
   } else {
@@ -220,7 +242,7 @@ auto MConnection::send_some_packet_msgs(Chan<Done>& done) -> asio::awaitable<Res
 
 auto MConnection::send_packet_msg(Chan<Done>& done) -> asio::awaitable<Result<bool>> {
   auto least_ratio = std::numeric_limits<float_t>::max();
-  detail::ChannelUptr* least_channel;
+  detail::ChannelUptr* least_channel{};
   for (auto& channel : channels_idx) {
     if (!channel.second->is_send_pending()) {
       continue;
@@ -238,13 +260,13 @@ auto MConnection::send_packet_msg(Chan<Done>& done) -> asio::awaitable<Result<bo
   }
   auto res = co_await (*least_channel)->write_packet_msg_to(buf_conn_writer);
   if (res.has_error()) {
-    stop_for_error(done);
+    stop_for_error(done, res.error());
   }
   flush_timer.set();
   co_return false;
 }
 
-void MConnection::stop_for_error(Chan<Done>& done) {
+void MConnection::stop_for_error(Chan<Done>& done, Error err) {
   stop();
 
   // TODO: handle error
@@ -254,7 +276,7 @@ void MConnection::stop() {
   if (stop_services()) {
     return;
   }
-  conn.close();
+  conn->close();
 }
 
 auto MConnection::stop_services() -> bool {
@@ -273,6 +295,6 @@ auto MConnection::stop_services() -> bool {
   return false;
 }
 
-//auto MConnection::recv_routine(Chan<Done>& done) -> asio::awaitable<void>;
+auto MConnection::recv_routine(Chan<Done>& done) -> asio::awaitable<void> {}
 
 } //namespace tendermint::p2p::conn
