@@ -18,7 +18,7 @@ const std::size_t default_buf_size = 4096;
 template<typename Writer>
 class BufferedWriter {
 public:
-  explicit BufferedWriter(Writer& w, std::size_t size = default_buf_size): w(w), buf(size){};
+  explicit BufferedWriter(std::shared_ptr<Writer>& w, std::size_t size = default_buf_size): w(w), buf(size){};
 
   auto flush() -> boost::asio::awaitable<Result<void>> {
     if (err)
@@ -26,7 +26,7 @@ public:
     if (n == 0)
       co_return success();
 
-    auto res = co_await w.write(boost::asio::buffer(buf.data(), n));
+    auto res = co_await w->write(boost::asio::buffer(buf.data(), n));
     if (res.has_error()) {
       err = res.error();
     } else {
@@ -62,7 +62,7 @@ public:
       std::size_t remaining = available();
       std::size_t written = 0;
       if (n == 0) {
-        auto res = co_await w.write(boost::asio::buffer(bytes_s.data(), remaining));
+        auto res = co_await w->write(boost::asio::buffer(bytes_s.data(), remaining));
         if (res.has_error()) {
           err = res.error();
         } else {
@@ -92,6 +92,6 @@ public:
 
 private:
   Error err;
-  Writer& w;
+  std::shared_ptr<Writer>& w;
 };
 } //namespace noir
