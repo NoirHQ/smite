@@ -6,6 +6,8 @@
 #include <noir/common/time.h>
 #include <date/date.h>
 
+#include <iomanip>
+
 namespace noir {
 
 tstamp get_time() {
