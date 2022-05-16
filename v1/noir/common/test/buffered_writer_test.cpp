@@ -25,15 +25,15 @@ public:
 TEST_CASE("BufferedWriter", "[noir][common]") {
   SECTION("available") {
     std::size_t test_size = 100;
-    TestWriter tw{};
-    BufferedWriter<TestWriter> bw{tw, test_size};
+    auto tw = std::make_shared<TestWriter>();
+    BufferedWriter<TestWriter> bw(tw, test_size);
     CHECK(test_size == bw.available());
   }
 
   SECTION("writer") {
     std::size_t test_size = 5;
-    TestWriter tw{};
-    BufferedWriter<TestWriter> bw{tw, test_size};
+    auto tw = std::make_shared<TestWriter>();
+    BufferedWriter<TestWriter> bw(tw, test_size);
 
     boost::asio::io_context io_context{};
     boost::asio::co_spawn(
@@ -57,8 +57,8 @@ TEST_CASE("BufferedWriter", "[noir][common]") {
 
   SECTION("flush") {
     std::size_t test_size = 5;
-    TestWriter tw{};
-    BufferedWriter<TestWriter> bw{tw, test_size};
+    auto tw = std::make_shared<TestWriter>();
+    BufferedWriter<TestWriter> bw(tw, test_size);
 
     boost::asio::io_context io_context{};
     boost::asio::co_spawn(
