@@ -15,7 +15,7 @@ private:
   TcpConn(std::string_view address, boost::asio::io_context& io_context)
     : Conn(address, io_context), socket(new boost::asio::ip::tcp::socket(io_context.get_executor())) {}
 
-  TcpConn(boost::asio::ip::tcp::socket&& socket)
+  explicit TcpConn(boost::asio::ip::tcp::socket&& socket)
     : Conn(static_cast<boost::asio::io_context&>(socket.get_executor().context())),
       socket(std::make_shared<boost::asio::ip::tcp::socket>(std::move(socket))) {
     boost::system::error_code ec;
