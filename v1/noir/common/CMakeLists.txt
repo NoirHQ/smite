@@ -5,6 +5,7 @@ add_library(noir_common_v1 STATIC
 target_include_directories(noir_common_v1 PUBLIC ${NOIR_SOURCE_DIR} ${Boost_INCLUDE_DIR})
 target_link_libraries(noir_common_v1
   fmt::fmt
+  noir::log::v1
 )
 
 add_library(noir::common::v1 ALIAS noir_common_v1)
