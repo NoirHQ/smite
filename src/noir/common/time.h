@@ -14,5 +14,6 @@ using tstamp = std::chrono::system_clock::duration::rep;
 
 tstamp get_time();
 result<std::time_t> parse_genesis_time(const char* time_str);
+std::string tstamp_to_format_str(const tstamp time_stamp);
 
 } // namespace noir

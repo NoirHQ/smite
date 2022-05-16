@@ -14,6 +14,7 @@ target_link_libraries(noir_common
   nonstd::scope-lite
   range-v3::range-v3
   tl::expected
+  date::date
 )
 set_target_properties(noir_common PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 

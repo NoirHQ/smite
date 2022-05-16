@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/common/time.h>
+#include <date/date.h>
 
 namespace noir {
 
@@ -21,6 +22,16 @@ result<std::time_t> parse_genesis_time(const char* time_str) {
   }
 
   return make_unexpected("Unknown time format");
+}
+
+std::string tstamp_to_format_str(const tstamp time_stamp) {
+  std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> tp{
+    std::chrono::seconds{time_stamp / 1000000}};
+  std::time_t tt = std::chrono::system_clock::to_time_t(tp);
+  std::tm tm = *std::gmtime(&tt); // GMT (UTC)
+  std::stringstream ss;
+  ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
+  return ss.str();
 }
 
 } // namespace noir

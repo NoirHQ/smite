@@ -26,6 +26,15 @@ namespace json {
     int64_t power;
     std::string name;
   };
+
+  struct genesis_json_obj {
+    std::string genesis_time;
+    std::string chain_id;
+    std::string initial_height;
+    std::vector<genesis_validator_json_obj> validators;
+    std::string app_hash;
+    std::string app_state;
+  };
 } // namespace json
 
 struct genesis_validator {
@@ -46,6 +55,7 @@ struct genesis_doc {
 
   static std::shared_ptr<genesis_doc> genesis_doc_from_file(const std::string& gen_doc_file);
 
+  void save(const std::string& file_path);
   bool validate_and_complete();
 };
 
@@ -55,3 +65,4 @@ NOIR_REFLECT(noir::consensus::genesis_validator, address, pub_key, power, name);
 NOIR_REFLECT(noir::consensus::genesis_doc, chain_id, initial_height, /*cs_params, validators,*/ app_hash, app_state);
 NOIR_REFLECT(noir::consensus::json::key_json_obj, type, value);
 NOIR_REFLECT(noir::consensus::json::genesis_validator_json_obj, address, pub_key, power, name);
+NOIR_REFLECT(noir::consensus::json::genesis_json_obj, genesis_time, chain_id, initial_height, validators, app_hash, app_state);

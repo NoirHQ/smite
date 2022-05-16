@@ -50,6 +50,7 @@ set(CONAN_PACKAGES
   scope-lite/0.2.0
   spdlog/1.10.0
   xxhash/0.8.1
+  date/3.0.1
 )
 
 if(UNIX AND NOT APPLE)
@@ -90,6 +91,7 @@ find_package(RocksDB REQUIRED)
 find_package(scope-lite REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(xxHash REQUIRED)
+find_package(date REQUIRED)
 
 add_subdirectory(libs)
 add_subdirectory(src)

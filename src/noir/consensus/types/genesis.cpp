@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/common/helper/variant.h>
+#include <noir/common/time.h>
 #include <noir/consensus/types/genesis.h>
 
 #include <fc/crypto/base64.hpp>
@@ -37,8 +38,8 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
       auto addr = from_hex(val.address);
       auto pub_key_str = fc::base64_decode(val.pub_key.value);
       ::noir::consensus::pub_key pub_key_{.key = bytes{pub_key_str.begin(), pub_key_str.end()}};
-      gen_doc->validators.push_back(
-        {.address = bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});
+      gen_doc->validators.push_back(genesis_validator{
+        .address = bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});
     }
   } catch (std::exception const& ex) {
     elog(fmt::format("error reading genesis from {}: {}", gen_doc_file, ex.what()));
@@ -92,6 +93,29 @@ bool genesis_doc::validate_and_complete() {
   if (genesis_time == 0)
     genesis_time = std::chrono::system_clock::now().time_since_epoch().count();
   return true;
+}
+
+void genesis_doc::save(const std::string& file_path) {
+  json::genesis_json_obj json_obj;
+  json_obj.genesis_time = tstamp_to_format_str(genesis_time);
+  json_obj.chain_id = chain_id;
+  json_obj.initial_height = to_string(initial_height);
+
+  for (const auto& validator : validators) {
+    json::genesis_validator_json_obj val;
+    val.address = to_string(validator.address);
+    val.pub_key.value = to_string(validator.pub_key.key);
+    val.power = validator.power;
+    val.name = validator.name;
+    json_obj.validators.push_back(val);
+  }
+
+  json_obj.app_hash = to_string(app_hash);
+  json_obj.app_state = to_string(app_state);
+
+  fc::variant vo;
+  fc::to_variant<json::genesis_json_obj>(json_obj, vo);
+  fc::json::save_to_file(vo, file_path);
 }
 
 } // namespace noir::consensus
