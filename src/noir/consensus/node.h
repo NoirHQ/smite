@@ -55,7 +55,9 @@ struct node {
     auto gen_doc = genesis_doc::genesis_doc_from_file(new_config->consensus.root_dir + "/config/genesis.json");
     if (!gen_doc) {
       wlog("Unable to load genesis from json.file. Will load default genesis.");
+      gen_doc = std::make_shared<genesis_doc>();
       *gen_doc = genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators};
+      gen_doc->save(new_config->consensus.root_dir + "/config/genesis.json");
     }
 
     // Load or generate node_key
