@@ -34,8 +34,8 @@ public:
   }
 
   auto tick_routine() -> boost::asio::awaitable<Result<void>> {
+    boost::asio::steady_timer t{io_context};
     for (;;) {
-      boost::asio::steady_timer t{io_context};
       t.expires_after(dur);
       co_await t.async_wait(boost::asio::use_awaitable);
       boost::system::error_code ec{};
