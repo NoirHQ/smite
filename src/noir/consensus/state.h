@@ -9,6 +9,7 @@
 #include <noir/consensus/tx.h>
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/genesis.h>
+#include <noir/consensus/types/validator.h>
 
 namespace noir::consensus {
 

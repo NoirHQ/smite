@@ -56,6 +56,18 @@ std::tuple<int64_t, tstamp, std::set<std::string>> evidence_pool::batch_expired_
   return {};
 }
 
+bytes evidence_pool::prefix_to_bytes(int64_t prefix) {
+  return noir::codec::proto3::encode(prefix); // TODO: check
+}
+
+bytes evidence_pool::key_committed(std::shared_ptr<evidence> ev) {
+  return {}; // TODO: implement
+}
+
+bytes evidence_pool::key_pending(std::shared_ptr<evidence> ev) {
+  return {}; // TODO: implement
+}
+
 result<void> evidence_pool::verify(std::shared_ptr<evidence> ev) {
   auto state_ = get_state();
   auto height = state_.last_block_height;
