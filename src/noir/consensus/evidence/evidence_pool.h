@@ -180,11 +180,11 @@ struct evidence_pool {
   }
 
   result<void> add_pending_evidence(std::shared_ptr<evidence> ev) {
-    auto evpb = evidence::evidence_to_proto(ev);
+    auto evpb = evidence::to_proto(*ev);
     if (!evpb)
-      return make_unexpected("failed to convert to proto");
-    bytes ev_bytes(evpb->ByteSizeLong());
-    evpb->SerializeToArray(ev_bytes.data(), evpb->ByteSizeLong()); // TODO: handle failure?
+      return make_unexpected(evpb.error());
+    bytes ev_bytes(evpb.value()->ByteSizeLong());
+    evpb.value()->SerializeToArray(ev_bytes.data(), evpb.value()->ByteSizeLong()); // TODO: handle failure?
     auto key = key_pending(ev);
     evidence_store->write_from_bytes(key, ev_bytes); // TODO: check
     std::atomic_fetch_add_explicit(&evidence_size, 1, std::memory_order_relaxed);
@@ -221,8 +221,8 @@ struct evidence_pool {
       std::shared_ptr<duplicate_vote_evidence> dve;
       std::string err;
       if (vote_set_.vote_a->height == new_state.last_block_height) {
-        if (auto ok = duplicate_vote_evidence::new_duplicate_vote_evidence(
-              vote_set_.vote_a, vote_set_.vote_b, new_state.last_block_time, new_state.last_validators);
+        if (auto ok = duplicate_vote_evidence::new_duplicate_vote_evidence(vote_set_.vote_a, vote_set_.vote_b,
+              new_state.last_block_time, std::shared_ptr<validator_set>(&new_state.last_validators) /* TODO: check */);
             !ok) {
           err = ok.error();
         } else {
@@ -274,11 +274,21 @@ struct evidence_pool {
     consensus_buffer.clear();
   }
 
-  result<std::shared_ptr<evidence>> bytes_to_ev(bytes ev_bytes) {}
-  std::string ev_map_key(std::shared_ptr<evidence> ev) {}
-  bytes prefix_to_bytes(int64_t prefix) {}
-  bytes key_committed(std::shared_ptr<evidence> ev) {}
-  bytes key_pending(std::shared_ptr<evidence> ev) {}
+  result<std::shared_ptr<evidence>> bytes_to_ev(bytes ev_bytes) {
+    ::tendermint::types::Evidence evpb;
+    evpb.ParseFromArray(ev_bytes.data(), ev_bytes.size());
+    return evidence::from_proto(evpb);
+  }
+
+  std::string ev_map_key(std::shared_ptr<evidence> ev) {
+    return to_hex(ev->get_hash()); // TODO: check
+  }
+
+  bytes prefix_to_bytes(int64_t prefix);
+
+  bytes key_committed(std::shared_ptr<evidence> ev);
+
+  bytes key_pending(std::shared_ptr<evidence> ev);
 
   /// verify
   result<void> verify(std::shared_ptr<evidence> ev);

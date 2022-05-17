@@ -10,24 +10,31 @@
 
 namespace noir::consensus {
 
-std::shared_ptr<::tendermint::types::Evidence> evidence::evidence_to_proto(std::shared_ptr<evidence> ev) {
-  if (!ev) {
-    elog("evidence_to_proto failed: null evidence");
-    return {};
-  }
+result<std::shared_ptr<::tendermint::types::Evidence>> evidence::to_proto(evidence& ev) {
   auto ret = std::make_shared<::tendermint::types::Evidence>();
-  if (auto ev_d = dynamic_cast<duplicate_vote_evidence*>(ev.get()); ev_d) {
-    *ret->mutable_duplicate_vote_evidence() = *ev_d->to_proto();
+  if (auto ev_d = dynamic_cast<duplicate_vote_evidence*>(&ev); ev_d) {
+    *ret->mutable_duplicate_vote_evidence() = *duplicate_vote_evidence::to_proto(*ev_d);
     return ret;
-  } else if (auto ev_l = dynamic_cast<light_client_attack_evidence*>(ev.get()); ev_l) {
-    *ret->mutable_light_client_attack_evidence() = *ev_l->to_proto().value();
+  } else if (auto ev_l = dynamic_cast<light_client_attack_evidence*>(&ev); ev_l) {
+    *ret->mutable_light_client_attack_evidence() =
+      *light_client_attack_evidence::to_proto(*ev_l).value(); // TODO: handle failure
     return ret;
   }
-  elog("evidence_to_proto failed: unknown evidence");
-  return {};
+  return make_unexpected("evidence_to_proto failed: unknown evidence");
 }
 
-std::shared_ptr<evidence> evidence::evidence_from_proto(std::shared_ptr<::tendermint::types::Evidence> ev) {}
+result<std::shared_ptr<evidence>> evidence::from_proto(::tendermint::types::Evidence& ev) {
+  if (!ev.IsInitialized())
+    return make_unexpected("evidence_from_proto failed: evidence is not initialized");
+  if (ev.sum_case() == tendermint::types::Evidence::kDuplicateVoteEvidence) {
+    auto evi = std::make_shared<::tendermint::types::DuplicateVoteEvidence>(ev.duplicate_vote_evidence());
+    return duplicate_vote_evidence::from_proto(*evi);
+  } else if (ev.sum_case() == tendermint::types::Evidence::kLightClientAttackEvidence) {
+    auto evi = std::make_shared<::tendermint::types::LightClientAttackEvidence>(ev.light_client_attack_evidence());
+    return light_client_attack_evidence::from_proto(*evi);
+  }
+  return make_unexpected("evidence is not recognized");
+}
 
 std::vector<std::shared_ptr<::tendermint::abci::Evidence>> light_client_attack_evidence::get_abci() {
   std::vector<std::shared_ptr<::tendermint::abci::Evidence>> ret;

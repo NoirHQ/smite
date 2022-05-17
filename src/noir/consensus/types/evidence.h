@@ -23,8 +23,8 @@ struct evidence {
   virtual tstamp get_timestamp() = 0;
   virtual result<void> validate_basic() = 0;
 
-  static std::shared_ptr<::tendermint::types::Evidence> evidence_to_proto(std::shared_ptr<evidence>);
-  static std::shared_ptr<evidence> evidence_from_proto(std::shared_ptr<::tendermint::types::Evidence>);
+  static result<std::shared_ptr<::tendermint::types::Evidence>> to_proto(evidence&);
+  static result<std::shared_ptr<evidence>> from_proto(::tendermint::types::Evidence&);
 };
 
 struct duplicate_vote_evidence : public evidence {
@@ -76,7 +76,7 @@ struct duplicate_vote_evidence : public evidence {
   }
 
   bytes get_bytes() override {
-    auto pbe = to_proto();
+    auto pbe = to_proto(*this);
     bytes ret(pbe->ByteSizeLong());
     pbe->SerializeToArray(ret.data(), pbe->ByteSizeLong());
     return ret;
@@ -125,22 +125,21 @@ struct duplicate_vote_evidence : public evidence {
     timestamp = evidence_time;
   }
 
-  std::shared_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto() {
+  static std::shared_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto(duplicate_vote_evidence& ev) {
     auto ret = std::make_shared<::tendermint::types::DuplicateVoteEvidence>();
-    if (vote_b)
-      *ret->mutable_vote_b() = *vote_b->to_proto();
-    if (vote_a)
-      *ret->mutable_vote_a() = *vote_a->to_proto();
-    ret->set_total_voting_power(total_voting_power);
-    ret->set_validator_power(validator_power);
-    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp);
+    if (ev.vote_b)
+      *ret->mutable_vote_b() = *ev.vote_b->to_proto();
+    if (ev.vote_a)
+      *ret->mutable_vote_a() = *ev.vote_a->to_proto();
+    ret->set_total_voting_power(ev.total_voting_power);
+    ret->set_validator_power(ev.validator_power);
+    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(ev.timestamp);
     return ret;
   }
 
-  result<std::shared_ptr<duplicate_vote_evidence>> from_proto(
-    std::shared_ptr<::tendermint::types::DuplicateVoteEvidence> pb) {
-    if (!pb)
-      return make_unexpected("null duplicate vote evidence");
+  static result<std::shared_ptr<duplicate_vote_evidence>> from_proto(::tendermint::types::DuplicateVoteEvidence& pb) {
+    if (!pb.IsInitialized())
+      return make_unexpected("from_proto failed: duplicate vote evidence is not initialized");
     auto ret = std::make_shared<duplicate_vote_evidence>();
     return ret; // TODO
   }
@@ -158,7 +157,7 @@ struct light_client_attack_evidence : public evidence {
   std::vector<std::shared_ptr<::tendermint::abci::Evidence>> get_abci() override;
 
   bytes get_bytes() override {
-    auto pbe = to_proto();
+    auto pbe = to_proto(*this);
     if (!pbe)
       check(false, fmt::format("converting light client attack evidence to proto: {}", pbe.error()));
     bytes ret(pbe.value()->ByteSizeLong());
@@ -231,27 +230,30 @@ struct light_client_attack_evidence : public evidence {
     byzantine_validators = get_byzantine_validators(common_vals, trusted_header);
   }
 
-  result<std::shared_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto() {
-    auto cb = conflicting_block->to_proto();
+  static result<std::shared_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto(
+    light_client_attack_evidence& ev) {
+    auto cb = ev.conflicting_block->to_proto();
     if (!cb)
       return make_unexpected(cb.error());
     auto ret = std::make_shared<::tendermint::types::LightClientAttackEvidence>();
     *ret->mutable_conflicting_block() = *cb.value();
-    ret->set_common_height(common_height);
+    ret->set_common_height(ev.common_height);
     auto byz_vals = ret->mutable_byzantine_validators();
-    for (auto& val : byzantine_validators) {
+    for (auto& val : ev.byzantine_validators) {
       auto pb = val->to_proto();
       if (!pb)
         return make_unexpected(pb.error());
       *byz_vals->Add() = *pb.value();
     }
-    ret->set_total_voting_power(total_voting_power);
-    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp);
+    ret->set_total_voting_power(ev.total_voting_power);
+    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(ev.timestamp);
     return ret;
   }
 
-  result<std::shared_ptr<light_client_attack_evidence>> from_proto(
-    std::shared_ptr<::tendermint::types::LightClientAttackEvidence> pb) {
+  static result<std::shared_ptr<light_client_attack_evidence>> from_proto(
+    ::tendermint::types::LightClientAttackEvidence& pb) {
+    if (!pb.IsInitialized())
+      return make_unexpected("from_proto failed: light client attack evidence is not initialized");
     return {}; // TODO
   }
 
@@ -267,7 +269,7 @@ struct evidence_list {
   bytes hash() {
     std::vector<bytes> bytes_list;
     for (auto& e : list)
-      bytes_list.emplace_back(e->get_hash());
+      bytes_list.push_back(e->get_hash());
     return consensus::merkle::hash_from_bytes_list(bytes_list);
   }
 

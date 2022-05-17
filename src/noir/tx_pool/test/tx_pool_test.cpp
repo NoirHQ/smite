@@ -5,10 +5,10 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/codec/scale.h>
-#include <noir/core/codec.h>
 #include <noir/common/hex.h>
 #include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
+#include <noir/core/codec.h>
 #include <noir/tx_pool/LRU_cache.h>
 #include <noir/tx_pool/tx_pool.h>
 #include <noir/tx_pool/unapplied_tx_queue.h>
