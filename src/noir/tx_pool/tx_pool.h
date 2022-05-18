@@ -42,7 +42,7 @@ private:
   std::mutex mutex_;
   config config_;
   unapplied_tx_queue tx_queue_;
-  LRU_cache<consensus::tx_hash, consensus::tx> tx_cache_;
+  LRU_cache<consensus::tx_hash, consensus::tx_ptr> tx_cache_;
 
   uint64_t block_height_ = 0;
 
@@ -71,13 +71,13 @@ public:
   void set_precheck(precheck_func* precheck);
   void set_postcheck(postcheck_func* postcheck);
 
-  consensus::response_check_tx& check_tx_sync(const consensus::tx& tx);
-  void check_tx_async(const consensus::tx& tx);
+  consensus::response_check_tx& check_tx_sync(const consensus::tx_ptr& tx_ptr);
+  void check_tx_async(const consensus::tx_ptr& tx);
 
-  std::vector<consensus::tx> reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
-  std::vector<consensus::tx> reap_max_txs(uint64_t tx_count);
+  std::vector<std::shared_ptr<const consensus::tx>> reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas);
+  std::vector<std::shared_ptr<const consensus::tx>> reap_max_txs(uint64_t tx_count);
   void update(uint64_t block_height,
-    const std::vector<consensus::tx>& block_txs,
+    const std::vector<consensus::tx_ptr>& block_txs,
     std::vector<consensus::response_deliver_tx> responses,
     precheck_func* new_precheck = nullptr,
     postcheck_func* new_postcheck = nullptr);
@@ -89,8 +89,8 @@ public:
   void flush_app_conn();
 
 private:
-  void check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx& tx);
-  void add_tx(const consensus::tx_hash& tx_id, const consensus::tx& tx, consensus::response_check_tx& res);
+  void check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx_ptr& tx);
+  void add_tx(const consensus::tx_hash& tx_id, const consensus::tx_ptr& tx_ptr, consensus::response_check_tx& res);
   void update_recheck_txs();
   void broadcast_tx(const consensus::tx& tx);
   void handle_msg(p2p::envelope_ptr msg);

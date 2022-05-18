@@ -30,7 +30,7 @@ struct result_unconfirmed_txs {
   uint64_t count;
   uint64_t total;
   uint64_t total_bytes;
-  std::vector<bytes> txs;
+  std::vector<std::shared_ptr<const bytes>> txs;
 };
 
 } // namespace noir::tendermint::rpc

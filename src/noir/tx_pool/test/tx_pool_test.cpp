@@ -158,26 +158,25 @@ public:
     return codec::scale::encode(tx_id_++);
   }
 
-  auto new_txs(uint count) {
-    std::vector<consensus::tx> txs;
+  std::vector<consensus::tx_ptr> new_txs(uint count) {
+    std::vector<consensus::tx_ptr> txs;
     txs.reserve(count);
     for (uint i = 0; i < count; i++) {
-      txs.push_back(new_tx());
+      auto tx_ptr = std::make_shared<consensus::tx>(new_tx());
+      txs.push_back(tx_ptr);
     }
     return txs;
   }
 
   auto make_random_wrapped_tx(const std::string& sender) {
-    wrapped_tx new_wrapped_tx;
-    new_wrapped_tx.sender = str_to_addr(sender);
-    new_wrapped_tx.gas = rand_gas();
+    std::unique_lock lock(mutex_);
+    auto tx = codec::scale::encode(tx_id_++);
+    auto nonce = nonce_++;
+    auto height = height_++;
+    lock.unlock();
 
-    std::scoped_lock lock(mutex_);
-    new_wrapped_tx.tx = codec::scale::encode(tx_id_++);
-    new_wrapped_tx.hash = get_tx_hash(new_wrapped_tx.tx);
-    new_wrapped_tx.nonce = nonce_++;
-    new_wrapped_tx.height = height_++;
-    return new_wrapped_tx;
+    auto sender_ = str_to_addr(sender);
+    return wrapped_tx(sender_, std::make_shared<consensus::tx>(tx), rand_gas(), nonce, height);
   }
 
   void reset_tx_id() {
@@ -309,7 +308,8 @@ TEST_CASE("unapplied_tx_queue: Indexing", "[noir][tx_pool]") {
   auto tx_queue = std::make_unique<unapplied_tx_queue>(queue_size);
 
   for (uint64_t i = 0; i < tx_count; i++) {
-    CHECK(tx_queue->add_tx(test_helper->make_random_wrapped_tx("user" + std::to_string(i / user_count))));
+    auto wtx = test_helper->make_random_wrapped_tx("user" + std::to_string(i / user_count));
+    CHECK(tx_queue->add_tx(wtx));
   }
   CHECK(tx_queue->size() == tx_count);
 
@@ -529,7 +529,7 @@ TEST_CASE("tx_pool: Reap tx using max bytes & gas", "[noir][tx_pool]") {
   const uint64_t tx_count = 10000;
   for (auto i = 0; i < tx_count; i++) {
     test_app->set_gas(test_detail::rand_gas());
-    CHECK_NOTHROW(tp.check_tx_sync(test_helper->new_tx()));
+    CHECK_NOTHROW(tp.check_tx_sync(std::make_shared<consensus::tx>(test_helper->new_tx())));
   }
 
   uint tc = 100;
@@ -538,8 +538,8 @@ TEST_CASE("tx_pool: Reap tx using max bytes & gas", "[noir][tx_pool]") {
     uint64_t max_gas = test_detail::rand_gas(1000000, 100000);
     auto txs = tp.reap_max_bytes_max_gas(max_bytes, max_gas);
     uint64_t total_bytes = 0;
-    for (auto& tx : txs) {
-      total_bytes += tx.size();
+    for (auto& tx_ptr : txs) {
+      total_bytes += tx_ptr->size();
     }
     CHECK(total_bytes <= max_bytes);
   }
@@ -549,7 +549,7 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
   auto test_helper = std::make_unique<::test_helper>();
 
   const uint64_t tx_count = 10;
-  auto put_tx = [&](class tx_pool& tp, std::vector<tx>& txs) {
+  auto put_tx = [&](class tx_pool& tp, std::vector<tx_ptr>& txs) {
     for (auto& tx : txs) {
       CHECK_NOTHROW(tp.check_tx_sync(tx));
     }
@@ -571,7 +571,7 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
     };
     auto& tp = test_helper->make_tx_pool(config);
     std::vector<consensus::response_deliver_tx> res;
-    std::vector<tx> empty_txs;
+    std::vector<tx_ptr> empty_txs;
     for (uint64_t i = 0; i < tx_count; i++) {
       tp.update(i, empty_txs, res);
       auto txs = test_helper->new_txs(1);
@@ -593,7 +593,7 @@ TEST_CASE("tx_pool: Update", "[noir][tx_pool]") {
     auto txs = test_helper->new_txs(tx_count);
     put_tx(tp, txs);
     std::vector<consensus::response_deliver_tx> res;
-    std::vector<consensus::tx> empty_txs;
+    std::vector<consensus::tx_ptr> empty_txs;
 
     usleep(100000LL); // sleep 100 msec
     tp.update(0, empty_txs, res);
@@ -607,10 +607,10 @@ TEST_CASE("tx_pool: Nonce override", "[noir][tx_pool]") {
   config config;
   auto& tp = test_helper->make_tx_pool(config, test_app);
 
-  auto tx1 = test_helper->new_tx();
+  auto tx1 = std::make_shared<consensus::tx>(test_helper->new_tx());
   CHECK_NOTHROW(tp.check_tx_sync(tx1));
 
-  auto tx2 = test_helper->new_tx();
+  auto tx2 = std::make_shared<consensus::tx>(test_helper->new_tx());
   test_app->set_nonce(0);
   CHECK_THROWS_AS(tp.check_tx_sync(tx2), fc::override_fail_exception);
 
@@ -646,20 +646,20 @@ TEST_CASE("tx_pool: Broadcast tx", "[noir][tx_pool]") {
 
   // Send
   {
-    auto tx1 = test_helper->gen_random_tx();
-    auto tx2 = test_helper->gen_random_tx();
+    auto tx1 = std::make_shared<consensus::tx>(test_helper->gen_random_tx());
+    auto tx2 = std::make_shared<consensus::tx>(test_helper->gen_random_tx());
 
     CHECK_NOTHROW(tp.check_tx_sync(tx1));
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     CHECKED_IF(result) {
-      CHECK(tx == tx1);
+      CHECK(tx == *tx1);
       result = false;
     }
 
     CHECK_NOTHROW(tp.check_tx_async(tx2));
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     CHECKED_IF(result) {
-      CHECK(tx == tx2);
+      CHECK(tx == *tx2);
     }
   }
 
@@ -695,10 +695,10 @@ TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
   uint tx_count = 1000;
   uint cache_size = 1000;
 
-  LRU_cache<tx_hash, consensus::tx> c{cache_size};
+  LRU_cache<tx_hash, consensus::tx_ptr> c{cache_size};
 
   struct test_tx {
-    consensus::tx tx;
+    consensus::tx_ptr tx;
     tx_hash hash;
   };
   std::vector<test_tx> txs;
@@ -706,8 +706,8 @@ TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
 
   for (uint64_t i = 0; i < tx_count; i++) {
     test_tx test_tx;
-    test_tx.tx = test_helper->new_tx();
-    test_tx.hash = get_tx_hash(test_tx.tx);
+    test_tx.tx = std::make_shared<consensus::tx>(test_helper->new_tx());
+    test_tx.hash = get_tx_hash(*test_tx.tx);
     c.put(test_tx.hash, test_tx.tx);
     txs.push_back(test_tx);
   }
@@ -719,17 +719,17 @@ TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
     }
 
     // new tx, replace the oldest tx in cache
-    auto tx = test_helper->new_tx();
-    c.put(get_tx_hash(tx), tx); // tx0 is replaced by new one
+    auto tx = std::make_shared<consensus::tx>(test_helper->new_tx());
+    c.put(get_tx_hash(*tx), tx); // tx0 is replaced by new one
     CHECK(c.size() == tx_count);
-    CHECK(c.has(get_tx_hash(tx)));
+    CHECK(c.has(get_tx_hash(*tx)));
     CHECK(!c.has(txs[0].hash));
 
     // put again tx1
     c.put(txs[1].hash, txs[1].tx);
-    tx = test_helper->new_tx();
-    c.put(get_tx_hash(tx), tx); // tx2 is replaced by new one
-    CHECK(c.has(get_tx_hash(tx)));
+    tx = std::make_shared<consensus::tx>(test_helper->new_tx());
+    c.put(get_tx_hash(*tx), tx); // tx2 is replaced by new one
+    CHECK(c.has(get_tx_hash(*tx)));
     CHECK(c.has(txs[1].hash));
     CHECK(!c.has(txs[2].hash));
   }
@@ -751,7 +751,7 @@ TEST_CASE("LRU_cache: Cache basic test", "[noir][tx_pool]") {
     for (auto& tx : txs) {
       auto res = c.get(tx.hash);
       CHECKED_IF(res.has_value()) {
-        CHECK(to_string(tx.hash) == to_string(get_tx_hash(res.value())));
+        CHECK(to_string(tx.hash) == to_string(get_tx_hash(*res.value())));
       }
     }
   }

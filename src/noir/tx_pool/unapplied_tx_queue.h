@@ -97,7 +97,7 @@ private:
 public:
   unapplied_tx_queue() = default;
 
-  unapplied_tx_queue(uint64_t size) {
+  explicit unapplied_tx_queue(uint64_t size) {
     max_tx_queue_bytes_size_ = size;
   }
 
@@ -127,7 +127,7 @@ public:
     return queue_.get<by_hash>().find(tx_hash.to_string()) != queue_.get<by_hash>().end();
   }
 
-  std::optional<consensus::wrapped_tx> get_tx(const consensus::tx_hash& tx_hash) const {
+  std::optional<const consensus::wrapped_tx> get_tx(const consensus::tx_hash& tx_hash) const {
     auto itr = queue_.get<by_hash>().find(tx_hash.to_string());
     if (itr == queue_.get<by_hash>().end()) {
       return {};
@@ -135,7 +135,7 @@ public:
     return itr->wtx;
   }
 
-  std::optional<consensus::wrapped_tx> get_tx(const consensus::address_type& sender, uint64_t nonce) const {
+  std::optional<const consensus::wrapped_tx> get_tx(const consensus::address_type& sender, uint64_t nonce) const {
     auto itr = queue_.get<by_nonce>().find(std::make_tuple(sender, nonce));
     if (itr == queue_.get<by_nonce>().end()) {
       return {};
@@ -143,7 +143,7 @@ public:
     return itr->wtx;
   }
 
-  bool add_tx(consensus::wrapped_tx wtx) {
+  bool add_tx(consensus::wrapped_tx& wtx) {
     auto size = bytes_size(wtx);
     if (size_in_bytes_ + size > max_tx_queue_bytes_size_) {
       return false;
@@ -221,7 +221,7 @@ public:
     return reverse_iterator<Tag>(queue_.get<Tag>().lower_bound(val));
   }
 
-  bool erase(consensus::tx_hash& tx_hash) {
+  bool erase(const consensus::tx_hash& tx_hash) {
     return erase(tx_hash.to_string());
   }
 

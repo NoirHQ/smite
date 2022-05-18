@@ -28,14 +28,31 @@ struct wrapped_tx {
   // TODO : constructor
   address_type sender;
   tx_hash hash;
-  consensus::tx tx;
+  consensus::tx_ptr tx_ptr;
   uint64_t gas;
   uint64_t nonce;
   uint64_t height;
   tstamp time_stamp;
 
+  wrapped_tx() = delete;
+  wrapped_tx(address_type& sender,
+    const consensus::tx_ptr& tx_ptr,
+    uint64_t gas = 0,
+    uint64_t nonce = 0,
+    uint64_t height = 0,
+    tstamp time_stamp = noir::get_time())
+    : sender(sender),
+      hash(get_tx_hash(*tx_ptr)),
+      tx_ptr(tx_ptr),
+      gas(gas),
+      nonce(nonce),
+      height(height),
+      time_stamp(time_stamp) {}
+  wrapped_tx(wrapped_tx const& rhs) = default;
+  wrapped_tx(wrapped_tx&& rhs) = default;
+
   uint64_t size() const {
-    return sizeof(*this) + tx.size();
+    return sizeof(*this) + tx_ptr->size();
   }
 };
 
