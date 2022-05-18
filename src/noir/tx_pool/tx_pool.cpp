@@ -97,7 +97,8 @@ void tx_pool::check_tx_async(const consensus::tx_ptr& tx_ptr) {
 void tx_pool::check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx_ptr& tx_ptr) {
   if (tx_ptr->size() > config_.max_tx_bytes) {
     FC_THROW_EXCEPTION(fc::tx_size_exception,
-      fmt::format("tx size {} bigger than {} (tx_hash: {})", tx_hash.to_string(), tx_ptr->size(), config_.max_tx_bytes));
+      fmt::format(
+        "tx size {} bigger than {} (tx_hash: {})", tx_hash.to_string(), tx_ptr->size(), config_.max_tx_bytes));
   }
 
   if (precheck_ && !precheck_(*tx_ptr)) {
@@ -112,7 +113,8 @@ void tx_pool::check_tx_internal(const consensus::tx_hash& tx_hash, const consens
   }
 }
 
-void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx_ptr& tx_ptr, consensus::response_check_tx& res) {
+void tx_pool::add_tx(
+  const consensus::tx_hash& tx_hash, const consensus::tx_ptr& tx_ptr, consensus::response_check_tx& res) {
   if (postcheck_ && !postcheck_(*tx_ptr, res)) {
     if (res.code != consensus::code_type_ok) {
       tx_cache_.del(tx_hash);
@@ -151,7 +153,8 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx_ptr&
   dlog(fmt::format("tx_hash({}) is accepted.", tx_hash.to_string()));
 }
 
-std::vector<std::shared_ptr<const consensus::tx>> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
+std::vector<std::shared_ptr<const consensus::tx>> tx_pool::reap_max_bytes_max_gas(
+  uint64_t max_bytes, uint64_t max_gas) {
   std::scoped_lock lock(mutex_);
   std::vector<std::shared_ptr<const consensus::tx>> txs;
   auto rbegin = tx_queue_.rbegin<unapplied_tx_queue::by_gas>(max_gas);
