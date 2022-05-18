@@ -16,13 +16,13 @@ using namespace noir::consensus;
 using tx = bytes;
 
 result_broadcast_tx mempool::broadcast_tx_async(const tx& t) {
-  tx_pool_ptr->check_tx_async(t);
+  tx_pool_ptr->check_tx_async(std::make_shared<consensus::tx>(t));
   auto tx_hash = get_tx_hash(t);
   return result_broadcast_tx{.hash = tx_hash};
 }
 
 result_broadcast_tx mempool::broadcast_tx_sync(const tx& t) {
-  auto r = tx_pool_ptr->check_tx_sync(t);
+  auto r = tx_pool_ptr->check_tx_sync(std::make_shared<consensus::tx>(t));
   return result_broadcast_tx{.code = r.code,
     .data = r.data,
     .log = r.log,

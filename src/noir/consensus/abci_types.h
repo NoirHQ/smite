@@ -146,7 +146,7 @@ enum class check_tx_type {
 };
 
 struct request_check_tx {
-  bytes tx;
+  const consensus::tx& tx;
   check_tx_type type;
 };
 

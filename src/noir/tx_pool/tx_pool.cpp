@@ -79,41 +79,41 @@ void tx_pool::set_postcheck(postcheck_func* postcheck) {
   postcheck_ = postcheck;
 }
 
-consensus::response_check_tx& tx_pool::check_tx_sync(const consensus::tx& tx) {
-  auto tx_hash = consensus::get_tx_hash(tx);
-  check_tx_internal(tx_hash, tx);
-  auto& res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = tx});
-  add_tx(tx_hash, tx, res);
+consensus::response_check_tx& tx_pool::check_tx_sync(const consensus::tx_ptr& tx_ptr) {
+  auto tx_hash = consensus::get_tx_hash(*tx_ptr);
+  check_tx_internal(tx_hash, tx_ptr);
+  auto& res = proxy_app_->check_tx_sync(consensus::request_check_tx{.tx = *tx_ptr});
+  add_tx(tx_hash, tx_ptr, res);
   return res;
 }
 
-void tx_pool::check_tx_async(const consensus::tx& tx) {
-  auto tx_hash = consensus::get_tx_hash(tx);
-  check_tx_internal(tx_hash, tx);
-  auto& req_res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = tx});
-  req_res.set_callback([&, tx_hash, tx](consensus::response_check_tx& res) { add_tx(tx_hash, tx, res); });
+void tx_pool::check_tx_async(const consensus::tx_ptr& tx_ptr) {
+  auto tx_hash = consensus::get_tx_hash(*tx_ptr);
+  check_tx_internal(tx_hash, tx_ptr);
+  auto& req_res = proxy_app_->check_tx_async(consensus::request_check_tx{.tx = *tx_ptr});
+  req_res.set_callback([&, tx_hash, tx_ptr](consensus::response_check_tx& res) { add_tx(tx_hash, tx_ptr, res); });
 }
 
-void tx_pool::check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx& tx) {
-  if (tx.size() > config_.max_tx_bytes) {
+void tx_pool::check_tx_internal(const consensus::tx_hash& tx_hash, const consensus::tx_ptr& tx_ptr) {
+  if (tx_ptr->size() > config_.max_tx_bytes) {
     FC_THROW_EXCEPTION(fc::tx_size_exception,
-      fmt::format("tx size {} bigger than {} (tx_hash: {})", tx_hash.to_string(), tx.size(), config_.max_tx_bytes));
+      fmt::format("tx size {} bigger than {} (tx_hash: {})", tx_hash.to_string(), tx_ptr->size(), config_.max_tx_bytes));
   }
 
-  if (precheck_ && !precheck_(tx)) {
+  if (precheck_ && !precheck_(*tx_ptr)) {
     FC_THROW_EXCEPTION(
       fc::bad_trasaction_exception, fmt::format("tx failed precheck (tx_hash: {})", tx_hash.to_string()));
   }
 
-  tx_cache_.put(tx_hash, tx);
+  tx_cache_.put(tx_hash, tx_ptr);
   if (tx_queue_.has(tx_hash)) {
     FC_THROW_EXCEPTION(
       fc::existed_tx_exception, fmt::format("tx already exists in pool (tx_hash: {})", tx_hash.to_string()));
   }
 }
 
-void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx, consensus::response_check_tx& res) {
-  if (postcheck_ && !postcheck_(tx, res)) {
+void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx_ptr& tx_ptr, consensus::response_check_tx& res) {
+  if (postcheck_ && !postcheck_(*tx_ptr, res)) {
     if (res.code != consensus::code_type_ok) {
       tx_cache_.del(tx_hash);
       FC_THROW_EXCEPTION(
@@ -124,7 +124,7 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
   std::scoped_lock lock(mutex_);
   auto old = tx_queue_.get_tx(res.sender, res.nonce);
   if (old.has_value()) {
-    auto old_wtx = old.value();
+    auto& old_wtx = old.value();
     if (res.gas_wanted < old_wtx.gas + config_.gas_price_bump) {
       if (!config_.keep_invalid_txs_in_cache) {
         tx_cache_.del(tx_hash);
@@ -136,15 +136,7 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
     tx_queue_.erase(old_wtx.hash);
   }
 
-  auto wtx = consensus::wrapped_tx{
-    .sender = res.sender,
-    .hash = tx_hash,
-    .tx = tx,
-    .gas = res.gas_wanted,
-    .nonce = res.nonce,
-    .height = block_height_,
-    .time_stamp = get_time(),
-  };
+  auto wtx = consensus::wrapped_tx(res.sender, tx_ptr, res.gas_wanted, res.nonce, block_height_);
 
   if (!tx_queue_.add_tx(wtx)) {
     if (!config_.keep_invalid_txs_in_cache) {
@@ -154,56 +146,56 @@ void tx_pool::add_tx(const consensus::tx_hash& tx_hash, const consensus::tx& tx,
   }
 
   if (config_.broadcast) {
-    broadcast_tx(tx);
+    broadcast_tx(*tx_ptr);
   }
   dlog(fmt::format("tx_hash({}) is accepted.", tx_hash.to_string()));
 }
 
-std::vector<consensus::tx> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
+std::vector<std::shared_ptr<const consensus::tx>> tx_pool::reap_max_bytes_max_gas(uint64_t max_bytes, uint64_t max_gas) {
   std::scoped_lock lock(mutex_);
-  std::vector<consensus::tx> txs;
+  std::vector<std::shared_ptr<const consensus::tx>> txs;
   auto rbegin = tx_queue_.rbegin<unapplied_tx_queue::by_gas>(max_gas);
   auto rend = tx_queue_.rend<unapplied_tx_queue::by_gas>(0);
   txs.reserve(max_gas / rbegin->gas());
   uint64_t bytes = 0;
   uint64_t gas = 0;
   for (auto itr = rbegin; itr != rend; itr++) {
-    auto wtx = itr->wtx;
-    auto tx = wtx.tx;
+    auto& wtx = itr->wtx;
+    auto& tx_ptr = wtx.tx_ptr;
     if (gas + wtx.gas > max_gas) {
       continue;
     }
 
-    if (bytes + tx.size() > max_bytes) {
+    if (bytes + tx_ptr->size() > max_bytes) {
       break;
     }
 
-    bytes += tx.size();
+    bytes += tx_ptr->size();
     gas += wtx.gas;
-    txs.push_back(tx);
+    txs.push_back(tx_ptr);
   }
 
   return txs;
 }
 
-std::vector<consensus::tx> tx_pool::reap_max_txs(uint64_t tx_count) {
+std::vector<std::shared_ptr<const consensus::tx>> tx_pool::reap_max_txs(uint64_t tx_count) {
   std::scoped_lock lock(mutex_);
   uint64_t count = std::min<uint64_t>(tx_count, tx_queue_.size());
 
-  std::vector<consensus::tx> txs;
+  std::vector<std::shared_ptr<const consensus::tx>> txs;
   txs.reserve(count);
   for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
     if (txs.size() >= count) {
       break;
     }
-    txs.push_back(itr->wtx.tx);
+    txs.push_back(itr->wtx.tx_ptr);
   }
 
   return txs;
 }
 
 void tx_pool::update(uint64_t block_height,
-  const std::vector<consensus::tx>& block_txs,
+  const std::vector<consensus::tx_ptr>& block_txs,
   std::vector<consensus::response_deliver_tx> responses,
   precheck_func* new_precheck,
   postcheck_func* new_postcheck) {
@@ -220,7 +212,7 @@ void tx_pool::update(uint64_t block_height,
 
   size_t size = std::min(block_txs.size(), responses.size());
   for (auto i = 0; i < size; i++) {
-    auto tx_hash = consensus::get_tx_hash(block_txs[i]);
+    auto tx_hash = consensus::get_tx_hash(*block_txs[i]);
     if (responses[i].code == consensus::code_type_ok) {
       tx_cache_.put(tx_hash, block_txs[i]);
     } else if (!config_.keep_invalid_txs_in_cache) {
@@ -235,7 +227,7 @@ void tx_pool::update(uint64_t block_height,
     auto begin = tx_queue_.begin<unapplied_tx_queue::by_height>(0);
     auto end = tx_queue_.end<unapplied_tx_queue::by_height>(expired_block_height);
     for (auto& itr = begin; itr != end; itr++) {
-      auto wtx = itr->wtx;
+      auto& wtx = itr->wtx;
       tx_queue_.erase(wtx.hash);
     }
   }
@@ -245,7 +237,7 @@ void tx_pool::update(uint64_t block_height,
     auto begin = tx_queue_.begin<unapplied_tx_queue::by_time>(0);
     auto end = tx_queue_.end<unapplied_tx_queue::by_time>(expired_time);
     for (auto& itr = begin; itr != end; itr++) {
-      auto wtx = itr->wtx;
+      auto& wtx = itr->wtx;
       tx_queue_.erase(wtx.hash);
     }
   }
@@ -257,9 +249,9 @@ void tx_pool::update(uint64_t block_height,
 
 void tx_pool::update_recheck_txs() {
   for (auto itr = tx_queue_.begin(); itr != tx_queue_.end(); itr++) {
-    auto wtx = itr->wtx;
+    auto& wtx = itr->wtx;
     proxy_app_->check_tx_async(consensus::request_check_tx{
-      .tx = wtx.tx,
+      .tx = *wtx.tx_ptr,
       .type = consensus::check_tx_type::recheck,
     });
     proxy_app_->flush_async();
@@ -309,7 +301,7 @@ void tx_pool::handle_msg(p2p::envelope_ptr msg) {
   consensus::tx tx;
   ds >> tx;
 
-  check_tx_sync(tx); // TODO : sync only?
+  check_tx_sync(std::make_shared<consensus::tx>(tx)); // TODO : sync only?
 }
 
 } // namespace noir::tx_pool
