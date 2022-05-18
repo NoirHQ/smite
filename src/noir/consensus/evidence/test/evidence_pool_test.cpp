@@ -14,10 +14,52 @@ using namespace noir;
 using namespace noir::consensus;
 using namespace noir::consensus::ev;
 
+p2p::block_id make_block_id(bytes hash, uint32_t part_set_size, bytes part_set_hash) {
+  return {.hash = std::move(hash), .parts = {.total = part_set_size, .hash = std::move(part_set_hash)}};
+}
+
+std::shared_ptr<vote> make_vote(mock_pv& val,
+  const std::string& chain_id,
+  int32_t val_index,
+  int64_t height,
+  int32_t round,
+  int step,
+  const p2p::block_id& block_id_,
+  tstamp time) {
+  auto pub_key = val.get_pub_key();
+  auto ret = std::make_shared<vote>();
+  ret->validator_address = pub_key.address();
+  ret->validator_index = val_index;
+  ret->height = height;
+  ret->round = round;
+  ret->type = noir::p2p::Prevote;
+  ret->block_id_ = block_id_;
+  ret->timestamp = time;
+  val.sign_vote(*ret);
+  return ret;
+}
+
+std::shared_ptr<duplicate_vote_evidence> mock_duplicate_vote_evidence() {
+  auto block_id = make_block_id(from_hex("0000"), 1000, from_hex("AAAA"));
+  auto block_id2 = make_block_id(from_hex("0001"), 1000, from_hex("AAAA"));
+  auto ret = std::make_shared<duplicate_vote_evidence>();
+  auto val = mock_pv();
+  val.priv_key_ = priv_key::new_priv_key();
+  val.pub_key_ = val.priv_key_.get_pub_key();
+  std::string chain_id = "my_chain";
+  auto default_vote_time = get_time();
+  ret->vote_a = make_vote(val, chain_id, 0, 1, 0, 2, block_id, default_vote_time);
+  ret->vote_b = make_vote(val, chain_id, 0, 1, 0, 2, block_id2, default_vote_time);
+  ret->total_voting_power = 30;
+  ret->validator_power = 10;
+  ret->timestamp = default_vote_time;
+  return ret;
+}
+
 std::shared_ptr<noir::consensus::db_store> initialize_state_from_validator_set(
   std::shared_ptr<validator_set> val_set, int64_t height) {
   auto default_evidence_time = get_time(); // TODO: use correct time
-  auto state_store_ = std::make_shared<noir::consensus::db_store>(make_session());
+  auto state_store_ = std::make_shared<noir::consensus::db_store>(make_session(true, "/tmp/ev_state"));
   auto state_ = state{.chain_id = "test_chain",
     .initial_height = 1,
     .last_block_height = height,
@@ -42,6 +84,7 @@ std::shared_ptr<noir::consensus::db_store> initialize_validator_state(
   auto pub_key_ = priv_val->get_pub_key();
   auto val = validator::new_validator(pub_key_, 10);
   auto val_set = std::make_shared<validator_set>();
+  val_set->validators.push_back(val);
   val_set->proposer = val;
   return initialize_state_from_validator_set(val_set, height);
 }
@@ -57,7 +100,7 @@ std::shared_ptr<commit> make_commit(int64_t height, bytes val_addr) {
 }
 
 std::shared_ptr<block_store> initialize_block_store(state state_, bytes val_addr) {
-  auto block_store_ = std::make_shared<noir::consensus::block_store>(make_session());
+  auto block_store_ = std::make_shared<noir::consensus::block_store>(make_session(true, "/tmp/ev_block"));
   auto default_evidence_time = get_time(); // TODO: use correct time
 
   for (auto i = 1; i <= state_.last_block_height; i++) {
@@ -78,18 +121,24 @@ std::pair<std::shared_ptr<evidence_pool>, std::shared_ptr<mock_pv>> default_test
   val->priv_key_ = priv_key::new_priv_key();
   val->pub_key_ = val->priv_key_.get_pub_key();
   auto val_address = val->priv_key_.get_pub_key().address();
-  auto evidence_db = make_session();
+  auto evidence_db = make_session(true, "/tmp/ev");
   auto state_store_ = initialize_validator_state(val, height);
   state state_;
   state_store_->load(state_);
   auto block_store_ = initialize_block_store(state_, val_address);
 
   auto pool_ = evidence_pool::new_pool(evidence_db, state_store_, block_store_);
-  CHECK(!pool_);
+  CHECK(pool_);
   return {pool_.value(), val};
 }
 
 TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") {
   int64_t height{1};
-  // auto [pool_, val] = default_test_pool(height);
+  auto [pool_, val] = default_test_pool(height);
+  auto ev = mock_duplicate_vote_evidence();
+  // auto add_result = pool_->add_evidence(ev); // FIXME
+  // CHECK(add_result);
+  // std::cout << add_result.error() << std::endl;
+  // evidence_list evs{.list = {ev}};
+  // auto check_result = pool_->check_evidence(evs);
 }
