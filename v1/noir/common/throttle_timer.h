@@ -6,11 +6,11 @@
 #pragma once
 #include <noir/common/timer.h>
 #include <noir/core/core.h>
+#include <noir/core/error.h>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <mutex>
 
 namespace noir {
 
@@ -18,12 +18,20 @@ class ThrottleTimer {
 public:
   ThrottleTimer(boost::asio::io_context& io_context, std::chrono::milliseconds dur)
     : io_context(io_context), event_ch(io_context), quit_ch(io_context), dur(dur), timer(io_context, dur) {
-    std::scoped_lock _{mtx};
-    timer.set_func(fire_routine());
+    timer.set_func([&]() -> boost::asio::awaitable<Result<void>> {
+      boost::system::error_code ec{};
+      auto res = co_await (quit_ch.async_receive(as_result(boost::asio::use_awaitable)) ||
+        event_ch.async_send(ec, {}, boost::asio::use_awaitable));
+      if (res.index() == 0) {
+        co_return std::get<0>(res).error();
+      } else {
+        is_set = false;
+        co_return success();
+      }
+    });
   }
 
   void set() {
-    std::scoped_lock _{mtx};
     if (!is_set) {
       is_set = true;
       timer.reset(dur);
@@ -32,7 +40,6 @@ public:
 
   void stop() {
     quit_ch.close();
-    std::scoped_lock _{mtx};
     timer.stop();
   }
 
@@ -41,36 +48,11 @@ public:
   Chan<noir::Done> event_ch;
 
 private:
-  auto fire_routine() -> std::function<boost::asio::awaitable<Result<void>>()> {
-    return [&]() -> boost::asio::awaitable<Result<void>> {
-      std::scoped_lock _{mtx};
-
-      boost::asio::steady_timer t{io_context};
-      t.expires_after(std::chrono::milliseconds{100});
-      auto res = co_await (event_ch.async_send(boost::system::error_code{}, {}, boost::asio::use_awaitable) ||
-        quit_ch.async_receive(as_result(boost::asio::use_awaitable)) || t.async_wait(boost::asio::use_awaitable));
-      switch (res.index()) {
-      case 0:
-        is_set = false;
-        // TODO: how to handle ec?
-        co_return success();
-      case 1:
-        co_return std::get<1>(res).error();
-      case 2:
-        timer.reset(dur);
-        co_return success();
-      }
-      co_return err_unreachable;
-    };
-  }
-
-private:
   boost::asio::io_context& io_context;
 
   Chan<noir::Done> quit_ch;
   std::chrono::milliseconds dur;
   Timer timer;
-  std::mutex mtx;
   bool is_set{false};
 };
 } //namespace noir
