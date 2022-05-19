@@ -177,7 +177,7 @@ auto MConnection::send_routine(Chan<Done>& done) -> asio::awaitable<void> {
       }
     } else if (res.index() == 2) {
       auto ping_res = co_await send_ping();
-      if (!ping_res.has_error()) {
+      if (ping_res.has_error()) {
         err = ping_res.error();
       } else {
         co_await flush();
