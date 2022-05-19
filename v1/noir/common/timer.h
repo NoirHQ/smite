@@ -9,61 +9,25 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <mutex>
 
 namespace noir {
 
 class Timer {
 public:
   Timer(boost::asio::io_context& io_context, std::chrono::milliseconds dur)
-    : io_context(io_context), timer(io_context), dur(dur), trigger_ch(io_context), stop_ch(io_context) {
+    : io_context(io_context), timer(io_context), d(dur), trigger_ch(io_context), stop_ch(io_context) {
     timer_routine();
   }
 
-  auto set_func(std::function<boost::asio::awaitable<Result<void>>()>&& f) {
-    this->f = f;
+  void set_func(std::function<boost::asio::awaitable<Result<void>>()>&& func) {
+    f = func;
   }
 
-  auto after_func(std::function<boost::asio::awaitable<Result<void>>()>&& f) {
-    this->f = f;
-    trigger_func();
-  }
-
-  auto reset(std::chrono::milliseconds dur) {
-    if (!f)
+  void reset(std::chrono::milliseconds dur) {
+    if (!f) {
       throw std::runtime_error("time: Reset called on uninitialized Timer");
-    this->dur = dur;
-    trigger_func();
-  }
-
-  void stop() {
-    boost::asio::co_spawn(
-      io_context,
-      [&]() -> boost::asio::awaitable<void> {
-        boost::system::error_code ec{};
-        co_await stop_ch.async_send(ec, {}, boost::asio::use_awaitable);
-      },
-      boost::asio::detached);
-  }
-
-private:
-  void timer_routine() {
-    boost::asio::co_spawn(
-      io_context,
-      [&]() -> boost::asio::awaitable<void> {
-        for (;;) {
-          co_await trigger_ch.async_receive(boost::asio::use_awaitable);
-          timer.expires_after(dur);
-          co_await timer.async_wait(boost::asio::use_awaitable);
-          auto res = co_await (stop_ch.async_receive(as_result(boost::asio::use_awaitable)) || this->f());
-          if (res.index() == 0)
-            co_return;
-        }
-      },
-      boost::asio::detached);
-  }
-
-  void trigger_func() {
+    }
+    d = dur;
     boost::asio::co_spawn(
       io_context,
       [&]() -> boost::asio::awaitable<void> {
@@ -73,13 +37,33 @@ private:
       boost::asio::detached);
   }
 
+  void stop() {
+    stop_ch.close();
+  }
+
+private:
+  void timer_routine() {
+    boost::asio::co_spawn(
+      io_context,
+      [&]() -> boost::asio::awaitable<void> {
+        for (;;) {
+          co_await trigger_ch.async_receive(boost::asio::use_awaitable);
+          timer.expires_after(d);
+          co_await timer.async_wait(boost::asio::use_awaitable);
+          auto res = co_await (stop_ch.async_receive(as_result(boost::asio::use_awaitable)) || f());
+          if (res.index() == 0)
+            co_return;
+        }
+      },
+      boost::asio::detached);
+  }
+
 private:
   boost::asio::io_context& io_context;
   boost::asio::steady_timer timer;
-  std::chrono::milliseconds dur;
+  std::chrono::milliseconds d;
   std::function<boost::asio::awaitable<Result<void>>()> f;
   Chan<Done> trigger_ch;
   Chan<Done> stop_ch;
-  std::mutex mtx;
 };
 } //namespace noir
