@@ -24,8 +24,8 @@ const std::size_t default_max_packet_msg_payload_size{1400};
 const std::chrono::milliseconds default_flush_throttle{100};
 const std::chrono::milliseconds update_stats_interval{2000};
 const std::chrono::milliseconds default_send_timeout{10000};
-const std::chrono::milliseconds default_ping_timeout{60000};
-const std::chrono::milliseconds default_pong_timeout{10000};
+const std::chrono::milliseconds default_ping_interval{60000};
+const std::chrono::milliseconds default_pong_timeout{90000};
 
 using ChannelId = uint16_t;
 
@@ -103,7 +103,7 @@ namespace detail {
 class MConnConfig {
 public:
   MConnConfig(std::size_t max_packet_msg_payload_size = default_max_packet_msg_payload_size,
-    std::chrono::milliseconds ping_interval = default_ping_timeout,
+    std::chrono::milliseconds ping_interval = default_ping_interval,
     std::chrono::milliseconds pong_timeout = default_pong_timeout,
     std::chrono::milliseconds flush_throttle = default_flush_throttle)
     : max_packet_msg_payload_size(max_packet_msg_payload_size),
