@@ -66,14 +66,14 @@ namespace detail {
     }
   }
 
-  auto Channel::write_packet_msg_to(BufferedWriter<net::Conn<net::TcpConn>>& writer)
+  auto Channel::write_packet_msg_to(std::unique_ptr<BufferedWriter<net::Conn<net::TcpConn>>>& writer)
     -> asio::awaitable<Result<std::size_t>> {
     Packet packet{};
     PacketMsg* msg = packet.mutable_packet_msg();
     set_next_packet_msg(msg);
     auto serialized = detail::serialize_packet(packet);
 
-    auto res = co_await writer.write(serialized);
+    auto res = co_await writer->write(serialized);
     if (res.has_value()) {
       recently_sent += res.value();
     }
@@ -100,7 +100,16 @@ namespace detail {
   }
 } //namespace detail
 
+void MConnection::set_conn(std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>&& tcp_conn) {
+  conn = std::move(tcp_conn);
+  buf_conn_writer = std::make_unique<noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>>(conn);
+}
+
 void MConnection::start(Chan<Done>& done) {
+  if (!conn || !buf_conn_writer) {
+    throw std::runtime_error("MUST set connection and buf_conn_writer");
+  }
+
   ping_timer.start();
   ch_stats_timer.start();
   set_recv_last_msg_at(steady_clock::now());
@@ -124,7 +133,7 @@ auto MConnection::string() -> std::string {
 }
 
 auto MConnection::flush() -> boost::asio::awaitable<void> {
-  co_await buf_conn_writer.flush();
+  co_await buf_conn_writer->flush();
 }
 
 auto MConnection::send(ChannelId ch_id, BytesPtr msg_bytes) -> asio::awaitable<Result<bool>> {
@@ -156,7 +165,8 @@ auto MConnection::send_routine(Chan<Done>& done) -> asio::awaitable<void> {
     auto res = co_await (flush_timer.event_ch.async_receive(boost::asio::use_awaitable) ||
       ch_stats_timer.time_ch.async_receive(asio::use_awaitable) ||
       ping_timer.time_ch.async_receive(asio::use_awaitable) || pong_ch.async_receive(asio::use_awaitable) ||
-      done.async_receive(as_result(asio::use_awaitable)) || quit_send_routine_ch.async_receive(asio::use_awaitable) ||
+      done.async_receive(as_result(asio::use_awaitable)) ||
+      quit_send_routine_ch.async_receive(as_result(asio::use_awaitable)) ||
       pong_timeout.time_ch.async_receive(asio::use_awaitable) || send_ch.async_receive(asio::use_awaitable));
 
     if (res.index() == 0) {
@@ -179,7 +189,9 @@ auto MConnection::send_routine(Chan<Done>& done) -> asio::awaitable<void> {
       } else {
         co_await flush();
       }
-    } else if (res.index() == 4 || res.index() == 5) {
+    } else if (res.index() == 4) {
+      break;
+    } else if (res.index() == 5) {
       break;
     } else if (res.index() == 6) {
     } else {
@@ -203,14 +215,14 @@ auto MConnection::send_routine(Chan<Done>& done) -> asio::awaitable<void> {
   }
 
   done_send_routine_ch.close();
-  ping_timer.stop();
+  pong_timeout.stop();
 }
 
 auto MConnection::send_ping() -> asio::awaitable<Result<void>> {
   Packet packet{};
   packet.mutable_packet_ping();
   auto serialized = detail::serialize_packet(packet);
-  auto res = co_await buf_conn_writer.write(serialized);
+  auto res = co_await buf_conn_writer->write(serialized);
   if (res.has_error()) {
     co_return res.error();
   } else {
@@ -222,7 +234,7 @@ auto MConnection::send_pong() -> asio::awaitable<Result<void>> {
   Packet packet{};
   packet.mutable_packet_pong();
   auto serialized = detail::serialize_packet(packet);
-  auto res = co_await buf_conn_writer.write(serialized);
+  auto res = co_await buf_conn_writer->write(serialized);
   if (res.has_error()) {
     co_return res.error();
   } else {

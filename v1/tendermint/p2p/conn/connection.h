@@ -33,13 +33,13 @@ class ChannelDescriptor {
 public:
   ChannelDescriptor(ChannelId id,
     int32_t priority,
-    std::string name,
+    std::string&& name,
     std::size_t send_queue_capacity = default_send_queue_capacity,
     std::size_t recv_message_capacity = default_recv_message_capacity,
     std::size_t recv_buffer_capacity = default_recv_buffer_capacity)
     : id(id),
       priority(priority),
-      name(name),
+      name(std::move(name)),
       send_queue_capacity(send_queue_capacity),
       recv_message_capacity(recv_message_capacity),
       recv_buffer_capacity(recv_buffer_capacity) {}
@@ -76,7 +76,7 @@ namespace detail {
 
     auto send_bytes(BytesPtr bytes) -> asio::awaitable<Result<bool>>;
     auto is_send_pending() -> bool;
-    auto write_packet_msg_to(noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>& w)
+    auto write_packet_msg_to(std::unique_ptr<noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>>& w)
       -> asio::awaitable<Result<std::size_t>>;
     void set_next_packet_msg(PacketMsg* msg);
     auto recv_packet_msg(PacketMsg packet) -> Result<noir::Bytes>;
@@ -92,7 +92,7 @@ namespace detail {
     Chan<BytesPtr> send_queue;
     noir::Bytes recving;
     BytesPtr sending;
-    std::size_t sent_pos;
+    std::size_t sent_pos{0};
 
     std::size_t max_packet_msg_payload_size;
   };
@@ -102,7 +102,7 @@ namespace detail {
 
 class MConnConfig {
 public:
-  MConnConfig(std::size_t max_packet_msg_payload_size = default_max_packet_msg_payload_size,
+  explicit MConnConfig(std::size_t max_packet_msg_payload_size = default_max_packet_msg_payload_size,
     std::chrono::milliseconds ping_interval = default_ping_interval,
     std::chrono::milliseconds pong_timeout = default_pong_timeout,
     std::chrono::milliseconds flush_throttle = default_flush_throttle)
@@ -119,13 +119,9 @@ public:
 
 class MConnection {
 public:
-  MConnection(asio::io_context& io_context,
-    std::shared_ptr<noir::net::Conn<noir::net::TcpConn>> conn,
-    std::vector<ChannelDescriptorPtr>& ch_descs,
-    MConnConfig config = MConnConfig{})
+  MConnection(
+    asio::io_context& io_context, std::vector<ChannelDescriptorPtr>& ch_descs, MConnConfig config = MConnConfig{})
     : io_context(io_context),
-      conn(std::move(conn)),
-      buf_conn_writer(this->conn),
       config(config),
       quit_send_routine_ch(io_context),
       done_send_routine_ch(io_context),
@@ -141,6 +137,7 @@ public:
     }
   }
 
+  void set_conn(std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>&& tcp_conn);
   void start(Chan<noir::Done>& done);
   void set_recv_last_msg_at(noir::Time&& t);
   auto get_last_message_at() -> noir::Time;
@@ -155,7 +152,7 @@ public:
   auto recv_routine(Chan<noir::Done>& done) -> asio::awaitable<void>;
   void stop_for_error(Chan<noir::Done>& done, noir::Error err);
 
-  static auto calc_max_packet_msg_size(std::size_t max_packet_msg_payload_size) -> const std::size_t {
+  static auto calc_max_packet_msg_size(std::size_t max_packet_msg_payload_size) -> std::size_t {
     PacketMsg msg{};
     msg.set_channel_id(1);
     msg.set_eof(true);
@@ -171,7 +168,7 @@ private:
   asio::io_context& io_context;
   detail::LastMsgRecv last_msg_recv;
   std::shared_ptr<noir::net::Conn<noir::net::TcpConn>> conn;
-  noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>> buf_conn_writer;
+  std::unique_ptr<noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>> buf_conn_writer;
   std::mutex stop_mtx;
   MConnConfig config;
 
