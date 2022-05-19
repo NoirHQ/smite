@@ -13,16 +13,17 @@ int main() {
   boost::asio::io_context io_context;
   Timer timer{io_context, std::chrono::milliseconds{1000}};
 
-  timer.after_func([&]() -> boost::asio::awaitable<Result<void>> {
+  timer.set_func([&]() -> boost::asio::awaitable<Result<void>> {
     std::cout << "function start" << std::endl;
-    boost::asio::steady_timer dt{io_context};
-    dt.expires_after(std::chrono::milliseconds{1000});
+    boost::asio::steady_timer st{io_context};
+    st.expires_after(std::chrono::milliseconds{1000});
 
-    co_await dt.async_wait(boost::asio::use_awaitable);
+    co_await st.async_wait(boost::asio::use_awaitable);
     std::cout << "function end" << std::endl;
     timer.reset(std::chrono::milliseconds{1000});
     co_return success();
   });
+  timer.reset(std::chrono::milliseconds{1000});
 
   boost::asio::co_spawn(
     io_context,
