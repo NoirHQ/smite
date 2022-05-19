@@ -17,3 +17,4 @@ add_noir_test(buffered_writer_test test/buffered_writer_test.cpp DEPENDS noir::c
 
 add_noir_example(ticker_example example/ticker_example.cpp DEPENDS noir::common::v1)
 add_noir_example(timer_example example/timer_example.cpp DEPENDS noir::common::v1)
+add_noir_example(throttle_timer_example example/throttle_timer_example.cpp DEPENDS noir::common::v1)
