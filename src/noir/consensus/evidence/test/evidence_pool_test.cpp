@@ -14,6 +14,26 @@ using namespace noir;
 using namespace noir::consensus;
 using namespace noir::consensus::ev;
 
+constexpr auto evidence_chain_id = "my_chain";
+constexpr auto evidence_store_path = "/tmp/ev";
+constexpr auto state_store_path = "/tmp/ev_state";
+constexpr auto block_store_path = "/tmp/ev_block";
+constexpr int64_t default_evidence_max_bytes = 1000;
+
+tstamp get_default_evidence_time() {
+  std::tm tm = {
+    .tm_sec = 0,
+    .tm_min = 0,
+    .tm_hour = 0,
+    .tm_mday = 1,
+    .tm_mon = 1 - 1,
+    .tm_year = 2019 - 1900,
+  }; /// 2019-1-1 0:0:0
+  tm.tm_isdst = -1;
+  auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+  return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
+}
+
 p2p::block_id make_block_id(bytes hash, uint32_t part_set_size, bytes part_set_hash) {
   return {.hash = std::move(hash), .parts = {.total = part_set_size, .hash = std::move(part_set_hash)}};
 }
@@ -46,8 +66,8 @@ std::shared_ptr<duplicate_vote_evidence> mock_duplicate_vote_evidence() {
   auto val = mock_pv();
   val.priv_key_ = priv_key::new_priv_key();
   val.pub_key_ = val.priv_key_.get_pub_key();
-  std::string chain_id = "my_chain";
-  auto default_vote_time = get_time();
+  std::string chain_id = evidence_chain_id;
+  auto default_vote_time = get_default_evidence_time();
   ret->vote_a = make_vote(val, chain_id, 0, 1, 0, 2, block_id, default_vote_time);
   ret->vote_b = make_vote(val, chain_id, 0, 1, 0, 2, block_id2, default_vote_time);
   ret->total_voting_power = 30;
@@ -58,9 +78,9 @@ std::shared_ptr<duplicate_vote_evidence> mock_duplicate_vote_evidence() {
 
 std::shared_ptr<noir::consensus::db_store> initialize_state_from_validator_set(
   std::shared_ptr<validator_set> val_set, int64_t height) {
-  auto default_evidence_time = get_time(); // TODO: use correct time
-  auto state_store_ = std::make_shared<noir::consensus::db_store>(make_session(true, "/tmp/ev_state"));
-  auto state_ = state{.chain_id = "test_chain",
+  auto default_evidence_time = get_default_evidence_time();
+  auto state_store_ = std::make_shared<noir::consensus::db_store>(make_session(true, state_store_path));
+  auto state_ = state{.chain_id = evidence_chain_id,
     .initial_height = 1,
     .last_block_height = height,
     .last_block_time = default_evidence_time,
@@ -90,7 +110,7 @@ std::shared_ptr<noir::consensus::db_store> initialize_validator_state(
 }
 
 std::shared_ptr<commit> make_commit(int64_t height, bytes val_addr) {
-  auto default_evidence_time = get_time(); // TODO: use correct time
+  auto default_evidence_time = get_default_evidence_time();
   auto commit_sigs = std::vector<commit_sig>();
   commit_sigs.push_back(commit_sig{.flag = noir::consensus::FlagCommit,
     .validator_address = val_addr,
@@ -100,13 +120,13 @@ std::shared_ptr<commit> make_commit(int64_t height, bytes val_addr) {
 }
 
 std::shared_ptr<block_store> initialize_block_store(state state_, bytes val_addr) {
-  auto block_store_ = std::make_shared<noir::consensus::block_store>(make_session(true, "/tmp/ev_block"));
-  auto default_evidence_time = get_time(); // TODO: use correct time
+  auto block_store_ = std::make_shared<noir::consensus::block_store>(make_session(true, block_store_path));
+  auto default_evidence_time = get_default_evidence_time();
 
   for (auto i = 1; i <= state_.last_block_height; i++) {
     auto last_commit = make_commit(i - 1, val_addr);
     auto block_ = make_block(i, state_, *last_commit);
-    block_->header.time = default_evidence_time + i; // TODO: use correct time
+    block_->header.time = default_evidence_time + i;
     block_->header.version = ""; // TODO: use correct version
     auto part_set_ = block_->make_part_set(1);
     auto seen_commit = make_commit(i, val_addr);
@@ -121,7 +141,7 @@ std::pair<std::shared_ptr<evidence_pool>, std::shared_ptr<mock_pv>> default_test
   val->priv_key_ = priv_key::new_priv_key();
   val->pub_key_ = val->priv_key_.get_pub_key();
   auto val_address = val->priv_key_.get_pub_key().address();
-  auto evidence_db = make_session(true, "/tmp/ev");
+  auto evidence_db = make_session(true, evidence_store_path);
   auto state_store_ = initialize_validator_state(val, height);
   state state_;
   state_store_->load(state_);
@@ -141,4 +161,16 @@ TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") 
   // std::cout << add_result.error() << std::endl;
   // evidence_list evs{.list = {ev}};
   // auto check_result = pool_->check_evidence(evs);
+}
+
+TEST_CASE("evidence_pool: basic", "[noir][consensus]") {
+  int64_t height{1};
+  auto [pool_, val] = default_test_pool(height);
+
+  auto [evs, size] = pool_->pending_evidence(default_evidence_max_bytes);
+  CHECK(evs.empty());
+
+  auto ev = mock_duplicate_vote_evidence();
+  // pool_->add_evidence(ev);
+  // CHECK(evs.size() == 1);
 }
