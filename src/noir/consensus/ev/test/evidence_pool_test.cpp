@@ -6,7 +6,7 @@
 #pragma once
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/common_test.h>
-#include <noir/consensus/evidence/evidence_pool.h>
+#include <noir/consensus/ev/evidence_pool.h>
 #include <noir/consensus/store/store_test.h>
 #include <noir/consensus/types/priv_validator.h>
 

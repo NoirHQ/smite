@@ -5,7 +5,7 @@
 //
 #pragma once
 #include <noir/codec/proto3.h>
-#include <noir/consensus/evidence/evidence_pool.h>
+#include <noir/consensus/ev/evidence_pool.h>
 
 namespace noir::consensus::ev {
 
