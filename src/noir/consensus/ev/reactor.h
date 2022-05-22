@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
-#include <noir/consensus/evidence/evidence_pool.h>
+#include <noir/consensus/ev/evidence_pool.h>
 
 namespace noir::consensus::ev {
 
