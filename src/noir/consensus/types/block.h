@@ -120,7 +120,7 @@ struct commit {
       *sigs->Add() = *sig.to_proto();
     ret->set_height(height);
     ret->set_round(round);
-    *ret->mutable_block_id() = my_block_id.to_proto();
+    *ret->mutable_block_id() = *p2p::block_id::to_proto(my_block_id);
     return ret;
   }
 
@@ -276,7 +276,7 @@ struct block_header {
     *ret->mutable_chain_id() = chain_id;
     ret->set_height(height);
     *ret->mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(time); // TODO
-    *ret->mutable_last_block_id() = last_block_id.to_proto();
+    *ret->mutable_last_block_id() = *p2p::block_id::to_proto(last_block_id);
     *ret->mutable_validators_hash() = std::string(validators_hash.begin(), validators_hash.end());
     *ret->mutable_next_validators_hash() = std::string(next_validators_hash.begin(), next_validators_hash.end());
     *ret->mutable_consensus_hash() = std::string(consensus_hash.begin(), consensus_hash.end());
