@@ -33,17 +33,30 @@ struct vote : p2p::vote_message {
     return commit_sig{flag, validator_address, timestamp, signature};
   }
 
-  std::shared_ptr<::tendermint::types::Vote> to_proto() {
+  static std::shared_ptr<::tendermint::types::Vote> to_proto(vote& v) {
     auto ret = std::make_shared<::tendermint::types::Vote>();
-    ret->set_type((::tendermint::types::SignedMsgType)type);
-    ret->set_height(height);
-    ret->set_round(round);
-    *ret->mutable_block_id() = block_id_.to_proto();
+    ret->set_type((::tendermint::types::SignedMsgType)v.type);
+    ret->set_height(v.height);
+    ret->set_round(v.round);
+    *ret->mutable_block_id() = *p2p::block_id::to_proto(v.block_id_);
     auto ts = ret->mutable_timestamp();
-    *ts = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp); // TODO
-    *ret->mutable_validator_address() = std::string(validator_address.begin(), validator_address.end());
-    ret->set_validator_index(validator_index);
-    *ret->mutable_signature() = std::string(signature.begin(), signature.end());
+    *ts = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(v.timestamp); // TODO
+    *ret->mutable_validator_address() = std::string(v.validator_address.begin(), v.validator_address.end());
+    ret->set_validator_index(v.validator_index);
+    *ret->mutable_signature() = std::string(v.signature.begin(), v.signature.end());
+    return ret;
+  }
+
+  static std::shared_ptr<vote> from_proto(::tendermint::types::Vote& pb) {
+    auto ret = std::make_shared<vote>();
+    ret->type = (p2p::signed_msg_type)pb.type();
+    ret->height = pb.height();
+    ret->round = pb.round();
+    ret->block_id_ = *p2p::block_id::from_proto(const_cast<::tendermint::types::BlockID&>(pb.block_id()));
+    ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp()); // TODO
+    ret->validator_address = {pb.validator_address().begin(), pb.validator_address().end()};
+    ret->validator_index = pb.validator_index();
+    ret->signature = {pb.signature().begin(), pb.signature().end()};
     return ret;
   }
 };

@@ -113,3 +113,39 @@ TEST_CASE("evidence: verify generated hash", "[noir][consensus]") {
   // std::cout << to_hex(ev_list.hash()) << std::endl;
   CHECK(ev_list.hash() == from_hex("b34b4bb0b31dba1c38185ea0e09b70fa8cd451431dfc3d15f4a234c3e9c0bd23"));
 }
+
+TEST_CASE("evidence: serialization", "[noir][consensus]") {
+  auto ev_dup = random_duplicate_vote_evidence();
+
+  SECTION("duplicate evidence") {
+    auto bz = ev_dup->get_bytes();
+    // std::cout << to_hex(bz) << std::endl;
+    // std::cout << ev_dup->get_string() << std::endl;
+
+    ::tendermint::types::DuplicateVoteEvidence pb;
+    pb.ParseFromArray(bz.data(), bz.size());
+    CHECK(pb.IsInitialized());
+    auto ev_dup2 = duplicate_vote_evidence::from_proto(pb).value();
+    // std::cout << ev_dup2->get_string() << std::endl;
+    CHECK(ev_dup->vote_a->signature == ev_dup2->vote_a->signature);
+    CHECK(ev_dup->vote_b->signature == ev_dup2->vote_b->signature);
+    CHECK(ev_dup->total_voting_power == ev_dup2->total_voting_power);
+    CHECK(ev_dup->validator_power == ev_dup2->validator_power);
+    CHECK(ev_dup->timestamp == ev_dup2->timestamp);
+  }
+
+  SECTION("evidence") {
+    auto ev = evidence::to_proto(*ev_dup).value();
+    bytes bz(ev->ByteSizeLong());
+    ev->SerializeToArray(bz.data(), ev->ByteSizeLong());
+    // std::cout << to_hex(bz) << std::endl;
+
+    ::tendermint::types::Evidence pb;
+    pb.ParseFromArray(bz.data(), bz.size());
+    CHECK(pb.IsInitialized());
+    auto ev2 = evidence::from_proto(pb).value();
+    // std::cout << ev2->get_string() << std::endl;
+    CHECK(ev_dup->get_string() == ev2->get_string());
+    CHECK(ev_dup->get_hash() == ev2->get_hash());
+  }
+}

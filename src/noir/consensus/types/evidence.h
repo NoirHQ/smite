@@ -91,7 +91,9 @@ struct duplicate_vote_evidence : public evidence {
   }
 
   std::string get_string() override {
-    return fmt::format("duplicate_vote_evidence(vote_a, vote_b)");
+    return fmt::format(
+      "duplicate_vote_evidence(vote_a, vote_b, total_voting_power={}, validator_power={}, timestamp={})",
+      total_voting_power, validator_power, timestamp);
   }
 
   tstamp get_timestamp() override {
@@ -128,9 +130,9 @@ struct duplicate_vote_evidence : public evidence {
   static std::shared_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto(duplicate_vote_evidence& ev) {
     auto ret = std::make_shared<::tendermint::types::DuplicateVoteEvidence>();
     if (ev.vote_b)
-      *ret->mutable_vote_b() = *ev.vote_b->to_proto();
+      *ret->mutable_vote_b() = *vote::to_proto(*ev.vote_b);
     if (ev.vote_a)
-      *ret->mutable_vote_a() = *ev.vote_a->to_proto();
+      *ret->mutable_vote_a() = *vote::to_proto(*ev.vote_a);
     ret->set_total_voting_power(ev.total_voting_power);
     ret->set_validator_power(ev.validator_power);
     *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(ev.timestamp);
@@ -141,6 +143,11 @@ struct duplicate_vote_evidence : public evidence {
     if (!pb.IsInitialized())
       return make_unexpected("from_proto failed: duplicate vote evidence is not initialized");
     auto ret = std::make_shared<duplicate_vote_evidence>();
+    ret->vote_a = vote::from_proto(const_cast<tendermint::types::Vote&>(pb.vote_a()));
+    ret->vote_b = vote::from_proto(const_cast<tendermint::types::Vote&>(pb.vote_b()));
+    ret->total_voting_power = pb.total_voting_power();
+    ret->validator_power = pb.validator_power();
+    ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp());
     return ret; // TODO
   }
 };

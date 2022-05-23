@@ -63,10 +63,17 @@ struct part_set_header {
     return (total == 0) && (hash.empty());
   }
 
-  ::tendermint::types::PartSetHeader to_proto() {
-    ::tendermint::types::PartSetHeader ret;
-    ret.set_total(total);
-    *ret.mutable_hash() = std::string(hash.begin(), hash.end());
+  static std::shared_ptr<::tendermint::types::PartSetHeader> to_proto(part_set_header& p) {
+    auto ret = std::make_shared<::tendermint::types::PartSetHeader>();
+    ret->set_total(p.total);
+    *ret->mutable_hash() = std::string(p.hash.begin(), p.hash.end());
+    return ret;
+  }
+
+  static std::shared_ptr<part_set_header> from_proto(::tendermint::types::PartSetHeader& pb) {
+    auto ret = std::make_shared<part_set_header>();
+    ret->total = pb.total();
+    ret->hash = {pb.hash().begin(), pb.hash().end()};
     return ret;
   }
 };
@@ -93,10 +100,17 @@ struct block_id {
     return to_hex(hash) + to_hex(parts.hash) + std::to_string(parts.total);
   }
 
-  ::tendermint::types::BlockID to_proto() {
-    ::tendermint::types::BlockID ret;
-    *ret.mutable_hash() = std::string(hash.begin(), hash.end());
-    *ret.mutable_part_set_header() = parts.to_proto();
+  static std::shared_ptr<::tendermint::types::BlockID> to_proto(block_id& b) {
+    auto ret = std::make_shared<::tendermint::types::BlockID>();
+    *ret->mutable_hash() = std::string(b.hash.begin(), b.hash.end());
+    *ret->mutable_part_set_header() = *part_set_header::to_proto(b.parts);
+    return ret;
+  }
+
+  static std::shared_ptr<block_id> from_proto(::tendermint::types::BlockID& pb) {
+    auto ret = std::make_shared<block_id>();
+    ret->hash = {pb.hash().begin(), pb.hash().end()};
+    ret->parts = *part_set_header::from_proto(const_cast<::tendermint::types::PartSetHeader&>(pb.part_set_header()));
     return ret;
   }
 };
