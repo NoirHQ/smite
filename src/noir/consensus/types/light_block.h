@@ -18,11 +18,11 @@ struct signed_header {
     return {}; // TODO
   }
 
-  std::unique_ptr<::tendermint::types::SignedHeader> to_proto() {
+  static std::unique_ptr<::tendermint::types::SignedHeader> to_proto(const signed_header& s) {
     auto ret = std::make_unique<::tendermint::types::SignedHeader>();
-    ret->set_allocated_header(header->to_proto().release());
-    if (commit.has_value())
-      ret->set_allocated_commit(commit->to_proto().release());
+    ret->set_allocated_header(block_header::to_proto(*s.header).release());
+    if (s.commit.has_value())
+      ret->set_allocated_commit(commit::to_proto(s.commit.value()).release());
     return ret;
   }
 };
@@ -45,16 +45,12 @@ struct light_block {
     return {};
   }
 
-  result<std::unique_ptr<::tendermint::types::LightBlock>> to_proto() {
+  static std::unique_ptr<::tendermint::types::LightBlock> to_proto(const light_block& l) {
     auto ret = std::make_unique<::tendermint::types::LightBlock>();
-    if (!s_header)
-      ret->set_allocated_signed_header(s_header->to_proto().release());
-    if (!val_set) {
-      auto val_set_proto = val_set->to_proto();
-      if (!val_set_proto)
-        return make_unexpected(val_set_proto.error());
-      ret->set_allocated_validator_set(val_set_proto.value().release());
-    }
+    if (!l.s_header)
+      ret->set_allocated_signed_header(signed_header::to_proto(*l.s_header).release());
+    if (!l.val_set)
+      ret->set_allocated_validator_set(validator_set::to_proto(*l.val_set).release());
     return ret;
   }
 };

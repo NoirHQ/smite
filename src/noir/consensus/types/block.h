@@ -69,11 +69,11 @@ struct commit_sig {
     }
   }
 
-  std::unique_ptr<::tendermint::types::CommitSig> to_proto() {
+  static std::unique_ptr<::tendermint::types::CommitSig> to_proto(const commit_sig& c) {
     auto ret = std::make_unique<::tendermint::types::CommitSig>();
-    ret->set_validator_address({validator_address.begin(), validator_address.end()});
-    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp); // TODO
-    ret->set_signature({signature.begin(), signature.end()});
+    ret->set_validator_address({c.validator_address.begin(), c.validator_address.end()});
+    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(c.timestamp); // TODO
+    ret->set_signature({c.signature.begin(), c.signature.end()});
     return ret;
   }
 };
@@ -113,14 +113,14 @@ struct commit {
     return bit_array_;
   }
 
-  std::unique_ptr<::tendermint::types::Commit> to_proto() {
+  static std::unique_ptr<::tendermint::types::Commit> to_proto(const commit& c) {
     auto ret = std::make_unique<::tendermint::types::Commit>();
     auto sigs = ret->mutable_signatures();
-    for (auto& sig : signatures)
-      sigs->AddAllocated(sig.to_proto().release());
-    ret->set_height(height);
-    ret->set_round(round);
-    ret->set_allocated_block_id(p2p::block_id::to_proto(my_block_id).release());
+    for (auto& sig : c.signatures)
+      sigs->AddAllocated(commit_sig::to_proto(sig).release());
+    ret->set_height(c.height);
+    ret->set_round(c.round);
+    ret->set_allocated_block_id(p2p::block_id::to_proto(c.my_block_id).release());
     return ret;
   }
 
@@ -270,22 +270,22 @@ struct block_header {
     return {};
   }
 
-  std::unique_ptr<::tendermint::types::Header> to_proto() {
+  static std::unique_ptr<::tendermint::types::Header> to_proto(const block_header& b) {
     auto ret = std::make_unique<::tendermint::types::Header>();
     *ret->mutable_version(); // TODO
-    *ret->mutable_chain_id() = chain_id;
-    ret->set_height(height);
-    *ret->mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(time); // TODO
-    ret->set_allocated_last_block_id(p2p::block_id::to_proto(last_block_id).release());
-    ret->set_validators_hash({validators_hash.begin(), validators_hash.end()});
-    ret->set_next_validators_hash({next_validators_hash.begin(), next_validators_hash.end()});
-    ret->set_consensus_hash({consensus_hash.begin(), consensus_hash.end()});
-    ret->set_app_hash({app_hash.begin(), app_hash.end()});
-    ret->set_data_hash({data_hash.begin(), data_hash.end()});
-    ret->set_evidence_hash({evidence_hash.begin(), evidence_hash.end()});
-    ret->set_last_results_hash({last_results_hash.begin(), last_results_hash.end()});
-    ret->set_last_commit_hash({last_commit_hash.begin(), last_commit_hash.end()});
-    ret->set_proposer_address({proposer_address.begin(), proposer_address.end()});
+    *ret->mutable_chain_id() = b.chain_id;
+    ret->set_height(b.height);
+    *ret->mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(b.time); // TODO
+    ret->set_allocated_last_block_id(p2p::block_id::to_proto(b.last_block_id).release());
+    ret->set_validators_hash({b.validators_hash.begin(), b.validators_hash.end()});
+    ret->set_next_validators_hash({b.next_validators_hash.begin(), b.next_validators_hash.end()});
+    ret->set_consensus_hash({b.consensus_hash.begin(), b.consensus_hash.end()});
+    ret->set_app_hash({b.app_hash.begin(), b.app_hash.end()});
+    ret->set_data_hash({b.data_hash.begin(), b.data_hash.end()});
+    ret->set_evidence_hash({b.evidence_hash.begin(), b.evidence_hash.end()});
+    ret->set_last_results_hash({b.last_results_hash.begin(), b.last_results_hash.end()});
+    ret->set_last_commit_hash({b.last_commit_hash.begin(), b.last_commit_hash.end()});
+    ret->set_proposer_address({b.proposer_address.begin(), b.proposer_address.end()});
     return ret;
   }
 };

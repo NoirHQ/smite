@@ -10,12 +10,12 @@
 
 namespace noir::consensus {
 
-result<std::unique_ptr<::tendermint::types::Evidence>> evidence::to_proto(evidence& ev) {
+result<std::unique_ptr<::tendermint::types::Evidence>> evidence::to_proto(const evidence& ev) {
   auto ret = std::make_unique<::tendermint::types::Evidence>();
-  if (auto ev_d = dynamic_cast<duplicate_vote_evidence*>(&ev); ev_d) {
+  if (auto ev_d = dynamic_cast<const duplicate_vote_evidence*>(&ev); ev_d) {
     ret->set_allocated_duplicate_vote_evidence(duplicate_vote_evidence::to_proto(*ev_d).release());
     return ret;
-  } else if (auto ev_l = dynamic_cast<light_client_attack_evidence*>(&ev); ev_l) {
+  } else if (auto ev_l = dynamic_cast<const light_client_attack_evidence*>(&ev); ev_l) {
     ret->set_allocated_light_client_attack_evidence(
       light_client_attack_evidence::to_proto(*ev_l).value().release()); // TODO: handle failure
     return ret;
