@@ -18,7 +18,7 @@ const std::size_t default_buf_size = 4096;
 template<typename Writer>
 class BufferedWriter {
 public:
-  explicit BufferedWriter(std::shared_ptr<Writer>& w, std::size_t size = default_buf_size): w(w), buf(size){};
+  explicit BufferedWriter(std::shared_ptr<Writer>& writer, std::size_t size = default_buf_size): w(writer), buf(size){};
 
   auto flush() -> boost::asio::awaitable<Result<void>> {
     if (err)
@@ -44,11 +44,11 @@ public:
     co_return success();
   }
 
-  void reset(Writer& w) {
+  void reset(Writer& writer) {
     err.clear();
     buf.clear();
     n = 0;
-    this->w = w;
+    w = writer;
   }
 
   auto available() -> std::size_t {
@@ -94,4 +94,7 @@ private:
   Error err;
   std::shared_ptr<Writer>& w;
 };
+
+template <typename Writer>
+using BufferedWriterUptr = std::unique_ptr<BufferedWriter<Writer>>;
 } //namespace noir

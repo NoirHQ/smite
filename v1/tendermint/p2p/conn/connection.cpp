@@ -66,8 +66,7 @@ namespace detail {
     }
   }
 
-  auto Channel::write_packet_msg_to(std::unique_ptr<BufferedWriter<net::Conn<net::TcpConn>>>& writer)
-    -> asio::awaitable<Result<std::size_t>> {
+  auto Channel::write_packet_msg_to(BufferedWriterUptr<net::TcpConn>& writer) -> asio::awaitable<Result<std::size_t>> {
     Packet packet{};
     PacketMsg* msg = packet.mutable_packet_msg();
     set_next_packet_msg(msg);
@@ -80,7 +79,7 @@ namespace detail {
     co_return res;
   }
 
-  auto Channel::recv_packet_msg(PacketMsg packet) -> Result<Bytes> {
+  auto Channel::recv_packet_msg(const PacketMsg& packet) -> Result<Bytes> {
     auto recv_cap = desc->recv_message_capacity;
     auto recv_received = recving.size() + packet.data().size();
     if (recv_cap < recv_received) {
@@ -100,9 +99,9 @@ namespace detail {
   }
 } //namespace detail
 
-void MConnection::set_conn(std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>&& tcp_conn) {
+void MConnection::set_conn(std::shared_ptr<noir::net::TcpConn>&& tcp_conn) {
   conn = std::move(tcp_conn);
-  buf_conn_writer = std::make_unique<noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>>(conn);
+  buf_conn_writer = std::make_unique<noir::BufferedWriter<noir::net::TcpConn>>(conn);
 }
 
 void MConnection::start(Chan<Done>& done) {
@@ -115,7 +114,7 @@ void MConnection::start(Chan<Done>& done) {
   set_recv_last_msg_at(steady_clock::now());
 
   asio::co_spawn(io_context, send_routine(done), asio::detached);
-  //  asio::co_spawn(io_context, recv_routine(done), asio::detached);
+  asio::co_spawn(io_context, recv_routine(done), asio::detached);
 }
 
 void MConnection::set_recv_last_msg_at(Time&& t) {
@@ -280,8 +279,7 @@ auto MConnection::send_packet_msg(Chan<Done>& done) -> asio::awaitable<Result<bo
 
 void MConnection::stop_for_error(Chan<Done>& done, Error err) {
   stop();
-
-  // TODO: handle error
+  on_error(done, err);
 }
 
 void MConnection::stop() {
@@ -307,6 +305,60 @@ auto MConnection::stop_services() -> bool {
   return false;
 }
 
-auto MConnection::recv_routine(Chan<Done>& done) -> asio::awaitable<void> {}
+auto MConnection::recv_routine(Chan<Done>& done) -> asio::awaitable<void> {
+  for (;;) {
+    Packet packet{};
+    auto res = co_await (done.async_receive(as_result(asio::use_awaitable)) ||
+      done_send_routine_ch.async_receive(as_result(asio::use_awaitable)) ||
+      quit_recv_routine_ch.async_receive(as_result(asio::use_awaitable)) || read_packet(packet));
+
+    if (res.index() == 0) {
+      co_return;
+    } else if (res.index() == 1) {
+      co_return;
+    } else if (res.index() == 2) {
+      co_return;
+    } else {
+      auto read_res = std::get<3>(res);
+      if (read_res.has_error()) {
+        stop_for_error(done, read_res.error());
+        break;
+      }
+
+      set_recv_last_msg_at(std::chrono::steady_clock::now());
+
+      if (packet.sum_case() == Packet::kPacketPing) {
+        boost::system::error_code ec{};
+        co_await pong_ch.async_send(ec, {}, asio::use_awaitable);
+      } else if (packet.sum_case() == Packet::kPacketPong) {
+      } else if (packet.sum_case() == Packet::kPacketMsg) {
+        auto channel_id = static_cast<uint16_t>(packet.packet_msg().channel_id());
+        auto& channel = channels_idx[channel_id];
+        if (packet.packet_msg().channel_id() < 0 ||
+          packet.packet_msg().channel_id() > std::numeric_limits<uint8_t>::max() || channels_idx.contains(channel_id) ||
+          channel == nullptr) {
+          stop_for_error(done, Error::format("unknown channel {}", packet.packet_msg().channel_id()));
+          break;
+        }
+        auto msg_res = channel->recv_packet_msg(packet.packet_msg());
+        if (msg_res.has_error()) {
+          stop_for_error(done, msg_res.error());
+          break;
+        }
+        if (msg_res.has_value()) {
+          auto msg_bytes = msg_res.value();
+          on_receive(done, channel_id, msg_bytes);
+        }
+      } else {
+        stop_for_error(done, Error::format("unknown message type {}", packet.sum_case()));
+        break;
+      }
+    }
+  }
+}
+
+auto MConnection::read_packet(Packet& packet) -> asio::awaitable<Result<void>> {
+  co_return success();
+}
 
 } //namespace tendermint::p2p::conn

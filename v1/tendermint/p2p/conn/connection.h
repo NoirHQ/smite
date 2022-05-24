@@ -76,10 +76,9 @@ namespace detail {
 
     auto send_bytes(BytesPtr bytes) -> asio::awaitable<Result<bool>>;
     auto is_send_pending() -> bool;
-    auto write_packet_msg_to(std::unique_ptr<noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>>& w)
-      -> asio::awaitable<Result<std::size_t>>;
+    auto write_packet_msg_to(noir::BufferedWriterUptr<noir::net::TcpConn>& w) -> asio::awaitable<Result<std::size_t>>;
     void set_next_packet_msg(PacketMsg* msg);
-    auto recv_packet_msg(PacketMsg packet) -> Result<noir::Bytes>;
+    auto recv_packet_msg(const PacketMsg& packet) -> Result<noir::Bytes>;
     void update_stats();
 
   public:
@@ -119,8 +118,11 @@ public:
 
 class MConnection {
 public:
-  MConnection(
-    asio::io_context& io_context, std::vector<ChannelDescriptorPtr>& ch_descs, MConnConfig config = MConnConfig{})
+  MConnection(asio::io_context& io_context,
+    std::vector<ChannelDescriptorPtr>& ch_descs,
+    std::function<void(noir::Chan<noir::Done>& done, ChannelId channel_id, noir::Bytes msg_bytes)>&& on_receive,
+    std::function<void(noir::Chan<noir::Done>& done, noir::Error error)>&& on_error,
+    MConnConfig config = MConnConfig{})
     : io_context(io_context),
       config(config),
       quit_send_routine_ch(io_context),
@@ -130,14 +132,16 @@ public:
       send_ch(io_context, 1),
       pong_ch(io_context, 1),
       ping_timer(io_context, config.ping_interval),
-      ch_stats_timer(io_context, update_stats_interval) {
-    this->max_packet_msg_size = calc_max_packet_msg_size(config.max_packet_msg_payload_size);
+      ch_stats_timer(io_context, update_stats_interval),
+      on_receive(std::move(on_receive)),
+      on_error(std::move(on_error)) {
+    max_packet_msg_size = calc_max_packet_msg_size(config.max_packet_msg_payload_size);
     for (auto& desc : ch_descs) {
       channels_idx[desc->id] = std::make_unique<detail::Channel>(io_context, desc, config.max_packet_msg_payload_size);
     }
   }
 
-  void set_conn(std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>&& tcp_conn);
+  void set_conn(std::shared_ptr<noir::net::TcpConn>&& tcp_conn);
   void start(Chan<noir::Done>& done);
   void set_recv_last_msg_at(noir::Time&& t);
   auto get_last_message_at() -> noir::Time;
@@ -163,12 +167,13 @@ public:
 private:
   auto send_ping() -> asio::awaitable<Result<void>>;
   auto send_pong() -> asio::awaitable<Result<void>>;
+  auto read_packet(Packet& packet) -> asio::awaitable<Result<void>>;
 
 private:
   asio::io_context& io_context;
   detail::LastMsgRecv last_msg_recv;
-  std::shared_ptr<noir::net::Conn<noir::net::TcpConn>> conn;
-  std::unique_ptr<noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>> buf_conn_writer;
+  std::shared_ptr<noir::net::TcpConn> conn;
+  noir::BufferedWriterUptr<noir::net::TcpConn> buf_conn_writer;
   std::mutex stop_mtx;
   MConnConfig config;
 
@@ -187,6 +192,9 @@ private:
 
   noir::Time created;
   std::size_t max_packet_msg_size;
+
+  std::function<void(noir::Chan<noir::Done>& done, ChannelId channel_id, noir::Bytes msg_bytes)> on_receive;
+  std::function<void(noir::Chan<noir::Done>& done, noir::Error error)> on_error;
 };
 
 } // namespace tendermint::p2p::conn
