@@ -100,6 +100,10 @@ public:
     co_return success();
   }
 
+  auto read(uint8_t* c, std::size_t s) -> boost::asio::awaitable<Result<void>> {
+    return read(std::span{c, s});
+  }
+
   auto close() -> Result<void> {
     return static_cast<Derived*>(this)->close();
   }
