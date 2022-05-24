@@ -10,14 +10,14 @@
 
 namespace noir::consensus {
 
-result<std::shared_ptr<::tendermint::types::Evidence>> evidence::to_proto(evidence& ev) {
-  auto ret = std::make_shared<::tendermint::types::Evidence>();
+result<std::unique_ptr<::tendermint::types::Evidence>> evidence::to_proto(evidence& ev) {
+  auto ret = std::make_unique<::tendermint::types::Evidence>();
   if (auto ev_d = dynamic_cast<duplicate_vote_evidence*>(&ev); ev_d) {
-    *ret->mutable_duplicate_vote_evidence() = *duplicate_vote_evidence::to_proto(*ev_d);
+    ret->set_allocated_duplicate_vote_evidence(duplicate_vote_evidence::to_proto(*ev_d).release());
     return ret;
   } else if (auto ev_l = dynamic_cast<light_client_attack_evidence*>(&ev); ev_l) {
-    *ret->mutable_light_client_attack_evidence() =
-      *light_client_attack_evidence::to_proto(*ev_l).value(); // TODO: handle failure
+    ret->set_allocated_light_client_attack_evidence(
+      light_client_attack_evidence::to_proto(*ev_l).value().release()); // TODO: handle failure
     return ret;
   }
   return make_unexpected("evidence_to_proto failed: unknown evidence");

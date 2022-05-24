@@ -63,10 +63,10 @@ struct part_set_header {
     return (total == 0) && (hash.empty());
   }
 
-  static std::shared_ptr<::tendermint::types::PartSetHeader> to_proto(part_set_header& p) {
-    auto ret = std::make_shared<::tendermint::types::PartSetHeader>();
+  static std::unique_ptr<::tendermint::types::PartSetHeader> to_proto(part_set_header& p) {
+    auto ret = std::make_unique<::tendermint::types::PartSetHeader>();
     ret->set_total(p.total);
-    *ret->mutable_hash() = std::string(p.hash.begin(), p.hash.end());
+    ret->set_hash({p.hash.begin(), p.hash.end()});
     return ret;
   }
 
@@ -100,10 +100,10 @@ struct block_id {
     return to_hex(hash) + to_hex(parts.hash) + std::to_string(parts.total);
   }
 
-  static std::shared_ptr<::tendermint::types::BlockID> to_proto(block_id& b) {
-    auto ret = std::make_shared<::tendermint::types::BlockID>();
-    *ret->mutable_hash() = std::string(b.hash.begin(), b.hash.end());
-    *ret->mutable_part_set_header() = *part_set_header::to_proto(b.parts);
+  static std::unique_ptr<::tendermint::types::BlockID> to_proto(block_id& b) {
+    auto ret = std::make_unique<::tendermint::types::BlockID>();
+    ret->set_hash({b.hash.begin(), b.hash.end()});
+    ret->set_allocated_part_set_header(part_set_header::to_proto(b.parts).release());
     return ret;
   }
 

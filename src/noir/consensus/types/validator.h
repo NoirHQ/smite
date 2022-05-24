@@ -53,12 +53,12 @@ struct validator {
     return validator{key.address(), key, voting_power, 0};
   }
 
-  result<std::shared_ptr<::tendermint::types::Validator>> to_proto() {
+  result<std::unique_ptr<::tendermint::types::Validator>> to_proto() {
     if (this == nullptr)
       return make_unexpected("null validator");
-    auto ret = std::make_shared<::tendermint::types::Validator>();
+    auto ret = std::make_unique<::tendermint::types::Validator>();
     // auto pk = pub_key_to_proto(); // FIXME
-    *ret->mutable_address() = std::string(address.begin(), address.end());
+    ret->set_address({address.begin(), address.end()});
     // ret->mutable_pub_key() // FIXME
     ret->set_voting_power(voting_power);
     ret->set_proposer_priority(proposer_priority);
@@ -451,8 +451,8 @@ struct validator_set {
     return {}; // TODO
   }
 
-  result<std::shared_ptr<::tendermint::types::ValidatorSet>> to_proto() {
-    auto ret = std::make_shared<::tendermint::types::ValidatorSet>();
+  result<std::unique_ptr<::tendermint::types::ValidatorSet>> to_proto() {
+    auto ret = std::make_unique<::tendermint::types::ValidatorSet>();
     if (validators.empty())
       return ret;
     auto vals_proto = ret->mutable_validators();
@@ -460,13 +460,13 @@ struct validator_set {
       auto val_p = val.to_proto();
       if (!val_p)
         return make_unexpected(val_p.error());
-      *vals_proto->Add() = *val_p.value();
+      vals_proto->AddAllocated(val_p.value().release());
     }
 
     auto val_proposer = proposer->to_proto();
     if (!val_proposer)
       return make_unexpected(val_proposer.error());
-    *ret->mutable_proposer() = *val_proposer.value();
+    ret->set_allocated_proposer(val_proposer.value().release());
     ret->set_total_voting_power(0);
     return ret;
   }

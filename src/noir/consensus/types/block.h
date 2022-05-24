@@ -69,11 +69,11 @@ struct commit_sig {
     }
   }
 
-  std::shared_ptr<::tendermint::types::CommitSig> to_proto() {
-    auto ret = std::make_shared<::tendermint::types::CommitSig>();
-    *ret->mutable_validator_address() = std::string(validator_address.begin(), validator_address.end());
+  std::unique_ptr<::tendermint::types::CommitSig> to_proto() {
+    auto ret = std::make_unique<::tendermint::types::CommitSig>();
+    ret->set_validator_address({validator_address.begin(), validator_address.end()});
     *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(timestamp); // TODO
-    *ret->mutable_signature() = std::string(signature.begin(), signature.end());
+    ret->set_signature({signature.begin(), signature.end()});
     return ret;
   }
 };
@@ -113,14 +113,14 @@ struct commit {
     return bit_array_;
   }
 
-  std::shared_ptr<::tendermint::types::Commit> to_proto() {
-    auto ret = std::make_shared<::tendermint::types::Commit>();
+  std::unique_ptr<::tendermint::types::Commit> to_proto() {
+    auto ret = std::make_unique<::tendermint::types::Commit>();
     auto sigs = ret->mutable_signatures();
     for (auto& sig : signatures)
-      *sigs->Add() = *sig.to_proto();
+      sigs->AddAllocated(sig.to_proto().release());
     ret->set_height(height);
     ret->set_round(round);
-    *ret->mutable_block_id() = *p2p::block_id::to_proto(my_block_id);
+    ret->set_allocated_block_id(p2p::block_id::to_proto(my_block_id).release());
     return ret;
   }
 
@@ -270,22 +270,22 @@ struct block_header {
     return {};
   }
 
-  std::shared_ptr<::tendermint::types::Header> to_proto() {
-    auto ret = std::make_shared<::tendermint::types::Header>();
+  std::unique_ptr<::tendermint::types::Header> to_proto() {
+    auto ret = std::make_unique<::tendermint::types::Header>();
     *ret->mutable_version(); // TODO
     *ret->mutable_chain_id() = chain_id;
     ret->set_height(height);
     *ret->mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(time); // TODO
-    *ret->mutable_last_block_id() = *p2p::block_id::to_proto(last_block_id);
-    *ret->mutable_validators_hash() = std::string(validators_hash.begin(), validators_hash.end());
-    *ret->mutable_next_validators_hash() = std::string(next_validators_hash.begin(), next_validators_hash.end());
-    *ret->mutable_consensus_hash() = std::string(consensus_hash.begin(), consensus_hash.end());
-    *ret->mutable_app_hash() = std::string(app_hash.begin(), app_hash.end());
-    *ret->mutable_data_hash() = std::string(data_hash.begin(), data_hash.end());
-    *ret->mutable_evidence_hash() = std::string(evidence_hash.begin(), evidence_hash.end());
-    *ret->mutable_last_results_hash() = std::string(last_results_hash.begin(), last_results_hash.end());
-    *ret->mutable_last_commit_hash() = std::string(last_commit_hash.begin(), last_commit_hash.end());
-    *ret->mutable_proposer_address() = std::string(proposer_address.begin(), proposer_address.end());
+    ret->set_allocated_last_block_id(p2p::block_id::to_proto(last_block_id).release());
+    ret->set_validators_hash({validators_hash.begin(), validators_hash.end()});
+    ret->set_next_validators_hash({next_validators_hash.begin(), next_validators_hash.end()});
+    ret->set_consensus_hash({consensus_hash.begin(), consensus_hash.end()});
+    ret->set_app_hash({app_hash.begin(), app_hash.end()});
+    ret->set_data_hash({data_hash.begin(), data_hash.end()});
+    ret->set_evidence_hash({evidence_hash.begin(), evidence_hash.end()});
+    ret->set_last_results_hash({last_results_hash.begin(), last_results_hash.end()});
+    ret->set_last_commit_hash({last_commit_hash.begin(), last_commit_hash.end()});
+    ret->set_proposer_address({proposer_address.begin(), proposer_address.end()});
     return ret;
   }
 };

@@ -23,7 +23,7 @@ struct evidence {
   virtual tstamp get_timestamp() = 0;
   virtual result<void> validate_basic() = 0;
 
-  static result<std::shared_ptr<::tendermint::types::Evidence>> to_proto(evidence&);
+  static result<std::unique_ptr<::tendermint::types::Evidence>> to_proto(evidence&);
   static result<std::shared_ptr<evidence>> from_proto(::tendermint::types::Evidence&);
 };
 
@@ -127,12 +127,12 @@ struct duplicate_vote_evidence : public evidence {
     timestamp = evidence_time;
   }
 
-  static std::shared_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto(duplicate_vote_evidence& ev) {
-    auto ret = std::make_shared<::tendermint::types::DuplicateVoteEvidence>();
+  static std::unique_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto(duplicate_vote_evidence& ev) {
+    auto ret = std::make_unique<::tendermint::types::DuplicateVoteEvidence>();
     if (ev.vote_b)
-      *ret->mutable_vote_b() = *vote::to_proto(*ev.vote_b);
+      ret->set_allocated_vote_b(vote::to_proto(*ev.vote_b).release());
     if (ev.vote_a)
-      *ret->mutable_vote_a() = *vote::to_proto(*ev.vote_a);
+      ret->set_allocated_vote_a(vote::to_proto(*ev.vote_a).release());
     ret->set_total_voting_power(ev.total_voting_power);
     ret->set_validator_power(ev.validator_power);
     *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(ev.timestamp);
@@ -237,20 +237,20 @@ struct light_client_attack_evidence : public evidence {
     byzantine_validators = get_byzantine_validators(common_vals, trusted_header);
   }
 
-  static result<std::shared_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto(
+  static result<std::unique_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto(
     light_client_attack_evidence& ev) {
     auto cb = ev.conflicting_block->to_proto();
     if (!cb)
       return make_unexpected(cb.error());
-    auto ret = std::make_shared<::tendermint::types::LightClientAttackEvidence>();
-    *ret->mutable_conflicting_block() = *cb.value();
+    auto ret = std::make_unique<::tendermint::types::LightClientAttackEvidence>();
+    ret->set_allocated_conflicting_block(cb.value().release());
     ret->set_common_height(ev.common_height);
     auto byz_vals = ret->mutable_byzantine_validators();
     for (auto& val : ev.byzantine_validators) {
       auto pb = val->to_proto();
       if (!pb)
         return make_unexpected(pb.error());
-      *byz_vals->Add() = *pb.value();
+      byz_vals->AddAllocated(pb.value().release());
     }
     ret->set_total_voting_power(ev.total_voting_power);
     *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(ev.timestamp);
