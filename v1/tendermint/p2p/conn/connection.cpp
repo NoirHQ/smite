@@ -358,6 +358,17 @@ auto MConnection::recv_routine(Chan<Done>& done) -> asio::awaitable<void> {
 }
 
 auto MConnection::read_packet(Packet& packet) -> asio::awaitable<Result<void>> {
+  VarInt64 message_length = 0;
+  auto length_res = co_await read_uleb128_async(*conn, message_length);
+  if (length_res.has_error()) {
+    co_return length_res.error();
+  }
+  std::vector<unsigned char> message_buffer(message_length);
+  auto msg_res = co_await conn->read(message_buffer);
+  if (msg_res.has_error()) {
+    co_return msg_res.error();
+  }
+  packet.ParseFromArray(message_buffer.data(), message_buffer.size());
   co_return success();
 }
 
