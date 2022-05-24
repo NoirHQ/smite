@@ -23,7 +23,7 @@ struct evidence {
   virtual tstamp get_timestamp() = 0;
   virtual result<void> validate_basic() = 0;
 
-  static result<std::unique_ptr<::tendermint::types::Evidence>> to_proto(evidence&);
+  static result<std::unique_ptr<::tendermint::types::Evidence>> to_proto(const evidence&);
   static result<std::shared_ptr<evidence>> from_proto(::tendermint::types::Evidence&);
 };
 
@@ -127,7 +127,7 @@ struct duplicate_vote_evidence : public evidence {
     timestamp = evidence_time;
   }
 
-  static std::unique_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto(duplicate_vote_evidence& ev) {
+  static std::unique_ptr<::tendermint::types::DuplicateVoteEvidence> to_proto(const duplicate_vote_evidence& ev) {
     auto ret = std::make_unique<::tendermint::types::DuplicateVoteEvidence>();
     if (ev.vote_b)
       ret->set_allocated_vote_b(vote::to_proto(*ev.vote_b).release());
@@ -238,19 +238,15 @@ struct light_client_attack_evidence : public evidence {
   }
 
   static result<std::unique_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto(
-    light_client_attack_evidence& ev) {
-    auto cb = ev.conflicting_block->to_proto();
-    if (!cb)
-      return make_unexpected(cb.error());
+    const light_client_attack_evidence& ev) {
+    auto cb = light_block::to_proto(*ev.conflicting_block);
     auto ret = std::make_unique<::tendermint::types::LightClientAttackEvidence>();
-    ret->set_allocated_conflicting_block(cb.value().release());
+    ret->set_allocated_conflicting_block(cb.release());
     ret->set_common_height(ev.common_height);
     auto byz_vals = ret->mutable_byzantine_validators();
     for (auto& val : ev.byzantine_validators) {
-      auto pb = val->to_proto();
-      if (!pb)
-        return make_unexpected(pb.error());
-      byz_vals->AddAllocated(pb.value().release());
+      auto pb = validator::to_proto(*val);
+      byz_vals->AddAllocated(pb.release());
     }
     ret->set_total_voting_power(ev.total_voting_power);
     *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(ev.timestamp);

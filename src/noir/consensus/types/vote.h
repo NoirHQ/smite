@@ -33,7 +33,7 @@ struct vote : p2p::vote_message {
     return commit_sig{flag, validator_address, timestamp, signature};
   }
 
-  static std::unique_ptr<::tendermint::types::Vote> to_proto(vote& v) {
+  static std::unique_ptr<::tendermint::types::Vote> to_proto(const vote& v) {
     auto ret = std::make_unique<::tendermint::types::Vote>();
     ret->set_type((::tendermint::types::SignedMsgType)v.type);
     ret->set_height(v.height);
