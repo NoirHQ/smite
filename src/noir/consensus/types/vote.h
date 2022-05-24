@@ -33,17 +33,17 @@ struct vote : p2p::vote_message {
     return commit_sig{flag, validator_address, timestamp, signature};
   }
 
-  static std::shared_ptr<::tendermint::types::Vote> to_proto(vote& v) {
-    auto ret = std::make_shared<::tendermint::types::Vote>();
+  static std::unique_ptr<::tendermint::types::Vote> to_proto(vote& v) {
+    auto ret = std::make_unique<::tendermint::types::Vote>();
     ret->set_type((::tendermint::types::SignedMsgType)v.type);
     ret->set_height(v.height);
     ret->set_round(v.round);
-    *ret->mutable_block_id() = *p2p::block_id::to_proto(v.block_id_);
+    ret->set_allocated_block_id(p2p::block_id::to_proto(v.block_id_).release());
     auto ts = ret->mutable_timestamp();
     *ts = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(v.timestamp); // TODO
-    *ret->mutable_validator_address() = std::string(v.validator_address.begin(), v.validator_address.end());
+    ret->set_validator_address({v.validator_address.begin(), v.validator_address.end()});
     ret->set_validator_index(v.validator_index);
-    *ret->mutable_signature() = std::string(v.signature.begin(), v.signature.end());
+    ret->set_signature({v.signature.begin(), v.signature.end()});
     return ret;
   }
 
