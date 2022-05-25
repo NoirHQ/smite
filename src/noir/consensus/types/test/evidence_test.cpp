@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
+#include <noir/codec/proto3.h>
 #include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/priv_validator.h>
 #include <utility>
@@ -13,6 +14,20 @@ using namespace noir::consensus;
 
 bytes string_to_bytes(std::string_view s) {
   return {s.begin(), s.end()};
+}
+
+tstamp get_default_evidence_time() {
+  std::tm tm = {
+    .tm_sec = 0,
+    .tm_min = 0,
+    .tm_hour = 0,
+    .tm_mday = 1,
+    .tm_mon = 1 - 1,
+    .tm_year = 2019 - 1900,
+  }; /// 2019-1-1 0:0:0
+  tm.tm_isdst = -1;
+  auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+  return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
 }
 
 p2p::block_id make_block_id(bytes hash, uint32_t part_set_size, bytes part_set_hash) {
@@ -48,7 +63,7 @@ std::shared_ptr<duplicate_vote_evidence> random_duplicate_vote_evidence() {
   val.priv_key_ = priv_key::new_priv_key();
   val.pub_key_ = val.priv_key_.get_pub_key();
   std::string chain_id = "my_chain";
-  auto default_vote_time = get_time();
+  auto default_vote_time = get_default_evidence_time();
   ret->vote_a = make_vote(val, chain_id, 0, 10, 2, 1, block_id, default_vote_time);
   ret->vote_b = make_vote(val, chain_id, 0, 10, 2, 1, block_id2, default_vote_time + 1);
   ret->total_voting_power = 30;
@@ -72,7 +87,7 @@ TEST_CASE("evidence: duplicate vote", "[noir][consensus]") {
   auto block_id = make_block_id(from_hex("0000"), 1000, from_hex("AAAA"));
   auto block_id2 = make_block_id(from_hex("0001"), 1000, from_hex("AAAA"));
   std::string chain_id = "my_chain";
-  auto default_vote_time = get_time();
+  auto default_vote_time = get_default_evidence_time();
 
   SECTION("good duplicate") {
     auto vote1 = make_vote(val, chain_id, 0, 10, 2, 1, block_id, default_vote_time);
@@ -147,5 +162,50 @@ TEST_CASE("evidence: serialization", "[noir][consensus]") {
     // std::cout << ev2->get_string() << std::endl;
     CHECK(ev_dup->get_string() == ev2->get_string());
     CHECK(ev_dup->get_hash() == ev2->get_hash());
+  }
+
+  SECTION("load duplicate evidence") {
+    std::string b =
+      "0AC201080110FFFFFFFFFFFFFFFF7F1802224C0A20342594391253BB8F0FBAA422B311D65348071CB7934C402B288B926A034D823B122808"
+      "FFFFFFFF07122085818BDC7BAB72042043881846E24BC779E19AC83A3DB92AC5F98721C81209902A060880DBAAE1053214C256F86B30169D"
+      "F07BE0AD86718E24FEF0BBF85A38FFFFFFFF074240B20C55CA7584D99C773A0BBBEB7CF1B9F9A1D392D4AA230F3162A441E549778454F7B8"
+      "55FE4A9325B8085574E9E89C559FD9CF6B9BEF4FF1515272A7AF54820012C201080110FFFFFFFFFFFFFFFF7F1801224C0A20395BF727F9AA"
+      "C5E80911591073FCF9C826F428804131CA089BEBA3869421749A122808FFFFFFFF07122085818BDC7BAB72042043881846E24BC779E19AC8"
+      "3A3DB92AC5F98721C81209902A060880DBAAE1053214C256F86B30169DF07BE0AD86718E24FEF0BBF85A38FFFFFFFF0742406DA7E28133E8"
+      "33E24249063910D7449E2FFFDEAF6828560AAFCE83861B126CFC114CFE1856DE749A1B37122228947A3ED87A9346938212D268F0C27C4553"
+      "3D0E180A20142A060880DBAAE105";
+    bytes bz = from_hex(b);
+    ::tendermint::types::DuplicateVoteEvidence pb;
+    pb.ParseFromArray(bz.data(), bz.size());
+    CHECK(pb.IsInitialized());
+    auto ev_dup2 = duplicate_vote_evidence::from_proto(pb).value();
+    // std::cout << ev_dup2->get_string() << std::endl;
+  }
+
+  SECTION("vote") {
+    auto v = *ev_dup->vote_a;
+    auto pb = vote::to_proto(v);
+    bytes bz(pb->ByteSizeLong());
+    pb->SerializeToArray(bz.data(), pb->ByteSizeLong());
+    // std::cout << "pb = " << to_hex(bz) << std::endl;
+
+    // auto v2 = *ev_dup->vote_a;
+    auto v2 = (p2p::vote_message)(*ev_dup->vote_a);
+    auto data = codec::proto3::encode(v2);
+    // std::cout << "ds = " << to_hex(data) << std::endl;
+    // type, height, round, block_id_, timestamp, validator_address, validator_index, signature
+    // std::cout << "type " << to_hex(codec::proto3::encode(v2.type)) << std::endl;
+    // std::cout << "height " << to_hex(codec::proto3::encode(v2.height)) << std::endl;
+    // std::cout << "round " << to_hex(codec::proto3::encode(v2.round)) << std::endl;
+    // std::cout << "block_id " << to_hex(codec::proto3::encode(v2.block_id_)) << std::endl;
+    // std::cout << "timestamp " << to_hex(codec::proto3::encode(v2.timestamp)) << std::endl;
+    // std::cout << "validator_address " << to_hex(codec::proto3::encode(v2.validator_address)) << std::endl;
+    // std::cout << "validator_index " << to_hex(codec::proto3::encode(v2.validator_index)) << std::endl;
+    // std::cout << "signature " << to_hex(codec::proto3::encode(v2.signature)) << std::endl;
+    CHECK(codec::proto3::encode(v2.type) == from_hex("01"));
+    CHECK(codec::proto3::encode(v2.height) == from_hex("0a"));
+    CHECK(codec::proto3::encode(v2.round) == from_hex("02"));
+    CHECK(codec::proto3::encode(v2.block_id_) == from_hex("0a020000120708e8071202aaaa"));
+    // CHECK(codec::proto3::encode(v2.timestamp) == from_hex("060880faa8e105")); // TODO: requires encoding of tstamp
   }
 }
