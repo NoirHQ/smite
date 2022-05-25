@@ -6,16 +6,27 @@
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/types/block.h>
 #include <noir/core/codec.h>
-//#include <noir/consensus/common_test.h>
 
 using namespace noir;
 using namespace noir::consensus;
 
-TEST_CASE("block: Encode block", "[noir][consensus]") {
-  block org{block_header{}, block_data{.hash = {0, 1, 2}}, commit{}};
+TEST_CASE("block: encode using datastream", "[noir][consensus]") {
+  block org{block_header{}, block_data{.txs = {{0}, {1}, {2}}}, commit{}};
   auto data = encode(org);
   auto decoded = decode<block>(data);
-  CHECK(org.data.hash == decoded.data.hash);
+  CHECK(org.data.get_hash() == decoded.data.get_hash());
+}
+
+TEST_CASE("block: encode using protobuf", "[noir][consensus]") {
+  block org{block_header{}, block_data{.txs = {{0}, {1}, {2}}}, commit{}};
+  auto pb = block::to_proto(org);
+  bytes bz(pb->ByteSizeLong());
+  pb->SerializeToArray(bz.data(), pb->ByteSizeLong());
+
+  ::tendermint::types::Block pb_block;
+  pb_block.ParseFromArray(bz.data(), bz.size());
+  auto decoded = block::from_proto(pb_block);
+  CHECK(org.data.get_hash() == decoded->data.get_hash());
 }
 
 TEST_CASE("block: Make part_set", "[noir][consensus]") {
