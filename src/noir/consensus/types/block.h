@@ -14,6 +14,8 @@
 #include <noir/crypto/rand.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
+#include <tendermint/types/block.pb.h>
+
 #include <fmt/core.h>
 
 #include <utility>
@@ -76,6 +78,15 @@ struct commit_sig {
     ret->set_signature({c.signature.begin(), c.signature.end()});
     return ret;
   }
+
+  static std::shared_ptr<commit_sig> from_proto(const ::tendermint::types::CommitSig& pb) {
+    auto ret = std::make_shared<commit_sig>();
+    ret->flag = (block_id_flag)pb.block_id_flag();
+    ret->validator_address = {pb.validator_address().begin(), pb.validator_address().end()};
+    ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp());
+    ret->signature = {pb.signature().begin(), pb.signature().end()};
+    return ret;
+  }
 };
 
 struct commit {
@@ -121,6 +132,24 @@ struct commit {
     ret->set_height(c.height);
     ret->set_round(c.round);
     ret->set_allocated_block_id(p2p::block_id::to_proto(c.my_block_id).release());
+    return ret;
+  }
+
+  static std::shared_ptr<commit> from_proto(const ::tendermint::types::Commit& pb) {
+    auto ret = std::make_shared<commit>();
+
+    auto bi = p2p::block_id::from_proto(pb.block_id());
+    ret->my_block_id = *bi;
+
+    auto pb_sigs = pb.signatures();
+    for (const auto& sig : pb_sigs)
+      ret->signatures.push_back(*commit_sig::from_proto(sig));
+
+    ret->height = pb.height();
+    ret->round = pb.round();
+
+    // ret->validate_basic(); // TODO
+
     return ret;
   }
 
@@ -203,9 +232,25 @@ struct part_set {
 
 struct block_data {
   std::vector<tx> txs;
-  bytes hash;
+  bytes hash; // may continuously change
 
   bytes get_hash();
+
+  static std::unique_ptr<::tendermint::types::Data> to_proto(const block_data& b) {
+    auto ret = std::make_unique<::tendermint::types::Data>();
+    auto pb_txs = ret->mutable_txs();
+    for (const auto& tx : b.txs)
+      pb_txs->Add({tx.begin(), tx.end()});
+    return ret;
+  }
+
+  static std::shared_ptr<block_data> from_proto(const ::tendermint::types::Data& pb) {
+    auto ret = std::make_shared<block_data>();
+    auto pb_txs = pb.txs();
+    for (const auto& tx : pb_txs)
+      ret->txs.push_back({tx.begin(), tx.end()});
+    return ret;
+  }
 };
 
 struct block_header {
@@ -288,6 +333,31 @@ struct block_header {
     ret->set_proposer_address({b.proposer_address.begin(), b.proposer_address.end()});
     return ret;
   }
+
+  static std::shared_ptr<block_header> from_proto(const ::tendermint::types::Header& pb) {
+    auto ret = std::make_shared<block_header>();
+
+    auto bi = p2p::block_id::from_proto(pb.last_block_id()); // TODO: handle error case
+
+    ret->version = ""; // TODO
+    ret->chain_id = pb.chain_id();
+    ret->height = pb.height();
+    ret->time = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.time());
+    ret->last_block_id = *bi;
+    ret->validators_hash = {pb.validators_hash().begin(), pb.validators_hash().end()};
+    ret->next_validators_hash = {pb.next_validators_hash().begin(), pb.next_validators_hash().end()};
+    ret->consensus_hash = {pb.consensus_hash().begin(), pb.consensus_hash().end()};
+    ret->app_hash = {pb.app_hash().begin(), pb.app_hash().end()};
+    ret->data_hash = {pb.data_hash().begin(), pb.data_hash().end()};
+    ret->evidence_hash = {pb.evidence_hash().begin(), pb.evidence_hash().end()};
+    ret->last_results_hash = {pb.last_results_hash().begin(), pb.last_results_hash().end()};
+    ret->last_commit_hash = {pb.last_commit_hash().begin(), pb.last_commit_hash().end()};
+    ret->proposer_address = {pb.proposer_address().begin(), pb.proposer_address().end()};
+
+    ret->validate_basic(); // TODO
+
+    return ret;
+  }
 };
 
 struct block {
@@ -333,7 +403,7 @@ struct block {
     if (header.last_commit_hash.empty())
       header.last_commit_hash = last_commit.get_hash();
     if (header.data_hash.empty())
-      header.data_hash = data.hash;
+      header.data_hash = data.get_hash();
     // if (header.evidence_hash.empty())
     //   header.evidence_hash =
   }
@@ -354,7 +424,9 @@ struct block {
     if (this == nullptr)
       return {};
     std::scoped_lock g(mtx);
-    // todo - implement
+    // if (!last_commit) // TODO: convert to last_commit to shared_ptr
+    //   return {};
+    fill_header();
     return header.get_hash();
   }
 
@@ -362,6 +434,27 @@ struct block {
     if (hash.empty())
       return false;
     return get_hash() == hash;
+  }
+
+  static std::unique_ptr<::tendermint::types::Block> to_proto(const block& b) {
+    auto ret = std::make_unique<::tendermint::types::Block>();
+    ret->set_allocated_header(block_header::to_proto(b.header).release());
+    ret->set_allocated_data(block_data::to_proto(b.data).release());
+    ret->set_allocated_last_commit(commit::to_proto(b.last_commit).release());
+
+    // TODO: add evidence
+
+    return ret;
+  }
+
+  static std::shared_ptr<block> from_proto(const ::tendermint::types::Block& pb) {
+    auto ret = std::make_shared<block>();
+    ret->header = *block_header::from_proto(pb.header());
+    ret->data = *block_data::from_proto(pb.data());
+    if (pb.has_last_commit())
+      ret->last_commit = *commit::from_proto(pb.last_commit());
+    ret->validate_basic(); // TODO
+    return ret;
   }
 
   template<typename T>
