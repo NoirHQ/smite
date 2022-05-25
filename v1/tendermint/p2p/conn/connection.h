@@ -16,17 +16,6 @@
 
 namespace tendermint::p2p::conn {
 
-const std::size_t default_send_queue_capacity{1};
-const std::size_t default_recv_buffer_capacity{4096};
-const std::size_t default_recv_message_capacity{22020096}; // 21MB
-const std::size_t num_batch_packet_msgs{10};
-const std::size_t default_max_packet_msg_payload_size{1400};
-const std::chrono::milliseconds default_flush_throttle{100};
-const std::chrono::milliseconds update_stats_interval{2000};
-const std::chrono::milliseconds default_send_timeout{10000};
-const std::chrono::milliseconds default_ping_interval{60000};
-const std::chrono::milliseconds default_pong_timeout{90000};
-
 using ChannelId = uint16_t;
 
 class ChannelDescriptor {
@@ -52,6 +41,11 @@ public:
   std::size_t recv_message_capacity;
   // Message message_type;
   std::size_t recv_buffer_capacity;
+
+private:
+  const static std::size_t default_send_queue_capacity = 1;
+  const static std::size_t default_recv_buffer_capacity = 4096;
+  const static std::size_t default_recv_message_capacity = 22020096; // 21MB
 };
 
 using ChannelDescriptorPtr = std::shared_ptr<ChannelDescriptor>;
@@ -94,6 +88,8 @@ namespace detail {
     std::size_t sent_pos{0};
 
     std::size_t max_packet_msg_payload_size;
+
+    constexpr static std::chrono::milliseconds default_send_timeout{10000};
   };
 
   using ChannelUptr = std::unique_ptr<Channel>;
@@ -114,6 +110,12 @@ public:
   std::chrono::milliseconds ping_interval;
   std::chrono::milliseconds pong_timeout;
   std::chrono::milliseconds flush_throttle;
+
+private:
+  const static std::size_t default_max_packet_msg_payload_size = 1400;
+  constexpr static std::chrono::milliseconds default_flush_throttle{100};
+  constexpr static std::chrono::milliseconds default_ping_interval{60000};
+  constexpr static std::chrono::milliseconds default_pong_timeout{90000};
 };
 
 class MConnection {
@@ -154,7 +156,7 @@ public:
   auto send_some_packet_msgs(Chan<noir::Done>& done) -> asio::awaitable<Result<bool>>;
   auto send_packet_msg(Chan<noir::Done>& done) -> asio::awaitable<Result<bool>>;
   auto recv_routine(Chan<noir::Done>& done) -> asio::awaitable<void>;
-  void stop_for_error(Chan<noir::Done>& done, noir::Error err);
+  void stop_for_error(Chan<noir::Done>& done, const noir::Error& err);
 
   static auto calc_max_packet_msg_size(std::size_t max_packet_msg_payload_size) -> std::size_t {
     PacketMsg msg{};
@@ -195,6 +197,9 @@ private:
 
   std::function<void(noir::Chan<noir::Done>& done, ChannelId channel_id, noir::Bytes msg_bytes)> on_receive;
   std::function<void(noir::Chan<noir::Done>& done, noir::Error error)> on_error;
+
+  const std::size_t num_batch_packet_msgs = 10;
+  constexpr static std::chrono::milliseconds update_stats_interval{2000};
 };
 
 } // namespace tendermint::p2p::conn

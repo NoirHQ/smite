@@ -44,7 +44,7 @@ namespace detail {
 
   auto Channel::is_send_pending() -> bool {
     if (!sending) {
-      return send_queue.try_receive([&](boost::system::error_code ec, BytesPtr bytes) mutable {
+      return send_queue.try_receive([&](boost::system::error_code ec, const BytesPtr& bytes) mutable {
         sending = bytes;
         sent_pos = 0;
       });
@@ -277,7 +277,7 @@ auto MConnection::send_packet_msg(Chan<Done>& done) -> asio::awaitable<Result<bo
   co_return false;
 }
 
-void MConnection::stop_for_error(Chan<Done>& done, Error err) {
+void MConnection::stop_for_error(Chan<Done>& done, const Error& err) {
   stop();
   on_error(done, err);
 }
@@ -345,7 +345,7 @@ auto MConnection::recv_routine(Chan<Done>& done) -> asio::awaitable<void> {
           stop_for_error(done, msg_res.error());
           break;
         }
-        if (msg_res.has_value()) {
+        if (msg_res.has_value() && !msg_res.value().empty()) {
           auto msg_bytes = msg_res.value();
           on_receive(done, channel_id, msg_bytes);
         }
