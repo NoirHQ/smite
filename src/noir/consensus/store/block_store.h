@@ -226,7 +226,7 @@ public:
       batch.emplace_back(encode_key<prefix::block_hash>(hash_), encode_val(height_));
     }
     {
-      auto buf = encode(bl.last_commit);
+      auto buf = encode(*bl.last_commit); // TODO: handle case when last_commit is nullptr?
       batch.emplace_back(encode_key<prefix::block_commit>(height_ - 1), buf);
     }
     // Save seen commit (seen +2/3 precommits for block)

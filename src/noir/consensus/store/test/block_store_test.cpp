@@ -97,7 +97,7 @@ TEST_CASE("block_store: save/load_block", "[noir][consensus]") {
     {
       noir::consensus::commit ret{};
       CHECK(bls.load_block_commit(height - 1, ret) == true);
-      CHECK(ret.get_hash() == bl_->last_commit.get_hash());
+      CHECK(ret.get_hash() == bl_->last_commit->get_hash());
     }
 
     {
