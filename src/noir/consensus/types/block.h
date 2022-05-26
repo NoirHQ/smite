@@ -135,8 +135,8 @@ struct commit {
     return ret;
   }
 
-  static std::shared_ptr<commit> from_proto(const ::tendermint::types::Commit& pb) {
-    auto ret = std::make_shared<commit>();
+  static std::unique_ptr<commit> from_proto(const ::tendermint::types::Commit& pb) {
+    auto ret = std::make_unique<commit>();
 
     auto bi = p2p::block_id::from_proto(pb.block_id());
     ret->my_block_id = *bi;
@@ -364,20 +364,32 @@ struct block {
   block_header header;
   block_data data;
   // evidence evidence;
-  commit last_commit;
+  std::unique_ptr<commit> last_commit;
 
   std::mutex mtx;
 
-  block() = default;
-  block(block_header header_, block_data data_, commit last_commit_)
+  block() {}
+  ~block() {}
+  block(block_header&& header_, block_data&& data_, std::unique_ptr<commit>&& last_commit_)
     : header(std::move(header_)), data(std::move(data_)), last_commit(std::move(last_commit_)) {}
-  block(const block& b): header(b.header), data(b.data), last_commit(b.last_commit) {}
-  block& operator=(const block& b) {
+  block(const block& b)
+    : header(b.header), data(b.data), last_commit(b.last_commit ? std::make_unique<commit>(*b.last_commit) : nullptr) {}
+  auto& operator=(const block& b) {
     std::scoped_lock g(mtx);
     header = b.header;
     data = b.data;
     // evidence = b.evidence;
-    last_commit = b.last_commit;
+    last_commit = b.last_commit ? std::make_unique<commit>(*b.last_commit) : nullptr;
+    return *this;
+  }
+  block(block&& b) noexcept
+    : header(std::move(b.header)), data(std::move(b.data)), last_commit(std::move(b.last_commit)) {}
+  auto& operator=(block&& b) noexcept {
+    std::scoped_lock g(mtx);
+    header = std::move(b.header);
+    data = std::move(b.data);
+    // evidence = b.evidence;
+    last_commit = std::move(b.last_commit);
     return *this;
   }
 
@@ -400,16 +412,18 @@ struct block {
   }
 
   void fill_header() {
-    if (header.last_commit_hash.empty())
-      header.last_commit_hash = last_commit.get_hash();
+    if (header.last_commit_hash.empty() && last_commit)
+      header.last_commit_hash = last_commit->get_hash();
     if (header.data_hash.empty())
       header.data_hash = data.get_hash();
     // if (header.evidence_hash.empty())
     //   header.evidence_hash =
   }
 
-  static std::shared_ptr<block> make_block(int64_t height, std::vector<tx>& txs, commit& last_commit /*, evidence */) {
-    auto block_ = std::make_shared<block>(block{block_header{"", "", height}, block_data{txs}, last_commit});
+  static std::shared_ptr<block> make_block(
+    int64_t height, const std::vector<tx>& txs, const commit& last_commit /*, evidence */) {
+    auto block_ = std::make_shared<block>(
+      block{block_header{"", "", height}, block_data{txs}, std::make_unique<commit>(last_commit)});
     block_->fill_header();
     return block_;
   }
@@ -424,8 +438,8 @@ struct block {
     if (this == nullptr)
       return {};
     std::scoped_lock g(mtx);
-    // if (!last_commit) // TODO: convert to last_commit to shared_ptr
-    //   return {};
+    if (!last_commit)
+      return {};
     fill_header();
     return header.get_hash();
   }
@@ -440,7 +454,8 @@ struct block {
     auto ret = std::make_unique<::tendermint::types::Block>();
     ret->set_allocated_header(block_header::to_proto(b.header).release());
     ret->set_allocated_data(block_data::to_proto(b.data).release());
-    ret->set_allocated_last_commit(commit::to_proto(b.last_commit).release());
+    if (b.last_commit)
+      ret->set_allocated_last_commit(commit::to_proto(*b.last_commit).release());
 
     // TODO: add evidence
 
@@ -452,7 +467,7 @@ struct block {
     ret->header = *block_header::from_proto(pb.header());
     ret->data = *block_data::from_proto(pb.data());
     if (pb.has_last_commit())
-      ret->last_commit = *commit::from_proto(pb.last_commit());
+      ret->last_commit = commit::from_proto(pb.last_commit());
     ret->validate_basic(); // TODO
     return ret;
   }
@@ -461,7 +476,9 @@ struct block {
   inline friend T& operator<<(T& ds, const block& v) {
     ds << v.header;
     ds << v.data;
-    ds << v.last_commit;
+    ds << bool(!!v.last_commit);
+    if (!!v.last_commit)
+      ds << *v.last_commit;
     return ds;
   }
 
@@ -469,7 +486,12 @@ struct block {
   inline friend T& operator>>(T& ds, block& v) {
     ds >> v.header;
     ds >> v.data;
-    ds >> v.last_commit;
+    bool b;
+    ds >> b;
+    if (b) {
+      v.last_commit = std::make_unique<commit>();
+      ds >> *v.last_commit;
+    }
     return ds;
   }
 };

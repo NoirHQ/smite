@@ -107,7 +107,7 @@ void reactor::try_sync_ticker() {
 
       // Verify the first block using the second's commit
       if (auto err = verify_commit_light(chain_id, std::make_shared<validator_set>(latest_state.validators), first_id,
-            first->header.height, std::make_shared<commit>(second->last_commit));
+            first->header.height, std::make_shared<commit>(*second->last_commit));
           err.has_value()) {
         elog(fmt::format("invalid last commit: height={} err={}", first->header.height, err.value()));
 
@@ -119,7 +119,7 @@ void reactor::try_sync_ticker() {
       } else {
         pool->pop_request();
 
-        store->save_block(*first, *first_parts, second->last_commit);
+        store->save_block(*first, *first_parts, *second->last_commit);
 
         auto new_state = block_exec->apply_block(latest_state, first_id, first);
         if (!new_state.has_value()) {
