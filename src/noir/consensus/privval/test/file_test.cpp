@@ -80,8 +80,8 @@ TEST_CASE("priv_val_file: save/load lss", "[noir][consensus]") {
     .height = 1,
     .round = 0,
     .step = sign_step::none,
-    .signature = gen_random_bytes(32),
-    .sign_bytes = gen_random_bytes(32),
+    .signature = "",
+    .signbytes = gen_random_bytes(32),
     .file_path = json_file_path,
   };
   exp.save();

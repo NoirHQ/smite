@@ -46,8 +46,8 @@ struct file_pv_last_sign_state {
   int64_t height;
   int32_t round;
   sign_step step;
-  bytes signature;
-  bytes sign_bytes; // hex? bytes?
+  std::string signature;
+  bytes signbytes; // hex? bytes?
   std::string file_path;
 
   /// \brief CheckHRS checks the given height, round, step (HRS) against that of the
@@ -248,6 +248,6 @@ struct file_pv_key_json_obj {
 } // namespace noir::consensus::privval
 
 NOIR_REFLECT(noir::consensus::privval::file_pv_key, priv_key);
-NOIR_REFLECT(noir::consensus::privval::file_pv_last_sign_state, height, round, step, signature, sign_bytes);
+NOIR_REFLECT(noir::consensus::privval::file_pv_last_sign_state, height, round, step, signature, signbytes);
 NOIR_REFLECT(noir::consensus::privval::key_json_obj, type, value);
 NOIR_REFLECT(noir::consensus::privval::file_pv_key_json_obj, address, pub_key, priv_key);
