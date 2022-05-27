@@ -71,10 +71,10 @@ result<bool> file_pv_last_sign_state::check_hrs(int64_t height_, int32_t round_,
         return make_unexpected(fmt::format("step regression at height {} round {}. Got {}, last step {}", height_,
           round_, static_cast<int8_t>(step_), static_cast<int8_t>(step)));
       if (step == step_) {
-        check(!sign_bytes.empty(), "no sign_bytes found");
+        check(!signbytes.empty(), "no signbytes found");
         if (signature.empty()) {
           // panics if the HRS matches the arguments, there's a SignBytes, but no Signature
-          elog("pv: Signature is nil but sign_bytes is not!");
+          elog("pv: Signature is nil but signbytes is not!");
           assert(false);
         }
         return true;
@@ -203,11 +203,12 @@ bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step)
   // If they only differ by timestamp, use last timestamp and signature
   // Otherwise, return error
   if (same_hrs.value()) {
-    if (sign_bytes == lss.sign_bytes) {
-      obj.signature = lss.signature;
-    } else if (check_only_differ_by_timestamp(obj, lss.sign_bytes, sign_bytes, timestamp)) {
+    auto decode_sig = fc::base64_decode(lss.signature);
+    if (sign_bytes == lss.signbytes) {
+      obj.signature = {decode_sig.begin(), decode_sig.end()};
+    } else if (check_only_differ_by_timestamp(obj, lss.signbytes, sign_bytes, timestamp)) {
       obj.timestamp = timestamp;
-      obj.signature = lss.signature;
+      obj.signature = {decode_sig.begin(), decode_sig.end()};
     } else {
       check(false, "conflicting data");
       // return false; // TODO: return errors
@@ -218,7 +219,8 @@ bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step)
   // It passed the checks. Sign the vote
   auto sig = key.priv_key.sign(sign_bytes);
   pv.save_signed(height, round, step, sign_bytes, sig);
-  obj.signature = sig;
+  auto decode_sig = fc::base64_decode(lss.signature);
+  obj.signature = {decode_sig.begin(), decode_sig.end()};
   return true;
 }
 
@@ -236,8 +238,8 @@ void file_pv::save_signed(int64_t height, int32_t round, sign_step step, const b
   last_sign_state.height = height;
   last_sign_state.round = round;
   last_sign_state.step = step;
-  last_sign_state.signature = sig;
-  last_sign_state.sign_bytes = sign_bytes;
+  last_sign_state.signature = fc::base64_encode(sig.data(), sig.size());
+  last_sign_state.signbytes = sign_bytes;
   last_sign_state.save();
 }
 
