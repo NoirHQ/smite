@@ -11,6 +11,7 @@
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/merkle/proof.h>
 #include <noir/consensus/tx.h>
+#include <noir/consensus/version.h>
 #include <noir/crypto/rand.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
@@ -254,7 +255,7 @@ struct block_data {
 };
 
 struct block_header {
-  std::string version;
+  consensus_version version;
   std::string chain_id;
   int64_t height{};
   tstamp time{};
@@ -278,7 +279,7 @@ struct block_header {
 
   bytes get_hash();
 
-  void populate(std::string& version_,
+  void populate(consensus::consensus_version& version_,
     std::string& chain_id_,
     tstamp timestamp_,
     p2p::block_id& last_block_id_,
@@ -339,7 +340,8 @@ struct block_header {
 
     auto bi = p2p::block_id::from_proto(pb.last_block_id()); // TODO: handle error case
 
-    ret->version = ""; // TODO
+    auto version_pb = pb.version();
+    ret->version = {.block = version_pb.block(), .app = version_pb.app()};
     ret->chain_id = pb.chain_id();
     ret->height = pb.height();
     ret->time = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.time());
@@ -422,8 +424,8 @@ struct block {
 
   static std::shared_ptr<block> make_block(
     int64_t height, const std::vector<tx>& txs, const commit& last_commit /*, evidence */) {
-    auto block_ = std::make_shared<block>(
-      block{block_header{"", "", height}, block_data{txs}, std::make_unique<commit>(last_commit)});
+    auto block_ = std::make_shared<block>(block{block_header{{.block = block_protocol, .app = 0}, "", height},
+      block_data{txs}, std::make_unique<commit>(last_commit)});
     block_->fill_header();
     return block_;
   }

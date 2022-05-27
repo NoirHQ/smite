@@ -22,7 +22,7 @@ static noir::consensus::state make_genesis_state() {
 }
 
 static inline void comp_hdr(noir::consensus::block_header& ret_hdr, noir::consensus::block_header& exp_hdr) {
-  CHECK(ret_hdr.version == exp_hdr.version);
+  CHECK(ret_hdr.version.app == exp_hdr.version.app);
   CHECK(ret_hdr.chain_id == exp_hdr.chain_id);
   CHECK(ret_hdr.height == exp_hdr.height);
   CHECK(ret_hdr.time == exp_hdr.time);

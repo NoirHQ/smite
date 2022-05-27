@@ -134,7 +134,7 @@ struct node {
   }
 
   static void log_node_startup_info(state& state_, pub_key& pub_key_, node_mode mode) {
-    ilog(fmt::format("Version info: version={}, mode={}", state_.version, mode_str(mode)));
+    ilog(fmt::format("Version info: version={}, mode={}", state_.version.software, mode_str(mode)));
     switch (mode) {
     case Full:
       ilog("################################");
