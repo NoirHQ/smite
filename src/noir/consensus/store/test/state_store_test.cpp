@@ -10,7 +10,7 @@
 namespace {
 
 inline void check_state_equal(noir::consensus::state& lhs, noir::consensus::state& rhs) {
-  CHECK(lhs.version == rhs.version);
+  CHECK(lhs.version.cs.app == rhs.version.cs.app);
   CHECK(lhs.chain_id == rhs.chain_id);
   CHECK(lhs.initial_height == rhs.initial_height);
   CHECK(lhs.last_block_height == rhs.last_block_height);

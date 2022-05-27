@@ -346,7 +346,7 @@ struct block_executor {
         return {};
       }
 
-      state_.version = next_params.version.app_version;
+      state_.version.cs.app = next_params.version.app_version;
 
       // Change results from this height
       last_height_vals_changed = header_.height + 1;

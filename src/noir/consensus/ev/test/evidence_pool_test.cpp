@@ -127,7 +127,7 @@ std::shared_ptr<block_store> initialize_block_store(state state_, bytes val_addr
     auto last_commit = make_commit(i - 1, val_addr);
     auto block_ = make_block(i, state_, *last_commit);
     block_->header.time = default_evidence_time + i;
-    block_->header.version = ""; // TODO: use correct version
+    block_->header.version = {.block = consensus::block_protocol, .app = 1};
     auto part_set_ = block_->make_part_set(1);
     auto seen_commit = make_commit(i, val_addr);
     block_store_->save_block(*block_, *part_set_, *seen_commit);

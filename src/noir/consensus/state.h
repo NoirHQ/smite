@@ -10,6 +10,7 @@
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/genesis.h>
 #include <noir/consensus/types/validator.h>
+#include <noir/consensus/version.h>
 
 namespace noir::consensus {
 
@@ -24,7 +25,7 @@ struct weighted_time {
  * including the last validator set and the consensus params.
  */
 struct state {
-  std::string version{"0.0.0"};
+  ::noir::consensus::version version;
 
   std::string chain_id;
   int64_t initial_height;
@@ -65,6 +66,7 @@ struct state {
     }
 
     state state_{};
+    state_.version = version::init_state_version();
     state_.chain_id = gen_doc.chain_id;
     state_.initial_height = gen_doc.initial_height;
 
@@ -96,7 +98,7 @@ struct state {
     }
 
     // Fill rest of header
-    block_->header.populate(version, chain_id, timestamp, last_block_id, validators.get_hash(),
+    block_->header.populate(version.cs, chain_id, timestamp, last_block_id, validators.get_hash(),
       next_validators.get_hash(), consensus_params_.hash_consensus_params(), app_hash, last_result_hash,
       proposal_address);
 
