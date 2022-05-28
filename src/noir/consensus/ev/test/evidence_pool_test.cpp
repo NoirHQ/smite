@@ -7,6 +7,7 @@
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/ev/evidence_pool.h>
+#include <noir/consensus/ev/test/evidence_test_common.h>
 #include <noir/consensus/store/store_test.h>
 #include <noir/consensus/types/priv_validator.h>
 
@@ -155,8 +156,9 @@ std::pair<std::shared_ptr<evidence_pool>, std::shared_ptr<mock_pv>> default_test
 TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") {
   int64_t height{1};
   auto [pool_, val] = default_test_pool(height);
-  auto ev = mock_duplicate_vote_evidence();
-  // auto add_result = pool_->add_evidence(ev); // FIXME
+  auto ev =
+    new_mock_duplicate_vote_evidence_with_validator(height, get_default_evidence_time() + 1, evidence_chain_id, *val);
+  auto add_result = pool_->add_evidence(ev); // FIXME
   // CHECK(add_result);
   // std::cout << add_result.error() << std::endl;
   // evidence_list evs{.list = {ev}};
