@@ -27,4 +27,10 @@ std::optional<std::string> mock_pv::sign_proposal(noir::p2p::proposal_message& p
   return {};
 }
 
+result<bytes> mock_pv::sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) {
+  auto sign_bytes = vote::vote_sign_bytes(chain_id, v);
+  auto sig = priv_key_.sign(sign_bytes);
+  return sig;
+}
+
 } // namespace noir::consensus

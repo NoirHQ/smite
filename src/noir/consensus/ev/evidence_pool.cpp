@@ -68,7 +68,7 @@ bytes evidence_pool::key_pending(std::shared_ptr<evidence> ev) {
   return {}; // TODO: implement
 }
 
-result<void> evidence_pool::verify(std::shared_ptr<evidence> ev) {
+result<void> evidence_pool::verify(const std::shared_ptr<evidence>& ev) {
   auto state_ = get_state();
   auto height = state_.last_block_height;
   auto evidence_params = state_.consensus_params_.evidence;
@@ -89,7 +89,7 @@ result<void> evidence_pool::verify(std::shared_ptr<evidence> ev) {
     if (!state_db->load_validators(ev->get_height(), *val_set))
       return make_unexpected("evidence verify failed: unable to load validator");
 
-    if (auto ok = verify_duplicate_vote(std::shared_ptr<duplicate_vote_evidence>(ev_d), state_.chain_id, val_set); !ok)
+    if (auto ok = verify_duplicate_vote(*ev_d, state_.chain_id, val_set); !ok)
       return make_unexpected(ok.error());
 
     auto val_op = val_set->get_by_address(ev_d->vote_a->validator_address);
@@ -123,9 +123,7 @@ result<void> evidence_pool::verify(std::shared_ptr<evidence> ev) {
       }
     }
 
-    if (auto ok = verify_light_client_attack(std::shared_ptr<light_client_attack_evidence>(ev_l), common_header.value(),
-          trusted_header.value(), common_vals);
-        !ok)
+    if (auto ok = verify_light_client_attack(*ev_l, common_header.value(), trusted_header.value(), common_vals); !ok)
       return make_unexpected(ok.error());
 
     if (auto ok = ev_l->validate_abci(common_vals, trusted_header.value(), ev_time); !ok) {
@@ -139,54 +137,54 @@ result<void> evidence_pool::verify(std::shared_ptr<evidence> ev) {
 }
 
 result<void> evidence_pool::verify_duplicate_vote(
-  std::shared_ptr<duplicate_vote_evidence> ev, std::string chain_id, std::shared_ptr<validator_set> val_set) {
-  auto val = val_set->get_by_address(ev->vote_a->validator_address);
+  const duplicate_vote_evidence& ev, const std::string& chain_id, const std::shared_ptr<validator_set>& val_set) {
+  auto val = val_set->get_by_address(ev.vote_a->validator_address);
   if (!val.has_value())
-    return make_unexpected(fmt::format("address was not a validator at height={}", ev->get_height()));
+    return make_unexpected(fmt::format("address was not a validator at height={}", ev.get_height()));
   auto pub_key_ = val->pub_key_;
 
-  if (ev->vote_a->height != ev->vote_b->height || ev->vote_a->round != ev->vote_b->round ||
-    ev->vote_a->type != ev->vote_b->type)
+  if (ev.vote_a->height != ev.vote_b->height || ev.vote_a->round != ev.vote_b->round ||
+    ev.vote_a->type != ev.vote_b->type)
     return make_unexpected(fmt::format("h/r/s do not match"));
-  if (ev->vote_a->validator_address != ev->vote_b->validator_address)
+  if (ev.vote_a->validator_address != ev.vote_b->validator_address)
     return make_unexpected(fmt::format("validator addresses do not match"));
-  if (ev->vote_a->block_id_ != ev->vote_b->block_id_)
-    return make_unexpected(fmt::format("block_ids do not match"));
-  if (pub_key_.address() != ev->vote_a->validator_address)
+  if (ev.vote_a->block_id_ == ev.vote_b->block_id_)
+    return make_unexpected(fmt::format("block_ids must be different"));
+  if (pub_key_.address() != ev.vote_a->validator_address)
     return make_unexpected(fmt::format("address does not match pub_key"));
 
-  auto vote_a = vote::to_proto(*ev->vote_a);
-  auto vote_b = vote::to_proto(*ev->vote_b);
-  if (pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, std::move(vote_a)), ev->vote_a->signature))
+  auto vote_a = vote::to_proto(*ev.vote_a);
+  auto vote_b = vote::to_proto(*ev.vote_b);
+  if (pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, *vote_a), ev.vote_a->signature))
     return make_unexpected(fmt::format("verifying vote_a: invalid signature"));
-  if (pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, std::move(vote_b)), ev->vote_b->signature))
+  if (pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, *vote_b), ev.vote_b->signature))
     return make_unexpected(fmt::format("verifying vote_b: invalid signature"));
   return {};
 }
 
-result<void> evidence_pool::verify_light_client_attack(std::shared_ptr<light_client_attack_evidence> ev,
+result<void> evidence_pool::verify_light_client_attack(const light_client_attack_evidence& ev,
   std::shared_ptr<signed_header> common_header,
   std::shared_ptr<signed_header> trusted_header,
   std::shared_ptr<validator_set> common_vals) {
-  if (common_header->header->height != ev->conflicting_block->s_header->header->height) {
-    auto commit_ = std::make_shared<commit>(ev->conflicting_block->s_header->commit.value());
+  if (common_header->header->height != ev.conflicting_block->s_header->header->height) {
+    auto commit_ = std::make_shared<commit>(ev.conflicting_block->s_header->commit.value());
     auto ok = common_vals->verify_commit_light_trusting(trusted_header->header->chain_id, commit_); // TODO: check
     if (!ok)
       return make_unexpected(fmt::format("skipping verification of conflicting block failed: {}", ok.error()));
-  } else if (ev->conflicting_header_is_invalid(trusted_header->header)) {
+  } else if (ev.conflicting_header_is_invalid(trusted_header->header)) {
     return make_unexpected(fmt::format("common height is the same as conflicting block height"));
   }
 
-  if (auto ok = ev->conflicting_block->val_set->verify_commit_light(trusted_header->header->chain_id,
-        ev->conflicting_block->s_header->commit->my_block_id, ev->conflicting_block->s_header->header->height,
-        std::make_shared<commit>(ev->conflicting_block->s_header->commit.value()));
+  if (auto ok = ev.conflicting_block->val_set->verify_commit_light(trusted_header->header->chain_id,
+        ev.conflicting_block->s_header->commit->my_block_id, ev.conflicting_block->s_header->header->height,
+        std::make_shared<commit>(ev.conflicting_block->s_header->commit.value()));
       !ok)
     return make_unexpected(fmt::format("invalid commit from conflicting block: {}", ok.error()));
 
-  if (ev->conflicting_block->s_header->header->height > trusted_header->header->height &&
-    ev->conflicting_block->s_header->header->time > trusted_header->header->time)
+  if (ev.conflicting_block->s_header->header->height > trusted_header->header->height &&
+    ev.conflicting_block->s_header->header->time > trusted_header->header->time)
     return make_unexpected(fmt::format("conflicting block doesn't violate monotonically increasing time"));
-  else if (ev->conflicting_block->s_header->header->get_hash() == trusted_header->header->get_hash())
+  else if (ev.conflicting_block->s_header->header->get_hash() == trusted_header->header->get_hash())
     return make_unexpected(fmt::format("trusted header hash matches the evidence's conflicting header hash"));
 
   return {};

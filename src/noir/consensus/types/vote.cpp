@@ -10,9 +10,11 @@
 
 namespace noir::consensus {
 
-bytes vote::vote_sign_bytes(std::string chain_id, std::shared_ptr<::tendermint::types::Vote> vote_) {
-  // auto pb = canonical::canonicalize_vote(*vote_);
-  return {}; // TODO: requires converting every serialization to proto
+bytes vote::vote_sign_bytes(const std::string& chain_id, const ::tendermint::types::Vote& v) {
+  auto pb = canonical::canonicalize_vote_pb(chain_id, v);
+  bytes sign_bytes(pb.ByteSizeLong());
+  pb.SerializeToArray(sign_bytes.data(), pb.ByteSizeLong());
+  return sign_bytes;
 }
 
 std::shared_ptr<vote_set> vote_set::new_vote_set(std::string& chain_id_,

@@ -291,10 +291,10 @@ struct evidence_pool {
   bytes key_pending(std::shared_ptr<evidence> ev);
 
   /// verify
-  result<void> verify(std::shared_ptr<evidence> ev);
+  result<void> verify(const std::shared_ptr<evidence>& ev);
   result<void> verify_duplicate_vote(
-    std::shared_ptr<duplicate_vote_evidence> ev, std::string chain_id, std::shared_ptr<validator_set> val_set);
-  result<void> verify_light_client_attack(std::shared_ptr<light_client_attack_evidence> ev,
+    const duplicate_vote_evidence& ev, const std::string& chain_id, const std::shared_ptr<validator_set>& val_set);
+  result<void> verify_light_client_attack(const light_client_attack_evidence& ev,
     std::shared_ptr<signed_header> common_header,
     std::shared_ptr<signed_header> trusted_header,
     std::shared_ptr<validator_set> common_vals);
