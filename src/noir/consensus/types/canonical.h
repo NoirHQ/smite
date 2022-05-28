@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/consensus/types/vote.h>
+#include <tendermint/types/canonical.pb.h>
 
 namespace noir::consensus {
 
@@ -42,6 +43,38 @@ struct canonical {
       .pol_round = proposal_.pol_round,
       .block_id_ = proposal_.block_id_,
       .timestamp = proposal_.timestamp};
+  }
+
+  static ::tendermint::types::CanonicalPartSetHeader canonicalize_part_set_header(
+    const ::tendermint::types::PartSetHeader& p) {
+    ::tendermint::types::CanonicalPartSetHeader ret;
+    ret.set_total(p.total());
+    ret.set_hash(p.hash());
+    return ret;
+  }
+
+  static std::unique_ptr<::tendermint::types::CanonicalBlockID> canonicalize_block_id(
+    const ::tendermint::types::BlockID& b) {
+    auto rbid = p2p::block_id::from_proto(b);
+    if (!rbid || rbid->is_zero())
+      return {};
+    auto ret = std::make_unique<::tendermint::types::CanonicalBlockID>();
+    ret->set_hash(b.hash());
+    *ret->mutable_part_set_header() = canonicalize_part_set_header(b.part_set_header());
+    return ret;
+  }
+
+  static ::tendermint::types::CanonicalVote canonicalize_vote_pb(
+    const std::string& chain_id, const ::tendermint::types::Vote& v) {
+    ::tendermint::types::CanonicalVote ret;
+    ret.set_type(v.type());
+    ret.set_height(v.height());
+    ret.set_round(v.round());
+    if (auto b = canonicalize_block_id(v.block_id()); !b)
+      ret.set_allocated_block_id(b.release());
+    *ret.mutable_timestamp() = v.timestamp();
+    ret.set_chain_id(chain_id);
+    return ret;
   }
 };
 

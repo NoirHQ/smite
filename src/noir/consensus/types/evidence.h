@@ -18,7 +18,7 @@ struct evidence {
   virtual std::vector<std::shared_ptr<::tendermint::abci::Evidence>> get_abci() = 0;
   virtual bytes get_bytes() = 0;
   virtual bytes get_hash() = 0;
-  virtual int64_t get_height() = 0;
+  virtual int64_t get_height() const = 0;
   virtual std::string get_string() = 0;
   virtual tstamp get_timestamp() = 0;
   virtual result<void> validate_basic() = 0;
@@ -86,7 +86,7 @@ struct duplicate_vote_evidence : public evidence {
     return crypto::sha256()(get_bytes());
   }
 
-  int64_t get_height() override {
+  int64_t get_height() const override {
     return vote_a->height;
   }
 
@@ -174,7 +174,7 @@ struct light_client_attack_evidence : public evidence {
 
   bytes get_hash() override;
 
-  int64_t get_height() override {
+  int64_t get_height() const override {
     return common_height;
   }
 
@@ -263,7 +263,7 @@ struct light_client_attack_evidence : public evidence {
   std::vector<std::shared_ptr<validator>> get_byzantine_validators(
     const std::shared_ptr<validator_set>& common_vals, const std::shared_ptr<signed_header>& trusted);
 
-  bool conflicting_header_is_invalid(const std::shared_ptr<block_header>& trusted_header);
+  bool conflicting_header_is_invalid(const std::shared_ptr<block_header>& trusted_header) const;
 };
 
 struct evidence_list {

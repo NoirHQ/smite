@@ -190,6 +190,10 @@ struct file_pv : public noir::consensus::priv_validator {
     return {};
   }
 
+  result<bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) override {
+    return {};
+  }
+
   /// \brief returns a string representation of the FilePV.
   /// \return string representation of the FilePV.
   inline std::string string() const;

@@ -93,7 +93,8 @@ std::vector<std::shared_ptr<validator>> light_client_attack_evidence::get_byzant
   return ret;
 }
 
-bool light_client_attack_evidence::conflicting_header_is_invalid(const std::shared_ptr<block_header>& trusted_header) {
+bool light_client_attack_evidence::conflicting_header_is_invalid(
+  const std::shared_ptr<block_header>& trusted_header) const {
   return trusted_header->validators_hash != conflicting_block->s_header->header->validators_hash ||
     trusted_header->next_validators_hash != conflicting_block->s_header->header->next_validators_hash ||
     trusted_header->consensus_hash != conflicting_block->s_header->header->consensus_hash ||
