@@ -5,59 +5,22 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/codec/proto3.h>
+#include <noir/consensus/ev/test/evidence_test_common.h>
 #include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/priv_validator.h>
 #include <utility>
 
 using namespace noir;
 using namespace noir::consensus;
+using namespace noir::consensus::ev;
 
 bytes string_to_bytes(std::string_view s) {
   return {s.begin(), s.end()};
 }
 
-tstamp get_default_evidence_time() {
-  std::tm tm = {
-    .tm_sec = 0,
-    .tm_min = 0,
-    .tm_hour = 0,
-    .tm_mday = 1,
-    .tm_mon = 1 - 1,
-    .tm_year = 2019 - 1900,
-  }; /// 2019-1-1 0:0:0
-  tm.tm_isdst = -1;
-  auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
-  return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
-}
-
-p2p::block_id make_block_id(bytes hash, uint32_t part_set_size, bytes part_set_hash) {
-  return {.hash = std::move(hash), .parts = {.total = part_set_size, .hash = std::move(part_set_hash)}};
-}
-
-std::shared_ptr<vote> make_vote(mock_pv& val,
-  const std::string& chain_id,
-  int32_t val_index,
-  int64_t height,
-  int32_t round,
-  int step,
-  const p2p::block_id& block_id_,
-  tstamp time) {
-  auto pub_key = val.get_pub_key();
-  auto ret = std::make_shared<vote>();
-  ret->validator_address = pub_key.address();
-  ret->validator_index = val_index;
-  ret->height = height;
-  ret->round = round;
-  ret->type = noir::p2p::Prevote;
-  ret->block_id_ = block_id_;
-  ret->timestamp = time;
-  val.sign_vote(*ret);
-  return ret;
-}
-
 std::shared_ptr<duplicate_vote_evidence> random_duplicate_vote_evidence() {
-  auto block_id = make_block_id(from_hex("0000"), 1000, from_hex("AAAA"));
-  auto block_id2 = make_block_id(from_hex("0001"), 1000, from_hex("AAAA"));
+  auto block_id = make_block_id(string_to_bytes("blockhash"), 1000, string_to_bytes("partshash"));
+  auto block_id2 = make_block_id(string_to_bytes("blockhash2"), 1000, string_to_bytes("partshash"));
   auto ret = std::make_shared<duplicate_vote_evidence>();
   auto val = mock_pv();
   val.priv_key_ = priv_key::new_priv_key();
@@ -81,11 +44,21 @@ TEST_CASE("evidence: list", "[noir][consensus]") {
 }
 
 TEST_CASE("evidence: duplicate vote", "[noir][consensus]") {
+  int64_t height{13};
+  auto ev = new_mock_duplicate_vote_evidence(height, get_time(), "mock-chain-id");
+  CHECK(ev->get_hash() == crypto::sha256()(ev->get_bytes()));
+  CHECK(ev->get_string() != "");
+  CHECK(ev->get_height() == height);
+}
+
+TEST_CASE("evidence: duplicate vote validation", "[noir][consensus]") {
   auto val = mock_pv();
   val.priv_key_ = priv_key::new_priv_key();
   val.pub_key_ = val.priv_key_.get_pub_key();
-  auto block_id = make_block_id(from_hex("0000"), 1000, from_hex("AAAA"));
-  auto block_id2 = make_block_id(from_hex("0001"), 1000, from_hex("AAAA"));
+  auto block_id =
+    make_block_id(string_to_bytes("blockhash"), std::numeric_limits<int32_t>::max(), string_to_bytes("partshash"));
+  auto block_id2 =
+    make_block_id(string_to_bytes("blockhash2"), std::numeric_limits<int32_t>::max(), string_to_bytes("partshash"));
   std::string chain_id = "my_chain";
   auto default_vote_time = get_default_evidence_time();
 
@@ -205,7 +178,7 @@ TEST_CASE("evidence: serialization", "[noir][consensus]") {
     CHECK(codec::proto3::encode(v2.type) == from_hex("01"));
     CHECK(codec::proto3::encode(v2.height) == from_hex("0a"));
     CHECK(codec::proto3::encode(v2.round) == from_hex("02"));
-    CHECK(codec::proto3::encode(v2.block_id_) == from_hex("0a020000120708e8071202aaaa"));
+    CHECK(codec::proto3::encode(v2.block_id_) == from_hex("0a09626c6f636b68617368120e08e8071209706172747368617368"));
     // CHECK(codec::proto3::encode(v2.timestamp) == from_hex("060880faa8e105")); // TODO: requires encoding of tstamp
   }
 }

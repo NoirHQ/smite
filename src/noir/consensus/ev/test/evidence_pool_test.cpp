@@ -21,62 +21,6 @@ constexpr auto state_store_path = "/tmp/ev_state";
 constexpr auto block_store_path = "/tmp/ev_block";
 constexpr int64_t default_evidence_max_bytes = 1000;
 
-tstamp get_default_evidence_time() {
-  std::tm tm = {
-    .tm_sec = 0,
-    .tm_min = 0,
-    .tm_hour = 0,
-    .tm_mday = 1,
-    .tm_mon = 1 - 1,
-    .tm_year = 2019 - 1900,
-  }; /// 2019-1-1 0:0:0
-  tm.tm_isdst = -1;
-  auto tp = std::chrono::system_clock::from_time_t(std::mktime(&tm));
-  return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
-}
-
-p2p::block_id make_block_id(bytes hash, uint32_t part_set_size, bytes part_set_hash) {
-  return {.hash = std::move(hash), .parts = {.total = part_set_size, .hash = std::move(part_set_hash)}};
-}
-
-std::shared_ptr<vote> make_vote(mock_pv& val,
-  const std::string& chain_id,
-  int32_t val_index,
-  int64_t height,
-  int32_t round,
-  int step,
-  const p2p::block_id& block_id_,
-  tstamp time) {
-  auto pub_key = val.get_pub_key();
-  auto ret = std::make_shared<vote>();
-  ret->validator_address = pub_key.address();
-  ret->validator_index = val_index;
-  ret->height = height;
-  ret->round = round;
-  ret->type = noir::p2p::Prevote;
-  ret->block_id_ = block_id_;
-  ret->timestamp = time;
-  val.sign_vote(*ret);
-  return ret;
-}
-
-std::shared_ptr<duplicate_vote_evidence> mock_duplicate_vote_evidence() {
-  auto block_id = make_block_id(from_hex("0000"), 1000, from_hex("AAAA"));
-  auto block_id2 = make_block_id(from_hex("0001"), 1000, from_hex("AAAA"));
-  auto ret = std::make_shared<duplicate_vote_evidence>();
-  auto val = mock_pv();
-  val.priv_key_ = priv_key::new_priv_key();
-  val.pub_key_ = val.priv_key_.get_pub_key();
-  std::string chain_id = evidence_chain_id;
-  auto default_vote_time = get_default_evidence_time();
-  ret->vote_a = make_vote(val, chain_id, 0, 1, 0, 2, block_id, default_vote_time);
-  ret->vote_b = make_vote(val, chain_id, 0, 1, 0, 2, block_id2, default_vote_time);
-  ret->total_voting_power = 30;
-  ret->validator_power = 10;
-  ret->timestamp = default_vote_time;
-  return ret;
-}
-
 std::shared_ptr<noir::consensus::db_store> initialize_state_from_validator_set(
   std::shared_ptr<validator_set> val_set, int64_t height) {
   auto default_evidence_time = get_default_evidence_time();
