@@ -70,7 +70,7 @@ struct canonical {
     ret.set_type(v.type());
     ret.set_height(v.height());
     ret.set_round(v.round());
-    if (auto b = canonicalize_block_id(v.block_id()); !b)
+    if (auto b = canonicalize_block_id(v.block_id()); b)
       ret.set_allocated_block_id(b.release());
     *ret.mutable_timestamp() = v.timestamp();
     ret.set_chain_id(chain_id);

@@ -55,7 +55,7 @@ struct evidence_pool {
     auto [h, t] = ret->remove_expired_pending_evidence();
     ret->pruning_height = h;
     ret->pruning_time = t;
-    auto ok = ret->list_evidence(prefix::prefix_pending, -1);
+    auto ok = ret->list_evidence(static_cast<int64_t>(prefix::prefix_pending), -1);
     if (!ok)
       return make_unexpected(ok.error());
     auto [ev_list, _] = ok.value();
@@ -69,7 +69,7 @@ struct evidence_pool {
   std::pair<std::vector<std::shared_ptr<evidence>>, int64_t> pending_evidence(int64_t max_bytes) {
     if (get_size() == 0)
       return {{}, 0};
-    auto ok = list_evidence(prefix::prefix_pending, max_bytes);
+    auto ok = list_evidence(static_cast<int64_t>(prefix::prefix_pending), max_bytes);
     if (!ok) {
       elog(fmt::format("failed to retrieve pending evidence: {}", ok.error()));
       // FIXME: what to do now?
@@ -118,7 +118,7 @@ struct evidence_pool {
     std::vector<bytes> hashes(evs.list.size());
     int idx{0};
     for (auto& e : evs.list) {
-      if (dynamic_cast<light_client_attack_evidence*>(e.get()) || is_pending(e)) {
+      if (dynamic_cast<light_client_attack_evidence*>(e.get()) || !is_pending(e)) {
         if (is_committed(e))
           return make_unexpected("evidence was already committed");
         if (auto ok = verify(e); !ok)
@@ -194,7 +194,7 @@ struct evidence_pool {
   result<void> mark_evidence_as_committed(evidence_list& evs, int64_t height);
 
   result<std::pair<std::vector<std::shared_ptr<evidence>>, int64_t>> list_evidence(
-    prefix prefix_key, int64_t max_bytes);
+    int64_t prefix_key, int64_t max_bytes);
 
   std::pair<int64_t, tstamp> remove_expired_pending_evidence();
 

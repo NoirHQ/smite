@@ -32,9 +32,26 @@ result<void> evidence_pool::mark_evidence_as_committed(evidence_list& evs, int64
 }
 
 result<std::pair<std::vector<std::shared_ptr<evidence>>, int64_t>> evidence_pool::list_evidence(
-  prefix prefix_key, int64_t max_bytes) {
-  // TODO: requires iterate_prefix to continue
-  return {};
+  int64_t prefix_key, int64_t max_bytes) {
+  auto iter = evidence_store->lower_bound_from_bytes(prefix_to_bytes(prefix_key));
+  std::vector<std::shared_ptr<evidence>> ret_evs;
+  ::tendermint::types::EvidenceList ret_ev_list;
+  int64_t ev_size{}, total_size{};
+  while ((*iter).second != std::nullopt) {
+    ::tendermint::types::Evidence evpb;
+    evpb.ParseFromArray((*iter).second.value().data(), (*iter).second.value().size());
+    *ret_ev_list.add_evidence() = evpb;
+    ev_size = ret_ev_list.ByteSizeLong(); // TODO: check
+    if (max_bytes != -1 && ev_size > max_bytes) {
+      return std::make_pair(ret_evs, total_size);
+    }
+    auto ev = evidence::from_proto(evpb);
+    total_size = ev_size;
+    ret_evs.push_back(ev.value());
+
+    ++iter;
+  }
+  return std::make_pair(ret_evs, total_size);
 }
 
 std::pair<int64_t, tstamp> evidence_pool::remove_expired_pending_evidence() {
@@ -57,15 +74,25 @@ std::tuple<int64_t, tstamp, std::set<std::string>> evidence_pool::batch_expired_
 }
 
 bytes evidence_pool::prefix_to_bytes(int64_t prefix) {
-  return noir::codec::proto3::encode(prefix); // TODO: check
+  return noir::codec::proto3::encode(prefix);
 }
 
 bytes evidence_pool::key_committed(std::shared_ptr<evidence> ev) {
-  return {}; // TODO: implement
+  auto bz = noir::codec::proto3::encode(static_cast<int64_t>(prefix::prefix_committed));
+  auto bz1 = noir::codec::proto3::encode(ev->get_height());
+  auto bz2 = ev->get_hash();
+  bz.insert(bz.begin(), bz1.begin(), bz1.end());
+  bz.insert(bz.begin(), bz2.begin(), bz2.end());
+  return bz;
 }
 
 bytes evidence_pool::key_pending(std::shared_ptr<evidence> ev) {
-  return {}; // TODO: implement
+  auto bz = noir::codec::proto3::encode(static_cast<int64_t>(prefix::prefix_pending));
+  auto bz1 = noir::codec::proto3::encode(ev->get_height());
+  auto bz2 = ev->get_hash();
+  bz.insert(bz.begin(), bz1.begin(), bz1.end());
+  bz.insert(bz.begin(), bz2.begin(), bz2.end());
+  return bz;
 }
 
 result<void> evidence_pool::verify(const std::shared_ptr<evidence>& ev) {
@@ -155,9 +182,9 @@ result<void> evidence_pool::verify_duplicate_vote(
 
   auto vote_a = vote::to_proto(*ev.vote_a);
   auto vote_b = vote::to_proto(*ev.vote_b);
-  if (pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, *vote_a), ev.vote_a->signature))
+  if (!pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, *vote_a), ev.vote_a->signature))
     return make_unexpected(fmt::format("verifying vote_a: invalid signature"));
-  if (pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, *vote_b), ev.vote_b->signature))
+  if (!pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, *vote_b), ev.vote_b->signature))
     return make_unexpected(fmt::format("verifying vote_b: invalid signature"));
   return {};
 }
