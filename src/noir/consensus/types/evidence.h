@@ -116,7 +116,7 @@ struct duplicate_vote_evidence : public evidence {
       return make_unexpected("evidence has a different time to the block it is associated with");
     if (val->voting_power != validator_power)
       return make_unexpected("validator power from evidence and our validator set does not match");
-    if (val_set->total_voting_power != total_voting_power)
+    if (val_set->get_total_voting_power() != total_voting_power)
       return make_unexpected("total voting power from the evidence and our validator set does not match");
     return {};
   }

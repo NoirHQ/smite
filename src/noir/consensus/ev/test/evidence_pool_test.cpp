@@ -158,21 +158,27 @@ TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") 
   auto [pool_, val] = default_test_pool(height);
   auto ev =
     new_mock_duplicate_vote_evidence_with_validator(height, get_default_evidence_time() + 1, evidence_chain_id, *val);
-  auto add_result = pool_->add_evidence(ev); // FIXME
-  // CHECK(add_result);
-  // std::cout << add_result.error() << std::endl;
-  // evidence_list evs{.list = {ev}};
-  // auto check_result = pool_->check_evidence(evs);
+  auto add_result = pool_->add_evidence(ev);
+  CHECK(add_result);
+  evidence_list evs{.list = {ev}};
+  auto check_result = pool_->check_evidence(evs);
+  CHECK(check_result);
 }
 
 TEST_CASE("evidence_pool: basic", "[noir][consensus]") {
   int64_t height{1};
   auto [pool_, val] = default_test_pool(height);
 
-  auto [evs, size] = pool_->pending_evidence(default_evidence_max_bytes);
-  CHECK(evs.empty());
+  SECTION("no evidence yet") {
+    auto [evs, size] = pool_->pending_evidence(default_evidence_max_bytes);
+    CHECK(evs.empty());
+  }
 
-  auto ev = mock_duplicate_vote_evidence();
-  // pool_->add_evidence(ev);
-  // CHECK(evs.size() == 1);
+  SECTION("good evidence") {
+    auto ev =
+      new_mock_duplicate_vote_evidence_with_validator(height, get_default_evidence_time(), evidence_chain_id, *val);
+    pool_->add_evidence(ev);
+    auto [evs, size] = pool_->pending_evidence(default_evidence_max_bytes);
+    CHECK(evs.size() == 1);
+  }
 }
