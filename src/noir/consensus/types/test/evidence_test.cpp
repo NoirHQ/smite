@@ -28,7 +28,8 @@ std::shared_ptr<duplicate_vote_evidence> random_duplicate_vote_evidence() {
   std::string chain_id = "my_chain";
   auto default_vote_time = get_default_evidence_time();
   ret->vote_a = make_vote(val, chain_id, 0, 10, 2, 1, block_id, default_vote_time);
-  ret->vote_b = make_vote(val, chain_id, 0, 10, 2, 1, block_id2, default_vote_time + 1);
+  ret->vote_b = make_vote(val, chain_id, 0, 10, 2, 1, block_id2,
+    default_vote_time + std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(1)).count());
   ret->total_voting_power = 30;
   ret->validator_power = 10;
   ret->timestamp = default_vote_time;

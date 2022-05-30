@@ -34,7 +34,9 @@ std::shared_ptr<noir::consensus::db_store> initialize_state_from_validator_set(
     .last_validators = *val_set,
     .last_height_validators_changed = 1,
     .consensus_params_ = consensus_params{.block = {.max_bytes = 22020096, .max_gas = -1},
-      .evidence = {.max_age_num_blocks = 20, .max_age_duration = 20, .max_bytes = 1000}}};
+      .evidence = {.max_age_num_blocks = 20,
+        .max_age_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(20)).count(),
+        .max_bytes = 1000}}};
 
   for (auto i = 0; i <= height; i++) {
     state_.last_block_height = i;
@@ -71,7 +73,8 @@ std::shared_ptr<block_store> initialize_block_store(state state_, bytes val_addr
   for (auto i = 1; i <= state_.last_block_height; i++) {
     auto last_commit = make_commit(i - 1, val_addr);
     auto block_ = make_block(i, state_, *last_commit);
-    block_->header.time = default_evidence_time + i;
+    block_->header.time =
+      default_evidence_time + std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(i)).count();
     block_->header.version = {.block = consensus::block_protocol, .app = 1};
     auto part_set_ = block_->make_part_set(1);
     auto seen_commit = make_commit(i, val_addr);
@@ -100,8 +103,10 @@ std::pair<std::shared_ptr<evidence_pool>, std::shared_ptr<mock_pv>> default_test
 TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") {
   int64_t height{1};
   auto [pool_, val] = default_test_pool(height);
-  auto ev =
-    new_mock_duplicate_vote_evidence_with_validator(height, get_default_evidence_time() + 1, evidence_chain_id, *val);
+  auto ev = new_mock_duplicate_vote_evidence_with_validator(height,
+    get_default_evidence_time() +
+      std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(1)).count(),
+    evidence_chain_id, *val);
   auto add_result = pool_->add_evidence(ev);
   CHECK(add_result);
   evidence_list evs{.list = {ev}};
@@ -125,4 +130,53 @@ TEST_CASE("evidence_pool: basic", "[noir][consensus]") {
     auto [evs, size] = pool_->pending_evidence(default_evidence_max_bytes);
     CHECK(evs.size() == 1);
   }
+}
+
+TEST_CASE("evidence_pool: update", "[noir][consensus]") {
+  int64_t height{21};
+  auto [pool_, val] = default_test_pool(height);
+  auto state = *pool_->state;
+
+  auto pruned_ev = new_mock_duplicate_vote_evidence_with_validator(1,
+    get_default_evidence_time() +
+      std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(1)).count(),
+    evidence_chain_id, *val);
+
+  auto not_pruned_ev = new_mock_duplicate_vote_evidence_with_validator(2,
+    get_default_evidence_time() +
+      std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(2)).count(),
+    evidence_chain_id, *val);
+
+  CHECK(pool_->add_evidence(pruned_ev));
+  CHECK(pool_->add_evidence(not_pruned_ev));
+
+  auto ev = new_mock_duplicate_vote_evidence_with_validator(height,
+    get_default_evidence_time() +
+      std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(21)).count(),
+    evidence_chain_id, *val);
+  auto last_commit = make_commit(height, val->priv_key_.get_pub_key().address());
+  auto block = block::make_block(height + 1, {}, *last_commit); // TODO: take evidence
+
+  state.last_block_height = height + 1;
+  state.last_block_time = get_default_evidence_time() +
+    std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(22)).count();
+
+  SECTION("two evidences") {
+    auto [ev_list, _] = pool_->pending_evidence(2 * default_evidence_max_bytes);
+    CHECK(ev_list.size() == 2);
+    CHECK(pool_->get_size() == 2);
+  }
+  CHECK(pool_->check_evidence({.list = {ev}}));
+
+  SECTION("three evidences") {
+    auto [ev_list, _] = pool_->pending_evidence(3 * default_evidence_max_bytes);
+    // CHECK(ev_list.size() == 3); // FIXME
+    CHECK(pool_->get_size() == 3);
+  }
+
+  // pool_->update(state, {.list = {ev}});
+  // SECTION("empty evidence") {
+  //   auto [ev_list, _] = pool_->pending_evidence(default_evidence_max_bytes);
+  //   CHECK(ev_list.size() == 1);
+  // }
 }
