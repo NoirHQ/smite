@@ -148,7 +148,7 @@ struct duplicate_vote_evidence : public evidence {
     ret->total_voting_power = pb.total_voting_power();
     ret->validator_power = pb.validator_power();
     ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp());
-    return ret; // TODO
+    return ret;
   }
 };
 
@@ -257,7 +257,23 @@ struct light_client_attack_evidence : public evidence {
     ::tendermint::types::LightClientAttackEvidence& pb) {
     if (!pb.IsInitialized())
       return make_unexpected("from_proto failed: light client attack evidence is not initialized");
-    return {}; // TODO
+    auto ret = std::make_shared<light_client_attack_evidence>();
+    auto conflicting_block = light_block::from_proto(pb.conflicting_block());
+    if (!conflicting_block)
+      return make_unexpected(conflicting_block.error());
+    for (auto& v : pb.byzantine_validators()) {
+      if (auto ok = validator::from_proto(v); !ok)
+        return make_unexpected(ok.error());
+      else
+        ret->byzantine_validators.push_back(ok.value());
+    }
+    ret->conflicting_block = conflicting_block.value();
+    ret->common_height = pb.common_height();
+    ret->total_voting_power = pb.total_voting_power();
+    ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp());
+    if (auto ok = ret->validate_basic(); !ok)
+      return make_unexpected(ok.error());
+    return ret;
   }
 
   std::vector<std::shared_ptr<validator>> get_byzantine_validators(
