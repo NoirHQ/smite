@@ -9,7 +9,7 @@
 
 namespace noir::consensus::ev {
 
-result<void> evidence_pool::mark_evidence_as_committed(evidence_list& evs, int64_t height) {
+void evidence_pool::mark_evidence_as_committed(evidence_list& evs, int64_t height) {
   std::set<std::string> block_evidence_map;
   std::vector<bytes> batch_delete;
 
@@ -25,14 +25,14 @@ result<void> evidence_pool::mark_evidence_as_committed(evidence_list& evs, int64
   }
 
   if (block_evidence_map.empty())
-    return {};
+    return;
   evidence_store->erase(batch_delete);
   remove_evidence_from_list(block_evidence_map);
   std::atomic_fetch_sub_explicit(&evidence_size, block_evidence_map.size(), std::memory_order_relaxed);
 }
 
 result<std::pair<std::vector<std::shared_ptr<evidence>>, int64_t>> evidence_pool::list_evidence(
-  int64_t prefix_key, int64_t max_bytes) {
+  prefix prefix_key, int64_t max_bytes) {
   auto iter = evidence_store->lower_bound_from_bytes(prefix_to_bytes(prefix_key));
   std::vector<std::shared_ptr<evidence>> ret_evs;
   ::tendermint::types::EvidenceList ret_ev_list;
@@ -67,14 +67,32 @@ std::pair<int64_t, tstamp> evidence_pool::remove_expired_pending_evidence() {
   return {height, time};
 }
 
-std::tuple<int64_t, tstamp, std::set<std::string>> evidence_pool::batch_expired_pending_evidence(std::vector<bytes>&) {
+std::tuple<int64_t, tstamp, std::set<std::string>> evidence_pool::batch_expired_pending_evidence(
+  std::vector<bytes>& batch_delete) {
   std::set<std::string> block_evidence_map;
-  // TODO: requires iterate_prefix to continue
-  return {};
+  for (auto iter = evidence_store->lower_bound_from_bytes(prefix_to_bytes(prefix::prefix_pending));
+       (*iter).second != std::nullopt; ++iter) {
+    ::tendermint::types::Evidence evpb;
+    evpb.ParseFromArray((*iter).second.value().data(), (*iter).second.value().size());
+    auto ev = evidence::from_proto(evpb);
+    if (!ev) {
+      elog(fmt::format("failed to get evidence from protobuf: {}", ev.error()));
+      continue;
+    }
+    if (is_expired(ev.value()->get_height(), ev.value()->get_timestamp())) {
+      return {ev.value()->get_height() + state->consensus_params_.evidence.max_age_num_blocks + 1,
+        ev.value()->get_timestamp() + state->consensus_params_.evidence.max_age_duration +
+          std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(1)).count(),
+        block_evidence_map};
+    }
+    batch_delete.push_back({(*iter).second.value().begin(), (*iter).second.value().end()});
+    block_evidence_map.insert(ev_map_key(ev.value()));
+  }
+  return {state->last_block_height, state->last_block_time, block_evidence_map};
 }
 
-bytes evidence_pool::prefix_to_bytes(int64_t prefix) {
-  return noir::codec::proto3::encode(prefix);
+bytes evidence_pool::prefix_to_bytes(prefix p) {
+  return noir::codec::proto3::encode(static_cast<int64_t>(p));
 }
 
 bytes evidence_pool::key_committed(std::shared_ptr<evidence> ev) {
