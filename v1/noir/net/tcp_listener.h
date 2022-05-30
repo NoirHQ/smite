@@ -62,6 +62,15 @@ public:
     co_return conn;
   }
 
+  auto close() -> Result<void> {
+    boost::system::error_code ec{};
+    acceptor.close(ec);
+    if (ec) {
+      return ec;
+    }
+    return success();
+  }
+
   boost::asio::strand<boost::asio::io_context::executor_type> strand;
 
 private:
