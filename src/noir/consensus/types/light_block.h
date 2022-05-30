@@ -25,6 +25,15 @@ struct signed_header {
       ret->set_allocated_commit(commit::to_proto(s.commit.value()).release());
     return ret;
   }
+
+  static std::shared_ptr<signed_header> from_proto(const ::tendermint::types::SignedHeader& pb) {
+    auto ret = std::make_shared<signed_header>();
+    if (pb.has_header())
+      ret->header = block_header::from_proto(pb.header());
+    if (pb.has_commit())
+      ret->commit = *commit::from_proto(pb.commit());
+    return ret;
+  }
 };
 
 struct light_block {
@@ -51,6 +60,19 @@ struct light_block {
       ret->set_allocated_signed_header(signed_header::to_proto(*l.s_header).release());
     if (!l.val_set)
       ret->set_allocated_validator_set(validator_set::to_proto(*l.val_set).release());
+    return ret;
+  }
+
+  static result<std::shared_ptr<light_block>> from_proto(const ::tendermint::types::LightBlock& pb) {
+    auto ret = std::make_shared<light_block>();
+    if (pb.has_signed_header())
+      ret->s_header = signed_header::from_proto(pb.signed_header());
+    if (pb.has_validator_set()) {
+      if (auto ok = validator_set::from_proto(pb.validator_set()); !ok)
+        return make_unexpected(ok.error());
+      else
+        ret->val_set = ok.value();
+    }
     return ret;
   }
 };
