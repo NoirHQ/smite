@@ -34,10 +34,10 @@ struct state {
   p2p::block_id last_block_id;
   tstamp last_block_time;
 
-  validator_set validators; // persisted to the database separately every time they change, so we can query for
-                            // historical validator sets.
+  // TODO: change following validator_set to shared_ptr
+  validator_set validators;
   validator_set next_validators;
-  validator_set last_validators; // used to validate block.LastCommit
+  validator_set last_validators;
   int64_t last_height_validators_changed;
 
   consensus_params consensus_params_;

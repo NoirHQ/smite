@@ -222,7 +222,7 @@ struct evidence_pool {
       std::string err;
       if (vote_set_.vote_a->height == new_state.last_block_height) {
         if (auto ok = duplicate_vote_evidence::new_duplicate_vote_evidence(vote_set_.vote_a, vote_set_.vote_b,
-              new_state.last_block_time, std::shared_ptr<validator_set>(&new_state.last_validators) /* TODO: check */);
+              new_state.last_block_time, std::make_shared<validator_set>(new_state.last_validators));
             !ok) {
           err = ok.error();
         } else {

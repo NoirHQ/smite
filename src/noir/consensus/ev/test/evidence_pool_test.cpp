@@ -37,12 +37,10 @@ std::shared_ptr<noir::consensus::db_store> initialize_state_from_validator_set(
       .evidence = {.max_age_num_blocks = 20,
         .max_age_duration = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(20)).count(),
         .max_bytes = 1000}}};
-
   for (auto i = 0; i <= height; i++) {
     state_.last_block_height = i;
     state_store_->save(state_);
   }
-
   return state_store_;
 }
 
@@ -100,20 +98,6 @@ std::pair<std::shared_ptr<evidence_pool>, std::shared_ptr<mock_pv>> default_test
   return {pool_.value(), val};
 }
 
-TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") {
-  int64_t height{1};
-  auto [pool_, val] = default_test_pool(height);
-  auto ev = new_mock_duplicate_vote_evidence_with_validator(height,
-    get_default_evidence_time() +
-      std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(1)).count(),
-    evidence_chain_id, *val);
-  auto add_result = pool_->add_evidence(ev);
-  CHECK(add_result);
-  evidence_list evs{.list = {ev}};
-  auto check_result = pool_->check_evidence(evs);
-  CHECK(check_result);
-}
-
 TEST_CASE("evidence_pool: basic", "[noir][consensus]") {
   int64_t height{1};
   auto [pool_, val] = default_test_pool(height);
@@ -130,6 +114,35 @@ TEST_CASE("evidence_pool: basic", "[noir][consensus]") {
     auto [evs, size] = pool_->pending_evidence(default_evidence_max_bytes);
     CHECK(evs.size() == 1);
   }
+}
+
+TEST_CASE("evidence_pool: report conflicting votes", "[noir][consensus]") {
+  int64_t height{10};
+  auto [pool_, pv] = default_test_pool(height);
+  auto val = validator::new_validator(pv->priv_key_.get_pub_key(), 10);
+  auto ev =
+    new_mock_duplicate_vote_evidence_with_validator(height + 1, get_default_evidence_time(), evidence_chain_id, *pv);
+
+  pool_->report_conflicting_votes(ev->vote_a, ev->vote_b);
+  pool_->report_conflicting_votes(ev->vote_a, ev->vote_b); // should fail
+  auto [ev_list, ev_size] = pool_->pending_evidence(default_evidence_max_bytes);
+  CHECK(ev_list.empty());
+  CHECK(ev_size == 0);
+
+  auto next = pool_->evidence_front();
+  CHECK(!next);
+
+  auto state = *pool_->state;
+  state.last_block_height++;
+  state.last_block_time = ev->get_timestamp();
+  state.last_validators = validator_set::new_validator_set({val});
+  pool_->update(state, {});
+
+  auto [ev_list2, _] = pool_->pending_evidence(default_evidence_max_bytes);
+  CHECK(ev_list2[0]->get_hash() == ev->get_hash());
+
+  next = pool_->evidence_front();
+  CHECK(next);
 }
 
 TEST_CASE("evidence_pool: update", "[noir][consensus]") {
@@ -174,9 +187,30 @@ TEST_CASE("evidence_pool: update", "[noir][consensus]") {
     CHECK(pool_->get_size() == 3);
   }
 
-  // pool_->update(state, {.list = {ev}});
-  // SECTION("empty evidence") {
-  //   auto [ev_list, _] = pool_->pending_evidence(default_evidence_max_bytes);
-  //   CHECK(ev_list.size() == 1);
-  // }
+  //  pool_->update(state, {.list = {ev}});
+  //  SECTION("empty evidence") {
+  //    auto [ev_list, _] = pool_->pending_evidence(default_evidence_max_bytes);
+  //    CHECK(ev_list.size() == 1);
+  //  }
+}
+
+TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") {
+  int64_t height{1};
+  auto [pool_, val] = default_test_pool(height);
+  auto ev = new_mock_duplicate_vote_evidence_with_validator(height,
+    get_default_evidence_time() +
+      std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(1)).count(),
+    evidence_chain_id, *val);
+  CHECK(pool_->add_evidence(ev));
+  CHECK(pool_->check_evidence({.list = {ev}}));
+}
+
+TEST_CASE("evidence_pool: verify failed duplicated evidence", "[noir][consensus]") {
+  int64_t height{1};
+  auto [pool_, val] = default_test_pool(height);
+  auto ev = new_mock_duplicate_vote_evidence_with_validator(height,
+    get_default_evidence_time() +
+      std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(1)).count(),
+    evidence_chain_id, *val);
+  CHECK(pool_->check_evidence({.list = {ev, ev}}).error() == "duplicate evidence");
 }
