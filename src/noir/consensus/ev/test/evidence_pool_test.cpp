@@ -22,7 +22,7 @@ constexpr auto block_store_path = "/tmp/ev_block";
 constexpr int64_t default_evidence_max_bytes = 1000;
 
 std::shared_ptr<noir::consensus::db_store> initialize_state_from_validator_set(
-  std::shared_ptr<validator_set> val_set, int64_t height) {
+  const std::shared_ptr<validator_set>& val_set, int64_t height) {
   auto default_evidence_time = get_default_evidence_time();
   auto state_store_ = std::make_shared<noir::consensus::db_store>(make_session(true, state_store_path));
   auto state_ = state{.chain_id = evidence_chain_id,
@@ -45,7 +45,7 @@ std::shared_ptr<noir::consensus::db_store> initialize_state_from_validator_set(
 }
 
 std::shared_ptr<noir::consensus::db_store> initialize_validator_state(
-  std::shared_ptr<mock_pv> priv_val, int64_t height) {
+  const std::shared_ptr<mock_pv>& priv_val, int64_t height) {
   auto pub_key_ = priv_val->get_pub_key();
   auto val = validator::new_validator(pub_key_, 10);
   auto val_set = std::make_shared<validator_set>();
@@ -54,7 +54,7 @@ std::shared_ptr<noir::consensus::db_store> initialize_validator_state(
   return initialize_state_from_validator_set(val_set, height);
 }
 
-std::shared_ptr<commit> make_commit(int64_t height, bytes val_addr) {
+std::shared_ptr<commit> make_commit(int64_t height, const bytes& val_addr) {
   auto default_evidence_time = get_default_evidence_time();
   auto commit_sigs = std::vector<commit_sig>();
   commit_sigs.push_back(commit_sig{.flag = noir::consensus::FlagCommit,
@@ -64,7 +64,7 @@ std::shared_ptr<commit> make_commit(int64_t height, bytes val_addr) {
   return std::make_shared<commit>(commit::new_commit(height, 0, {}, commit_sigs));
 }
 
-std::shared_ptr<block_store> initialize_block_store(state state_, bytes val_addr) {
+std::shared_ptr<block_store> initialize_block_store(const state& state_, const bytes& val_addr) {
   auto block_store_ = std::make_shared<noir::consensus::block_store>(make_session(true, block_store_path));
   auto default_evidence_time = get_default_evidence_time();
 
@@ -183,15 +183,17 @@ TEST_CASE("evidence_pool: update", "[noir][consensus]") {
 
   SECTION("three evidences") {
     auto [ev_list, _] = pool_->pending_evidence(3 * default_evidence_max_bytes);
-    // CHECK(ev_list.size() == 3); // FIXME
+    CHECK(ev_list.size() == 3);
     CHECK(pool_->get_size() == 3);
   }
 
-  //  pool_->update(state, {.list = {ev}});
-  //  SECTION("empty evidence") {
-  //    auto [ev_list, _] = pool_->pending_evidence(default_evidence_max_bytes);
-  //    CHECK(ev_list.size() == 1);
-  //  }
+  pool_->update(state, {.list = {ev}});
+  SECTION("empty evidence") {
+    auto [ev_list, _] = pool_->pending_evidence(default_evidence_max_bytes);
+    // CHECK(ev_list.size() == 1); // FIXME
+  }
+
+  CHECK(pool_->check_evidence({.list = {ev}}).error() == "evidence was already committed");
 }
 
 TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") {

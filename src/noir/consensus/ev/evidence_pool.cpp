@@ -102,8 +102,8 @@ bytes evidence_pool::key_committed(std::shared_ptr<evidence> ev) {
   auto bz = noir::codec::proto3::encode(static_cast<int64_t>(prefix::prefix_committed));
   auto bz1 = noir::codec::proto3::encode(ev->get_height());
   auto bz2 = ev->get_hash();
-  bz.insert(bz.begin(), bz1.begin(), bz1.end());
-  bz.insert(bz.begin(), bz2.begin(), bz2.end());
+  bz.insert(bz.end(), bz1.begin(), bz1.end());
+  bz.insert(bz.end(), bz2.begin(), bz2.end());
   return bz;
 }
 
@@ -111,8 +111,8 @@ bytes evidence_pool::key_pending(std::shared_ptr<evidence> ev) {
   auto bz = noir::codec::proto3::encode(static_cast<int64_t>(prefix::prefix_pending));
   auto bz1 = noir::codec::proto3::encode(ev->get_height());
   auto bz2 = ev->get_hash();
-  bz.insert(bz.begin(), bz1.begin(), bz1.end());
-  bz.insert(bz.begin(), bz2.begin(), bz2.end());
+  bz.insert(bz.end(), bz1.begin(), bz1.end());
+  bz.insert(bz.end(), bz2.begin(), bz2.end());
   return bz;
 }
 
