@@ -36,7 +36,7 @@ public:
       receive_ch(io_context),
       error_ch(io_context, 1),
       done_ch(io_context) {}
-  auto handshake(noir::Chan<noir::Done>& done, NodeInfo& node_info, noir::Bytes& priv_key)
+  auto handshake(noir::Chan<noir::Done>& done, NodeInfo& node_info, noir::Bytes32& priv_key)
     -> boost::asio::awaitable<Result<std::tuple<NodeInfo, std::shared_ptr<noir::Bytes>>>>;
   auto send_message(noir::Chan<noir::Done>& done, ChannelId ch_id, std::shared_ptr<noir::Bytes>& msg)
     -> boost::asio::awaitable<Result<void>>;
