@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <tendermint/p2p/conn/secret_connection.h>
 #include <tendermint/p2p/transport_mconn.h>
 
 namespace tendermint::p2p {
@@ -11,7 +12,7 @@ using namespace noir;
 using namespace noir::net;
 using namespace boost::asio;
 
-auto MConnConnection::handshake(Chan<Done>& done, NodeInfo& node_info, Bytes& priv_key)
+auto MConnConnection::handshake(Chan<Done>& done, NodeInfo& node_info, Bytes32& priv_key)
   -> awaitable<Result<std::tuple<NodeInfo, std::shared_ptr<Bytes>>>> {
   // TODO: handshake
   co_return std::make_tuple(NodeInfo{}, std::make_shared<Bytes>());
