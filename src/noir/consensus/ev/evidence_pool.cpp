@@ -39,7 +39,8 @@ result<std::pair<std::vector<std::shared_ptr<evidence>>, int64_t>> evidence_pool
   int64_t ev_size{}, total_size{};
   while ((*iter).second != std::nullopt) {
     ::tendermint::types::Evidence evpb;
-    evpb.ParseFromArray((*iter).second.value().data(), (*iter).second.value().size());
+    if (auto ok = evpb.ParseFromArray((*iter).second.value().data(), (*iter).second.value().size()); !ok)
+      return make_unexpected("unable to parse pending evidence");
     *ret_ev_list.add_evidence() = evpb;
     ev_size = ret_ev_list.ByteSizeLong(); // TODO: check
     if (max_bytes != -1 && ev_size > max_bytes) {
@@ -85,7 +86,9 @@ std::tuple<int64_t, tstamp, std::set<std::string>> evidence_pool::batch_expired_
           std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(1)).count(),
         block_evidence_map};
     }
-    batch_delete.push_back({(*iter).second.value().begin(), (*iter).second.value().end()});
+    auto start = (*iter).second.value().data();
+    bytes key(start, start + (*iter).second.value().size()); // TODO : check
+    batch_delete.push_back(key);
     block_evidence_map.insert(ev_map_key(ev.value()));
   }
   return {state->last_block_height, state->last_block_time, block_evidence_map};

@@ -72,7 +72,7 @@ struct evidence_pool {
     auto ok = list_evidence(prefix::prefix_pending, max_bytes);
     if (!ok) {
       elog(fmt::format("failed to retrieve pending evidence: {}", ok.error()));
-      // FIXME: what to do now?
+      return {{}, 0}; // TODO : check
     }
     return ok.value();
   }
@@ -163,20 +163,12 @@ struct evidence_pool {
 
   bool is_committed(std::shared_ptr<evidence> ev) {
     auto key = key_committed(ev);
-    if (!evidence_store->contains(noir::db::session::shared_bytes(key.data(), key.size()))) { // TODO: check
-      elog("failed to find committed evidence");
-      return false;
-    }
-    return true;
+    return evidence_store->contains(noir::db::session::shared_bytes(key.data(), key.size()));
   }
 
   bool is_pending(std::shared_ptr<evidence> ev) {
     auto key = key_pending(ev);
-    if (!evidence_store->contains(noir::db::session::shared_bytes(key.data(), key.size()))) { // TODO: check
-      elog("failed to find pending evidence");
-      return false;
-    }
-    return true;
+    return evidence_store->contains(noir::db::session::shared_bytes(key.data(), key.size()));
   }
 
   result<void> add_pending_evidence(std::shared_ptr<evidence> ev) {
