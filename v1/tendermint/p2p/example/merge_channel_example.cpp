@@ -7,8 +7,7 @@
 #include <tendermint/p2p/channel.h>
 #include <iostream>
 
-using noir::Chan;
-using noir::Done;
+using namespace noir;
 using tendermint::p2p::Channel;
 using tendermint::p2p::Envelope;
 using tendermint::p2p::EnvelopePtr;
