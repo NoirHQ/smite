@@ -12,7 +12,8 @@ target_link_libraries(tendermint_p2p
   noir::common::v1
   noir::net::v1
   tendermint::proto
-  OpenSSL
+  ${OPENSSL_SSL_LIBRARY}
+  ${OPENSSL_CRYPTO_LIBRARY}
 )
 
 add_library(tendermint::p2p ALIAS tendermint_p2p)
