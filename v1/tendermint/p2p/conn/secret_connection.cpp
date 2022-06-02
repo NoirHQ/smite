@@ -16,7 +16,7 @@ namespace tendermint::p2p::conn {
 
 using namespace noir;
 
-std::shared_ptr<SecretConnection> SecretConnection::make_secret_connection(Bytes32& loc_priv_key) {
+std::shared_ptr<SecretConnection> SecretConnection::make_secret_connection(Bytes& loc_priv_key) {
   check(loc_priv_key.size() == 64, "unable to create a new create_connection: invalid private key size");
   auto sc = std::make_shared<SecretConnection>();
   sc->loc_priv_key = loc_priv_key;

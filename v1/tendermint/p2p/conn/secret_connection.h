@@ -48,24 +48,26 @@ struct AuthSigMessage {
 class SecretConnection {
 public:
   bool is_authorized{};
-  static std::shared_ptr<SecretConnection> make_secret_connection(noir::Bytes32& loc_priv_key);
+  static std::shared_ptr<SecretConnection> make_secret_connection(noir::Bytes& loc_priv_key);
   std::optional<std::string> shared_eph_pub_key(noir::Bytes32& received_pub_key);
   std::optional<std::string> shared_auth_sig(AuthSigMessage& received_msg);
   noir::Bytes derive_secrets(noir::Bytes32& dh_secret);
 
-private:
-  noir::Bytes32 loc_priv_key;
-  noir::Bytes32 loc_pub_key;
-  noir::Bytes32 loc_signature;
-  noir::Bytes32 rem_pub_key; // other's pub key
+public:
+  noir::Bytes loc_pub_key;
+  noir::Bytes loc_signature;
 
   noir::Bytes32 loc_eph_pub;
-  noir::Bytes32 loc_eph_priv;
-  noir::Bytes32 rem_eph_pub; // other's ephemeral pub key
-
   noir::Bytes32 recv_secret;
   noir::Bytes32 send_secret;
   noir::Bytes32 chal_secret;
+
+private:
+  noir::Bytes loc_priv_key;
+  noir::Bytes rem_pub_key; // other's pub key
+
+  noir::Bytes32 loc_eph_priv;
+  noir::Bytes32 rem_eph_pub; // other's ephemeral pub key
 
   nonce96 recv_nonce;
   nonce96 send_nonce;
