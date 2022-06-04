@@ -17,7 +17,7 @@ bytes vote::vote_sign_bytes(const std::string& chain_id, const ::tendermint::typ
   return sign_bytes;
 }
 
-std::shared_ptr<vote_set> vote_set::new_vote_set(std::string& chain_id_,
+std::shared_ptr<vote_set> vote_set::new_vote_set(const std::string& chain_id_,
   int64_t height_,
   int32_t round_,
   p2p::signed_msg_type signed_msg_type,

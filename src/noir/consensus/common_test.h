@@ -90,6 +90,22 @@ std::tuple<validator, std::shared_ptr<priv_validator>> rand_validator(bool rand_
   return {validator{priv_val->pub_key_.address(), priv_val->pub_key_, vote_power, 0}, priv_val};
 }
 
+std::tuple<std::shared_ptr<validator_set>, std::vector<std::shared_ptr<priv_validator>>> rand_validator_set(
+  int num_validators, int64_t voting_power) {
+  std::vector<validator> valz;
+  std::vector<std::shared_ptr<priv_validator>> priv_validators;
+  for (auto i = 0; i < num_validators; i++) {
+    auto [val, priv_validator] = rand_validator(false, voting_power);
+    valz.push_back(val);
+    priv_validators.push_back(priv_validator);
+  }
+  std::sort(priv_validators.begin(), priv_validators.end(),
+    [](std::shared_ptr<priv_validator> a, std::shared_ptr<priv_validator> b) {
+      return a->get_pub_key().address() < b->get_pub_key().address();
+    });
+  return {std::make_shared<validator_set>(validator_set::new_validator_set(valz)), priv_validators};
+}
+
 std::tuple<genesis_doc, std::vector<std::shared_ptr<priv_validator>>> rand_genesis_doc(
   const config& config_, int num_validators, bool rand_power, int64_t min_power) {
   std::vector<genesis_validator> validators;
