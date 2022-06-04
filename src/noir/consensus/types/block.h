@@ -32,6 +32,17 @@ inline int64_t max_commit_bytes(int val_count) {
   return 94 /* max_commit_overhead_bytes */ + (109 /* max_commit_sig_bytes */ * val_count);
 }
 
+inline bytes random_address() {
+  noir::bytes ret{20};
+  noir::crypto::rand_bytes(ret);
+  return ret;
+}
+inline bytes random_hash() {
+  noir::bytes ret{32};
+  noir::crypto::rand_bytes(ret);
+  return ret;
+}
+
 enum block_id_flag {
   FlagAbsent = 1,
   FlagCommit,
@@ -314,6 +325,38 @@ struct block_header {
     // validate_hash(evidence_hash);
     // todo - add more
     return {};
+  }
+
+  static result<block_header> make_header(block_header&& h) {
+    if (h.version.block == 0)
+      h.version.block = block_protocol;
+    if (h.height == 0)
+      h.height = 1;
+    if (h.last_block_id.is_zero())
+      h.last_block_id = {.hash = random_hash(), .parts = {.total = 100, .hash = random_hash()}};
+    if (h.chain_id.empty())
+      h.chain_id = "test-chain";
+    if (h.last_commit_hash.empty())
+      h.last_commit_hash = random_hash();
+    if (h.data_hash.empty())
+      h.data_hash = random_hash();
+    if (h.validators_hash.empty())
+      h.validators_hash = random_hash();
+    if (h.next_validators_hash.empty())
+      h.next_validators_hash = random_hash();
+    if (h.consensus_hash.empty())
+      h.consensus_hash = random_hash();
+    if (h.app_hash.empty())
+      h.app_hash = random_hash();
+    if (h.last_results_hash.empty())
+      h.last_results_hash = random_hash();
+    if (h.evidence_hash.empty())
+      h.evidence_hash = random_hash();
+    if (h.proposer_address.empty())
+      h.proposer_address = random_address();
+    if (auto r = h.validate_basic(); r.has_value())
+      return make_unexpected(r.value());
+    return h;
   }
 
   static std::unique_ptr<::tendermint::types::Header> to_proto(const block_header& b) {

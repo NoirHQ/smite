@@ -42,6 +42,7 @@ add_noir_test(crypto_ed25519_test test/crypto_ed25519_test.cpp DEPENDS noir_cons
 add_noir_test(events_test types/test/event_bus_test.cpp DEPENDS noir_consensus)
 add_noir_test(evidence_pool_test ev/test/evidence_pool_test.cpp DEPENDS noir_consensus)
 add_noir_test(evidence_test types/test/evidence_test.cpp DEPENDS noir_consensus)
+add_noir_test(evidence_verify_test ev/test/evidence_verify_test.cpp DEPENDS noir_consensus)
 add_noir_test(node_key_test types/test/node_key_test.cpp DEPENDS noir_consensus)
 add_noir_test(privval_test privval/test/file_test.cpp DEPENDS noir_consensus)
 add_noir_test(psql_test indexer/sink/psql/test/psql_test.cpp DEPENDS noir_consensus)
