@@ -285,6 +285,8 @@ public:
     app.get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>();
   plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type& bs_reactor_mq_channel =
     app.get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>();
+  plugin_interface::incoming::channels::es_reactor_message_queue::channel_type& es_reactor_mq_channel =
+    app.get_channel<plugin_interface::incoming::channels::es_reactor_message_queue>();
   plugin_interface::incoming::channels::tp_reactor_message_queue::channel_type& tp_reactor_mq_channel =
     app.get_channel<plugin_interface::incoming::channels::tp_reactor_message_queue>();
   plugin_interface::channels::update_peer_status::channel_type& update_peer_status_channel =
@@ -846,6 +848,10 @@ struct msg_handler {
       break;
     case BlockSync:
       my_impl->bs_reactor_mq_channel.publish( ///< notify block_sync reactor to take additional actions
+        appbase::priority::medium, std::make_shared<envelope>(msg));
+      break;
+    case Evidence:
+      my_impl->es_reactor_mq_channel.publish( ///< notify evidence reactor to take additional actions
         appbase::priority::medium, std::make_shared<envelope>(msg));
       break;
     case Transaction:
