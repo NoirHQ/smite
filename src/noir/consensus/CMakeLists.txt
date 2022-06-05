@@ -5,6 +5,7 @@ add_library(noir_consensus STATIC
   consensus_state.cpp
   crypto.cpp
   ev/evidence_pool.cpp
+  ev/reactor.cpp
   indexer/sink/psql/psql.cpp
   merkle/proof.cpp
   merkle/tree.cpp

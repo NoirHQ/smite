@@ -23,7 +23,7 @@ result<std::unique_ptr<::tendermint::types::Evidence>> evidence::to_proto(const 
   return make_unexpected("evidence_to_proto failed: unknown evidence");
 }
 
-result<std::shared_ptr<evidence>> evidence::from_proto(::tendermint::types::Evidence& ev) {
+result<std::shared_ptr<evidence>> evidence::from_proto(const ::tendermint::types::Evidence& ev) {
   if (!ev.IsInitialized())
     return make_unexpected("evidence_from_proto failed: evidence is not initialized");
   if (ev.sum_case() == tendermint::types::Evidence::kDuplicateVoteEvidence) {

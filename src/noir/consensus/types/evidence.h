@@ -24,7 +24,7 @@ struct evidence {
   virtual result<void> validate_basic() = 0;
 
   static result<std::unique_ptr<::tendermint::types::Evidence>> to_proto(const evidence&);
-  static result<std::shared_ptr<evidence>> from_proto(::tendermint::types::Evidence&);
+  static result<std::shared_ptr<evidence>> from_proto(const ::tendermint::types::Evidence&);
 };
 
 struct duplicate_vote_evidence : public evidence {

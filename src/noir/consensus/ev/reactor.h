@@ -16,8 +16,11 @@ struct reactor {
   std::shared_ptr<evidence_pool> pool;
   std::unique_ptr<named_thread_pool> thread_pool;
 
+  std::mutex mtx;
+  std::map<std::string, std::shared_ptr<bool>> peer_routines;
+
   // Receive an envelope from peers [via p2p]
-  plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type::handle bs_reactor_mq_subscription =
+  plugin_interface::incoming::channels::es_reactor_message_queue::channel_type::handle es_reactor_mq_subscription =
     app.get_channel<plugin_interface::incoming::channels::es_reactor_message_queue>().subscribe(
       std::bind(&reactor::process_peer_msg, this, std::placeholders::_1));
 
@@ -26,25 +29,18 @@ struct reactor {
     app.get_channel<plugin_interface::channels::update_peer_status>().subscribe(
       std::bind(&reactor::process_peer_update, this, std::placeholders::_1));
 
+  // Send an envelope to peers [via p2p]
+  plugin_interface::egress::channels::transmit_message_queue::channel_type& xmt_mq_channel =
+    app.get_channel<plugin_interface::egress::channels::transmit_message_queue>();
+
   reactor(appbase::application& app)
-    : app(app), thread_pool(std::make_unique<named_thread_pool>("bs_reactor_thread", 3)) {}
+    : app(app), thread_pool(std::make_unique<named_thread_pool>("es_reactor_thread", 3)) {}
 
-  void process_peer_msg(p2p::envelope_ptr info) {}
+  void process_peer_update(plugin_interface::peer_status_info_ptr info);
 
-  void process_peer_update(plugin_interface::peer_status_info_ptr info) {
-    dlog(fmt::format(
-      "[es_reactor] peer update: peer_id={}, status={}", info->peer_id, p2p::peer_status_to_str(info->status)));
-    switch (info->status) {
-    case p2p::peer_status::up: {
-      break;
-    }
-    case p2p::peer_status::down: {
-      break;
-    }
-    default:
-      break;
-    }
-  }
+  result<void> process_peer_msg(p2p::envelope_ptr info);
+
+  void broadcast_evidence_loop(const std::string& peer_id, const std::shared_ptr<bool>& closer);
 };
 
 } // namespace noir::consensus::ev
