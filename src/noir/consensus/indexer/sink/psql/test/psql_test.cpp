@@ -70,7 +70,7 @@ TEST_CASE("psql: psql_event_sink", "[noir][consensus]") {
     auto ev_bus = std::make_shared<events::event_bus>(app_);
     auto new_sink = psql_event_sink::new_event_sink(conn_str, chain_id);
     if (!new_sink) {
-      std::cerr << new_sink.error() << std::endl;
+      std::cerr << new_sink.error().message() << std::endl;
       return;
     }
     indexer_service new_service(new_sink.value(), ev_bus);

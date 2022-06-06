@@ -14,9 +14,9 @@ struct indexer_service {
   explicit indexer_service(std::shared_ptr<event_sink> new_sink, std::shared_ptr<events::event_bus> new_bus)
     : sink(new_sink), bus(new_bus) {}
 
-  result<void> on_start() {
+  Result<void> on_start() {
     if (sink->type() == event_sink_type::null)
-      return {};
+      return success();
     handle = bus->subscribe("indexer", [&](const events::message msg) {
       std::visit(noir::overloaded{
                    [&](const events::event_data_new_block_header& msg) {
@@ -35,7 +35,7 @@ struct indexer_service {
                  },
         msg.data);
     });
-    return {};
+    return success();
   }
 
   std::shared_ptr<event_sink> sink;
