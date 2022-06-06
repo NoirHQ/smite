@@ -19,13 +19,13 @@ constexpr uint signature_size{64};
 constexpr std::string_view key_type{"ed25519"};
 
 namespace detail {
-  result<bytes> sign(const bytes& msg, const bytes& key) {
+  Result<bytes> sign(const bytes& msg, const bytes& key) {
     bytes sig(signature_size);
     if (crypto_sign_detached(reinterpret_cast<unsigned char*>(sig.data()), nullptr,
           reinterpret_cast<const unsigned char*>(msg.data()), msg.size(),
           reinterpret_cast<const unsigned char*>(key.data())) == 0)
       return sig;
-    return make_unexpected("unable to sign");
+    return Error::format("unable to sign");
   }
 
   bool verify(const bytes& sig, const bytes& msg, const bytes& key) {

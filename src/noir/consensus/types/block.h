@@ -327,7 +327,7 @@ struct block_header {
     return {};
   }
 
-  static result<block_header> make_header(block_header&& h) {
+  static Result<block_header> make_header(block_header&& h) {
     if (h.version.block == 0)
       h.version.block = block_protocol;
     if (h.height == 0)
@@ -355,7 +355,7 @@ struct block_header {
     if (h.proposer_address.empty())
       h.proposer_address = random_address();
     if (auto r = h.validate_basic(); r.has_value())
-      return make_unexpected(r.value());
+      return Error::format("{}", r.value());
     return h;
   }
 

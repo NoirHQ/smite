@@ -34,7 +34,7 @@ void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
   }
 }
 
-result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
+Result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
   auto from = info->from;
   auto to = info->broadcast ? "all" : info->to;
 
@@ -46,15 +46,15 @@ result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
 
   for (auto i = 0; i < msg.evidence().size(); i++) {
     if (auto ok = evidence::from_proto(msg.evidence().at(i)); !ok) {
-      elog(fmt::format("failed to convert evidence: {}", ok.error()));
+      elog(fmt::format("failed to convert evidence: {}", ok.error().message()));
       continue;
     } else {
       if (auto r = pool->add_evidence(ok.value()); !r) {
-        return make_unexpected(r.error()); // TODO : check; requires removing peer
+        return r.error(); // TODO : check; requires removing peer
       }
     }
   }
-  return {};
+  return success();
 }
 
 void reactor::broadcast_evidence_loop(const std::string& peer_id, const std::shared_ptr<bool>& closer) {

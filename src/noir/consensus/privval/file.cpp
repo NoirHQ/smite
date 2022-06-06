@@ -57,19 +57,18 @@ bool file_pv_key::load(const fs::path& key_file_path, file_pv_key& priv_key) {
   return true;
 }
 
-result<bool> file_pv_last_sign_state::check_hrs(int64_t height_, int32_t round_, sign_step step_) const {
+Result<bool> file_pv_last_sign_state::check_hrs(int64_t height_, int32_t round_, sign_step step_) const {
   if (height > height_)
-    return make_unexpected(fmt::format("height regression. Got {}, last height {}", height_, height));
+    return Error::format("height regression. Got {}, last height {}", height_, height);
 
   if (height == height_) {
     if (round > round_)
-      return make_unexpected(
-        fmt::format("round regression at height {}. Got {}, last round {}", height_, round_, round));
+      return Error::format("round regression at height {}. Got {}, last round {}", height_, round_, round);
 
     if (round == round_) {
       if (step > step_)
-        return make_unexpected(fmt::format("step regression at height {} round {}. Got {}, last step {}", height_,
-          round_, static_cast<int8_t>(step_), static_cast<int8_t>(step)));
+        return Error::format("step regression at height {} round {}. Got {}, last step {}", height_, round_,
+          static_cast<int8_t>(step_), static_cast<int8_t>(step));
       if (step == step_) {
         check(!signbytes.empty(), "no signbytes found");
         if (signature.empty()) {
@@ -124,15 +123,15 @@ std::shared_ptr<file_pv> file_pv::gen_file_pv(
   return std::make_shared<file_pv>(priv_key_, key_file_path, state_file_path);
 }
 
-result<std::shared_ptr<file_pv>> file_pv::load_file_pv_internal(
+Result<std::shared_ptr<file_pv>> file_pv::load_file_pv_internal(
   const fs::path& key_file_path, const fs::path& state_file_path, bool load_state) {
   auto ret = std::make_shared<file_pv>();
   if (!file_pv_key::load(key_file_path, ret->key))
-    return make_unexpected(fmt::format("error reading PrivValidator key from {}", key_file_path.string()));
+    return Error::format("error reading PrivValidator key from {}", key_file_path.string());
   // Overwrite pubkey and address for convenience
   if (load_state) {
     if (!file_pv_last_sign_state::load(state_file_path, ret->last_sign_state))
-      return make_unexpected(fmt::format("error reading PrivValidator state from {}", state_file_path.string()));
+      return Error::format("error reading PrivValidator state from {}", state_file_path.string());
   }
   return ret;
 }
@@ -192,7 +191,7 @@ bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step)
 
   auto same_hrs = lss.check_hrs(height, round, step);
   if (!same_hrs) {
-    elog(same_hrs.error());
+    elog(same_hrs.error().message());
     return false;
   }
   tstamp timestamp;

@@ -21,10 +21,10 @@ struct evidence {
   virtual int64_t get_height() const = 0;
   virtual std::string get_string() = 0;
   virtual tstamp get_timestamp() = 0;
-  virtual result<void> validate_basic() = 0;
+  virtual Result<void> validate_basic() = 0;
 
-  static result<std::unique_ptr<::tendermint::types::Evidence>> to_proto(const evidence&);
-  static result<std::shared_ptr<evidence>> from_proto(const ::tendermint::types::Evidence&);
+  static Result<std::unique_ptr<::tendermint::types::Evidence>> to_proto(const evidence&);
+  static Result<std::shared_ptr<evidence>> from_proto(const ::tendermint::types::Evidence&);
 };
 
 struct duplicate_vote_evidence : public evidence {
@@ -34,18 +34,18 @@ struct duplicate_vote_evidence : public evidence {
   int64_t validator_power{};
   tstamp timestamp{};
 
-  static result<std::shared_ptr<duplicate_vote_evidence>> new_duplicate_vote_evidence(
+  static Result<std::shared_ptr<duplicate_vote_evidence>> new_duplicate_vote_evidence(
     const std::shared_ptr<vote>& vote1,
     const std::shared_ptr<vote>& vote2,
     tstamp block_time,
     const std::shared_ptr<validator_set>& val_set) {
     if (!vote1 || !vote2)
-      return make_unexpected("missing vote");
+      return Error::format("missing vote");
     if (!val_set)
-      return make_unexpected("missing validator_set");
+      return Error::format("missing validator_set");
     auto val = val_set->get_by_address(vote1->validator_address);
     if (!val.has_value())
-      return make_unexpected("validator is not in validator_set");
+      return Error::format("validator is not in validator_set");
     std::shared_ptr<vote> vote_a_, vote_b_;
     if (vote1->block_id_.key() < vote2->block_id_.key()) {
       vote_a_ = vote1;
@@ -100,25 +100,25 @@ struct duplicate_vote_evidence : public evidence {
     return timestamp;
   }
 
-  result<void> validate_basic() override {
+  Result<void> validate_basic() override {
     if (!vote_a || !vote_b)
-      return make_unexpected("one or both of votes are empty");
+      return Error::format("one or both of votes are empty");
     // if (vote_a->validate_basic)
     // if (vote_b->validate_basic)
     if (vote_a->block_id_.key() >= vote_b->block_id_.key())
-      return make_unexpected("duplicate votes in invalid order");
-    return {};
+      return Error::format("duplicate votes in invalid order");
+    return success();
   }
 
-  result<void> validate_abci(
+  Result<void> validate_abci(
     std::shared_ptr<validator> val, std::shared_ptr<validator_set> val_set, tstamp evidence_time) {
     if (timestamp != evidence_time)
-      return make_unexpected("evidence has a different time to the block it is associated with");
+      return Error::format("evidence has a different time to the block it is associated with");
     if (val->voting_power != validator_power)
-      return make_unexpected("validator power from evidence and our validator set does not match");
+      return Error::format("validator power from evidence and our validator set does not match");
     if (val_set->get_total_voting_power() != total_voting_power)
-      return make_unexpected("total voting power from the evidence and our validator set does not match");
-    return {};
+      return Error::format("total voting power from the evidence and our validator set does not match");
+    return success();
   }
 
   void generate_abci(std::shared_ptr<validator> val, std::shared_ptr<validator_set> val_set, tstamp evidence_time) {
@@ -139,9 +139,9 @@ struct duplicate_vote_evidence : public evidence {
     return ret;
   }
 
-  static result<std::shared_ptr<duplicate_vote_evidence>> from_proto(::tendermint::types::DuplicateVoteEvidence& pb) {
+  static Result<std::shared_ptr<duplicate_vote_evidence>> from_proto(::tendermint::types::DuplicateVoteEvidence& pb) {
     if (!pb.IsInitialized())
-      return make_unexpected("from_proto failed: duplicate vote evidence is not initialized");
+      return Error::format("from_proto failed: duplicate vote evidence is not initialized");
     auto ret = std::make_shared<duplicate_vote_evidence>();
     ret->vote_a = vote::from_proto(const_cast<tendermint::types::Vote&>(pb.vote_a()));
     ret->vote_b = vote::from_proto(const_cast<tendermint::types::Vote&>(pb.vote_b()));
@@ -186,48 +186,48 @@ struct light_client_attack_evidence : public evidence {
     return timestamp;
   }
 
-  result<void> validate_basic() override {
+  Result<void> validate_basic() override {
     if (!conflicting_block)
-      return make_unexpected("conflicting block is null");
+      return Error::format("conflicting block is null");
     if (!conflicting_block->s_header)
-      return make_unexpected("conflicting block is missing header");
+      return Error::format("conflicting block is missing header");
     if (total_voting_power <= 0)
-      return make_unexpected("negative or zero total voting power");
+      return Error::format("negative or zero total voting power");
     if (common_height <= 0)
-      return make_unexpected("negative or zero common height");
+      return Error::format("negative or zero common height");
     if (common_height > conflicting_block->s_header->header->height)
-      return make_unexpected("common height is ahead of conflicting block height");
+      return Error::format("common height is ahead of conflicting block height");
     auto ok = conflicting_block->validate_basic(conflicting_block->s_header->header->chain_id);
     if (!ok)
-      return make_unexpected(fmt::format("invalid conflicting light block: {}", ok.error()));
-    return {};
+      return Error::format(fmt::format("invalid conflicting light block: {}", ok.error()));
+    return success();
   }
 
-  result<void> validate_abci(
+  Result<void> validate_abci(
     std::shared_ptr<validator_set> common_vals, std::shared_ptr<signed_header> trusted_header, tstamp evidence_time) {
     auto ev_total = total_voting_power;
     auto vals_total = common_vals->total_voting_power;
     if (ev_total != vals_total)
-      return make_unexpected("total voting power from evidence and our validator set does not match");
+      return Error::format("total voting power from evidence and our validator set does not match");
     if (timestamp != evidence_time)
-      return make_unexpected("evidence has a different time to the block it is associated with");
+      return Error::format("evidence has a different time to the block it is associated with");
 
     auto validators = get_byzantine_validators(common_vals, trusted_header);
     if (validators.empty() && !byzantine_validators.empty())
-      return make_unexpected("expected zero validators from an amnesia light client attack but got some");
+      return Error::format("expected zero validators from an amnesia light client attack but got some");
 
     if (validators.size() != byzantine_validators.size())
-      return make_unexpected("unexpected number of byzantine validators from evidence");
+      return Error::format("unexpected number of byzantine validators from evidence");
 
     int idx{0};
     for (auto& val : validators) {
       if (byzantine_validators[idx]->address != val->address)
-        return make_unexpected("evidence contained an unexpected byzantine validator address");
+        return Error::format("evidence contained an unexpected byzantine validator address");
       if (byzantine_validators[idx]->voting_power != val->voting_power)
-        return make_unexpected("evidence contained an unexpected byzantine validator power");
+        return Error::format("evidence contained an unexpected byzantine validator power");
       idx++;
     }
-    return {};
+    return success();
   }
 
   void generate_abci(
@@ -237,7 +237,7 @@ struct light_client_attack_evidence : public evidence {
     byzantine_validators = get_byzantine_validators(common_vals, trusted_header);
   }
 
-  static result<std::unique_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto(
+  static Result<std::unique_ptr<::tendermint::types::LightClientAttackEvidence>> to_proto(
     const light_client_attack_evidence& ev) {
     auto cb = light_block::to_proto(*ev.conflicting_block);
     auto ret = std::make_unique<::tendermint::types::LightClientAttackEvidence>();
@@ -253,17 +253,17 @@ struct light_client_attack_evidence : public evidence {
     return ret;
   }
 
-  static result<std::shared_ptr<light_client_attack_evidence>> from_proto(
+  static Result<std::shared_ptr<light_client_attack_evidence>> from_proto(
     ::tendermint::types::LightClientAttackEvidence& pb) {
     if (!pb.IsInitialized())
-      return make_unexpected("from_proto failed: light client attack evidence is not initialized");
+      return Error::format("from_proto failed: light client attack evidence is not initialized");
     auto ret = std::make_shared<light_client_attack_evidence>();
     auto conflicting_block = light_block::from_proto(pb.conflicting_block());
     if (!conflicting_block)
-      return make_unexpected(conflicting_block.error());
+      return conflicting_block.error();
     for (auto& v : pb.byzantine_validators()) {
       if (auto ok = validator::from_proto(v); !ok)
-        return make_unexpected(ok.error());
+        return ok.error();
       else
         ret->byzantine_validators.push_back(ok.value());
     }
@@ -272,7 +272,7 @@ struct light_client_attack_evidence : public evidence {
     ret->total_voting_power = pb.total_voting_power();
     ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp());
     if (auto ok = ret->validate_basic(); !ok)
-      return make_unexpected(ok.error());
+      return ok.error();
     return ret;
   }
 

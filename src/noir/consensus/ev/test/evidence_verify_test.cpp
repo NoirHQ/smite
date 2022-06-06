@@ -16,17 +16,17 @@ using namespace noir::consensus::ev;
 
 constexpr int64_t default_voting_power = 10;
 
-result<bool> sign_add_vote(
+Result<bool> sign_add_vote(
   const std::shared_ptr<priv_validator>& priv_val, vote& vote_, const std::shared_ptr<vote_set>& vote_set_) {
   auto v = vote::to_proto(vote_);
   if (auto ok = priv_val->sign_vote_pb(vote_set_->chain_id, *v); !ok)
-    return make_unexpected(ok.error());
+    return ok.error();
   else
     vote_.signature = ok.value();
   return vote_set_->add_vote(vote_);
 }
 
-result<std::shared_ptr<commit>> make_commit(const p2p::block_id& block_id_,
+Result<std::shared_ptr<commit>> make_commit(const p2p::block_id& block_id_,
   int64_t height,
   int32_t round,
   std::shared_ptr<vote_set> vote_set_,
@@ -42,7 +42,7 @@ result<std::shared_ptr<commit>> make_commit(const p2p::block_id& block_id_,
       .validator_address = pub_key_.address(),
       .validator_index = i};
     if (auto ok = sign_add_vote(validators[i], *static_cast<vote*>(&vote_), vote_set_); !ok)
-      return make_unexpected(ok.error());
+      return ok.error();
   }
   return std::make_shared<commit>(vote_set_->make_commit());
 }

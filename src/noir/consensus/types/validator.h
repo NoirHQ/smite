@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/helper/rust.h>
 #include <noir/common/log.h>
 #include <noir/consensus/crypto.h>
 #include <noir/consensus/types/block.h>
+#include <noir/core/result.h>
 #include <noir/p2p/types.h>
 #include <tendermint/types/types.pb.h>
 
@@ -56,18 +56,18 @@ struct validator {
   static std::unique_ptr<::tendermint::types::Validator> to_proto(const validator& v) {
     auto ret = std::make_unique<::tendermint::types::Validator>();
     ret->set_address({v.address.begin(), v.address.end()});
-    ret->set_allocated_pub_key(pub_key::to_proto(v.pub_key_)->release()); // TODO: handle error case
+    ret->set_allocated_pub_key(pub_key::to_proto(v.pub_key_).value().release()); // TODO: handle error case
     ret->set_voting_power(v.voting_power);
     ret->set_proposer_priority(v.proposer_priority);
     return ret;
   }
 
-  static result<std::shared_ptr<validator>> from_proto(const ::tendermint::types::Validator& pb) {
+  static Result<std::shared_ptr<validator>> from_proto(const ::tendermint::types::Validator& pb) {
     auto ret = std::make_shared<validator>();
     if (auto ok = pub_key::from_proto(pb.pub_key()); ok)
       ret->pub_key_ = *ok.value();
     else
-      return make_unexpected(ok.error());
+      return ok.error();
     ret->address = {pb.address().begin(), pb.address().end()};
     ret->voting_power = pb.voting_power();
     ret->proposer_priority = pb.proposer_priority();
@@ -456,8 +456,8 @@ struct validator_set {
     }
   }
 
-  result<void> validate_basic() {
-    return {}; // TODO
+  Result<void> validate_basic() {
+    return success(); // TODO
   }
 
   static std::unique_ptr<::tendermint::types::ValidatorSet> to_proto(const validator_set& v) {
@@ -473,33 +473,33 @@ struct validator_set {
     return ret;
   }
 
-  static result<std::shared_ptr<validator_set>> from_proto(const ::tendermint::types::ValidatorSet& pb) {
+  static Result<std::shared_ptr<validator_set>> from_proto(const ::tendermint::types::ValidatorSet& pb) {
     auto ret = std::make_shared<validator_set>();
     for (auto& v : pb.validators()) {
       if (auto ok = validator::from_proto(v); !ok)
-        return make_unexpected(ok.error());
+        return ok.error();
       else
         ret->validators.push_back(*ok.value());
     }
     if (auto ok = validator::from_proto(pb.proposer()); !ok)
-      return make_unexpected(fmt::format("from_proto failed: {}", ok.error()));
+      return Error::format("from_proto failed: {}", ok.error().message());
     else
       ret->proposer = *ok.value();
     ret->get_total_voting_power();
     if (auto ok = ret->validate_basic(); !ok)
-      return make_unexpected(ok.error());
+      return ok.error();
     return ret;
   }
 
-  result<void> verify_commit_light(
+  Result<void> verify_commit_light(
     std::string chain_id, p2p::block_id block_id_, int64_t height, std::shared_ptr<commit> commit_) {
     // FIXME: implement
-    return {};
+    return success();
   }
 
-  result<void> verify_commit_light_trusting(std::string chain_id, std::shared_ptr<commit> commit_) {
+  Result<void> verify_commit_light_trusting(std::string chain_id, std::shared_ptr<commit> commit_) {
     // FIXME: implement
-    return {};
+    return success();
   }
 };
 

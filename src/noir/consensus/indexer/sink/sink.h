@@ -21,7 +21,7 @@ struct sink {
       }
       auto ok = psql_event_sink::new_event_sink(cfg->tx_index.psql_conn, cfg->base.chain_id);
       if (!ok) {
-        elog(ok.error());
+        elog(ok.error().message());
         return nullptr;
       }
       return ok.value();

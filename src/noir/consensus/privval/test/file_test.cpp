@@ -137,7 +137,7 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
       SECTION("load_file_pv_empty_state") {
         {
           auto ret = file_pv::load_file_pv_empty_state(key_file_path, lss_file_path);
-          REQUIRE(ret != nullptr);
+          REQUIRE(ret.value() != nullptr);
           // load_file_pv_empty_state() does not load last_sign_state
           compare_file_pv_key(ret.value()->key, file_pv_ptr->key);
         }
