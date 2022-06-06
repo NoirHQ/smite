@@ -16,6 +16,7 @@ add_library(noir STATIC)
 target_link_libraries(noir
   noir::common
   noir::consensus
+  noir::core
   noir::crypto
   noir::jmt
   noir::p2p
