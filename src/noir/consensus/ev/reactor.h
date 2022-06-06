@@ -38,7 +38,7 @@ struct reactor {
 
   void process_peer_update(plugin_interface::peer_status_info_ptr info);
 
-  result<void> process_peer_msg(p2p::envelope_ptr info);
+  Result<void> process_peer_msg(p2p::envelope_ptr info);
 
   void broadcast_evidence_loop(const std::string& peer_id, const std::shared_ptr<bool>& closer);
 };

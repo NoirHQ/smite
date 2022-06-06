@@ -45,7 +45,7 @@ struct node {
     auto priv_val = noir::consensus::privval::file_pv::load_or_gen_file_pv(
       pv_root_dir / new_config->priv_validator.key, pv_root_dir / new_config->priv_validator.state);
     if (!priv_val)
-      check(false, priv_val.error());
+      check(false, priv_val.error().message());
 
     auto vote_power = 10;
     auto val = validator{priv_val.value()->get_address(), priv_val.value()->get_pub_key(), vote_power, 0};

@@ -15,7 +15,7 @@ tstamp get_time() {
     .count();
 }
 
-result<std::time_t> parse_genesis_time(const char* time_str) {
+Result<std::time_t> parse_genesis_time(const char* time_str) {
   struct tm tm {};
   if (strptime(time_str, "%Y-%m-%dT%H:%M:%SZ", &tm)) {
     return timegm(&tm);
@@ -23,7 +23,7 @@ result<std::time_t> parse_genesis_time(const char* time_str) {
     return std::mktime(&tm);
   }
 
-  return make_unexpected("Unknown time format");
+  return Error::format("Unknown time format");
 }
 
 std::string tstamp_to_format_str(const tstamp time_stamp) {

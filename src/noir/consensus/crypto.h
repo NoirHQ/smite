@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/helper/rust.h>
 #include <noir/common/refl.h>
 #include <noir/common/types/bytes.h>
+#include <noir/core/result.h>
 #include <tendermint/crypto/keys.pb.h>
 
 namespace noir::consensus {
@@ -28,19 +28,19 @@ struct pub_key {
 
   std::string get_type() const;
 
-  static result<std::unique_ptr<::tendermint::crypto::PublicKey>> to_proto(const pub_key& p) {
+  static Result<std::unique_ptr<::tendermint::crypto::PublicKey>> to_proto(const pub_key& p) {
     auto ret = std::make_unique<::tendermint::crypto::PublicKey>();
     if (p.get_type() == "ed25519")
       ret->set_ed25519({p.get_bytes().begin(), p.get_bytes().end()});
     else
-      return make_unexpected(fmt::format("to_proto failed: key_type '{}' is not supported", p.get_type()));
+      return Error::format("to_proto failed: key_type '{}' is not supported", p.get_type());
     return ret;
   }
 
-  static result<std::shared_ptr<pub_key>> from_proto(const ::tendermint::crypto::PublicKey& pb) {
+  static Result<std::shared_ptr<pub_key>> from_proto(const ::tendermint::crypto::PublicKey& pb) {
     auto ret = std::make_shared<pub_key>();
     if (!pb.has_ed25519())
-      return make_unexpected("only ed25519 is supported");
+      return Error::format("only ed25519 is supported");
     ret->key = {pb.ed25519().begin(), pb.ed25519().end()};
     return ret;
   }

@@ -193,7 +193,7 @@ TEST_CASE("evidence_pool: update", "[noir][consensus]") {
     // CHECK(ev_list.size() == 1); // FIXME
   }
 
-  CHECK(pool_->check_evidence({.list = {ev}}).error() == "evidence was already committed");
+  CHECK(pool_->check_evidence({.list = {ev}}).error().message() == "evidence was already committed");
 }
 
 TEST_CASE("evidence_pool: verify pending evidence passes", "[noir][consensus]") {
@@ -214,5 +214,5 @@ TEST_CASE("evidence_pool: verify failed duplicated evidence", "[noir][consensus]
     get_default_evidence_time() +
       std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(1)).count(),
     evidence_chain_id, *val);
-  CHECK(pool_->check_evidence({.list = {ev, ev}}).error() == "duplicate evidence");
+  CHECK(pool_->check_evidence({.list = {ev, ev}}).error().message() == "duplicate evidence");
 }

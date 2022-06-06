@@ -59,7 +59,7 @@ struct file_pv_last_sign_state {
   /// \param[in] step
   /// \return indicates whether the last Signature should be reused - true if the HRS matches the arguments and the
   /// SignBytes are not empty (indicating we have already signed for this HRS, and can reuse the existing signature)
-  result<bool> check_hrs(int64_t height_, int32_t round_, sign_step step_) const;
+  Result<bool> check_hrs(int64_t height_, int32_t round_, sign_step step_) const;
 
   /// \brief persists the FilePvLastSignState to its filePath.
   void save();
@@ -111,7 +111,7 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] key_file_path
   /// \param[in] state_file_path
   /// \return shared_ptr of file_pv
-  static inline result<std::shared_ptr<file_pv>> load_file_pv(
+  static inline Result<std::shared_ptr<file_pv>> load_file_pv(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
     return load_file_pv_internal(key_file_path, state_file_path, true);
   }
@@ -121,7 +121,7 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] key_file_path
   /// \param[in] state_file_path
   /// \return shared_ptr of file_pv
-  static inline result<std::shared_ptr<file_pv>> load_file_pv_empty_state(
+  static inline Result<std::shared_ptr<file_pv>> load_file_pv_empty_state(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
     return load_file_pv_internal(key_file_path, state_file_path, false);
   }
@@ -133,7 +133,7 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] key_file_path
   /// \param[in] state_file_path
   /// \return shared_ptr of file_pv
-  static result<std::shared_ptr<file_pv>> load_or_gen_file_pv(
+  static Result<std::shared_ptr<file_pv>> load_or_gen_file_pv(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path) {
     std::shared_ptr<file_pv> ret;
     if (std::filesystem::exists(key_file_path)) {
@@ -190,8 +190,8 @@ struct file_pv : public noir::consensus::priv_validator {
     return {};
   }
 
-  result<bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) override {
-    return {};
+  Result<bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) override {
+    return success();
   }
 
   /// \brief returns a string representation of the FilePV.
@@ -218,7 +218,7 @@ private:
   /// \param[in] state_file_path
   /// \param[in] load_state if true, we load from the stateFilePath. Otherwise, we use an empty LastSignState
   /// \return shared_ptr of file_pv
-  static result<std::shared_ptr<file_pv>> load_file_pv_internal(
+  static Result<std::shared_ptr<file_pv>> load_file_pv_internal(
     const std::filesystem::path& key_file_path, const std::filesystem::path& state_file_path, bool load_state);
 
   /// \brief signVote checks if the vote is good to sign and sets the vote signature. It may need to set the timestamp

@@ -41,13 +41,13 @@ struct evidence_pool {
   int64_t pruning_height{};
   tstamp pruning_time{};
 
-  static result<std::shared_ptr<evidence_pool>> new_pool(std::shared_ptr<db_session_type> new_evidence_store,
+  static Result<std::shared_ptr<evidence_pool>> new_pool(std::shared_ptr<db_session_type> new_evidence_store,
     std::shared_ptr<noir::consensus::db_store> new_state_db,
     std::shared_ptr<noir::consensus::block_store> new_block_store) {
     auto ret = std::make_shared<evidence_pool>();
     ret->state = std::make_unique<noir::consensus::state>();
     if (!new_state_db->load(*ret->state))
-      return make_unexpected(fmt::format("failed to load state"));
+      return Error::format("failed to load state");
     ret->evidence_store = std::move(new_evidence_store);
     ret->state_db = std::move(new_state_db);
     ret->block_store = std::move(new_block_store);
@@ -57,7 +57,7 @@ struct evidence_pool {
     ret->pruning_time = t;
     auto ok = ret->list_evidence(prefix::prefix_pending, -1);
     if (!ok)
-      return make_unexpected(ok.error());
+      return ok.error();
     auto [ev_list, _] = ok.value();
 
     ret->evidence_size.store(ev_list.size());
@@ -90,23 +90,23 @@ struct evidence_pool {
       std::tie(pruning_height, pruning_time) = remove_expired_pending_evidence();
   }
 
-  result<void> add_evidence(std::shared_ptr<evidence> ev) {
+  Result<void> add_evidence(std::shared_ptr<evidence> ev) {
     dlog("attempting to add evidence");
     if (is_pending(ev)) {
       dlog("evidence already pending; ignoring");
-      return {};
+      return success();
     }
     if (is_committed(ev)) {
       dlog("evidence already committed; ignoring");
-      return {};
+      return success();
     }
     if (auto ok = verify(ev); !ok)
-      return make_unexpected(ok.error());
+      return ok.error();
     if (auto ok = add_pending_evidence(ev); !ok)
-      return make_unexpected(fmt::format("failed to add evidence to pending list: {}", ok.error()));
+      return Error::format("failed to add evidence to pending list: {}", ok.error().message());
     ev_list.push_back(ev);
     ilog("verified new evidence of byzantine behavior");
-    return {};
+    return success();
   }
 
   void report_conflicting_votes(std::shared_ptr<vote> vote_a, std::shared_ptr<vote> vote_b) {
@@ -114,15 +114,15 @@ struct evidence_pool {
     consensus_buffer.push_back(duplicate_vote_set{vote_a, vote_b});
   }
 
-  result<void> check_evidence(const evidence_list& evs) {
+  Result<void> check_evidence(const evidence_list& evs) {
     std::vector<bytes> hashes(evs.list.size());
     int idx{0};
     for (auto& e : evs.list) {
       if (dynamic_cast<light_client_attack_evidence*>(e.get()) || !is_pending(e)) {
         if (is_committed(e))
-          return make_unexpected("evidence was already committed");
+          return Error::format("evidence was already committed");
         if (auto ok = verify(e); !ok)
-          return make_unexpected(ok.error());
+          return ok.error();
         if (auto ok = add_pending_evidence(e); !ok)
           elog(fmt::format("failed to add evidence to pending list: {}", ok.error()));
         ilog("check evidence: verified evidence of byzantine behavior");
@@ -132,11 +132,11 @@ struct evidence_pool {
       hashes[idx] = e->get_hash();
       for (auto i = idx - 1; i >= 0; i--) {
         if (hashes[i] == hashes[idx])
-          return make_unexpected("duplicate evidence");
+          return Error::format("duplicate evidence");
       }
       idx++;
     }
-    return {};
+    return success();
   }
 
   std::shared_ptr<evidence> evidence_front() {
@@ -171,21 +171,21 @@ struct evidence_pool {
     return evidence_store->contains(noir::db::session::shared_bytes(key.data(), key.size()));
   }
 
-  result<void> add_pending_evidence(std::shared_ptr<evidence> ev) {
+  Result<void> add_pending_evidence(std::shared_ptr<evidence> ev) {
     auto evpb = evidence::to_proto(*ev);
     if (!evpb)
-      return make_unexpected(evpb.error());
+      return evpb.error();
     bytes ev_bytes(evpb.value()->ByteSizeLong());
     evpb.value()->SerializeToArray(ev_bytes.data(), evpb.value()->ByteSizeLong()); // TODO: handle failure?
     auto key = key_pending(ev);
     evidence_store->write_from_bytes(key, ev_bytes); // TODO: check
     std::atomic_fetch_add_explicit(&evidence_size, 1, std::memory_order_relaxed);
-    return {};
+    return success();
   }
 
   void mark_evidence_as_committed(evidence_list& evs, int64_t height);
 
-  result<std::pair<std::vector<std::shared_ptr<evidence>>, int64_t>> list_evidence(
+  Result<std::pair<std::vector<std::shared_ptr<evidence>>, int64_t>> list_evidence(
     prefix prefix_key, int64_t max_bytes);
 
   std::pair<int64_t, tstamp> remove_expired_pending_evidence();
@@ -216,7 +216,7 @@ struct evidence_pool {
         if (auto ok = duplicate_vote_evidence::new_duplicate_vote_evidence(vote_set_.vote_a, vote_set_.vote_b,
               new_state.last_block_time, std::make_shared<validator_set>(new_state.last_validators));
             !ok) {
-          err = ok.error();
+          err = ok.error().message();
         } else {
           dve = ok.value();
         }
@@ -234,7 +234,7 @@ struct evidence_pool {
         if (auto ok = duplicate_vote_evidence::new_duplicate_vote_evidence(
               vote_set_.vote_a, vote_set_.vote_b, b_meta.header.time, val_set);
             !ok) {
-          err = ok.error();
+          err = ok.error().message();
         } else {
           dve = ok.value();
         }
@@ -266,7 +266,7 @@ struct evidence_pool {
     consensus_buffer.clear();
   }
 
-  result<std::shared_ptr<evidence>> bytes_to_ev(bytes ev_bytes) {
+  Result<std::shared_ptr<evidence>> bytes_to_ev(bytes ev_bytes) {
     ::tendermint::types::Evidence evpb;
     evpb.ParseFromArray(ev_bytes.data(), ev_bytes.size());
     return evidence::from_proto(evpb);
@@ -283,14 +283,14 @@ struct evidence_pool {
   bytes key_pending(std::shared_ptr<evidence> ev);
 
   /// verify
-  result<void> verify(const std::shared_ptr<evidence>& ev);
-  result<void> verify_duplicate_vote(
+  Result<void> verify(const std::shared_ptr<evidence>& ev);
+  Result<void> verify_duplicate_vote(
     const duplicate_vote_evidence& ev, const std::string& chain_id, const std::shared_ptr<validator_set>& val_set);
-  result<void> verify_light_client_attack(const light_client_attack_evidence& ev,
+  Result<void> verify_light_client_attack(const light_client_attack_evidence& ev,
     std::shared_ptr<signed_header> common_header,
     std::shared_ptr<signed_header> trusted_header,
     std::shared_ptr<validator_set> common_vals);
-  result<std::shared_ptr<signed_header>> get_signed_header(int64_t height);
+  Result<std::shared_ptr<signed_header>> get_signed_header(int64_t height);
 };
 
 } // namespace noir::consensus::ev

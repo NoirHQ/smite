@@ -11,28 +11,28 @@ namespace noir::consensus::indexer {
 struct null_event_sink : public event_sink {
 
   Result<void> index_block_events(const events::event_data_new_block_header&) override {
-    return {};
+    return success();
   }
   Result<void> index_tx_events(const std::vector<tx_result>&) override {
-    return {};
+    return success();
   }
   Result<std::vector<int64_t>> search_block_events(std::string query) override {
-    return {};
+    return success();
   }
   Result<std::vector<std::shared_ptr<tx_result>>> search_tx_events(std::string query) override {
-    return {};
+    return success();
   }
   Result<std::shared_ptr<tx_result>> get_tx_by_hash(bytes hash) override {
-    return {};
+    return success();
   }
   Result<bool> has_block(int64_t height) override {
-    return {};
+    return success();
   }
   event_sink_type type() override {
     return event_sink_type::null;
   }
   Result<void> stop() override {
-    return {};
+    return success();
   }
 };
 
