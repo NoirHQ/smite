@@ -5,4 +5,4 @@
 //
 #include <noir/clist/clist.h>
 
-namespace noir {}
+namespace noir {} // namespace noir
