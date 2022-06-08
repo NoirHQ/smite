@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/clist/clist.h>
 #include <noir/consensus/common.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/store/block_store.h>
@@ -28,7 +29,7 @@ struct duplicate_vote_set {
 
 struct evidence_pool {
   std::shared_ptr<db_session_type> evidence_store{};
-  std::vector<std::shared_ptr<evidence>> ev_list{};
+  std::unique_ptr<clist<std::shared_ptr<evidence>>> ev_list{};
   std::atomic<uint32_t> evidence_size{};
 
   std::shared_ptr<noir::consensus::db_store> state_db{};
@@ -61,8 +62,9 @@ struct evidence_pool {
     auto [ev_list, _] = ok.value();
 
     ret->evidence_size.store(ev_list.size());
+    ret->ev_list = clist<std::shared_ptr<evidence>>::new_clist();
     for (auto& e : ev_list)
-      ret->ev_list.emplace_back(e);
+      ret->ev_list->push_back(e);
     return ret;
   }
 
@@ -104,7 +106,7 @@ struct evidence_pool {
       return ok.error();
     if (auto ok = add_pending_evidence(ev); !ok)
       return Error::format("failed to add evidence to pending list: {}", ok.error().message());
-    ev_list.push_back(ev);
+    ev_list->push_back(ev);
     ilog("verified new evidence of byzantine behavior");
     return success();
   }
@@ -139,10 +141,8 @@ struct evidence_pool {
     return success();
   }
 
-  std::shared_ptr<evidence> evidence_front() {
-    if (!ev_list.empty())
-      return ev_list[0];
-    return {};
+  std::shared_ptr<c_element<std::shared_ptr<evidence>>> evidence_front() {
+    return ev_list->front();
   }
 
   uint32_t get_size() {
@@ -193,12 +193,12 @@ struct evidence_pool {
   std::tuple<int64_t, tstamp, std::set<std::string>> batch_expired_pending_evidence(std::vector<bytes>&);
 
   void remove_evidence_from_list(std::set<std::string>& block_evidence_map) {
-    auto it = ev_list.begin();
-    while (it != ev_list.end()) {
-      if (block_evidence_map.find(ev_map_key(*it)) != block_evidence_map.end())
-        it = ev_list.erase(it);
-      else
-        it++;
+    for (auto e = ev_list->front(); e; e = e->get_next()) {
+      auto ev = e->value;
+      if (block_evidence_map.find(ev_map_key(ev)) != block_evidence_map.end()) {
+        ev_list->remove(e);
+        e->detach_prev(); // TODO : check
+      }
     }
   }
 
@@ -259,7 +259,7 @@ struct evidence_pool {
         elog(fmt::format("failed to flush evidence from consensus_buffer to pending list: {}", ok.error()));
         continue;
       }
-      ev_list.push_back(dve);
+      ev_list->push_back(dve);
       ilog(fmt::format("verified new evidence of byzantine behavior: evidence={}", dve->get_string()));
     }
     // Reset consensus_buffer
