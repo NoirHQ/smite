@@ -23,9 +23,10 @@ private:
   e_ptr<T> prev{};
   e_ptr<T> next{};
   bool removed{};
-  T value;
 
 public:
+  T value;
+
   explicit c_element(T v): value(v) {}
 
   static e_ptr<T> new_e(T v) {

@@ -8,6 +8,8 @@
 
 namespace noir::consensus::ev {
 
+constexpr int broadcast_evidence_interval_s = 10;
+
 void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
   dlog(fmt::format(
     "[es_reactor] peer update: peer_id={}, status={}", info->peer_id, p2p::peer_status_to_str(info->status)));
@@ -59,17 +61,17 @@ Result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
 
 void reactor::broadcast_evidence_loop(const std::string& peer_id, const std::shared_ptr<bool>& closer) {
   thread_pool->get_executor().post([&]() {
-    std::shared_ptr<evidence> next{};
+    std::shared_ptr<c_element<std::shared_ptr<evidence>>> next{};
 
-    while (true) {
+    for (;;) {
       if (*closer)
         return;
       if (!next) {
-        if (next = pool->evidence_front(); !next)
+        if (next = pool->ev_list->front_wait(); !next)
           continue;
       }
 
-      auto ev = next;
+      auto ev = next->value;
       auto ev_proto = evidence::to_proto(*ev);
       // check(ev_proto, fmt::format("failed to convert evidence: {}", ev_proto.error()));
 
@@ -84,7 +86,7 @@ void reactor::broadcast_evidence_loop(const std::string& peer_id, const std::sha
       xmt_mq_channel.publish(appbase::priority::medium, new_env);
       dlog(fmt::format("gossiped evidence to peer={}", peer_id));
 
-      // TODO : next = next->next; which requires to use thread safe list
+      next = next->next_wait_with_timeout(std::chrono::milliseconds{broadcast_evidence_interval_s * 1000});
     }
   });
 }
