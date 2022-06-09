@@ -34,7 +34,7 @@ public:
     return ret;
   }
 
-  /// brief blocks until next is available or got removed; note may return nullptr
+  /// \brief blocks until next is available or got removed; note may return nullptr
   e_ptr<T> next_wait() {
     std::unique_lock<std::mutex> lck(mtx);
     cv_next.wait(lck, [this] { return (next != nullptr || removed); });
@@ -131,7 +131,7 @@ public:
     return head;
   }
 
-  /// brief blocks until front is available
+  /// \brief blocks until front is available
   e_ptr<T> front_wait() {
     std::unique_lock<std::mutex> lck(mtx);
     cv.wait(lck, [this] { return head != nullptr; });
@@ -143,7 +143,7 @@ public:
     return tail;
   }
 
-  /// brief blocks until back is available
+  /// \brief blocks until back is available
   e_ptr<T> back_wait() {
     std::unique_lock<std::mutex> lck(mtx);
     cv.wait(lck, !tail);

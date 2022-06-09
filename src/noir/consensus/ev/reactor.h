@@ -13,8 +13,8 @@ namespace noir::consensus::ev {
 struct reactor {
 
   appbase::application& app;
-  std::shared_ptr<evidence_pool> pool;
-  std::unique_ptr<named_thread_pool> thread_pool;
+  std::shared_ptr<evidence_pool> pool{};
+  std::unique_ptr<named_thread_pool> thread_pool{};
 
   std::mutex mtx;
   std::map<std::string, std::shared_ptr<bool>> peer_routines;
@@ -35,6 +35,13 @@ struct reactor {
 
   reactor(appbase::application& app)
     : app(app), thread_pool(std::make_unique<named_thread_pool>("es_reactor_thread", 3)) {}
+
+  static std::shared_ptr<reactor> new_reactor(
+    appbase::application& new_app, const std::shared_ptr<evidence_pool>& new_pool) {
+    auto ret = std::make_shared<reactor>(new_app);
+    ret->pool = new_pool;
+    return ret;
+  }
 
   void process_peer_update(plugin_interface::peer_status_info_ptr info);
 

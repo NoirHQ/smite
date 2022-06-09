@@ -42,9 +42,9 @@ struct evidence_pool {
   int64_t pruning_height{};
   tstamp pruning_time{};
 
-  static Result<std::shared_ptr<evidence_pool>> new_pool(std::shared_ptr<db_session_type> new_evidence_store,
-    std::shared_ptr<noir::consensus::db_store> new_state_db,
-    std::shared_ptr<noir::consensus::block_store> new_block_store) {
+  static Result<std::shared_ptr<evidence_pool>> new_pool(const std::shared_ptr<db_session_type>& new_evidence_store,
+    const std::shared_ptr<noir::consensus::db_store>& new_state_db,
+    const std::shared_ptr<noir::consensus::block_store>& new_block_store) {
     auto ret = std::make_shared<evidence_pool>();
     ret->state = std::make_unique<noir::consensus::state>();
     if (!new_state_db->load(*ret->state))

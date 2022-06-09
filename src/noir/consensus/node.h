@@ -8,6 +8,7 @@
 #include <noir/consensus/block_executor.h>
 #include <noir/consensus/block_sync/reactor.h>
 #include <noir/consensus/consensus_reactor.h>
+#include <noir/consensus/ev/reactor.h>
 #include <noir/consensus/indexer/indexer_service.h>
 #include <noir/consensus/indexer/sink/sink.h>
 #include <noir/consensus/privval/file.h>
@@ -114,6 +115,8 @@ struct node {
 
     auto new_bs_reactor = create_block_sync_reactor(app, state_, block_exec, bls, block_sync);
 
+    auto new_ev_reactor = create_evidence_reactor(app, new_config, session, bls);
+
     auto [new_cs_reactor, new_cs_state] = create_consensus_reactor(
       app, new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, event_bus_, block_sync);
 
@@ -173,6 +176,25 @@ struct node {
     bool block_sync_) {
     auto bs_reactor = block_sync::reactor::new_reactor(app, state_, block_exec_, new_block_store, block_sync_);
     return bs_reactor;
+  }
+
+  static Result<std::tuple<std::shared_ptr<ev::reactor>, std::shared_ptr<ev::evidence_pool>>> create_evidence_reactor(
+    appbase::application& app,
+    const std::shared_ptr<config>& new_config,
+    const std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>& session,
+    const std::shared_ptr<block_store>& new_block_store) {
+    auto db_dir = std::filesystem::path{new_config->consensus.root_dir} / "data/evidence.db"; // TODO : clean up
+    auto evidence_session = make_session(false, db_dir);
+
+    auto state_store = std::make_shared<noir::consensus::db_store>(session);
+
+    auto evidence_pool = ev::evidence_pool::new_pool(evidence_session, state_store, new_block_store);
+    if (!evidence_pool)
+      return Error::format("unable to create evidence pool: {}", evidence_pool.error().message());
+
+    auto evidence_reactor = ev::reactor::new_reactor(app, evidence_pool.value());
+
+    return {evidence_reactor, evidence_pool.value()};
   }
 
   static std::tuple<std::shared_ptr<consensus_reactor>, std::shared_ptr<consensus_state>> create_consensus_reactor(

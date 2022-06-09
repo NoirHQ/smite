@@ -198,7 +198,7 @@ private:
   /// \brief A list of the available indices in the iterator cache that are available for use.
   mutable std::vector<size_t> m_free_list;
 
-  /// brief Mutex to avoid concurrency error on iterators.
+  /// \brief Mutex to avoid concurrency error on iterators.
   mutable std::mutex m_iterator_mtx;
 };
 
