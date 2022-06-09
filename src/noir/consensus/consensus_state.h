@@ -89,14 +89,14 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   void finalize_commit(int64_t height);
   void set_proposal(p2p::proposal_message& msg);
   bool add_proposal_block_part(p2p::block_part_message& msg, node_id peer_id);
+
+  /// \brief attempt to add vote; if it's a duplicate signature, dupeout the validator
   bool try_add_vote(p2p::vote_message& msg, node_id peer_id);
   bool add_vote(vote& vote_, node_id peer_id);
   std::optional<vote> sign_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header);
   tstamp vote_time();
   vote sign_add_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header);
 
-  //  // config details
-  //  config            *cfg.ConsensusConfig
   consensus_config cs_config;
 
   //  privValidator     types.PrivValidator // for signing votes
@@ -104,15 +104,10 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   std::shared_ptr<priv_validator> local_priv_validator;
   priv_validator_type local_priv_validator_type;
 
-  //  // store blocks and commits
-  //  blockStore sm.BlockStore
   std::shared_ptr<block_store> block_store_{};
-
-  //  // create and execute blocks
-  //  blockExec *sm.BlockExecutor
   std::shared_ptr<block_executor> block_exec{};
 
-  //  // notify us if txs are available
+  // notify us if txs are available
   //  txNotifier txNotifier
   //
   //  // add evidence to the pool
@@ -121,30 +116,20 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   //
 
   // internal state
-  //  mtx tmsync.RWMutex
-  //  cstypes.RoundState
-  //  state sm.State // State until height-1.
   std::mutex mtx;
   round_state rs{};
   state local_state; // State until height-1.
-  //  // privValidator pubkey, memoized for the duration of one block
-  //  // to avoid extra requests to HSM
-  //  privValidatorPubKey crypto.PubKey
   pub_key local_priv_validator_pub_key;
 
-  //
-  //  // state changes may be triggered by: msgs from peers,
-  //  // msgs from ourself, or by timeouts
-  //  peerMsgQueue     chan msgInfo
   ///< no need for peer_mq; we have one at consensus_reactor which handles all messages from peers
 
   plugin_interface::egress::channels::event_switch_message_queue::channel_type& event_switch_mq_channel;
 
-  //  internalMsgQueue chan msgInfo
+  // internalMsgQueue chan msgInfo
   plugin_interface::channels::internal_message_queue::channel_type& internal_mq_channel;
   plugin_interface::channels::internal_message_queue::channel_type::handle internal_mq_subscription;
 
-  //  timeoutTicker TimeoutTicker
+  // timeoutTicker TimeoutTicker
   plugin_interface::channels::timeout_ticker::channel_type& timeout_ticker_channel;
   plugin_interface::channels::timeout_ticker::channel_type::handle timeout_ticker_subscription;
   std::mutex timeout_ticker_mtx;
@@ -152,11 +137,6 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   uint16_t thread_pool_size = 2;
   std::optional<named_thread_pool> thread_pool;
   timeout_info_ptr old_ti;
-
-  //
-  //  // information about about added votes and block parts are written on this channel
-  //  // so statistics can be computed by reactor
-  //  statsMsgQueue chan msgInfo
 
   // we use eventBus to trigger msg broadcasts in the reactor,
   // and to notify external subscribers, eg. through a websocket
@@ -201,32 +181,13 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   /// \return true on success, false otherwise
   bool read_replay_message(const timed_wal_message& msg);
 
-  //  // for tests where we want to limit the number of transitions the state makes
-  //  nSteps int
+  // for tests where we want to limit the number of transitions the state makes
   int n_steps;
 
-  //
-  //  // some functions can be overwritten for testing
-  //  decideProposal func(height int64, round int32)
-  //  doPrevote      func(height int64, round int32)
-  //  setProposal    func(proposal *types.Proposal) error
+  // some functions can be overwritten for testing
   ///-- directly implemented decide_proposal
   ///-- directly implemented do_prevote
   ///-- directly implemented set_proposal
-
-  //
-  //  // closed when we finish shutting down
-  //  done chan struct{}
-  //
-  //  // synchronous pubsub between consensus state and reactor.
-  //  // state only emits EventNewRoundStep and EventVote
-  //  evsw tmevents.EventSwitch
-  //
-  //  // for reporting metrics
-  //  metrics *Metrics
-  //
-  //  // wait the channel event happening for shutting down the state gracefully
-  //  onStopCh chan *cstypes.RoundState
 };
 
 /// \brief repair wal file until first error is encountered

@@ -86,7 +86,7 @@ public:
   /// \return true on success, false otherwise
   bool flush_and_sync();
 
-  /// brief gets the size of wal file of current index
+  /// \brief gets the size of wal file of current index
   /// \return size
   size_t size();
 

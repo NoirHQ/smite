@@ -1123,9 +1123,6 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node
   return added;
 }
 
-/**
- * Attempt to add vote. If it's a duplicate signature, dupeout? the validator
- */
 bool consensus_state::try_add_vote(p2p::vote_message& msg, node_id peer_id) {
   auto vote_ = vote{msg};
   auto added = add_vote(vote_, peer_id);
