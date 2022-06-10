@@ -75,17 +75,20 @@ struct validator {
   }
 };
 
-struct validator_set {
+struct validator_set : public std::enable_shared_from_this<validator_set> {
   std::vector<validator> validators;
   std::optional<validator> proposer;
   int64_t total_voting_power = 0;
+  // private:
+  // validator_set() = default;
 
-  static validator_set new_validator_set(const std::vector<validator>& validator_list) {
-    validator_set vals;
-    vals.update_with_change_set(validator_list, false);
+public:
+  [[nodiscard]] static std::shared_ptr<validator_set> new_validator_set(const std::vector<validator>& validator_list) {
+    auto ret = std::shared_ptr<validator_set>(new validator_set());
+    ret->update_with_change_set(validator_list, false);
     if (!validator_list.empty())
-      vals.increment_proposer_priority(1);
-    return vals;
+      ret->increment_proposer_priority(1);
+    return ret;
   }
 
   int size() const {
@@ -296,7 +299,7 @@ struct validator_set {
     // Verify that applying the 'deletes' against 'vals' will not result in error.
     // Get the voting power that is going to be removed.
     int64_t removed_voting_power = 0;
-    for (auto val_update : deletes) {
+    for (auto& val_update : deletes) {
       auto address = val_update.address;
       auto val = get_by_address(address);
       if (!val.has_value()) {
@@ -311,18 +314,18 @@ struct validator_set {
 
     // Verify that applying the 'updates' against 'vals' will not result in error.
     // Get the updated total voting power before removal. Note that this is < 2 * MaxTotalVotingPower
-    auto delta = [](validator& update, validator_set& vals) {
-      auto val = vals.get_by_address(update.address);
+    auto delta = [](validator& update, const std::shared_ptr<validator_set>& vals) {
+      auto val = vals->get_by_address(update.address);
       if (val.has_value())
         return update.voting_power - val->voting_power;
       return update.voting_power;
     };
     std::vector<validator> updatesCopy(updates);
     sort(updatesCopy.begin(), updatesCopy.end(),
-      [delta, this](validator a, validator b) { return delta(a, *this) < delta(b, *this); });
+      [delta, this](validator a, validator b) { return delta(a, shared_from_this()) < delta(b, shared_from_this()); });
     auto tvp_after_removals = total_voting_power - removed_voting_power;
-    for (auto val_update : updatesCopy) {
-      tvp_after_removals += delta(val_update, *this);
+    for (auto& val_update : updatesCopy) {
+      tvp_after_removals += delta(val_update, shared_from_this());
       if (tvp_after_removals > max_total_voting_power) {
         elog("total voting power of resulting valset exceeds max");
         return;
@@ -379,9 +382,10 @@ struct validator_set {
     }
   }
 
-  validator_set copy_increment_proposer_priority(int32_t times) {
-    auto cp = *this;
-    cp.increment_proposer_priority(times);
+  std::shared_ptr<validator_set> copy_increment_proposer_priority(int32_t times) {
+    auto cp = validator_set::new_validator_set({});
+    *cp = *this;
+    cp->increment_proposer_priority(times);
     return cp;
   }
 
@@ -460,21 +464,21 @@ struct validator_set {
     return success(); // TODO
   }
 
-  static std::unique_ptr<::tendermint::types::ValidatorSet> to_proto(const validator_set& v) {
+  static std::unique_ptr<::tendermint::types::ValidatorSet> to_proto(const std::shared_ptr<validator_set>& v) {
     auto ret = std::make_unique<::tendermint::types::ValidatorSet>();
-    if (v.validators.empty())
+    if (v->validators.empty())
       return ret;
     auto vals_proto = ret->mutable_validators();
-    for (auto& val : v.validators)
+    for (auto& val : v->validators)
       vals_proto->AddAllocated(validator::to_proto(val).release());
-    if (v.proposer.has_value())
-      ret->set_allocated_proposer(validator::to_proto(v.proposer.value()).release());
+    if (v->proposer.has_value())
+      ret->set_allocated_proposer(validator::to_proto(v->proposer.value()).release());
     ret->set_total_voting_power(0);
     return ret;
   }
 
   static Result<std::shared_ptr<validator_set>> from_proto(const ::tendermint::types::ValidatorSet& pb) {
-    auto ret = std::make_shared<validator_set>();
+    auto ret = validator_set::new_validator_set({});
     for (auto& v : pb.validators()) {
       if (auto ok = validator::from_proto(v); !ok)
         return ok.error();

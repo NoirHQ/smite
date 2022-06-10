@@ -10,32 +10,32 @@
 using namespace noir;
 using namespace noir::consensus;
 
-void print_validator_set(validator_set& vals) {
+void print_validator_set(const std::shared_ptr<validator_set>& vals) {
   auto index = 0;
-  for (auto val : vals.validators)
+  for (auto val : vals->validators)
     std::cout << index++ << ":" << to_hex(val.address) << " " << val.voting_power << " " << val.proposer_priority
               << std::endl;
 }
 
 TEST_CASE("validator_set: Basic", "[noir][consensus]") {
-  validator_set vals;
+  auto vals = validator_set::new_validator_set({});
 
   SECTION("empty validator") {
-    CHECK_THROWS_WITH(vals.increment_proposer_priority(1), "empty validator set");
+    CHECK_THROWS_WITH(vals->increment_proposer_priority(1), "empty validator set");
   }
 
   SECTION("non-positive times") {
     validator val;
-    vals.validators.push_back(val);
-    CHECK_THROWS_WITH(vals.increment_proposer_priority(0), "cannot call with non-positive times");
+    vals->validators.push_back(val);
+    CHECK_THROWS_WITH(vals->increment_proposer_priority(0), "cannot call with non-positive times");
   }
 
   SECTION("get by") {
     validator val = {from_hex("0123456789")};
-    vals.validators.push_back(val);
-    CHECK(vals.get_by_index(-1) == std::nullopt);
-    CHECK(vals.get_by_index(3) == std::nullopt);
-    CHECK(vals.get_by_index(0).value().address == val.address);
+    vals->validators.push_back(val);
+    CHECK(vals->get_by_index(-1) == std::nullopt);
+    CHECK(vals->get_by_index(3) == std::nullopt);
+    CHECK(vals->get_by_index(0).value().address == val.address);
   }
 }
 
@@ -44,11 +44,11 @@ TEST_CASE("validator_set: Proposer Selection 1", "[noir][consensus]") {
     {validator{from_hex("bb"), {}, 300, 0}}, {validator{from_hex("cc"), {}, 330, 0}}});
   std::string proposers;
   for (auto i = 0; i < 99; i++) {
-    auto val = vals.get_proposer();
+    auto val = vals->get_proposer();
     if (val.has_value())
       proposers += to_hex(val.value().address) + " ";
     // print_validator_set(vals);
-    vals.increment_proposer_priority(1);
+    vals->increment_proposer_priority(1);
   }
   std::string expected = "aa cc aa bb aa aa cc aa bb aa aa cc aa aa bb aa cc aa aa bb";
   expected += " aa aa cc aa bb aa aa cc aa bb aa aa cc aa aa bb aa cc aa aa bb";
@@ -66,8 +66,8 @@ TEST_CASE("validator_set: Proposer Selection 2", "[noir][consensus]") {
     auto vals = validator_set::new_validator_set(
       {{validator{addrs[0], {}, 100, 0}}, {validator{addrs[1], {}, 100, 0}}, {validator{addrs[2], {}, 100, 0}}});
     for (auto i = 0; i < addrs.size() * 5; i++) {
-      auto val = vals.get_proposer();
-      vals.increment_proposer_priority(1);
+      auto val = vals->get_proposer();
+      vals->increment_proposer_priority(1);
       CHECK(val.value().address == addrs[i % addrs.size()]);
     }
   }
@@ -75,19 +75,19 @@ TEST_CASE("validator_set: Proposer Selection 2", "[noir][consensus]") {
   SECTION("one validator has more than others") {
     auto vals = validator_set::new_validator_set(
       {{validator{addrs[0], {}, 100, 0}}, {validator{addrs[1], {}, 100, 0}}, {validator{addrs[2], {}, 400, 0}}});
-    CHECK(vals.get_proposer()->address == addrs[2]);
-    vals.increment_proposer_priority(1);
-    CHECK(vals.get_proposer()->address == addrs[0]);
+    CHECK(vals->get_proposer()->address == addrs[2]);
+    vals->increment_proposer_priority(1);
+    CHECK(vals->get_proposer()->address == addrs[0]);
   }
 
   SECTION("one validator has more than others, enough to propose twice in a row") {
     auto vals = validator_set::new_validator_set(
       {{validator{addrs[0], {}, 100, 0}}, {validator{addrs[1], {}, 100, 0}}, {validator{addrs[2], {}, 401, 0}}});
-    CHECK(vals.get_proposer()->address == addrs[2]);
-    vals.increment_proposer_priority(1);
-    CHECK(vals.get_proposer()->address == addrs[2]);
-    vals.increment_proposer_priority(1);
-    CHECK(vals.get_proposer()->address == addrs[0]);
+    CHECK(vals->get_proposer()->address == addrs[2]);
+    vals->increment_proposer_priority(1);
+    CHECK(vals->get_proposer()->address == addrs[2]);
+    vals->increment_proposer_priority(1);
+    CHECK(vals->get_proposer()->address == addrs[0]);
   }
 
   SECTION("each validator should be the proposer a proportional number of times") {
@@ -95,13 +95,13 @@ TEST_CASE("validator_set: Proposer Selection 2", "[noir][consensus]") {
       {{validator{addrs[0], {}, 4, 0}}, {validator{addrs[1], {}, 5, 0}}, {validator{addrs[2], {}, 3, 0}}});
     int count_addr0{}, count_addr1{}, count_addr2{};
     for (auto i = 0; i < 120; i++) {
-      auto val = vals.get_proposer();
-      vals.increment_proposer_priority(1);
-      if (vals.get_proposer()->address == addrs[0])
+      auto val = vals->get_proposer();
+      vals->increment_proposer_priority(1);
+      if (vals->get_proposer()->address == addrs[0])
         count_addr0++;
-      if (vals.get_proposer()->address == addrs[1])
+      if (vals->get_proposer()->address == addrs[1])
         count_addr1++;
-      if (vals.get_proposer()->address == addrs[2])
+      if (vals->get_proposer()->address == addrs[2])
         count_addr2++;
     }
     CHECK(count_addr0 == 40);
@@ -119,33 +119,32 @@ TEST_CASE("validator_set: Apply update", "[noir][consensus]") {
     std::vector<validator> update_vals;
     update_vals.push_back(validator{from_hex("0011"), {}, 11});
     auto vals = validator_set::new_validator_set(start_vals);
-    vals.apply_updates(update_vals);
-    //    print_validator_set(vals);
-    CHECK(vals.get_by_index(0)->address == std::vector<char>(from_hex("0011")));
-    CHECK(vals.get_by_index(1)->address == std::vector<char>(from_hex("0044")));
-    CHECK(vals.get_by_index(2)->address == std::vector<char>(from_hex("0066")));
+    vals->apply_updates(update_vals);
+    CHECK(vals->get_by_index(0)->address == std::vector<char>(from_hex("0011")));
+    CHECK(vals->get_by_index(1)->address == std::vector<char>(from_hex("0044")));
+    CHECK(vals->get_by_index(2)->address == std::vector<char>(from_hex("0066")));
   }
 
   SECTION("insert middle") {
     std::vector<validator> update_vals;
     update_vals.push_back(validator{from_hex("0055"), {}, 55});
     auto vals = validator_set::new_validator_set(start_vals);
-    vals.apply_updates(update_vals);
-    //    print_validator_set(vals);
-    CHECK(vals.get_by_index(0)->address == std::vector<char>(from_hex("0044")));
-    CHECK(vals.get_by_index(1)->address == std::vector<char>(from_hex("0055")));
-    CHECK(vals.get_by_index(2)->address == std::vector<char>(from_hex("0066")));
+    vals->apply_updates(update_vals);
+    // print_validator_set(vals);
+    CHECK(vals->get_by_index(0)->address == std::vector<char>(from_hex("0044")));
+    CHECK(vals->get_by_index(1)->address == std::vector<char>(from_hex("0055")));
+    CHECK(vals->get_by_index(2)->address == std::vector<char>(from_hex("0066")));
   }
 
   SECTION("insert tail") {
     std::vector<validator> update_vals;
     update_vals.push_back(validator{from_hex("0077"), {}, 77});
     auto vals = validator_set::new_validator_set(start_vals);
-    vals.apply_updates(update_vals);
-    //    print_validator_set(vals);
-    CHECK(vals.get_by_index(0)->address == std::vector<char>(from_hex("0044")));
-    CHECK(vals.get_by_index(1)->address == std::vector<char>(from_hex("0066")));
-    CHECK(vals.get_by_index(2)->address == std::vector<char>(from_hex("0077")));
+    vals->apply_updates(update_vals);
+    // print_validator_set(vals);
+    CHECK(vals->get_by_index(0)->address == std::vector<char>(from_hex("0044")));
+    CHECK(vals->get_by_index(1)->address == std::vector<char>(from_hex("0066")));
+    CHECK(vals->get_by_index(2)->address == std::vector<char>(from_hex("0077")));
   }
 
   SECTION("override voting_power") {
@@ -153,9 +152,9 @@ TEST_CASE("validator_set: Apply update", "[noir][consensus]") {
     update_vals.push_back(validator{from_hex("0044"), {}, 444});
     update_vals.push_back(validator{from_hex("0066"), {}, 6});
     auto vals = validator_set::new_validator_set(start_vals);
-    vals.apply_updates(update_vals);
-    //    print_validator_set(vals);
-    CHECK(vals.get_by_index(0)->voting_power == 444);
-    CHECK(vals.get_by_index(1)->voting_power == 6);
+    vals->apply_updates(update_vals);
+    // print_validator_set(vals);
+    CHECK(vals->get_by_index(0)->voting_power == 444);
+    CHECK(vals->get_by_index(1)->voting_power == 6);
   }
 }

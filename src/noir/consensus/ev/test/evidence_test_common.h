@@ -47,7 +47,7 @@ inline std::shared_ptr<duplicate_vote_evidence> new_mock_duplicate_vote_evidence
   auto vote_b = make_mock_vote(height, 0, 0, pub_key_.address(), rand_block_id(), time);
   auto v_b = vote::to_proto(*vote_b);
   vote_b->signature = pv.sign_vote_pb(chain_id, *v_b).value();
-  auto val_set = std::make_shared<validator_set>(validator_set::new_validator_set({val}));
+  auto val_set = validator_set::new_validator_set({val});
   auto ev = duplicate_vote_evidence::new_duplicate_vote_evidence(vote_a, vote_b, time, val_set);
   return ev.value();
 }
@@ -107,9 +107,9 @@ inline std::shared_ptr<noir::consensus::db_store> initialize_state_from_validato
     .initial_height = 1,
     .last_block_height = height,
     .last_block_time = default_evidence_time,
-    .validators = *val_set,
+    .validators = val_set,
     .next_validators = val_set->copy_increment_proposer_priority(1),
-    .last_validators = *val_set,
+    .last_validators = val_set,
     .last_height_validators_changed = 1,
     .consensus_params_ = consensus_params{.block = {.max_bytes = 22020096, .max_gas = -1},
       .evidence = {.max_age_num_blocks = 20,

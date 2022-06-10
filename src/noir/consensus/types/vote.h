@@ -132,7 +132,7 @@ struct vote_set {
   int64_t height;
   int32_t round;
   p2p::signed_msg_type signed_msg_type_;
-  validator_set val_set;
+  std::shared_ptr<validator_set> val_set{};
 
   std::mutex mtx;
   std::shared_ptr<bit_array> votes_bit_array{};
@@ -146,12 +146,12 @@ struct vote_set {
     int64_t height_,
     int32_t round_,
     p2p::signed_msg_type signed_msg_type,
-    validator_set& val_set_);
+    const std::shared_ptr<validator_set>& val_set_);
 
   std::shared_ptr<bit_array> get_bit_array();
 
   virtual int get_size() const {
-    return val_set.size();
+    return val_set->size();
   }
 
   bool add_vote(std::optional<vote> vote_);
@@ -198,7 +198,7 @@ struct vote_set {
         return {}; // nothing to do
       it->second->peer_maj23 = true;
     } else {
-      auto new_votes_by_block = block_votes::new_block_votes(true, val_set.size());
+      auto new_votes_by_block = block_votes::new_block_votes(true, val_set->size());
       votes_by_block[block_key] = new_votes_by_block;
     }
     return {};
@@ -211,12 +211,12 @@ struct vote_set {
 
   bool has_two_thirds_any() {
     std::scoped_lock g(mtx);
-    return sum > val_set.total_voting_power * 2 / 3;
+    return sum > val_set->total_voting_power * 2 / 3;
   }
 
   bool has_all() {
     std::scoped_lock g(mtx);
-    return sum == val_set.total_voting_power;
+    return sum == val_set->total_voting_power;
   }
 
   /**
@@ -307,7 +307,7 @@ struct vote_set_reader {
     else
       is_commit = vote_set_.maj23.has_value();
     type = vote_set_.signed_msg_type_;
-    size = vote_set_.val_set.size();
+    size = vote_set_.val_set->size();
     votes = vote_set_.votes;
   }
 

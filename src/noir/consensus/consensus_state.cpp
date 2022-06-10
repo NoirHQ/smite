@@ -325,7 +325,7 @@ void consensus_state::update_to_state(state& state_) {
   }
 
   // Reset fields based on state.
-  rs.validators = std::make_shared<validator_set>(state_.validators);
+  rs.validators = state_.validators;
 
   if (state_.last_block_height == 0) {
     // very first commit should be empty
@@ -370,7 +370,7 @@ void consensus_state::update_to_state(state& state_) {
   rs.valid_block_parts = {};
   rs.votes = height_vote_set::new_height_vote_set(state_.chain_id, height, state_.validators);
   rs.commit_round = -1;
-  rs.last_validators = std::make_shared<validator_set>(state_.last_validators);
+  rs.last_validators = state_.last_validators;
   rs.triggered_timeout_precommit = false;
 
   local_state = state_;

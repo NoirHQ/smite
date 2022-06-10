@@ -106,8 +106,8 @@ void reactor::try_sync_ticker() {
       auto first_id = p2p::block_id{first->get_hash(), first_part_set_header};
 
       // Verify the first block using the second's commit
-      if (auto err = verify_commit_light(chain_id, std::make_shared<validator_set>(latest_state.validators), first_id,
-            first->header.height, std::make_shared<commit>(*second->last_commit));
+      if (auto err = verify_commit_light(chain_id, latest_state.validators, first_id, first->header.height,
+            std::make_shared<commit>(*second->last_commit));
           err.has_value()) {
         elog(fmt::format("invalid last commit: height={} err={}", first->header.height, err.value()));
 

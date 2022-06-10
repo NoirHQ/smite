@@ -48,10 +48,10 @@ Result<std::shared_ptr<commit>> make_commit(const p2p::block_id& block_id_,
 }
 
 std::vector<std::shared_ptr<priv_validator>> order_priv_vals_by_val_set(
-  const validator_set& vals, const std::vector<std::shared_ptr<priv_validator>>& priv_vals) {
+  const std::shared_ptr<validator_set>& vals, const std::vector<std::shared_ptr<priv_validator>>& priv_vals) {
   std::vector<std::shared_ptr<priv_validator>> output(priv_vals.size());
   size_t idx{};
-  for (auto& v : vals.validators) {
+  for (auto& v : vals->validators) {
     for (auto& p : priv_vals) {
       auto pub_key_ = p->get_pub_key();
       if (v.address == pub_key_.address()) {
@@ -82,8 +82,8 @@ make_lunatic_evidence(int64_t height,
 
   auto [phantom_val_set, phantom_priv_vals] = rand_validator_set(phantom_vals, default_voting_power);
 
-  auto conflicting_vals = *phantom_val_set; // TODO: check
-  conflicting_vals.update_with_change_set(byz_val_set, true);
+  auto conflicting_vals = phantom_val_set; // TODO: check
+  conflicting_vals->update_with_change_set(byz_val_set, true);
   std::vector<std::shared_ptr<priv_validator>> conflicting_priv_vals;
   conflicting_priv_vals.insert(conflicting_priv_vals.end(), phantom_priv_vals.begin(), phantom_priv_vals.end());
   conflicting_priv_vals.insert(conflicting_priv_vals.end(), byz_priv_vals.begin(), byz_priv_vals.end());
@@ -97,7 +97,7 @@ make_lunatic_evidence(int64_t height,
     block_header::make_header({.chain_id = "test_chain", .height = height, .time = get_default_evidence_time()});
   CHECK(trusted_header);
   auto conflicting_header = block_header::make_header(
-    {.chain_id = "test_chain", .height = height, .time = attack_time, .validators_hash = conflicting_vals.get_hash()});
+    {.chain_id = "test_chain", .height = height, .time = attack_time, .validators_hash = conflicting_vals->get_hash()});
   CHECK(conflicting_header);
 
   auto block_id_ = p2p::block_id{.hash = random_hash(), .parts = {.total = 100, .hash = random_hash()}};
@@ -110,7 +110,7 @@ make_lunatic_evidence(int64_t height,
   ev->conflicting_block->s_header = std::make_shared<signed_header>();
   ev->conflicting_block->s_header->header = std::make_shared<consensus::block_header>(conflicting_header.value());
   ev->conflicting_block->s_header->commit = *commit_.value();
-  ev->conflicting_block->val_set = std::make_shared<validator_set>(conflicting_vals);
+  ev->conflicting_block->val_set = conflicting_vals;
   ev->common_height = common_height;
   ev->total_voting_power = common_val_set->get_total_voting_power();
   for (auto& v : byz_val_set) {
@@ -127,7 +127,7 @@ make_lunatic_evidence(int64_t height,
   auto trusted_block_id = p2p::block_id{.hash = random_hash(), .parts = {.total = 100, .hash = random_hash()}};
   auto [trusted_vals, priv_vals] = rand_validator_set(total_vals, default_voting_power);
   auto trusted_vote_set =
-    vote_set::new_vote_set("test_chain", height, 1, p2p::signed_msg_type::Precommit, *trusted_vals);
+    vote_set::new_vote_set("test_chain", height, 1, p2p::signed_msg_type::Precommit, trusted_vals);
   auto trusted_commit =
     make_commit(trusted_block_id, height, 1, trusted_vote_set, priv_vals, get_default_evidence_time());
   CHECK(trusted_commit);

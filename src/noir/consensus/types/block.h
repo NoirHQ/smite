@@ -555,7 +555,7 @@ struct block {
 /// \param[in] val_set
 /// \return shared_ptr of vote_set
 std::shared_ptr<struct vote_set> commit_to_vote_set(
-  std::string& chain_id, commit& commit_, struct validator_set& val_set); // FIXME: add const keyword
+  const std::string& chain_id, commit& commit_, const std::shared_ptr<struct validator_set>& val_set);
 
 using block_ptr = std::shared_ptr<block>;
 

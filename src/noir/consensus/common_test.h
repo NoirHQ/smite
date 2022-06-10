@@ -103,7 +103,7 @@ std::tuple<std::shared_ptr<validator_set>, std::vector<std::shared_ptr<priv_vali
     [](std::shared_ptr<priv_validator> a, std::shared_ptr<priv_validator> b) {
       return a->get_pub_key().address() < b->get_pub_key().address();
     });
-  return {std::make_shared<validator_set>(validator_set::new_validator_set(valz)), priv_validators};
+  return {validator_set::new_validator_set(valz), priv_validators};
 }
 
 std::tuple<genesis_doc, std::vector<std::shared_ptr<priv_validator>>> rand_genesis_doc(
@@ -169,7 +169,7 @@ void sign_add_votes(config& config_,
   p2p::part_set_header header) {}
 
 bool validate_votes(const std::shared_ptr<vote_set>& votes, const bytes& address, const bytes& block_hash) {
-  auto index = votes->val_set.get_index_by_address(address);
+  auto index = votes->val_set->get_index_by_address(address);
   if (index < 0) {
     return false;
   }

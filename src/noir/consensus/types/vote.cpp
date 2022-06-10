@@ -21,7 +21,7 @@ std::shared_ptr<vote_set> vote_set::new_vote_set(const std::string& chain_id_,
   int64_t height_,
   int32_t round_,
   p2p::signed_msg_type signed_msg_type,
-  validator_set& val_set_) {
+  const std::shared_ptr<validator_set>& val_set_) {
   if (height_ == 0)
     throw std::runtime_error("Cannot make vote_set for height = 0, doesn't make sense");
   auto ret = std::make_shared<vote_set>();
@@ -29,9 +29,11 @@ std::shared_ptr<vote_set> vote_set::new_vote_set(const std::string& chain_id_,
   ret->height = height_;
   ret->round = round_;
   ret->signed_msg_type_ = signed_msg_type;
-  ret->val_set = val_set_;
-  ret->votes_bit_array = bit_array::new_bit_array(val_set_.size());
-  ret->votes.resize(val_set_.size());
+  auto new_val_set = validator_set::new_validator_set({});
+  new_val_set = val_set_;
+  ret->val_set = new_val_set;
+  ret->votes_bit_array = bit_array::new_bit_array(val_set_->size());
+  ret->votes.resize(val_set_->size());
   ret->sum = 0;
   return ret;
 }
@@ -69,9 +71,9 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   }
 
   // Ensure that signer is a validator
-  auto val = val_set.get_by_index(val_index);
+  auto val = val_set->get_by_index(val_index);
   if (!val) {
-    elog(fmt::format("cannot find validator {} in val_set of size {}", val_index, val_set.validators.size()));
+    elog(fmt::format("cannot find validator {} in val_set of size {}", val_index, val_set->validators.size()));
     return false;
   }
 
@@ -142,14 +144,14 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
       return false;
     }
     // Start tracking this blockKey
-    new_votes_by_block = block_votes::new_block_votes(false, val_set.size());
+    new_votes_by_block = block_votes::new_block_votes(false, val_set->size());
     votes_by_block[block_key] = new_votes_by_block;
     // We'll add the vote in a bit.
   }
 
   // Before adding to votesByBlock, see if we'll exceed quorum
   auto orig_sum = new_votes_by_block->sum;
-  auto quorum = val_set.get_total_voting_power() * 2 / 3 + 1;
+  auto quorum = val_set->get_total_voting_power() * 2 / 3 + 1;
 
   // Add vote to votesByBlock
   new_votes_by_block->add_verified_vote(vote_.value(), voting_power);

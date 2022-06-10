@@ -31,7 +31,7 @@ public:
   /// \param[in] height
   /// \param[out] v_set
   /// \return true on success, false otherwise
-  virtual bool load_validators(int64_t height, validator_set& v_set) const = 0;
+  virtual bool load_validators(int64_t height, std::shared_ptr<validator_set>& v_set) const = 0;
   /// \brief LoadABCIResponses loads the abciResponse for a given height
   /// \param[in] height
   /// \param[out] abci_rsp
@@ -56,7 +56,8 @@ public:
   /// \param[in] upper_height
   /// \param[in] v_set
   /// \return true on success, false otherwise
-  virtual bool save_validator_sets(int64_t lower_height, int64_t upper_height, const validator_set& v_set) = 0;
+  virtual bool save_validator_sets(
+    int64_t lower_height, int64_t upper_height, const std::shared_ptr<validator_set>& v_set) = 0;
   /// \brief Bootstrap is used for bootstrapping state when not starting from a initial height.
   /// \param[in] st
   /// \return true on success, false otherwise
@@ -76,7 +77,7 @@ private:
   // TEMP struct for encoding
   struct validators_info {
     int64_t last_height_changed;
-    std::optional<validator_set> v_set;
+    std::shared_ptr<validator_set> v_set{};
   };
   struct consensus_params_info {
     int64_t last_height_changed;
@@ -102,22 +103,22 @@ public:
     return load_internal(st);
   }
 
-  bool load_validators(int64_t height, validator_set& v_set) const override {
+  bool load_validators(int64_t height, std::shared_ptr<validator_set>& v_set) const override {
     validators_info v_info{};
     if (!load_validators_info(height, v_info)) {
       return false;
     }
 
-    if (v_info.v_set == std::nullopt) {
+    if (v_info.v_set == nullptr) {
       int64_t last_stored_height = last_stored_height_for(height, v_info.last_height_changed);
 
-      if (bool ret = load_validators_info(last_stored_height, v_info); (!ret) || (v_info.v_set == std::nullopt)) {
+      if (bool ret = load_validators_info(last_stored_height, v_info); (!ret) || (v_info.v_set == nullptr)) {
         return false;
       }
       v_info.v_set->increment_proposer_priority(
         static_cast<int32_t>(height - v_info.last_height_changed)); // safe_convert_int?
     }
-    v_set = *v_info.v_set;
+    v_set = v_info.v_set;
 
     return true;
   }
@@ -152,7 +153,8 @@ public:
     return save_abci_responses_internal(height, rsp);
   }
 
-  bool save_validator_sets(int64_t lower_height, int64_t upper_height, const validator_set& v_set) override {
+  bool save_validator_sets(
+    int64_t lower_height, int64_t upper_height, const std::shared_ptr<validator_set>& v_set) override {
     batch_type batch{};
     for (auto height = lower_height; height <= upper_height; ++height) {
       if (!save_validators_info(height, lower_height, v_set, batch)) {
@@ -234,12 +236,15 @@ private:
     auto height = st.last_block_height + 1;
     if (height == 1) {
       height = st.initial_height;
-    } else if (!st.last_validators.validators.empty()) { // height > 1, can height < 0 ?
-      if (!save_validators_info(height, height, st.validators, batch)) {
+    } else if (st.last_validators && !st.last_validators->validators.empty()) { // height > 1, can height < 0 ?
+      if (!save_validators_info(height - 1, height - 1, st.last_validators, batch)) {
         return false;
       }
     }
-    if (!save_validators_info(height + 1, height + 1, st.validators, batch)) {
+    if (!save_validators_info(height, height, st.validators, batch)) {
+      return false;
+    }
+    if (!save_validators_info(height + 1, height + 1, st.next_validators, batch)) {
       return false;
     }
     if (!save_consensus_params_info(height, st.last_height_consensus_params_changed, st.consensus_params_, batch)) {
@@ -261,15 +266,13 @@ private:
   }
 
   bool save_validators_info(
-    int64_t height, int64_t last_height_changed, const validator_set& v_set, batch_type& batch) {
+    int64_t height, int64_t last_height_changed, const std::shared_ptr<validator_set>& v_set, batch_type& batch) {
     if (last_height_changed > height) {
       return false;
     }
     validators_info v_info{
       .last_height_changed = last_height_changed,
-      .v_set = (height == last_height_changed || height % val_set_checkpoint_interval == 0)
-        ? std::optional<validator_set>(v_set)
-        : std::nullopt,
+      .v_set = (height == last_height_changed || height % val_set_checkpoint_interval == 0) ? v_set : nullptr,
     };
     auto buf = encode(v_info);
     batch.emplace_back(encode_key<prefix::validators>(height), buf);
@@ -351,8 +354,8 @@ private:
       return false;
     }
     int64_t last_recorded_height = last_stored_height_for(retain_height, val_info.last_height_changed);
-    if (val_info.v_set == std::nullopt) {
-      if (auto ret = load_validators_info(last_recorded_height, val_info); !ret || (val_info.v_set == std::nullopt)) {
+    if (val_info.v_set == nullptr) {
+      if (auto ret = load_validators_info(last_recorded_height, val_info); !ret || (val_info.v_set == nullptr)) {
         return false;
       }
 

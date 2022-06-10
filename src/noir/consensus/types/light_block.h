@@ -59,7 +59,7 @@ struct light_block {
     if (!l.s_header)
       ret->set_allocated_signed_header(signed_header::to_proto(*l.s_header).release());
     if (!l.val_set)
-      ret->set_allocated_validator_set(validator_set::to_proto(*l.val_set).release());
+      ret->set_allocated_validator_set(validator_set::to_proto(l.val_set).release());
     return ret;
   }
 

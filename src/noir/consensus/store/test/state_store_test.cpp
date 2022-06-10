@@ -35,17 +35,17 @@ TEST_CASE("db_store: save/load validator_set", "[noir][consensus]") {
     .voting_power = 1,
   });
   auto v_set = noir::consensus::validator_set::new_validator_set(validator_list);
-  noir::consensus::validator_set ret{};
+  auto ret = noir::consensus::validator_set::new_validator_set({});
 
   CHECK(dbs.save_validator_sets(1, 2, v_set) == true);
   CHECK(dbs.load_validators(1, ret) == true);
-  CHECK(v_set.validators[0].address == ret.validators[0].address);
-  CHECK(v_set.validators[0].voting_power == ret.validators[0].voting_power);
-  CHECK(v_set.validators[0].proposer_priority == ret.validators[0].proposer_priority);
+  CHECK(v_set->validators[0].address == ret->validators[0].address);
+  CHECK(v_set->validators[0].voting_power == ret->validators[0].voting_power);
+  CHECK(v_set->validators[0].proposer_priority == ret->validators[0].proposer_priority);
   CHECK(dbs.load_validators(2, ret) == true);
-  CHECK(v_set.validators[0].address == ret.validators[0].address);
-  CHECK(v_set.validators[0].voting_power == ret.validators[0].voting_power);
-  CHECK(v_set.validators[0].proposer_priority == ret.validators[0].proposer_priority);
+  CHECK(v_set->validators[0].address == ret->validators[0].address);
+  CHECK(v_set->validators[0].voting_power == ret->validators[0].voting_power);
+  CHECK(v_set->validators[0].proposer_priority == ret->validators[0].proposer_priority);
 }
 
 TEST_CASE("db_store: save/load consensus_param", "[noir][consensus]") {
@@ -163,9 +163,9 @@ TEST_CASE("db_store: prune_state", "[noir][consensus]") {
       }
 
       for (auto height = t.prune_height; height <= t.end_height; ++height) {
-        noir::consensus::validator_set vals{};
+        auto vals = noir::consensus::validator_set::new_validator_set({});
         CHECK(dbs.load_validators(height, vals) == true);
-        CHECK(vals.size() != 0); // nil check
+        CHECK(vals->size() != 0); // nil check
 
         noir::consensus::consensus_params cs_param{};
         CHECK(dbs.load_consensus_params(height, cs_param) == true);
@@ -177,15 +177,15 @@ TEST_CASE("db_store: prune_state", "[noir][consensus]") {
 
       noir::consensus::consensus_params empty_cs_param{};
       for (auto height = t.start_height; height < t.prune_height; ++height) {
-        noir::consensus::validator_set vals{};
+        auto vals = noir::consensus::validator_set::new_validator_set({});
         {
           auto ret = dbs.load_validators(height, vals);
           if (height == t.remaining_val_set_height) {
             CHECK(ret == true);
-            CHECK(vals.size() != 0); // nil check
+            CHECK(vals->size() != 0); // nil check
           } else {
             CHECK(ret == false);
-            CHECK(vals.size() == 0); // nil check
+            CHECK(vals->size() == 0); // nil check
           }
         }
 
