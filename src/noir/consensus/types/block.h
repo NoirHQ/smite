@@ -19,6 +19,7 @@
 
 #include <fmt/core.h>
 
+#include <memory>
 #include <utility>
 
 namespace noir::consensus {
@@ -117,9 +118,10 @@ struct commit {
   bytes hash; // NOTE: not to be serialized
   std::shared_ptr<bit_array> bit_array_{}; // NOTE: not to be serialized
 
-  static commit new_commit(
-    int64_t height_, int32_t round_, p2p::block_id block_id_, std::vector<commit_sig>& commit_sigs) {
-    return commit{height_, round_, block_id_, commit_sigs};
+  [[nodiscard]] static std::shared_ptr<commit> new_commit(
+    int64_t height_, int32_t round_, const p2p::block_id& block_id_, const std::vector<commit_sig>& commit_sigs) {
+    return std::make_shared<commit>(
+      commit{.height = height_, .round = round_, .my_block_id = block_id_, .signatures = commit_sigs});
   }
 
   size_t size() const {
@@ -473,9 +475,9 @@ struct block {
   }
 
   static std::shared_ptr<block> make_block(
-    int64_t height, const std::vector<tx>& txs, const commit& last_commit /*, evidence */) {
+    int64_t height, const std::vector<tx>& txs, const std::shared_ptr<commit>& last_commit /*, evidence */) {
     auto block_ = std::make_shared<block>(block{block_header{{.block = block_protocol, .app = 0}, "", height},
-      block_data{txs}, std::make_unique<commit>(last_commit)});
+      block_data{txs}, std::make_unique<commit>(*last_commit)});
     block_->fill_header();
     return block_;
   }

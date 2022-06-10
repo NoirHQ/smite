@@ -12,7 +12,7 @@ namespace noir::consensus {
 /// \brief SignedHeader is a header along with the commits that prove it.
 struct signed_header {
   std::shared_ptr<noir::consensus::block_header> header;
-  std::optional<noir::consensus::commit> commit;
+  std::shared_ptr<noir::consensus::commit> commit;
 
   Result<void> validate_basic(std::string chain_id) {
     return success(); // TODO
@@ -21,8 +21,8 @@ struct signed_header {
   static std::unique_ptr<::tendermint::types::SignedHeader> to_proto(const signed_header& s) {
     auto ret = std::make_unique<::tendermint::types::SignedHeader>();
     ret->set_allocated_header(block_header::to_proto(*s.header).release());
-    if (s.commit.has_value())
-      ret->set_allocated_commit(commit::to_proto(s.commit.value()).release());
+    if (s.commit)
+      ret->set_allocated_commit(commit::to_proto(*s.commit).release());
     return ret;
   }
 
@@ -31,7 +31,7 @@ struct signed_header {
     if (pb.has_header())
       ret->header = block_header::from_proto(pb.header());
     if (pb.has_commit())
-      ret->commit = *commit::from_proto(pb.commit());
+      ret->commit = commit::from_proto(pb.commit());
     return ret;
   }
 };

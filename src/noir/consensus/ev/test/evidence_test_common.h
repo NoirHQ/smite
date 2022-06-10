@@ -139,7 +139,7 @@ inline std::shared_ptr<commit> make_commit(int64_t height, const bytes& val_addr
     .validator_address = val_addr,
     .timestamp = default_evidence_time,
     .signature = bytes{}});
-  return std::make_shared<commit>(commit::new_commit(height, 0, {}, commit_sigs));
+  return commit::new_commit(height, 0, {}, commit_sigs);
 }
 
 inline std::vector<noir::consensus::tx> make_txs(int64_t height, int num) {
@@ -151,7 +151,7 @@ inline std::vector<noir::consensus::tx> make_txs(int64_t height, int num) {
 }
 
 inline std::shared_ptr<noir::consensus::block> make_block(
-  int64_t height, const noir::consensus::state& st, const noir::consensus::commit& commit_) {
+  int64_t height, const noir::consensus::state& st, const std::shared_ptr<noir::consensus::commit>& commit_) {
   auto txs = make_txs(st.last_block_height, 10);
   auto [block_, part_set_] = const_cast<noir::consensus::state&>(st).make_block(height, txs, commit_, /* {}, */ {});
   // TODO: temparary workaround to set block
@@ -165,7 +165,7 @@ inline std::shared_ptr<block_store> initialize_block_store(const state& state_, 
 
   for (auto i = 1; i <= state_.last_block_height; i++) {
     auto last_commit = make_commit(i - 1, val_addr);
-    auto block_ = make_block(i, state_, *last_commit);
+    auto block_ = make_block(i, state_, last_commit);
     block_->header.time =
       default_evidence_time + std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(i)).count();
     block_->header.version = {.block = consensus::block_protocol, .app = 1};
