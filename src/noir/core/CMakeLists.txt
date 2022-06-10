@@ -5,6 +5,13 @@ target_include_directories(noir_core PUBLIC ${NOIR_SOURCE_DIR} ${Boost_INCLUDE_D
 target_link_libraries(noir_core
   fmt::fmt
 )
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+  set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+  find_package(Threads REQUIRED)
+  target_link_libraries(noir_core Threads::Threads)
+endif()
+
 set_target_properties(noir_core PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
 add_library(noir::core ALIAS noir_core)

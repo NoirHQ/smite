@@ -6,6 +6,9 @@
 #pragma once
 #include <noir/core/core.h>
 
+#include <mutex>
+#include <condition_variable>
+
 namespace noir {
 
 constexpr int clist_max_length{std::numeric_limits<int>::max()};
