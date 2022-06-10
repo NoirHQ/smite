@@ -233,7 +233,7 @@ struct vote_set {
   /**
    * constructs a commit from the vote_set. It only include precommits for the block, which has 2/3+ majority and nil
    */
-  commit make_commit() {
+  std::shared_ptr<commit> make_commit() {
     std::scoped_lock g(mtx);
     if (signed_msg_type_ != p2p::Precommit)
       throw std::runtime_error("cannot make_commit() unless signed_msg_type_ is Precommit");

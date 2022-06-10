@@ -57,8 +57,11 @@ struct block_executor {
     return res;
   }
 
-  std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> create_proposal_block(
-    int64_t height, state& state_, commit& commit_, bytes& proposer_addr, std::vector<std::optional<vote>>& votes) {
+  std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> create_proposal_block(int64_t height,
+    state& state_,
+    const std::shared_ptr<commit>& commit_,
+    bytes& proposer_addr,
+    std::vector<std::optional<vote>>& votes) {
     auto max_bytes = state_.consensus_params_.block.max_bytes;
     auto max_gas = state_.consensus_params_.block.max_gas;
 
@@ -82,7 +85,7 @@ struct block_executor {
     return state_.make_block(height, modified_txs, commit_, proposer_addr);
   }
 
-  bool validate_block(state& state_, std::shared_ptr<block> block_) {
+  bool validate_block(state& state_, const std::shared_ptr<block>& block_) {
     auto hash = block_->get_hash();
     if (cache.find(to_hex(hash)) != cache.end())
       return true;

@@ -83,8 +83,10 @@ struct state {
     return state_;
   }
 
-  std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> make_block(
-    int64_t height, std::vector<bytes> txs, commit commit_, /* evidence, */ bytes proposal_address) {
+  std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> make_block(int64_t height,
+    std::vector<bytes>& txs,
+    const std::shared_ptr<commit>& commit_,
+    /* evidence, */ bytes proposal_address) {
     // Build base block
     auto block_ = block::make_block(height, txs, commit_);
 
@@ -104,10 +106,10 @@ struct state {
     return {block_, block_->make_part_set(block_part_size_bytes)};
   }
 
-  tstamp get_median_time(commit& commit_, const std::shared_ptr<validator_set>& validators) {
+  tstamp get_median_time(const std::shared_ptr<commit>& commit_, const std::shared_ptr<validator_set>& validators) {
     std::vector<weighted_time> weighted_times;
     int64_t total_voting_power{};
-    for (auto commit_sig : commit_.signatures) {
+    for (auto commit_sig : commit_->signatures) {
       if (commit_sig.absent())
         continue;
       auto validator = validators->get_by_address(commit_sig.validator_address);

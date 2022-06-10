@@ -214,7 +214,7 @@ Result<void> evidence_pool::verify_light_client_attack(const light_client_attack
   std::shared_ptr<signed_header> trusted_header,
   std::shared_ptr<validator_set> common_vals) {
   if (common_header->header->height != ev.conflicting_block->s_header->header->height) {
-    auto commit_ = std::make_shared<commit>(ev.conflicting_block->s_header->commit.value());
+    auto commit_ = ev.conflicting_block->s_header->commit;
     auto ok = common_vals->verify_commit_light_trusting(trusted_header->header->chain_id, commit_); // TODO: check
     if (!ok)
       return Error::format("skipping verification of conflicting block failed: {}", ok.error());
@@ -224,7 +224,7 @@ Result<void> evidence_pool::verify_light_client_attack(const light_client_attack
 
   if (auto ok = ev.conflicting_block->val_set->verify_commit_light(trusted_header->header->chain_id,
         ev.conflicting_block->s_header->commit->my_block_id, ev.conflicting_block->s_header->header->height,
-        std::make_shared<commit>(ev.conflicting_block->s_header->commit.value()));
+        ev.conflicting_block->s_header->commit);
       !ok)
     return Error::format("invalid commit from conflicting block: {}", ok.error());
 
@@ -241,12 +241,12 @@ Result<std::shared_ptr<signed_header>> evidence_pool::get_signed_header(int64_t 
   block_meta block_meta_;
   if (!block_store->load_block_meta(height, block_meta_))
     return Error::format("don't have a header at height={}", height);
-  commit commit_;
-  if (!block_store->load_block_commit(height, commit_))
+  auto new_commit_ = std::make_shared<commit>();
+  if (!block_store->load_block_commit(height, *new_commit_))
     return Error::format("don't have a commit at height={}", height);
   auto ret = std::make_shared<signed_header>();
   ret->header = std::make_shared<noir::consensus::block_header>(block_meta_.header);
-  ret->commit = commit_;
+  ret->commit = new_commit_;
   return ret;
 }
 } // namespace noir::consensus::ev

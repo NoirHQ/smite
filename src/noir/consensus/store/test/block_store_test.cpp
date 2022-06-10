@@ -57,9 +57,9 @@ TEST_CASE("block_store: save/load_block", "[noir][consensus]") {
   }
 
   noir::consensus::block_meta base_meta{};
-  noir::consensus::commit commit_{};
+  auto new_commit_ = std::make_shared<noir::consensus::commit>();
   for (auto height = 1; height < 100; ++height) {
-    auto bl_ = noir::consensus::ev::make_block(height, genesis_state, commit_);
+    auto bl_ = noir::consensus::ev::make_block(height, genesis_state, new_commit_);
     auto p_set_ = bl_->make_part_set(64); // make parts more than one
     auto seen_commit_ = noir::consensus::make_commit(10, noir::tstamp{});
     REQUIRE(bl_ != nullptr);
@@ -137,9 +137,9 @@ TEST_CASE("block_store: prune_block", "[noir][consensus]") {
     CHECK(bls.load_block(i, bl_) == false);
   }
 
-  noir::consensus::commit commit_{};
+  auto new_commit_ = std::make_shared<noir::consensus::commit>();
   for (auto height = 1; height <= 1500; ++height) {
-    auto bl_ = noir::consensus::ev::make_block(height, genesis_state, commit_);
+    auto bl_ = noir::consensus::ev::make_block(height, genesis_state, new_commit_);
     auto p_set_ = bl_->make_part_set(64); // make parts more than one
     auto seen_commit_ = noir::consensus::make_commit(10, noir::tstamp{});
 

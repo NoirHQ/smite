@@ -34,17 +34,17 @@ Result<std::shared_ptr<commit>> make_commit(const p2p::block_id& block_id_,
   tstamp now) {
   for (auto i = 0; i < validators.size(); i++) {
     auto pub_key_ = validators[i]->get_pub_key();
-    auto vote_ = p2p::vote_message{.type = noir::p2p::Precommit,
+    vote vote_{{.type = noir::p2p::Precommit,
       .height = height,
       .round = round,
       .block_id_ = block_id_,
       .timestamp = now,
       .validator_address = pub_key_.address(),
-      .validator_index = i};
-    if (auto ok = sign_add_vote(validators[i], *static_cast<vote*>(&vote_), vote_set_); !ok)
+      .validator_index = i}};
+    if (auto ok = sign_add_vote(validators[i], vote_, vote_set_); !ok)
       return ok.error();
   }
-  return std::make_shared<commit>(vote_set_->make_commit());
+  return vote_set_->make_commit();
 }
 
 std::vector<std::shared_ptr<priv_validator>> order_priv_vals_by_val_set(
@@ -109,7 +109,7 @@ make_lunatic_evidence(int64_t height,
   ev->conflicting_block = std::make_shared<light_block>();
   ev->conflicting_block->s_header = std::make_shared<signed_header>();
   ev->conflicting_block->s_header->header = std::make_shared<consensus::block_header>(conflicting_header.value());
-  ev->conflicting_block->s_header->commit = *commit_.value();
+  ev->conflicting_block->s_header->commit = commit_.value();
   ev->conflicting_block->val_set = conflicting_vals;
   ev->common_height = common_height;
   ev->total_voting_power = common_val_set->get_total_voting_power();
@@ -121,7 +121,7 @@ make_lunatic_evidence(int64_t height,
   auto common = std::make_shared<light_block>();
   common->s_header = std::make_shared<signed_header>();
   common->s_header->header = std::make_shared<consensus::block_header>(common_header.value());
-  common->s_header->commit = commit{};
+  common->s_header->commit = std::make_shared<commit>();
   common->val_set = common_val_set;
 
   auto trusted_block_id = p2p::block_id{.hash = random_hash(), .parts = {.total = 100, .hash = random_hash()}};
@@ -134,7 +134,7 @@ make_lunatic_evidence(int64_t height,
   auto trusted = std::make_shared<light_block>();
   trusted->s_header = std::make_shared<signed_header>();
   trusted->s_header->header = std::make_shared<consensus::block_header>(trusted_header.value());
-  trusted->s_header->commit = *trusted_commit.value();
+  trusted->s_header->commit = trusted_commit.value();
   trusted->val_set = trusted_vals;
 
   return {ev, trusted, common};

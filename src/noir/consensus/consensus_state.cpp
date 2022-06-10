@@ -636,7 +636,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
     if (!local_priv_validator)
       throw std::runtime_error("attempted to create proposal block with empty priv_validator");
 
-    commit commit_;
+    std::shared_ptr<commit> commit_{};
     std::vector<std::optional<vote>> votes_;
     if (rs.height == local_state.initial_height) {
       // We are creating a proposal for the first block
@@ -981,7 +981,7 @@ void consensus_state::finalize_commit(int64_t height) {
   if (block_store_->height() < block_->header.height) {
     auto precommits = rs.votes->precommits(rs.commit_round);
     auto seen_commit = precommits->make_commit();
-    block_store_->save_block(*block_, *block_parts_, seen_commit);
+    block_store_->save_block(*block_, *block_parts_, *seen_commit);
   } else {
     dlog("calling finalizeCommit on already stored block");
   }
