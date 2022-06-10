@@ -266,7 +266,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::shared_ptr<T>& v) {
   bool b;
   ds >> b;
   if (b) {
-    v = std::make_shared<T>();
+    v = std::shared_ptr<T>(new T());
     ds >> *v;
   }
   return ds;

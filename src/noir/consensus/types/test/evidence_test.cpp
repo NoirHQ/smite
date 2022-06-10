@@ -66,8 +66,7 @@ TEST_CASE("evidence: duplicate vote validation", "[noir][consensus]") {
   SECTION("good duplicate") {
     auto vote1 = make_vote(val, chain_id, 0, 10, 2, 1, block_id, default_vote_time);
     auto vote2 = make_vote(val, chain_id, 0, 10, 2, 1, block_id, default_vote_time);
-    auto val_set =
-      std::make_shared<validator_set>(validator_set::new_validator_set({{val.pub_key_.address(), {}, 10, 0}}));
+    auto val_set = validator_set::new_validator_set({{val.pub_key_.address(), {}, 10, 0}});
     auto ev = duplicate_vote_evidence::new_duplicate_vote_evidence(vote1, vote2, default_vote_time, val_set);
     CHECK(ev);
     CHECK(!ev.value()->validate_basic());

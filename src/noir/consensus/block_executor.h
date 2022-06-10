@@ -65,7 +65,7 @@ struct block_executor {
     auto [evidence, ev_size] = ev_pool->pending_evidence(state_.consensus_params_.evidence.max_bytes);
 
     // Fetch a limited amount of valid txs
-    auto max_data_bytes_ = max_data_bytes(max_bytes, ev_size, state_.validators.size());
+    auto max_data_bytes_ = max_data_bytes(max_bytes, ev_size, state_.validators->size());
 
     // TODO : remove following - no longer use prepared_proposal
     std::vector<bytes> txs;
@@ -285,7 +285,7 @@ struct block_executor {
     }
     vote_infos.resize(block_.last_commit->size());
     if (block_.header.height > initial_height) {
-      validator_set last_val_set;
+      auto last_val_set = validator_set::new_validator_set({});
       if (!store_->load_validators(block_.header.height - 1, last_val_set)) {
         throw std::runtime_error(
           fmt::format("panic: unable to load validator for height={}", block_.header.height - 1));
@@ -293,21 +293,21 @@ struct block_executor {
 
       // Check if commit_size matches validator_set size
       auto commit_size = block_.last_commit->size();
-      auto val_set_len = last_val_set.validators.size();
+      auto val_set_len = last_val_set->validators.size();
       if (commit_size != val_set_len) {
         throw std::runtime_error("panic: commit_size doesn't match val_set length");
       }
 
-      for (auto i = 0; i < last_val_set.validators.size(); i++) {
+      for (auto i = 0; i < last_val_set->validators.size(); i++) {
         auto commit_sig = block_.last_commit->signatures[i];
-        vote_infos[i] = vote_info{last_val_set.validators[i], !commit_sig.absent()};
+        vote_infos[i] = vote_info{last_val_set->validators[i], !commit_sig.absent()};
       }
     }
     return last_commit_info{block_.last_commit->round, vote_infos};
   }
 
-  bool validate_validator_update(std::vector<validator_update> abci_updates, validator_params params) {
-    for (auto val_update : abci_updates) {
+  bool validate_validator_update(std::vector<validator_update>& abci_updates, validator_params& params) {
+    for (auto& val_update : abci_updates) {
       if (val_update.power < 0) {
         elog("voting power can't be negative");
         return false;
@@ -329,12 +329,12 @@ struct block_executor {
 
     auto last_height_vals_changed = state_.last_height_validators_changed;
     if (!validator_updates.empty()) {
-      n_val_set.update_with_change_set(validator_updates, true);
+      n_val_set->update_with_change_set(validator_updates, true);
       last_height_vals_changed = header_.height + 1 + 1;
     }
 
     // Update validator proposer priority and set state variables
-    n_val_set.increment_proposer_priority(1);
+    n_val_set->increment_proposer_priority(1);
 
     // Update params with latest abci_responses
     auto next_params = state_.consensus_params_;

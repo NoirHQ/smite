@@ -34,10 +34,9 @@ struct state {
   p2p::block_id last_block_id;
   tstamp last_block_time;
 
-  // TODO: change following validator_set to shared_ptr
-  validator_set validators;
-  validator_set next_validators;
-  validator_set last_validators;
+  std::shared_ptr<validator_set> validators{};
+  std::shared_ptr<validator_set> next_validators{};
+  std::shared_ptr<validator_set> last_validators{};
   int64_t last_height_validators_changed;
 
   consensus_params consensus_params_;
@@ -52,7 +51,7 @@ struct state {
       return state{};
 
     std::vector<validator> empty_set;
-    validator_set val_set, next_val_set;
+    std::shared_ptr<validator_set> val_set, next_val_set;
     if (gen_doc.validators.empty()) {
       val_set = validator_set::new_validator_set(empty_set);
       next_val_set = validator_set::new_validator_set(empty_set);
@@ -62,7 +61,7 @@ struct state {
         validators.push_back(validator{val.address, val.pub_key, val.power, 0});
       }
       val_set = validator_set::new_validator_set(validators);
-      next_val_set = validator_set::new_validator_set(validators).copy_increment_proposer_priority(1);
+      next_val_set = validator_set::new_validator_set(validators)->copy_increment_proposer_priority(1);
     }
 
     state state_{};
@@ -98,20 +97,20 @@ struct state {
     }
 
     // Fill rest of header
-    block_->header.populate(version.cs, chain_id, timestamp, last_block_id, validators.get_hash(),
-      next_validators.get_hash(), consensus_params_.hash_consensus_params(), app_hash, last_result_hash,
+    block_->header.populate(version.cs, chain_id, timestamp, last_block_id, validators->get_hash(),
+      next_validators->get_hash(), consensus_params_.hash_consensus_params(), app_hash, last_result_hash,
       proposal_address);
 
     return {block_, block_->make_part_set(block_part_size_bytes)};
   }
 
-  tstamp get_median_time(commit& commit_, validator_set& validators) {
+  tstamp get_median_time(commit& commit_, const std::shared_ptr<validator_set>& validators) {
     std::vector<weighted_time> weighted_times;
     int64_t total_voting_power{};
     for (auto commit_sig : commit_.signatures) {
       if (commit_sig.absent())
         continue;
-      auto validator = validators.get_by_address(commit_sig.validator_address);
+      auto validator = validators->get_by_address(commit_sig.validator_address);
       if (validator.has_value()) {
         total_voting_power += validator->voting_power;
         weighted_times.push_back(weighted_time{commit_sig.timestamp, validator->voting_power});
@@ -135,7 +134,7 @@ struct state {
   }
 
   bool is_empty() const {
-    return validators.validators.empty();
+    return validators == nullptr;
   }
 };
 

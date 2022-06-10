@@ -132,8 +132,8 @@ Result<void> evidence_pool::verify(const std::shared_ptr<evidence>& ev) {
     return Error::format("evidence from height={} is too old", ev->get_height());
 
   if (auto ev_d = dynamic_cast<duplicate_vote_evidence*>(ev.get()); ev_d) {
-    auto val_set = std::make_shared<validator_set>();
-    if (!state_db->load_validators(ev->get_height(), *val_set))
+    auto val_set = validator_set::new_validator_set({});
+    if (!state_db->load_validators(ev->get_height(), val_set))
       return Error::format("evidence verify failed: unable to load validator");
 
     if (auto ok = verify_duplicate_vote(*ev_d, state_.chain_id, val_set); !ok)
@@ -153,8 +153,8 @@ Result<void> evidence_pool::verify(const std::shared_ptr<evidence>& ev) {
     auto common_header = get_signed_header(ev->get_height());
     if (!common_header)
       return common_header.error();
-    auto common_vals = std::make_shared<validator_set>();
-    if (!state_db->load_validators(ev->get_height(), *common_vals))
+    auto common_vals = validator_set::new_validator_set({});
+    if (!state_db->load_validators(ev->get_height(), common_vals))
       return Error::format("evidence verify failed: unable to load validator");
     auto trusted_header = common_header;
 

@@ -27,7 +27,7 @@ std::shared_ptr<vote> commit::get_vote(int32_t val_idx) {
 }
 
 std::shared_ptr<vote_set> commit_to_vote_set(
-  std::string& chain_id, commit& commit_, validator_set& val_set) { // FIXME: add const keyword
+  const std::string& chain_id, commit& commit_, const std::shared_ptr<validator_set>& val_set) {
   auto vote_set_ =
     vote_set::new_vote_set(chain_id, commit_.height, commit_.round, p2p::signed_msg_type::Precommit, val_set);
   check(vote_set_ != nullptr);

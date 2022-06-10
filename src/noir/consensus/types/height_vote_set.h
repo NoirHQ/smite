@@ -32,7 +32,7 @@ struct round_vote_set {
 struct height_vote_set {
   std::string chain_id;
   int64_t height;
-  validator_set val_set;
+  std::shared_ptr<validator_set> val_set{};
 
   std::mutex mtx;
   int32_t round;
@@ -40,14 +40,14 @@ struct height_vote_set {
   std::map<node_id, std::vector<int32_t>> peer_catchup_rounds;
 
   static std::shared_ptr<height_vote_set> new_height_vote_set(
-    std::string chain_id_, int64_t height_, const validator_set& val_set_) {
+    const std::string& chain_id_, int64_t height_, const std::shared_ptr<validator_set>& val_set_) {
     auto hvs = std::make_shared<height_vote_set>();
     hvs->chain_id = chain_id_;
     hvs->reset(height_, val_set_);
     return hvs;
   }
 
-  void reset(int64_t height_, const validator_set& val_set_) {
+  void reset(int64_t height_, const std::shared_ptr<validator_set>& val_set_) {
     std::scoped_lock g(mtx);
     height = height_;
     val_set = val_set_;

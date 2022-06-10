@@ -156,7 +156,7 @@ struct node {
       ilog("#####################################");
       {
         auto addr = pub_key_.address();
-        if (state_.validators.has_address(addr))
+        if (state_.validators->has_address(addr))
           ilog("   > node is in the active validator set");
         else
           ilog("   > node is NOT in the active validator set");
