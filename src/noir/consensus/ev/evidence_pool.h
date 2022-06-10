@@ -47,8 +47,7 @@ struct evidence_pool {
     const std::shared_ptr<noir::consensus::block_store>& new_block_store) {
     auto ret = std::make_shared<evidence_pool>();
     ret->state = std::make_unique<noir::consensus::state>();
-    if (!new_state_db->load(*ret->state))
-      return Error::format("failed to load state");
+    new_state_db->load(*ret->state); // could read empty state in genesis
     ret->evidence_store = std::move(new_evidence_store);
     ret->state_db = std::move(new_state_db);
     ret->block_store = std::move(new_block_store);

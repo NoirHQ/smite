@@ -72,11 +72,13 @@ std::shared_ptr<consensus_state> consensus_state::new_state(appbase::application
   state& state_,
   const std::shared_ptr<block_executor>& block_exec_,
   const std::shared_ptr<block_store>& new_block_store,
+  const std::shared_ptr<ev::evidence_pool>& new_ev_pool,
   const std::shared_ptr<events::event_bus>& event_bus_) {
   auto consensus_state_ = std::make_shared<consensus_state>(app, event_bus_);
   consensus_state_->cs_config = cs_config_;
   consensus_state_->block_exec = block_exec_;
   consensus_state_->block_store_ = new_block_store;
+  consensus_state_->ev_pool = new_ev_pool;
   consensus_state_->do_wal_catchup = true;
 
   if (state_.last_block_height > 0) {

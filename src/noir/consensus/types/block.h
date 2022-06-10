@@ -32,6 +32,13 @@ inline int64_t max_commit_bytes(int val_count) {
   return 94 /* max_commit_overhead_bytes */ + (109 /* max_commit_sig_bytes */ * val_count);
 }
 
+inline int64_t max_data_bytes(int64_t max_bytes, int64_t evidence_bytes, int vals_count) {
+  auto max_data_bytes =
+    max_bytes - max_overhead_for_block - max_header_bytes - max_commit_bytes(vals_count) - evidence_bytes;
+  check(max_bytes >= 0, "negative max_data_bytes");
+  return max_data_bytes;
+}
+
 inline bytes random_address() {
   noir::bytes ret{20};
   noir::crypto::rand_bytes(ret);

@@ -3,9 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-
 #pragma once
-
 #include <noir/crypto/rand.h>
 #include <noir/db/rocks_session.h>
 #include <noir/db/session.h>

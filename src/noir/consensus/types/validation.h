@@ -29,4 +29,8 @@ std::optional<std::string> verify_commit_light(std::string chain_id_,
   int64_t height,
   std::shared_ptr<struct commit> commit_);
 
+Result<void> verify_commit_light_trusting(const std::string& chain_id_,
+  const std::shared_ptr<validator_set>& vals,
+  const std::shared_ptr<struct commit>& commit_);
+
 } // namespace noir::consensus

@@ -25,6 +25,16 @@ struct evidence {
 
   static Result<std::unique_ptr<::tendermint::types::Evidence>> to_proto(const evidence&);
   static Result<std::shared_ptr<evidence>> from_proto(const ::tendermint::types::Evidence&);
+
+  template<typename T>
+  inline friend T& operator<<(T& ds, const evidence& v) {
+    return ds;
+  }
+
+  template<typename T>
+  inline friend T& operator>>(T& ds, evidence& v) {
+    return ds;
+  }
 };
 
 struct duplicate_vote_evidence : public evidence {
@@ -143,8 +153,8 @@ struct duplicate_vote_evidence : public evidence {
     if (!pb.IsInitialized())
       return Error::format("from_proto failed: duplicate vote evidence is not initialized");
     auto ret = std::make_shared<duplicate_vote_evidence>();
-    ret->vote_a = vote::from_proto(const_cast<tendermint::types::Vote&>(pb.vote_a()));
-    ret->vote_b = vote::from_proto(const_cast<tendermint::types::Vote&>(pb.vote_b()));
+    ret->vote_a = vote::from_proto(const_cast<::tendermint::types::Vote&>(pb.vote_a()));
+    ret->vote_b = vote::from_proto(const_cast<::tendermint::types::Vote&>(pb.vote_b()));
     ret->total_voting_power = pb.total_voting_power();
     ret->validator_power = pb.validator_power();
     ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp());
@@ -306,6 +316,39 @@ struct evidence_list {
     }
     return false;
   }
+
+  template<typename T>
+  inline friend T& operator<<(T& ds, const evidence_list& v) {
+    return ds;
+  }
+
+  template<typename T>
+  inline friend T& operator>>(T& ds, evidence_list& v) {
+    return ds;
+  }
 };
 
 } // namespace noir::consensus
+
+// NOIR_REFLECT_NO_DESC(noir::consensus::evidence, );
+template<>
+struct noir::is_foreachable<noir::consensus::evidence> : std::false_type {};
+
+// NOIR_REFLECT_DERIVED(noir::consensus::duplicate_vote_evidence,
+//   noir::consensus::evidence,
+//   vote_a,
+//   vote_b,
+//   total_voting_power,
+//   validator_power,
+//   timestamp);
+// NOIR_REFLECT_DERIVED(noir::consensus::light_client_attack_evidence,
+//   noir::consensus::evidence,
+//   conflicting_block,
+//   common_height,
+//   byzantine_validators,
+//   total_voting_power,
+//   timestamp);
+
+// NOIR_REFLECT(noir::consensus::evidence_list, list);
+template<>
+struct noir::is_foreachable<noir::consensus::evidence_list> : std::false_type {};

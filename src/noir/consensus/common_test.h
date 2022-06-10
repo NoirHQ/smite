@@ -10,7 +10,7 @@
 #include <noir/consensus/common.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/consensus_state.h>
-#include <noir/consensus/store/store_test.h>
+#include <noir/consensus/ev/test/evidence_test_common.h>
 
 #include <appbase/application.hpp>
 #include <fc/crypto/base58.hpp>
@@ -137,9 +137,10 @@ std::tuple<std::shared_ptr<consensus_state>, validator_stub_list> rand_cs(
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
   auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app_);
-  auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls, ev_bus);
+  auto [ev_pool, _] = ev::default_test_pool(1);
+  auto block_exec = block_executor::new_block_executor(dbs, proxyApp, ev_pool, bls, ev_bus);
 
-  auto cs = consensus_state::new_state(app_, config_.consensus, state_, block_exec, bls, ev_bus);
+  auto cs = consensus_state::new_state(app_, config_.consensus, state_, block_exec, bls, ev_pool, ev_bus);
   cs->set_priv_validator(priv_vals[0]); // todo - requires many other fields to be properly initialized
 
   for (auto i = 0; i < num_validators; i++) {
@@ -192,23 +193,6 @@ bool validate_last_precommit(consensus_state& cs_state, validator_stub& priv_val
   auto pub_key = priv_val.priv_val->get_pub_key();
   auto address = pub_key.address();
   return validate_votes(votes, address, block_hash);
-}
-
-inline std::vector<noir::consensus::tx> make_txs(int64_t height, int num) {
-  std::vector<noir::consensus::tx> txs{};
-  for (auto i = 0; i < num; ++i) {
-    txs.push_back(noir::consensus::tx{});
-  }
-  return txs;
-}
-
-inline std::shared_ptr<noir::consensus::block> make_block(
-  int64_t height, const noir::consensus::state& st, const noir::consensus::commit& commit_) {
-  auto txs = make_txs(st.last_block_height, 10);
-  auto [block_, part_set_] = const_cast<noir::consensus::state&>(st).make_block(height, txs, commit_, /* {}, */ {});
-  // TODO: temparary workaround to set block
-  block_->header.height = height;
-  return block_;
 }
 
 inline std::shared_ptr<noir::consensus::part_set> make_part_set(const noir::consensus::block& bl, uint32_t part_size) {

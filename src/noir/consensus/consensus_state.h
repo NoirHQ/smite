@@ -33,6 +33,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
     state& state_,
     const std::shared_ptr<block_executor>& block_exec_,
     const std::shared_ptr<block_store>& new_block_store,
+    const std::shared_ptr<ev::evidence_pool>& new_ev_pool,
     const std::shared_ptr<events::event_bus>& event_bus_);
 
   state get_state();
@@ -109,11 +110,8 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   // notify us if txs are available
   //  txNotifier txNotifier
-  //
-  //  // add evidence to the pool
-  //  // when it's detected
-  //  evpool evidencePool
-  //
+
+  std::shared_ptr<ev::evidence_pool> ev_pool{};
 
   // internal state
   std::mutex mtx;
