@@ -25,7 +25,7 @@ Result<void> validator_set::verify_commit_light(
   auto vals = std::make_shared<validator_set>(*this);
   auto err = noir::consensus::verify_commit_light(chain_id_, vals, block_id_, height, commit_);
   if (err.has_value())
-    return Error::format(err.value());
+    return Error::format("{}", err.value());
   return success();
 }
 

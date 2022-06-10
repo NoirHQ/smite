@@ -39,9 +39,9 @@ struct pub_key {
 
   static Result<std::shared_ptr<pub_key>> from_proto(const ::tendermint::crypto::PublicKey& pb) {
     auto ret = std::make_shared<pub_key>();
-    if (!pb.has_ed25519())
-      return Error::format("only ed25519 is supported");
     ret->key = {pb.ed25519().begin(), pb.ed25519().end()};
+    if (ret->key.empty())
+      return Error::format("only ed25519 is supported");
     return ret;
   }
 

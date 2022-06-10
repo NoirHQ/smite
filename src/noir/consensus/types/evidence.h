@@ -209,7 +209,7 @@ struct light_client_attack_evidence : public evidence {
       return Error::format("common height is ahead of conflicting block height");
     auto ok = conflicting_block->validate_basic(conflicting_block->s_header->header->chain_id);
     if (!ok)
-      return Error::format(fmt::format("invalid conflicting light block: {}", ok.error()));
+      return Error::format("invalid conflicting light block: {}", ok.error().message());
     return success();
   }
 
