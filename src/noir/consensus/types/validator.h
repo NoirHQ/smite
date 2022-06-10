@@ -6,8 +6,8 @@
 #pragma once
 #include <noir/common/log.h>
 #include <noir/consensus/crypto.h>
-#include <noir/consensus/types/block.h>
 #include <noir/core/result.h>
+#include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 #include <tendermint/types/types.pb.h>
 
@@ -491,16 +491,11 @@ struct validator_set {
     return ret;
   }
 
-  Result<void> verify_commit_light(
-    std::string chain_id, p2p::block_id block_id_, int64_t height, std::shared_ptr<commit> commit_) {
-    // FIXME: implement
-    return success();
-  }
-
-  Result<void> verify_commit_light_trusting(std::string chain_id, std::shared_ptr<commit> commit_) {
-    // FIXME: implement
-    return success();
-  }
+  Result<void> verify_commit_light(const std::string& chain_id,
+    p2p::block_id block_id_,
+    int64_t height,
+    const std::shared_ptr<struct commit>& commit_);
+  Result<void> verify_commit_light_trusting(const std::string& chain_id, const std::shared_ptr<struct commit>& commit_);
 };
 
 } // namespace noir::consensus

@@ -43,6 +43,19 @@ struct reactor {
     return ret;
   }
 
+  void on_start() {
+    ilog("starting ev_reactor...");
+    // nothing much to do
+  }
+
+  void on_stop() {
+    ilog("stopping ev_reactor...");
+    for (auto& peer : peer_routines)
+      *peer.second = true;
+    thread_pool->stop();
+    ilog("stopped ev_reactor...");
+  }
+
   void process_peer_update(plugin_interface::peer_status_info_ptr info);
 
   Result<void> process_peer_msg(p2p::envelope_ptr info);

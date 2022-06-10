@@ -99,4 +99,16 @@ std::optional<std::string> verify_commit_light(std::string chain_id_,
   return verify_commit_single(chain_id_, vals, commit_, voting_power_needed, false, true);
 }
 
+Result<void> verify_commit_light_trusting(const std::string& chain_id_,
+  const std::shared_ptr<validator_set>& vals,
+  const std::shared_ptr<commit>& commit_ /* TODO : trust_level */) {
+  if (!vals)
+    return Error::format("null validator_set");
+  if (!commit_)
+    return Error::format("null commit");
+
+  // TODO : implement the rest
+  return success();
+}
+
 } // namespace noir::consensus

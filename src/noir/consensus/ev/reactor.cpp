@@ -20,7 +20,7 @@ void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
     if (it == peer_routines.end()) {
       auto closer = std::make_shared<bool>(false);
       peer_routines.insert({info->peer_id, closer});
-      broadcast_evidence_loop(info->peer_id, closer);
+      // broadcast_evidence_loop(info->peer_id, closer); // TODO : uncomment
     }
     break;
   }
@@ -46,8 +46,8 @@ Result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
 
   dlog(fmt::format("[es_reactor] recv msg. from={}, to={}", from, to));
 
-  for (auto i = 0; i < msg.evidence().size(); i++) {
-    if (auto ok = evidence::from_proto(msg.evidence().at(i)); !ok) {
+  for (const auto& ev : msg.evidence()) {
+    if (auto ok = evidence::from_proto(ev); !ok) {
       elog(fmt::format("failed to convert evidence: {}", ok.error().message()));
       continue;
     } else {

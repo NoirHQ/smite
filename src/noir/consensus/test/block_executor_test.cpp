@@ -48,9 +48,10 @@ TEST_CASE("block_executor: Apply block", "[noir][consensus]") {
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
   auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
-  auto block_exec = block_executor::new_block_executor(state_db, proxyApp, bls, ev_bus);
+  auto [ev_pool, _] = ev::default_test_pool(1);
+  auto block_exec = block_executor::new_block_executor(state_db, proxyApp, ev_pool, bls, ev_bus);
 
-  auto block_ = make_block(1, state_, commit{});
+  auto block_ = ev::make_block(1, state_, commit{});
   auto block_id_ = p2p::block_id{block_->get_hash(), block_->make_part_set(65536)->header()};
 
   CHECK(block_exec->apply_block(state_, block_id_, block_) != std::nullopt);

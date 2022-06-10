@@ -37,6 +37,7 @@ struct node {
 
   std::shared_ptr<consensus_reactor> cs_reactor{};
   std::shared_ptr<block_sync::reactor> bs_reactor{};
+  std::shared_ptr<ev::reactor> ev_reactor{};
 
   static std::unique_ptr<node> new_default_node(appbase::application& app, const std::shared_ptr<config>& new_config) {
     // Load or generate priv
@@ -82,7 +83,6 @@ struct node {
     auto proxyApp = std::make_shared<app_connection>();
     auto bls = std::make_shared<noir::consensus::block_store>(session);
     auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
-    auto block_exec = block_executor::new_block_executor(dbs, proxyApp, bls, ev_bus);
 
     state state_ = load_state_from_db_or_genesis(dbs, new_genesis_doc);
 
@@ -113,12 +113,17 @@ struct node {
 
     log_node_startup_info(state_, pub_key_, new_config->base.mode);
 
+    auto ok_ev_reactor = create_evidence_reactor(app, new_config, session, bls);
+    if (!ok_ev_reactor)
+      check(false, fmt::format("unable to start node: {}", ok_ev_reactor.error().message()));
+    auto [new_ev_reactor, new_ev_pool] = ok_ev_reactor.value();
+
+    auto block_exec = block_executor::new_block_executor(dbs, proxyApp, new_ev_pool, bls, ev_bus);
+
+    auto [new_cs_reactor, new_cs_state] = create_consensus_reactor(app, new_config, std::make_shared<state>(state_),
+      block_exec, bls, new_ev_pool, new_priv_validator, event_bus_, block_sync);
+
     auto new_bs_reactor = create_block_sync_reactor(app, state_, block_exec, bls, block_sync);
-
-    auto new_ev_reactor = create_evidence_reactor(app, new_config, session, bls);
-
-    auto [new_cs_reactor, new_cs_state] = create_consensus_reactor(
-      app, new_config, std::make_shared<state>(state_), block_exec, bls, new_priv_validator, event_bus_, block_sync);
 
     auto node_ = std::make_unique<node>();
     node_->config_ = new_config;
@@ -133,6 +138,7 @@ struct node {
     node_->state_sync_on = new_state_sync_on;
     node_->bs_reactor = new_bs_reactor;
     node_->cs_reactor = new_cs_reactor;
+    node_->ev_reactor = new_ev_reactor;
     return node_;
   }
 
@@ -203,10 +209,12 @@ struct node {
     const std::shared_ptr<state>& state_,
     const std::shared_ptr<block_executor>& block_exec_,
     const std::shared_ptr<block_store>& block_store_,
+    const std::shared_ptr<ev::evidence_pool>& ev_pool_,
     const std::shared_ptr<priv_validator>& priv_validator_,
     const std::shared_ptr<events::event_bus>& event_bus_,
     bool wait_sync) {
-    auto cs_state = consensus_state::new_state(app, config_->consensus, *state_, block_exec_, block_store_, event_bus_);
+    auto cs_state =
+      consensus_state::new_state(app, config_->consensus, *state_, block_exec_, block_store_, ev_pool_, event_bus_);
 
     if (config_->base.mode == Validator)
       cs_state->set_priv_validator(priv_validator_);
@@ -224,15 +232,19 @@ struct node {
         std::chrono::duration_cast<std::chrono::seconds>(initial_sleep_duration).count()));
       std::this_thread::sleep_for(initial_sleep_duration);
     }
+    bs_reactor->on_start();
 
     cs_reactor->on_start();
 
-    bs_reactor->on_start(); // TODO: is this right place to start block_sync?
+    // TODO : start mempool_reactor
+
+    ev_reactor->on_start();
   }
 
   void on_stop() {
-    bs_reactor->on_stop();
+    ev_reactor->on_stop();
     cs_reactor->on_stop();
+    bs_reactor->on_stop();
   }
 
   /**

@@ -7,6 +7,7 @@
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/app_connection.h>
 #include <noir/consensus/common.h>
+#include <noir/consensus/ev/evidence_pool.h>
 #include <noir/consensus/store/block_store.h>
 #include <noir/consensus/store/state_store.h>
 #include <noir/consensus/types/event_bus.h>
@@ -29,6 +30,8 @@ struct block_executor {
   std::shared_ptr<app_connection> proxyApp_{};
 
   // evidence tool // todo
+  std::shared_ptr<ev::evidence_pool> ev_pool{};
+
   // todo - we may not need to handle events for tendermint but only for app?
   std::shared_ptr<events::event_bus> event_bus_{};
 
@@ -36,18 +39,21 @@ struct block_executor {
 
   block_executor(std::shared_ptr<db_store> new_store,
     std::shared_ptr<app_connection> new_proxyApp,
+    std::shared_ptr<ev::evidence_pool> new_ev_pool,
     std::shared_ptr<block_store> new_block_store,
     std::shared_ptr<events::event_bus> new_event_bus)
     : store_(std::move(new_store)),
+      ev_pool(std::move(new_ev_pool)),
       block_store_(std::move(new_block_store)),
       proxyApp_(std::move(new_proxyApp)),
       event_bus_(new_event_bus) {}
 
   static std::shared_ptr<block_executor> new_block_executor(const std::shared_ptr<db_store>& new_store,
     const std::shared_ptr<app_connection>& new_proxyApp,
+    const std::shared_ptr<ev::evidence_pool>& new_ev_pool,
     const std::shared_ptr<block_store>& new_block_store,
     const std::shared_ptr<events::event_bus>& new_event_bus) {
-    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_block_store, new_event_bus);
+    auto res = std::make_shared<block_executor>(new_store, new_proxyApp, new_ev_pool, new_block_store, new_event_bus);
     return res;
   }
 
@@ -56,25 +62,21 @@ struct block_executor {
     auto max_bytes = state_.consensus_params_.block.max_bytes;
     auto max_gas = state_.consensus_params_.block.max_gas;
 
-    // evidence // todo
+    auto [evidence, ev_size] = ev_pool->pending_evidence(state_.consensus_params_.evidence.max_bytes);
 
     // Fetch a limited amount of valid txs
-    auto max_data_bytes =
-      max_bytes - max_overhead_for_block - max_header_bytes - max_commit_bytes(state_.validators.size());
-    if (max_data_bytes < 0)
-      throw std::runtime_error(fmt::format(
-        "negative max_data_bytes: max_bytes={} is too small to accommodate header and last_commit", max_bytes));
+    auto max_data_bytes_ = max_data_bytes(max_bytes, ev_size, state_.validators.size());
 
+    // TODO : remove following - no longer use prepared_proposal
     std::vector<bytes> txs;
-    auto prepared_proposal = proxyApp_->prepare_proposal_sync(request_prepare_proposal{txs, max_data_bytes, votes});
+    auto prepared_proposal = proxyApp_->prepare_proposal_sync(request_prepare_proposal{txs, max_data_bytes_, votes});
     auto new_txs = prepared_proposal.block_data;
     int tx_size{};
     for (auto tx : new_txs) {
       tx_size += tx.size();
-      if (max_data_bytes < tx_size)
+      if (max_data_bytes_ < tx_size)
         throw std::runtime_error("block data exceeds max amount of allowed bytes");
     }
-
     auto modified_txs = prepared_proposal.block_data;
 
     return state_.make_block(height, modified_txs, commit_, proposer_addr);
