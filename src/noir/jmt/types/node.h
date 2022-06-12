@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/codec/bcs.h>
 #include <noir/common/overloaded.h>
-#include <noir/common/types/bytes.h>
+#include <noir/common/bytes.h>
 #include <noir/crypto/hash/xxhash.h>
 #include <noir/jmt/types/common.h>
 #include <noir/jmt/types/nibble.h>
@@ -23,13 +23,13 @@ using codec::bcs::datastream;
 
 namespace detail {
   inline void serialize_u64_varint(uint64_t num, std::vector<uint8_t>& binary) {
-    auto encoded = codec::bcs::encode(varuint64(num));
+    auto encoded = codec::bcs::encode(Varuint64(num));
     binary.insert(binary.end(), encoded.begin(), encoded.end());
   }
 
   inline uint64_t deserialize_u64_varint(std::span<const char> binary) {
-    datastream<const char> ds(binary);
-    varuint64 v;
+    datastream<const unsigned char> ds(binary);
+    Varuint64 v;
     ds >> v;
     return v.value;
   }
@@ -115,7 +115,7 @@ struct child {
       node_type);
   }
 
-  bytes32 hash;
+  Bytes32 hash;
   jmt::version version;
   jmt::node_type node_type;
 
@@ -176,7 +176,7 @@ struct internal_node {
     return {existence_bitmap, leaf_bitmap};
   }
 
-  bytes32 hash() const {
+  Bytes32 hash() const {
     return merkle_hash(0, 16, generate_bitmaps());
   }
 
@@ -204,7 +204,7 @@ struct internal_node {
 
   // TODO: return type result
   static internal_node deserialize(std::span<const char> data) {
-    datastream<const char> ds(data);
+    datastream<const unsigned char> ds(data);
     uint16_t existence_bitmap = 0;
     uint16_t leaf_bitmap = 0;
     ds >> existence_bitmap;
@@ -217,20 +217,20 @@ struct internal_node {
     auto count = std::popcount(existence_bitmap);
     for (auto i = 0; i < count; ++i) {
       auto next_child = std::countr_zero(existence_bitmap);
-      varuint64 v;
+      Varuint64 v;
       ds >> v;
       auto version = v.value;
       check(ds.remaining() >= 32,
         fmt::format("not enough bytes left, children: {}, bytes: {}", std::popcount(existence_bitmap), ds.remaining()));
-      bytes32 hash;
-      ds >> std::span(hash.data(), hash.size());
+      Bytes32 hash;
+      ds >> hash;
 
       auto child_bit = 1 << next_child;
       jmt::node_type type;
       if (leaf_bitmap & child_bit) {
         type = leaf{};
       } else {
-        varuint64 leaf_count;
+        Varuint64 leaf_count;
         ds >> leaf_count;
         type = internal{leaf_count};
       }
@@ -256,7 +256,7 @@ struct internal_node {
     return {uint16_t(bitmaps[0] & mask), uint16_t(bitmaps[1] & mask)};
   }
 
-  bytes32 merkle_hash(uint8_t start, uint8_t width, bitmap_type bitmaps) const {
+  Bytes32 merkle_hash(uint8_t start, uint8_t width, bitmap_type bitmaps) const {
     auto [range_existence_bitmap, range_leaf_bitmap] = range_bitmaps(start, width, bitmaps);
     if (!range_existence_bitmap) {
       return sparse_merkle_placeholder_hash;
@@ -276,8 +276,8 @@ struct internal_node {
     return {child_half_start, sibling_half_start};
   }
 
-  std::tuple<std::optional<node_key>, std::vector<bytes32>> get_child_with_siblings(const node_key& key, nibble n) {
-    std::vector<bytes32> siblings;
+  std::tuple<std::optional<node_key>, std::vector<Bytes32>> get_child_with_siblings(const node_key& key, nibble n) {
+    std::vector<Bytes32> siblings;
     auto [existence_bitmap, leaf_bitmap] = generate_bitmaps();
 
     for (auto h = 3; h >= 0; --h) {
@@ -323,11 +323,11 @@ template<typename T>
 struct leaf_node {
   leaf_node() = default;
 
-  leaf_node(const bytes32& account_key, const T& value): account_key(account_key), value(value) {
+  leaf_node(const Bytes32& account_key, const T& value): account_key(account_key), value(value) {
     default_hasher{}(value, value_hash);
   }
 
-  bytes32 hash() const {
+  Bytes32 hash() const {
     return sparse_merkle_leaf_node{account_key, value_hash}.hash();
   }
 
@@ -335,8 +335,8 @@ struct leaf_node {
     return std::tie(a.account_key, a.value_hash, a.value) == std::tie(b.account_key, b.value_hash, b.value);
   }
 
-  bytes32 account_key;
-  bytes32 value_hash;
+  Bytes32 account_key;
+  Bytes32 value_hash;
   T value;
 };
 
@@ -369,7 +369,7 @@ struct node {
     return n;
   }
 
-  static node leaf(const bytes32& account_key, const T& value) {
+  static node leaf(const Bytes32& account_key, const T& value) {
     node n;
     n.data = leaf_node(account_key, value);
     return n;
@@ -416,7 +416,7 @@ struct node {
     return out;
   }
 
-  bytes32 hash() const {
+  Bytes32 hash() const {
     return std::visit(overloaded{
                         [&](const null&) { return sparse_merkle_placeholder_hash; },
                         [&](const internal_node& n) { return n.hash(); },
@@ -437,7 +437,7 @@ struct node {
     case node_tag::internal:
       return node<T>{internal_node::deserialize({(const char*)val.data() + 1, val.size() - 1})};
     case node_tag::leaf:
-      return node<T>{codec::bcs::decode<leaf_node<T>>({(const char*)val.data() + 1, val.size() - 1})};
+      return node<T>{codec::bcs::decode<leaf_node<T>>({val.data() + 1, val.size() - 1})};
     default:
       return make_unexpected(fmt::format("lead tag byte is unknown: {}", tag));
     }
@@ -531,13 +531,20 @@ namespace std {
 template<>
 struct hash<noir::jmt::node_key> {
   std::size_t operator()(const noir::jmt::node_key& key) const noexcept {
-    noir::crypto::xxh64 hash;
+    noir::crypto::Xxh64 hash;
     auto nhash = std::hash<noir::jmt::nibble_path>()(key.nibble_path);
-    hash.init().update({(char*)&key.version, 8}).update({(char*)&nhash, sizeof(nhash)});
+    hash.update({(unsigned char*)&key.version, 8}).update({(unsigned char*)&nhash, sizeof(nhash)});
     return hash.final();
   }
 };
 
 } // namespace std
+
+namespace noir {
+
+template<typename T>
+struct IsForeachable<jmt::leaf_node<T>> : std::true_type {};
+
+} // namespace noir
 
 NOIR_REFLECT(noir::jmt::internal_node, children, leaf_count);

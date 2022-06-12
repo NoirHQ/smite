@@ -26,8 +26,6 @@ list(APPEND PROTO_SOURCES
   tendermint/store/types.proto
 )
 
-find_package(Protobuf REQUIRED)
-
 set(PROTO_PATH ${PROJECT_SOURCE_DIR}/proto)
 foreach(PROTO ${PROTO_SOURCES})
   set(PROTO_OUTPUT ${PROTO})

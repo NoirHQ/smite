@@ -75,7 +75,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   void enter_propose(int64_t height, int32_t round);
   bool is_proposal_complete();
-  bool is_proposal(bytes address);
+  bool is_proposal(Bytes address);
   void decide_proposal(int64_t height, int32_t round);
 
   void enter_prevote(int64_t height, int32_t round);
@@ -94,9 +94,9 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   /// \brief attempt to add vote; if it's a duplicate signature, dupeout the validator
   bool try_add_vote(p2p::vote_message& msg, node_id peer_id);
   bool add_vote(vote& vote_, node_id peer_id);
-  std::optional<vote> sign_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header);
+  std::optional<vote> sign_vote(p2p::signed_msg_type msg_type, Bytes hash, p2p::part_set_header header);
   tstamp vote_time();
-  vote sign_add_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header);
+  vote sign_add_vote(p2p::signed_msg_type msg_type, Bytes hash, p2p::part_set_header header);
 
   consensus_config cs_config;
 

@@ -8,32 +8,32 @@
 
 namespace noir::consensus::merkle {
 
-using hash_func = std::function<bytes(std::span<const char>)>;
-hash_func hash = [](std::span<const char> in) {
-  return crypto::sha256()(in); ///< use sha256 for now; may use a different algorithm in the future
+using hash_func = std::function<Bytes(std::span<const unsigned char>)>;
+hash_func hash = [](std::span<const unsigned char> in) {
+  return crypto::Sha256()(in); ///< use Sha256 for now; may use a different algorithm in the future
 };
 
 const char leaf_prefix = '\x00';
 const char inner_prefix = '\x01';
 
-bytes get_empty_hash() {
+Bytes get_empty_hash() {
   return hash({});
 }
 
-bytes leaf_hash_opt(const bytes& leaf) {
-  bytes buff;
-  buff.reserve(leaf.size() + 1);
-  buff.push_back(leaf_prefix);
-  buff.insert(buff.end(), leaf.begin(), leaf.end());
+Bytes leaf_hash_opt(const Bytes& leaf) {
+  Bytes buff;
+  buff.raw().reserve(leaf.size() + 1);
+  buff.raw().push_back(leaf_prefix);
+  buff.raw().insert(buff.end(), leaf.begin(), leaf.end());
   return hash(buff);
 }
 
-bytes inner_hash_opt(const bytes& left, const bytes& right) {
-  bytes buff;
-  buff.reserve(left.size() + right.size() + 1);
-  buff.push_back(inner_prefix);
-  buff.insert(buff.end(), left.begin(), left.end());
-  buff.insert(buff.end(), right.begin(), right.end());
+Bytes inner_hash_opt(const Bytes& left, const Bytes& right) {
+  Bytes buff;
+  buff.raw().reserve(left.size() + right.size() + 1);
+  buff.raw().push_back(inner_prefix);
+  buff.raw().insert(buff.end(), left.begin(), left.end());
+  buff.raw().insert(buff.end(), right.begin(), right.end());
   return hash(buff);
 }
 
@@ -46,7 +46,7 @@ size_t get_split_point(size_t length) {
   return k;
 }
 
-bytes hash_from_bytes_list(const bytes_list& list) {
+Bytes hash_from_bytes_list(const bytes_list& list) {
   switch (list.size()) {
   case 0:
     return get_empty_hash();
@@ -59,7 +59,7 @@ bytes hash_from_bytes_list(const bytes_list& list) {
   return inner_hash_opt(left, right);
 }
 
-bytes compute_hash_from_aunts(int64_t index, int64_t total, bytes leaf_hash, bytes_list inner_hashes) {
+Bytes compute_hash_from_aunts(int64_t index, int64_t total, Bytes leaf_hash, bytes_list inner_hashes) {
   if (index >= total || index < 0 || total <= 0)
     return {};
   switch (total) {

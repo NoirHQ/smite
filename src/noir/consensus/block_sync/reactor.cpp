@@ -32,7 +32,7 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
   auto from = info->from;
   auto to = info->broadcast ? "all" : info->to;
 
-  datastream<char> ds(info->message.data(), info->message.size());
+  datastream<unsigned char> ds(info->message.data(), info->message.size());
   p2p::bs_reactor_message msg;
   ds >> msg;
 

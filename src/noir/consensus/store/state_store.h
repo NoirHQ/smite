@@ -72,7 +72,7 @@ class db_store : public state_store {
   using db_session_type = noir::db::session::session<noir::db::session::rocksdb_t>;
 
 private:
-  using batch_type = std::vector<std::pair<bytes, bytes>>;
+  using batch_type = std::vector<std::pair<Bytes, Bytes>>;
 
   // TEMP struct for encoding
   struct validators_info {
@@ -84,7 +84,7 @@ private:
     std::optional<consensus_params> cs_param;
   };
   struct response_deliver_tx {
-    bytes data; // dummy
+    Bytes data; // dummy
   };
 
 public:
@@ -196,14 +196,14 @@ private:
   };
   static constexpr int val_set_checkpoint_interval = 100000;
   std::shared_ptr<db_session_type> db_session_;
-  bytes state_key_;
+  Bytes state_key_;
 
   template<prefix key_prefix>
-  static bytes encode_key(int64_t val) {
-    bytes ret{};
-    auto hex_ = from_hex(fmt::format("{:016x}", static_cast<uint64_t>(val)));
-    ret.push_back(static_cast<char>(key_prefix));
-    ret.insert(ret.end(), hex_.begin(), hex_.end());
+  static Bytes encode_key(int64_t val) {
+    Bytes ret{};
+    auto hex_ = hex::decode(fmt::format("{:016x}", static_cast<uint64_t>(val)));
+    ret.raw().push_back(static_cast<char>(key_prefix));
+    ret.raw().insert(ret.end(), hex_.begin(), hex_.end());
     return ret;
   }
 
@@ -375,8 +375,8 @@ private:
 
   template<prefix key_prefix>
   bool prune_range(int64_t start_, int64_t end_) {
-    bytes start;
-    bytes end;
+    Bytes start;
+    Bytes end;
     start = encode_key<key_prefix>(start_);
     end = encode_key<key_prefix>(end_);
     while (start != end) { // TODO: change to safer
@@ -388,7 +388,7 @@ private:
     return true;
   }
 
-  bool reverse_batch_delete(const bytes& start, const bytes& end, bytes& new_end) {
+  bool reverse_batch_delete(const Bytes& start, const Bytes& end, Bytes& new_end) {
     auto start_it = db_session_->lower_bound_from_bytes(start);
     auto end_it = db_session_->lower_bound_from_bytes(end);
     if (end_it == db_session_->begin()) {
@@ -401,7 +401,7 @@ private:
       db_session_->erase(it.key());
       if (++size == 1000) {
         auto key_ = it.key();
-        new_end = bytes{key_.begin(), key_.end()};
+        new_end = Bytes{key_.begin(), key_.end()};
         break;
       } else if (it == start_it) {
         new_end = start;

@@ -68,7 +68,7 @@ private:
 };
 
 /// \brief A WALEncoder writes custom-encoded WAL messages to an output stream.
-/// Format: 4 bytes CRC sum + 4 bytes length + arbitrary-length value
+/// Format: 4 Bytes CRC sum + 4 Bytes length + arbitrary-length value
 class wal_encoder {
   friend class wal_file_manager;
 
@@ -78,7 +78,7 @@ public:
   /// \brief writes the custom encoding of v to the stream. It returns an error if the encoded size of v is
   /// greater than 1MB. Any error encountered during the write is also returned.
   /// \param[in] msg
-  /// \param[out] size written bytes size
+  /// \param[out] size written Bytes size
   /// \return true on success, false otherwise
   bool encode(const timed_wal_message& msg, size_t& size);
 

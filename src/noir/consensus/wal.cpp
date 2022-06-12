@@ -20,22 +20,22 @@ wal_decoder::result wal_decoder::decode(timed_wal_message& msg) {
   std::scoped_lock g(mtx_);
   try {
     {
-      noir::bytes crc(4);
-      file_->read(crc.data(), crc.size());
+      Bytes crc(4);
+      file_->read(reinterpret_cast<char*>(crc.data()), crc.size());
       // TODO: check CRC32
     }
     size_t len;
     {
-      noir::bytes len_(4);
-      file_->read(len_.data(), len_.size());
+      Bytes len_(4);
+      file_->read(reinterpret_cast<char*>(len_.data()), len_.size());
       len = stoull(to_hex(len_), nullptr, 16);
       if (len > wal_file_manager::max_msg_size_bytes) {
         return result::corrupted;
       }
     }
     {
-      noir::bytes dat(len);
-      file_->read(dat.data(), len);
+      noir::Bytes dat(len);
+      file_->read(reinterpret_cast<char*>(dat.data()), len);
       msg = noir::decode<timed_wal_message>(dat);
     }
   } catch (...) {
@@ -79,13 +79,13 @@ bool wal_encoder::encode(const timed_wal_message& msg, size_t& size) {
     return false;
   }
 
-  noir::bytes crc(4); // TODO: CRC32
-  noir::bytes buf = crc;
-  noir::bytes len_hdr = from_hex(fmt::format("{:08x}", static_cast<uint32_t>(dat.size()))); // TODO: optimize
-  buf.insert(buf.end(), len_hdr.begin(), len_hdr.end());
-  buf.insert(buf.end(), dat.begin(), dat.end());
+  Bytes crc(4); // TODO: CRC32
+  Bytes buf = crc;
+  Bytes len_hdr = from_hex(fmt::format("{:08x}", static_cast<uint32_t>(dat.size()))); // TODO: optimize
+  buf.raw().insert(buf.end(), len_hdr.begin(), len_hdr.end());
+  buf.raw().insert(buf.end(), dat.begin(), dat.end());
 
-  file_->write(buf.data(), buf.size());
+  file_->write(reinterpret_cast<const char*>(buf.data()), buf.size());
   size = buf.size();
   return true;
 }

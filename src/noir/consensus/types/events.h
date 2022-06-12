@@ -177,7 +177,7 @@ struct event_data_round_state {
 };
 
 struct validator_info {
-  bytes address;
+  Bytes address;
   int32_t index;
 };
 

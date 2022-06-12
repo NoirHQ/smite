@@ -26,8 +26,8 @@ auto prepare_test_dir = []() {
   return std::shared_ptr<fc::temp_directory>(std::move(temp_dir));
 };
 
-inline noir::bytes gen_random_bytes(size_t num) {
-  noir::bytes ret(num);
+inline noir::Bytes gen_random_bytes(size_t num) {
+  noir::Bytes ret(num);
   noir::crypto::rand_bytes(ret);
   return ret;
 }
@@ -159,13 +159,13 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
 
         auto data_proposal1 = noir::encode(canonical::canonicalize_proposal(proposal_));
         // std::cout << "data_proposal1=" << to_hex(data_proposal1) << std::endl;
-        // std::cout << "digest1=" << fc::sha256::hash(data_proposal1).str() << std::endl;
+        // std::cout << "digest1=" << fc::Sha256::hash(data_proposal1).str() << std::endl;
         auto sig_org = file_pv_ptr->sign_proposal(proposal_);
         // std::cout << "sig=" << std::string(proposal_.signature.begin(), proposal_.signature.end()) << std::endl;
 
         auto data_proposal2 = noir::encode(canonical::canonicalize_proposal(proposal_));
         // std::cout << "data_proposal2=" << to_hex(data_proposal2) << std::endl;
-        // std::cout << "digest2=" << fc::sha256::hash(data_proposal2).str() << std::endl;
+        // std::cout << "digest2=" << fc::Sha256::hash(data_proposal2).str() << std::endl;
         auto result = file_pv_ptr->get_pub_key().verify_signature(data_proposal2, proposal_.signature);
         CHECK(result == true);
       }
@@ -190,7 +190,7 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
           ++vote_.height;
           auto data_vote1 = noir::encode(canonical::canonicalize_vote(vote_));
           // std::cout << "data_vote1=" << to_hex(data_vote1) << std::endl;
-          // std::cout << "digest1=" << fc::sha256::hash(data_vote1).str() << std::endl;
+          // std::cout << "digest1=" << fc::Sha256::hash(data_vote1).str() << std::endl;
           std::optional<std::string> sig_org;
           if (st.expect_throw) {
             CHECK_THROWS(file_pv_ptr->sign_vote(vote_));
@@ -200,7 +200,7 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
 
             auto data_vote2 = noir::encode(canonical::canonicalize_vote(vote_));
             // std::cout << "data_vote2=" << to_hex(data_vote2) << std::endl;
-            // std::cout << "digest2=" << fc::sha256::hash(data_vote2).str() << std::endl;
+            // std::cout << "digest2=" << fc::Sha256::hash(data_vote2).str() << std::endl;
             auto result = file_pv_ptr->get_pub_key().verify_signature(data_vote2, vote_.signature);
             CHECK(result == true);
           }

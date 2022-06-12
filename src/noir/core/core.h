@@ -7,7 +7,7 @@
 #include <noir/core/as_result.h>
 #include <noir/core/basic.h>
 #include <noir/core/channel.h>
-#include <noir/core/codec.h>
+// #include <noir/core/codec.h>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
 //#include <boost/asio/experimental/awaitable_operators.hpp>

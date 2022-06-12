@@ -15,13 +15,17 @@ namespace noir::crypto {
 
 /// \brief generates keccak256 hash
 /// \ingroup crypto
-struct sha3_256 : public hash<sha3_256> {
-  using hash::final;
+struct Sha3_256 : public Hash<Sha3_256> {
+  using Hash::final;
+  using Hash::update;
 
-  hash<sha3_256>& init();
-  hash<sha3_256>& update(std::span<const char> in);
-  void final(std::span<char> out);
-  std::size_t digest_size() const;
+  auto init() -> Sha3_256&;
+  auto update(BytesView in) -> Sha3_256&;
+  void final(BytesViewMut out);
+
+  constexpr auto digest_size() const -> size_t {
+    return 32;
+  }
 
 private:
   std::optional<Keccak_HashInstance> ctx;

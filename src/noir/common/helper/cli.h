@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/types/bytes_n.h>
-#include <noir/common/types/inttypes.h>
+#include <noir/common/bytes.h>
+#include <noir/common/inttypes.h>
 #include <appbase/CLI11.hpp>
 
 namespace CLI::detail {
@@ -20,11 +20,11 @@ bool lexical_conversion<noir::uint256_t, noir::uint256_t>(
   const std::vector<std::string>& strings, noir::uint256_t& output);
 
 template<>
-struct expected_count<noir::bytes32> {
+struct expected_count<noir::Bytes32> {
   static constexpr int value = 1;
 };
 
 template<>
-bool lexical_conversion<noir::bytes32, noir::bytes32>(const std::vector<std::string>& strings, noir::bytes32& output);
+bool lexical_conversion<noir::Bytes32, noir::Bytes32>(const std::vector<std::string>& strings, noir::Bytes32& output);
 
 } // namespace CLI::detail

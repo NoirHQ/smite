@@ -7,25 +7,25 @@
 
 namespace noir::crypto {
 
-crypto::hash<sha256>& sha256::init() {
-  openssl::hash::init(EVP_sha256());
+auto Sha256::init() -> Sha256& {
+  MessageDigest::init(EVP_sha256());
   return *this;
 }
 
-crypto::hash<sha256>& sha256::update(std::span<const char> in) {
+auto Sha256::update(BytesView in) -> Sha256& {
   if (!ctx) {
     init();
   }
-  openssl::hash::update(in);
+  MessageDigest::update(in);
   return *this;
 }
 
-void sha256::final(std::span<char> out) {
-  openssl::hash::final(out);
+void Sha256::final(BytesViewMut out) {
+  MessageDigest::final(out);
 }
 
-std::size_t sha256::digest_size() const {
-  return openssl::hash::digest_size(EVP_sha256());
+auto Sha256::digest_size() const -> size_t {
+  return MessageDigest::digest_size(EVP_sha256());
 }
 
 } // namespace noir::crypto

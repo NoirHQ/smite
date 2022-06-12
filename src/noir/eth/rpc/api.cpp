@@ -148,8 +148,7 @@ fc::variant api::get_block_by_number(const fc::variant& req) {
     "invalid argument 0: json: cannot unmarshal hex string without 0x prefix");
   check(params[1].is_bool(), "invalid argument 1: json: cannot unmarshal into bool");
   auto full_tx = params[1].as_bool();
-  uint64_t height;
-  from_hex(block_number, height);
+  auto height = std::stoull(block_number, nullptr, 16);
   consensus::block cb;
   if (block_store_ptr->load_block((int64_t)height, cb)) {
     // TODO: get block by number

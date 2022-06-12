@@ -13,7 +13,7 @@ namespace noir::tendermint::rpc {
 using namespace noir;
 using namespace noir::consensus;
 
-using tx = bytes;
+using tx = Bytes;
 
 result_broadcast_tx mempool::broadcast_tx_async(const tx& t) {
   tx_pool_ptr->check_tx_async(std::make_shared<consensus::tx>(t));

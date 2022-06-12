@@ -5,9 +5,9 @@
 //
 #include <noir/common/helper/variant.h>
 #include <noir/consensus/types/node_key.h>
+#include <noir/crypto/rand.h>
 
 #include <fc/crypto/base64.hpp>
-#include <fc/crypto/rand.hpp>
 #include <fc/io/json.hpp>
 #include <fc/variant_object.hpp>
 
@@ -15,9 +15,9 @@ namespace noir::consensus {
 
 std::shared_ptr<node_key> node_key::gen_node_key() {
   std::shared_ptr<node_key> key = std::make_shared<node_key>();
-  bytes_n<64> priv_key{};
-  fc::rand_pseudo_bytes(priv_key.data(), priv_key.size());
-  key->priv_key = priv_key.to_bytes();
+  BytesN<64> priv_key{};
+  crypto::rand_bytes(priv_key);
+  key->priv_key = {priv_key.begin(), priv_key.end()};
   key->node_id = node_id_from_pub_key(key->get_pub_key());
   return key;
 }
@@ -30,7 +30,7 @@ std::shared_ptr<node_key> node_key::load_node_key(const std::filesystem::path& f
     fc::from_variant(obj, json_obj);
     key = std::make_shared<node_key>();
     auto key_str = fc::base64_decode(json_obj.priv_key.value);
-    key->priv_key = bytes(key_str.begin(), key_str.end());
+    key->priv_key = Bytes(key_str.begin(), key_str.end());
     key->node_id = node_id_from_pub_key(key->get_pub_key());
   } catch (...) {
     elog(fmt::format("error reading node_key from {}", file_path.string()));
@@ -38,10 +38,10 @@ std::shared_ptr<node_key> node_key::load_node_key(const std::filesystem::path& f
   return key;
 }
 
-std::string node_key::node_id_from_pub_key(const bytes& pub_key) {
+std::string node_key::node_id_from_pub_key(const Bytes& pub_key) {
   check(pub_key.size() == 32, "unable to get a node_id: invalid public key size");
-  auto h = crypto::sha256()(pub_key);
-  bytes address = bytes(h.begin(), h.begin() + 20);
+  auto h = crypto::Sha256()(pub_key);
+  auto address = Bytes(h.begin(), h.begin() + 20);
   return to_hex(address);
 }
 

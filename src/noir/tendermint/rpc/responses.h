@@ -11,18 +11,18 @@ namespace noir::tendermint::rpc {
 
 struct result_broadcast_tx {
   uint32_t code;
-  bytes data;
+  Bytes data;
   std::string log;
   std::string codespace;
   std::string mempool_error;
 
-  bytes32 hash;
+  Bytes32 hash;
 };
 
 struct result_broadcast_tx_commit {
   ::tendermint::abci::ResponseCheckTx check_tx;
   ::tendermint::abci::ResponseDeliverTx deliver_tx;
-  bytes hash;
+  Bytes hash;
   int64_t height;
 };
 
@@ -30,7 +30,7 @@ struct result_unconfirmed_txs {
   uint64_t count;
   uint64_t total;
   uint64_t total_bytes;
-  std::vector<std::shared_ptr<const bytes>> txs;
+  std::vector<std::shared_ptr<const Bytes>> txs;
 };
 
 } // namespace noir::tendermint::rpc

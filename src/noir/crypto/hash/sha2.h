@@ -5,19 +5,21 @@
 //
 #pragma once
 #include <noir/crypto/hash/hash.h>
-#include <noir/crypto/openssl/hash.h>
+#include <noir/crypto/openssl/message_digest.h>
 
 namespace noir::crypto {
 
 /// \brief generates sha256 hash
 /// \ingroup crypto
-struct sha256 : public hash<sha256>, openssl::hash {
-  using crypto::hash<sha256>::final;
+struct Sha256 : public Hash<Sha256>, openssl::MessageDigest {
+  using Hash::final;
+  using Hash::update;
 
-  crypto::hash<sha256>& init();
-  crypto::hash<sha256>& update(std::span<const char> in);
-  void final(std::span<char> out);
-  std::size_t digest_size() const;
+  auto init() -> Sha256&;
+  auto update(BytesView in) -> Sha256&;
+  void final(BytesViewMut out);
+
+  auto digest_size() const -> size_t;
 };
 
 } // namespace noir::crypto

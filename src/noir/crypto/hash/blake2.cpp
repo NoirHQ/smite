@@ -7,28 +7,24 @@
 
 namespace noir::crypto {
 
-hash<blake2b_256>& blake2b_256::init() {
+auto Blake2b256::init() -> Blake2b256& {
   if (!state) {
-    state = blake2b_state{};
+    state.emplace();
   }
   blake2b_init(&*state, digest_size());
   return *this;
-};
+}
 
-hash<blake2b_256>& blake2b_256::update(std::span<const char> in) {
+auto Blake2b256::update(BytesView in) -> Blake2b256& {
   if (!state) {
     init();
   }
-  blake2b_update(&*state, (const uint8_t*)in.data(), in.size());
+  blake2b_update(&*state, in.data(), in.size());
   return *this;
 }
 
-void blake2b_256::final(std::span<char> out) {
-  blake2b_final(&*state, (uint8_t*)out.data(), digest_size());
-}
-
-std::size_t blake2b_256::digest_size() const {
-  return 32;
+void Blake2b256::final(BytesViewMut out) {
+  blake2b_final(&*state, out.data(), digest_size());
 }
 
 } // namespace noir::crypto

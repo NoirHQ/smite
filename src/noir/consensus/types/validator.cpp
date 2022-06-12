@@ -11,7 +11,7 @@
 
 namespace noir::consensus {
 
-bytes validator_set::get_hash() {
+Bytes validator_set::get_hash() {
   merkle::bytes_list items;
   for (const auto& val : validators) {
     auto bz = encode(val);

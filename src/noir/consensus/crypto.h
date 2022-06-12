@@ -5,26 +5,26 @@
 //
 #pragma once
 #include <noir/common/refl.h>
-#include <noir/common/types/bytes.h>
+#include <noir/common/bytes.h>
 #include <noir/core/result.h>
 #include <tendermint/crypto/keys.pb.h>
 
 namespace noir::consensus {
 
 struct pub_key {
-  bytes key;
+  Bytes key;
 
   bool empty() const {
     return key.empty();
   }
 
-  bytes address();
+  Bytes address();
 
-  bytes get_bytes() const {
+  Bytes get_bytes() const {
     return key;
   }
 
-  bool verify_signature(const bytes& msg, const bytes& sig);
+  bool verify_signature(const Bytes& msg, const Bytes& sig);
 
   std::string get_type() const;
 
@@ -51,15 +51,15 @@ struct pub_key {
 };
 
 struct priv_key {
-  bytes key;
+  Bytes key;
 
   static priv_key new_priv_key();
 
-  bytes get_bytes() const {
+  Bytes get_bytes() const {
     return key;
   }
 
-  bytes sign(const bytes& msg) const;
+  Bytes sign(const Bytes& msg) const;
 
   pub_key get_pub_key();
 

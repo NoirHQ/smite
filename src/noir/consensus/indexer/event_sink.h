@@ -20,7 +20,7 @@ struct event_sink {
   virtual Result<void> index_tx_events(const std::vector<tx_result>&) = 0;
   virtual Result<std::vector<int64_t>> search_block_events(std::string query) = 0;
   virtual Result<std::vector<std::shared_ptr<tx_result>>> search_tx_events(std::string query) = 0;
-  virtual Result<std::shared_ptr<tx_result>> get_tx_by_hash(bytes hash) = 0;
+  virtual Result<std::shared_ptr<tx_result>> get_tx_by_hash(Bytes hash) = 0;
   virtual Result<bool> has_block(int64_t height) = 0;
   virtual event_sink_type type() = 0;
   virtual Result<void> stop() = 0;

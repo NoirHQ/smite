@@ -1,2 +1,2 @@
 add_subdirectory(noird)
-add_subdirectory(smite)
+#add_subdirectory(smite)

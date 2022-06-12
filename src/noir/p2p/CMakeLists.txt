@@ -5,6 +5,7 @@ add_library(noir_p2p STATIC
 )
 target_link_libraries(noir_p2p
   RocksDB::rocksdb
+  noir::codec
   noir::common
   noir::crypto
   noir::proto_legacy

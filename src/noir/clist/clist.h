@@ -65,16 +65,22 @@ public:
     return removed;
   }
 
-  void detach_next() {
+  Result<void> detach_next() {
     std::scoped_lock _(mtx);
-    check(removed, "detach_next() must be called after remove");
+    if (!removed) {
+      return Error("detach_next() must be called after remove");
+    }
     next.reset();
+    return success();
   }
 
-  void detach_prev() {
+  Result<void> detach_prev() {
     std::scoped_lock _(mtx);
-    check(removed, "detach_prev() must be called after remove");
+    if (!removed) {
+      return Error("detach_prev() must be called after remove");
+    }
     prev.reset();
+    return success();
   }
 
   void set_next(e_ptr<T> new_next) {
@@ -156,7 +162,11 @@ public:
   e_ptr<T> push_back(T v) {
     std::scoped_lock _(mtx);
     auto e = c_element<T>::new_e(v);
-    check(len < max_len, fmt::format("clist: maximum length reached {}", max_len));
+    // FIXME: return Error instead of throw an exception
+    if (!(len < max_len)) {
+      throw std::runtime_error(fmt::format("clist: maximum length reached {}", max_len));
+    }
+    //
     if (tail == nullptr) {
       head = e;
       tail = e;
@@ -171,13 +181,19 @@ public:
     return e;
   }
 
-  void remove(e_ptr<T> e) {
+  Result<void> remove(e_ptr<T> e) {
     std::scoped_lock _(mtx);
     auto prev = e->get_prev();
     auto next = e->get_next();
-    check(head && tail, "remove on empty clist");
-    check(prev || head == e, "remove with false head");
-    check(next || tail == e, "remove with false tail");
+    if (!(head && tail)) {
+      return Error("remove on empty clist");
+    }
+    if (!(prev || head == e)) {
+      return Error("remove with false head");
+    }
+    if (!(next || tail == e)) {
+      return Error("remove with false tail");
+    }
     len--;
     if (!prev)
       head = next;
@@ -188,6 +204,7 @@ public:
     else
       next->set_prev(prev);
     e->set_removed();
+    return success();
   }
 };
 

@@ -4,18 +4,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/bytes.h>
 #include <openssl/evp.h>
-#include <span>
 
 namespace noir::openssl {
 
 /// \cond PRIVATE
-struct hash {
-  ~hash();
+struct MessageDigest {
+  ~MessageDigest();
 
   void init(const EVP_MD* type);
-  void update(std::span<const char> in);
-  void final(std::span<char> out);
+  void update(BytesView in);
+  void final(BytesViewMut out);
   size_t digest_size(const EVP_MD* type) const;
 
 protected:

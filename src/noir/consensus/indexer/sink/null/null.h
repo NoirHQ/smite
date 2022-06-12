@@ -22,7 +22,7 @@ struct null_event_sink : public event_sink {
   Result<std::vector<std::shared_ptr<tx_result>>> search_tx_events(std::string query) override {
     return success();
   }
-  Result<std::shared_ptr<tx_result>> get_tx_by_hash(bytes hash) override {
+  Result<std::shared_ptr<tx_result>> get_tx_by_hash(Bytes hash) override {
     return success();
   }
   Result<bool> has_block(int64_t height) override {

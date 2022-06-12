@@ -12,7 +12,7 @@ namespace noir::consensus::indexer {
 
 struct tx_indexer {
   virtual Result<void> index(std::vector<std::shared_ptr<tx_result>>) = 0;
-  virtual Result<std::shared_ptr<tx_result>> get(bytes hash) = 0;
+  virtual Result<std::shared_ptr<tx_result>> get(Bytes hash) = 0;
   virtual Result<std::vector<std::shared_ptr<tx_result>>> search(std::string query) = 0;
 };
 

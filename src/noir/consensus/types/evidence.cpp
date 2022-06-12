@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/codec/datastream.h>
-#include <noir/common/types/varint.h>
+#include <noir/common/varint.h>
 #include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/protobuf.h>
 
@@ -50,15 +50,15 @@ std::vector<std::shared_ptr<::tendermint::abci::Evidence>> light_client_attack_e
   return ret;
 }
 
-bytes light_client_attack_evidence::get_hash() {
-  bytes buf(10);
-  codec::basic_datastream<char> ds(buf);
-  auto n = write_zigzag(ds, varint<int64_t>(common_height));
-  bytes bz(32 + n);
+Bytes light_client_attack_evidence::get_hash() {
+  Bytes buf(10);
+  codec::BasicDatastream<unsigned char> ds(buf);
+  auto n = write_zigzag(ds, Varint<int64_t>(common_height));
+  Bytes bz(32 + n.value());
   auto h = get_hash();
   std::copy(h.begin(), h.end(), bz.begin());
   std::copy(buf.begin(), buf.end(), bz.begin() + 32);
-  return crypto::sha256()(bz);
+  return crypto::Sha256()(bz);
 }
 
 std::vector<std::shared_ptr<validator>> light_client_attack_evidence::get_byzantine_validators(

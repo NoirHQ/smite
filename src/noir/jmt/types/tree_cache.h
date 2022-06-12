@@ -17,7 +17,7 @@ struct frozen_tree_cache {
   node_batch<T> node_cache;
   stale_node_index_batch stale_node_index_cache;
   std::vector<jmt::node_stats> node_stats;
-  std::vector<bytes32> root_hashes;
+  std::vector<Bytes32> root_hashes;
 };
 
 template<typename R, typename T = typename R::value_type>
@@ -100,7 +100,7 @@ struct tree_cache {
     next_version += 1;
   }
 
-  std::pair<std::vector<bytes32>, tree_update_batch<T>> deltas() {
+  std::pair<std::vector<Bytes32>, tree_update_batch<T>> deltas() {
     return {frozen_cache.root_hashes,
       {frozen_cache.node_cache, frozen_cache.stale_node_index_cache, frozen_cache.node_stats}};
   }

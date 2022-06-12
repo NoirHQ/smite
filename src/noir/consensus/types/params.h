@@ -71,9 +71,9 @@ struct consensus_params {
       validator_params::get_default(), version_params::get_default()};
   }
 
-  bytes hash_consensus_params() {
+  Bytes hash_consensus_params() {
     // todo
-    return bytes{};
+    return Bytes{};
   }
 };
 

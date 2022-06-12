@@ -12,20 +12,20 @@
 namespace noir::eth {
 
 struct header {
-  bytes parent_hash;
-  bytes uncle_hash;
-  bytes coinbase;
-  bytes root;
-  bytes tx_hash;
-  bytes receipt_hash;
-  bytes bloom;
+  Bytes parent_hash;
+  Bytes uncle_hash;
+  Bytes coinbase;
+  Bytes root;
+  Bytes tx_hash;
+  Bytes receipt_hash;
+  Bytes bloom;
   uint256_t difficulty;
   uint256_t number;
   uint64_t gas_limit;
   uint64_t gas_used;
   uint64_t time;
-  bytes extra;
-  bytes mix_digest;
+  Bytes extra;
+  Bytes mix_digest;
   uint64_t nonce;
   uint256_t base_fee;
 
@@ -35,19 +35,19 @@ public:
 
   fc::variant_object to_json() {
     fc::mutable_variant_object h_mvo;
-    h_mvo("parentHash", noir::to_hex(parent_hash));
+    h_mvo("parentHash", to_hex(parent_hash));
     h_mvo("sha3Uncles", "0000000000000000000000000000000000000000000000000000000000000000");
-    h_mvo("miner", noir::to_hex(coinbase));
-    h_mvo("stateRoot", noir::to_hex(root));
+    h_mvo("miner", to_hex(coinbase));
+    h_mvo("stateRoot", to_hex(root));
     // TODO: empty tx root: 56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421?
     h_mvo("transactionsRoot", "56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
     h_mvo("receiptsRoot", "56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
     h_mvo("logsBloom", "");
     h_mvo("difficulty", "0");
-    h_mvo("blockNumber", noir::to_hex(number));
+    h_mvo("blockNumber", to_hex(number));
     h_mvo("gasLimit", "0");
     h_mvo("gasUsed", "0");
-    h_mvo("timestamp", noir::to_hex(time));
+    h_mvo("timestamp", to_hex(time));
     h_mvo("extra", "");
     h_mvo("mixHash", "0000000000000000000000000000000000000000000000000000000000000000");
     h_mvo("nonce", "0");
@@ -60,7 +60,7 @@ struct block {
   eth::header header;
   std::vector<eth::header> uncles;
   std::vector<rpc_transaction> transactions;
-  bytes hash;
+  Bytes hash;
   uint64_t size;
   uint256_t td;
 
@@ -73,7 +73,7 @@ public:
     b_mvo("header", header.to_json());
     b_mvo("uncles", fc::variants{});
     b_mvo("transactions", fc::variants{});
-    b_mvo("hash", noir::to_hex(hash));
+    b_mvo("hash", to_hex(hash));
     b_mvo("size", "0");
     b_mvo("totalDifficulty", "0");
     return b_mvo;

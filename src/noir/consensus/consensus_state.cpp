@@ -617,7 +617,7 @@ bool consensus_state::is_proposal_complete() {
   return rs.votes->prevotes(rs.proposal->pol_round)->has_two_thirds_majority();
 }
 
-bool consensus_state::is_proposal(bytes address) {
+bool consensus_state::is_proposal(Bytes address) {
   return rs.validators->get_proposer()->address == address;
 }
 
@@ -725,7 +725,7 @@ void consensus_state::do_prevote(int64_t height, int32_t round) {
   // If proposal_block is nil, prevote nil
   if (!rs.proposal_block) {
     dlog("prevote step; proposal_block is nil");
-    sign_add_vote(p2p::Prevote, bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Prevote, Bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -786,7 +786,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
       dlog("precommit step; no +2/3 prevotes during enterPrecommit while we are locked; precommitting nil");
     else
       dlog("precommit step; no +2/3 prevotes during enterPrecommit; precommitting nil");
-    sign_add_vote(p2p::Precommit, bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Precommit, Bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -811,7 +811,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
       // publish event unlock
       event_bus_->publish_event_unlock(events::event_data_round_state{rs});
     }
-    sign_add_vote(p2p::Precommit, bytes{} /* todo - nil */, p2p::part_set_header{});
+    sign_add_vote(p2p::Precommit, Bytes{} /* todo - nil */, p2p::part_set_header{});
     return;
   }
 
@@ -858,7 +858,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
 
   // publish event unlock
   event_bus_->publish_event_unlock(events::event_data_round_state{rs});
-  sign_add_vote(p2p::Precommit, bytes{} /* todo - nil */, p2p::part_set_header{});
+  sign_add_vote(p2p::Precommit, Bytes{} /* todo - nil */, p2p::part_set_header{});
 }
 
 /**
@@ -1082,7 +1082,7 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node
   auto added = rs.proposal_block_parts->add_part(part_);
 
   if (rs.proposal_block_parts->byte_size > local_state.consensus_params_.block.max_bytes) {
-    elog(fmt::format("total size of proposal block parts exceeds maximum block bytes ({} > {})",
+    elog(fmt::format("total size of proposal block parts exceeds maximum block Bytes ({} > {})",
       rs.proposal_block_parts->byte_size, local_state.consensus_params_.block.max_bytes));
     return added;
   }
@@ -1282,7 +1282,7 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
   return added;
 }
 
-std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header) {
+std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, Bytes hash, p2p::part_set_header header) {
   // Flush the WAL. Otherwise, we may not recompute the same vote to sign,
   // and the privValidator will refuse to sign anything.
   if (!wal_->flush_and_sync()) {
@@ -1349,7 +1349,7 @@ tstamp consensus_state::vote_time() {
 /**
  * sign vote and publish on internal_msg_channel
  */
-vote consensus_state::sign_add_vote(p2p::signed_msg_type msg_type, bytes hash, p2p::part_set_header header) {
+vote consensus_state::sign_add_vote(p2p::signed_msg_type msg_type, Bytes hash, p2p::part_set_header header) {
   if (!local_priv_validator)
     return {};
 

@@ -35,9 +35,9 @@ std::pair<std::vector<std::shared_ptr<proof_node>>, std::shared_ptr<proof_node>>
   return {left_right, root};
 }
 
-std::pair<bytes, std::vector<std::shared_ptr<proof>>> proofs_from_bytes_list(const bytes_list& items) {
+std::pair<Bytes, std::vector<std::shared_ptr<proof>>> proofs_from_bytes_list(const bytes_list& items) {
   auto [trails, root_spn] = trails_from_bytes_list(items);
-  bytes root_hash = root_spn->hash;
+  Bytes root_hash = root_spn->hash;
   std::vector<std::shared_ptr<proof>> proofs;
   proofs.resize(items.size());
   for (auto i = 0; i < trails.size(); i++) {

@@ -9,6 +9,7 @@
 #include <noir/common/concepts.h>
 #include <noir/common/for_each.h>
 #include <noir/common/types.h>
+#include <noir/common/varint.h>
 #include <boost/pfr.hpp>
 #include <map>
 #include <memory>
@@ -18,15 +19,15 @@
 NOIR_CODEC(bcs) {
 
 // Booleans and Integers
-template<typename Stream, integral T>
+template<typename Stream, Integral T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
-  ds.write((const char*)&v, sizeof(v));
+  ds.write((const unsigned char*)&v, sizeof(v));
   return ds;
 }
 
-template<typename Stream, integral T>
+template<typename Stream, Integral T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
-  ds.read({(char*)&v, sizeof(v)});
+  ds.read((unsigned char*)&v, sizeof(v));
   return ds;
 }
 
@@ -34,25 +35,25 @@ template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const uint256_t& v) {
   uint64_t data[4] = {0};
   boost::multiprecision::export_bits(v, std::begin(data), 64, false);
-  ds << std::span((const char*)data, 32);
+  ds.write((const unsigned char*)data, 32);
   return ds;
 }
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, uint256_t& v) {
   uint64_t data[4] = {0};
-  ds >> std::span((char*)data, 32);
+  ds.read((unsigned char*)data, 32);
   boost::multiprecision::import_bits(v, std::begin(data), std::end(data), 64, false);
   return ds;
 }
 
-template<typename Stream, enumeration E>
+template<typename Stream, Enumeration E>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const E& v) {
   ds << static_cast<const std::underlying_type_t<E>>(v);
   return ds;
 }
 
-template<typename Stream, enumeration E>
+template<typename Stream, Enumeration E>
 datastream<Stream>& operator>>(datastream<Stream>& ds, E& v) {
   std::underlying_type_t<E> tmp;
   ds >> tmp;
@@ -61,14 +62,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, E& v) {
 }
 
 // ULEB128-Encoded Integers
-template<typename Stream, unsigned_integral T>
-datastream<Stream>& operator<<(datastream<Stream>& ds, const varint<T>& v) {
+template<typename Stream, UnsignedIntegral T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const Varint<T>& v) {
   write_uleb128(ds, v);
   return ds;
 }
 
-template<typename Stream, unsigned_integral T>
-datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
+template<typename Stream, UnsignedIntegral T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, Varint<T>& v) {
   v = 0;
   read_uleb128(ds, v);
   return ds;
@@ -77,7 +78,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
 // Optional Data
 template<typename Stream, typename T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::optional<T>& v) {
-  char has_value = v.has_value();
+  unsigned char has_value = v.has_value();
   ds << has_value;
   if (has_value)
     ds << *v;
@@ -86,7 +87,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::optional<T>& v
 
 template<typename Stream, typename T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::optional<T>& v) {
-  char has_value = 0;
+  unsigned char has_value = 0;
   ds >> has_value;
   if (has_value) {
     T val;
@@ -102,7 +103,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::optional<T>& v) {
 // TODO: Add other containers
 template<typename Stream, typename T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) {
-  ds << unsigned_int(v.size());
+  ds << Varuint32(v.size());
   for (const auto& i : v) {
     ds << i;
   }
@@ -111,7 +112,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) 
 
 template<typename Stream, typename T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
-  unsigned_int size;
+  Varuint32 size;
   ds >> size;
   v.resize(size);
   for (auto& i : v) {
@@ -138,14 +139,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T (&v)[N]) {
   return ds;
 }
 
-template<typename Stream, Byte T, size_t N>
-datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T, N> v) {
+template<typename Stream, ByteSequence T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   ds.write(v.data(), v.size());
   return ds;
 }
 
-template<typename Stream, Byte T, size_t N>
-datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
+template<typename Stream, ByteSequence T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   ds.read(v.data(), v.size());
   return ds;
 }
@@ -162,7 +163,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::map<K, V>& v) 
 template<typename Stream, typename K, typename V>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::map<K, V>& v) {
   v.clear();
-  varuint32 size = 0;
+  Varuint32 size = 0;
   ds >> size;
   for (auto i = 0; i < size.value; ++i) {
     K key;
@@ -176,7 +177,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::map<K, V>& v) {
 // Strings (utf-8 support?)
 template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
-  ds << unsigned_int(v.size());
+  ds << Varuint32(v.size());
   if (v.size()) {
     ds.write(v.data(), v.size());
   }
@@ -185,7 +186,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
-  unsigned_int size;
+  Varuint32 size;
   ds >> size;
   v.resize(size);
   if (size) {
@@ -208,13 +209,13 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::tuple<Ts...>& v) {
 }
 
 // Structures
-template<typename Stream, foreachable T>
+template<typename Stream, Foreachable T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   for_each_field([&](const auto& val) { ds << val; }, v);
   return ds;
 }
 
-template<typename Stream, foreachable T>
+template<typename Stream, Foreachable T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   for_each_field([&](auto& val) { ds >> val; }, v);
   return ds;
@@ -223,14 +224,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
 // Enumerations (tagged-unions)
 template<typename Stream, typename... Ts>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::variant<Ts...>& v) {
-  ds << unsigned_int(v.index());
+  ds << Varuint32(v.index());
   std::visit([&](auto& val) { ds << val; }, v);
   return ds;
 }
 
 namespace detail {
   template<size_t I, typename Stream, typename... Ts>
-  void decode(datastream<Stream>& ds, std::variant<Ts...>& v, unsigned_int i) {
+  void decode(datastream<Stream>& ds, std::variant<Ts...>& v, Varuint32 i) {
     if constexpr (I < std::variant_size_v<std::variant<Ts...>>) {
       if (i.value == I) {
         std::variant_alternative_t<I, std::variant<Ts...>> tmp;
@@ -247,7 +248,7 @@ namespace detail {
 
 template<typename Stream, typename... Ts>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& v) {
-  unsigned_int index = 0;
+  Varuint32 index = 0;
   ds >> index;
   detail::decode<0>(ds, v, index);
   return ds;

@@ -22,8 +22,8 @@ TEST_CASE("serialization: net_message - scale", "[noir][p2p]") {
   static_assert(header_size == message_header_size, "invalid message_header_size");
   const size_t buffer_size = header_size + payload_size;
 
-  auto send_buffer = std::make_shared<std::vector<char>>(buffer_size);
-  codec::scale::datastream<char> ds(send_buffer->data(), buffer_size);
+  auto send_buffer = std::make_shared<std::vector<unsigned char>>(buffer_size);
+  codec::scale::datastream<unsigned char> ds(send_buffer->data(), buffer_size);
   ds.write(header, header_size);
   ds << m;
 
@@ -33,7 +33,7 @@ TEST_CASE("serialization: net_message - scale", "[noir][p2p]") {
   std::cout << "ds=" << to_hex(*send_buffer) << std::endl;
 
   // Decode
-  codec::scale::datastream<char> ds_decode(send_buffer->data(), buffer_size);
+  codec::scale::datastream<unsigned char> ds_decode(send_buffer->data(), buffer_size);
   uint32_t payload_size_decode;
   ds_decode >> payload_size_decode;
   internal_message m_decode;

@@ -5,20 +5,24 @@
 //
 #pragma once
 #include <noir/crypto/hash/hash.h>
-#include <blake2.h>
 #include <optional>
+#include <blake2.h>
 
 namespace noir::crypto {
 
 /// \brief generates blake2b_256 hash
 /// \ingroup crypto
-struct blake2b_256 : public hash<blake2b_256> {
-  using hash::final;
+struct Blake2b256 : public Hash<Blake2b256> {
+  using Hash::final;
+  using Hash::update;
 
-  hash<blake2b_256>& init();
-  hash<blake2b_256>& update(std::span<const char> in);
-  void final(std::span<char> out);
-  std::size_t digest_size() const;
+  auto init() -> Blake2b256&;
+  auto update(BytesView in) -> Blake2b256&;
+  void final(BytesViewMut out);
+
+  constexpr auto digest_size() const -> size_t {
+    return 32;
+  }
 
 private:
   std::optional<blake2b_state> state;

@@ -40,13 +40,13 @@ inline int64_t max_data_bytes(int64_t max_bytes, int64_t evidence_bytes, int val
   return max_data_bytes;
 }
 
-inline bytes random_address() {
-  noir::bytes ret{20};
+inline Bytes random_address() {
+  Bytes ret{20};
   noir::crypto::rand_bytes(ret);
   return ret;
 }
-inline bytes random_hash() {
-  noir::bytes ret{32};
+inline Bytes random_hash() {
+  Bytes ret{32};
   noir::crypto::rand_bytes(ret);
   return ret;
 }
@@ -59,9 +59,9 @@ enum block_id_flag {
 
 struct commit_sig {
   block_id_flag flag;
-  bytes validator_address;
+  Bytes validator_address;
   tstamp timestamp;
-  bytes signature;
+  Bytes signature;
 
   static commit_sig new_commit_sig_absent() {
     return commit_sig{FlagAbsent};
@@ -115,7 +115,7 @@ struct commit {
   p2p::block_id my_block_id{};
   std::vector<commit_sig> signatures{};
 
-  bytes hash; // NOTE: not to be serialized
+  Bytes hash; // NOTE: not to be serialized
   std::shared_ptr<bit_array> bit_array_{}; // NOTE: not to be serialized
 
   [[nodiscard]] static std::shared_ptr<commit> new_commit(
@@ -128,7 +128,7 @@ struct commit {
     return signatures.size();
   }
 
-  bytes get_hash();
+  Bytes get_hash();
 
   /// \brief GetVote converts the CommitSig for the given valIdx to a Vote. Returns nil if the precommit at valIdx is
   /// nil. Panics if valIdx >= commit.Size().
@@ -195,13 +195,13 @@ struct commit {
 
 struct part {
   uint32_t index;
-  bytes bytes_;
+  Bytes bytes_;
   merkle::proof proof_;
 };
 
 struct part_set {
   uint32_t total{};
-  bytes hash{};
+  Bytes hash{};
 
   std::vector<std::shared_ptr<part>> parts{};
   std::shared_ptr<bit_array> parts_bit_array{};
@@ -220,7 +220,7 @@ struct part_set {
 
   static std::shared_ptr<part_set> new_part_set_from_header(const p2p::part_set_header& header);
 
-  static std::shared_ptr<part_set> new_part_set_from_data(const bytes& data, uint32_t part_size);
+  static std::shared_ptr<part_set> new_part_set_from_data(const Bytes& data, uint32_t part_size);
 
   bool add_part(std::shared_ptr<part> part_);
 
@@ -248,14 +248,14 @@ struct part_set {
     return parts_bit_array;
   }
 
-  bytes get_hash();
+  Bytes get_hash();
 };
 
 struct block_data {
   std::vector<tx> txs;
-  bytes hash; // may continuously change
+  Bytes hash; // may continuously change
 
-  bytes get_hash();
+  Bytes get_hash();
 
   static std::unique_ptr<::tendermint::types::Data> to_proto(const block_data& b) {
     auto ret = std::make_unique<::tendermint::types::Data>();
@@ -284,31 +284,31 @@ struct block_header {
   p2p::block_id last_block_id;
 
   // Hashes of block data
-  bytes last_commit_hash;
-  bytes data_hash;
+  Bytes last_commit_hash;
+  Bytes data_hash;
 
   // Hashes from app for previous block
-  bytes validators_hash;
-  bytes next_validators_hash;
-  bytes consensus_hash;
-  bytes app_hash;
-  bytes last_results_hash; // root hash of all results from txs of previous block
+  Bytes validators_hash;
+  Bytes next_validators_hash;
+  Bytes consensus_hash;
+  Bytes app_hash;
+  Bytes last_results_hash; // root hash of all results from txs of previous block
 
-  bytes evidence_hash;
-  bytes proposer_address; // todo - use address type?
+  Bytes evidence_hash;
+  Bytes proposer_address; // todo - use address type?
 
-  bytes get_hash();
+  Bytes get_hash();
 
   void populate(consensus::consensus_version& version_,
     std::string& chain_id_,
     tstamp timestamp_,
     p2p::block_id& last_block_id_,
-    bytes val_hash,
-    bytes next_val_hash,
-    bytes consensus_hash_,
-    bytes& app_hash_,
-    bytes& last_results_hash_,
-    bytes& proposer_address_) {
+    Bytes val_hash,
+    Bytes next_val_hash,
+    Bytes consensus_hash_,
+    Bytes& app_hash_,
+    Bytes& last_results_hash_,
+    Bytes& proposer_address_) {
     version = version_;
     chain_id = chain_id_;
     time = timestamp_;
@@ -459,7 +459,7 @@ struct block {
     // if (last_commit.height == 0)
     //   return "unknown last_commit";
 
-    // if (last_commit.get_hash() != header.last_commit_hash)
+   // if (last_commit.get_hash() != header.last_commit_hash)
     //  return "wrong last_commit_hash";
 
     return {};
@@ -488,7 +488,7 @@ struct block {
    */
   std::shared_ptr<part_set> make_part_set(uint32_t part_size);
 
-  bytes get_hash() {
+  Bytes get_hash() {
     if (this == nullptr)
       return {};
     std::scoped_lock g(mtx);
@@ -498,7 +498,7 @@ struct block {
     return header.get_hash();
   }
 
-  bool hashes_to(bytes& hash) {
+  bool hashes_to(Bytes& hash) {
     if (hash.empty())
       return false;
     return get_hash() == hash;
@@ -571,7 +571,7 @@ NOIR_REFLECT(noir::consensus::block_header, version, chain_id, height, time, las
   validators_hash, next_validators_hash, consensus_hash, app_hash, last_results_hash, proposer_address);
 
 template<>
-struct noir::is_foreachable<noir::consensus::commit> : std::false_type {};
+struct noir::IsForeachable<noir::consensus::commit> : std::false_type {};
 
 template<>
-struct noir::is_foreachable<noir::consensus::block> : std::false_type {};
+struct noir::IsForeachable<noir::consensus::block> : std::false_type {};

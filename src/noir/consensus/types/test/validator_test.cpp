@@ -59,7 +59,7 @@ TEST_CASE("validator_set: Proposer Selection 1", "[noir][consensus]") {
 }
 
 TEST_CASE("validator_set: Proposer Selection 2", "[noir][consensus]") {
-  std::vector<bytes> addrs = {from_hex("0000000000000000000000000000000000000000"),
+  std::vector<Bytes> addrs = {from_hex("0000000000000000000000000000000000000000"),
     from_hex("0000000000000000000000000000000000000001"), from_hex("0000000000000000000000000000000000000002")};
 
   SECTION("all validators have equal power") {
@@ -120,9 +120,9 @@ TEST_CASE("validator_set: Apply update", "[noir][consensus]") {
     update_vals.push_back(validator{from_hex("0011"), {}, 11});
     auto vals = validator_set::new_validator_set(start_vals);
     vals->apply_updates(update_vals);
-    CHECK(vals->get_by_index(0)->address == std::vector<char>(from_hex("0011")));
-    CHECK(vals->get_by_index(1)->address == std::vector<char>(from_hex("0044")));
-    CHECK(vals->get_by_index(2)->address == std::vector<char>(from_hex("0066")));
+    CHECK(vals->get_by_index(0)->address == from_hex("0011"));
+    CHECK(vals->get_by_index(1)->address == from_hex("0044"));
+    CHECK(vals->get_by_index(2)->address == from_hex("0066"));
   }
 
   SECTION("insert middle") {
@@ -131,9 +131,9 @@ TEST_CASE("validator_set: Apply update", "[noir][consensus]") {
     auto vals = validator_set::new_validator_set(start_vals);
     vals->apply_updates(update_vals);
     // print_validator_set(vals);
-    CHECK(vals->get_by_index(0)->address == std::vector<char>(from_hex("0044")));
-    CHECK(vals->get_by_index(1)->address == std::vector<char>(from_hex("0055")));
-    CHECK(vals->get_by_index(2)->address == std::vector<char>(from_hex("0066")));
+    CHECK(vals->get_by_index(0)->address == from_hex("0044"));
+    CHECK(vals->get_by_index(1)->address == from_hex("0055"));
+    CHECK(vals->get_by_index(2)->address == from_hex("0066"));
   }
 
   SECTION("insert tail") {
@@ -142,9 +142,9 @@ TEST_CASE("validator_set: Apply update", "[noir][consensus]") {
     auto vals = validator_set::new_validator_set(start_vals);
     vals->apply_updates(update_vals);
     // print_validator_set(vals);
-    CHECK(vals->get_by_index(0)->address == std::vector<char>(from_hex("0044")));
-    CHECK(vals->get_by_index(1)->address == std::vector<char>(from_hex("0066")));
-    CHECK(vals->get_by_index(2)->address == std::vector<char>(from_hex("0077")));
+    CHECK(vals->get_by_index(0)->address == from_hex("0044"));
+    CHECK(vals->get_by_index(1)->address == from_hex("0066"));
+    CHECK(vals->get_by_index(2)->address == from_hex("0077"));
   }
 
   SECTION("override voting_power") {

@@ -107,13 +107,13 @@ TEST_CASE("state_wal: catchup_replay", "[noir][consensus]") {
 auto corrupt_wal_file = [](const std::string& wal_path) {
   std::array<char, 100> corrupt_msg;
   size_t len = sizeof(corrupt_msg);
-  char* corrupt_ptr = static_cast<char*>(static_cast<void*>(&corrupt_msg));
+  auto corrupt_ptr = static_cast<unsigned char*>(static_cast<void*>(&corrupt_msg));
   noir::crypto::rand_bytes({corrupt_ptr, len});
   fc::cfile file_;
   file_.set_file_path(wal_path);
   file_.open(fc::cfile::update_rw_mode);
   file_.seek_end(0);
-  file_.write(corrupt_ptr, len);
+  file_.write(reinterpret_cast<char*>(corrupt_ptr), len);
 };
 
 TEST_CASE("state_wal: repair_wal_file", "[noir][consensus]") {

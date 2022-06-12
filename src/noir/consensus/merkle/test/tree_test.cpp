@@ -75,7 +75,7 @@ TEST_CASE("merkle_tree: Verify proof", "[noir][consensus]") {
 
     // Trail too long should fail
     auto orig_aunts = proof->aunts;
-    proof->aunts.push_back({static_cast<char>(i % 256)});
+    proof->aunts.push_back({static_cast<unsigned char>(i % 256)});
     err = proof->verify(root_hash, items[i]);
     CHECK(err.value() == "invalid root hash");
     proof->aunts = orig_aunts;

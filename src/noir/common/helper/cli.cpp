@@ -15,8 +15,8 @@ bool lexical_conversion<noir::uint256_t, noir::uint256_t>(
 }
 
 template<>
-bool lexical_conversion<noir::bytes32, noir::bytes32>(const std::vector<std::string>& strings, noir::bytes32& output) {
-  output = noir::bytes32(strings[0]);
+bool lexical_conversion<noir::Bytes32, noir::Bytes32>(const std::vector<std::string>& strings, noir::Bytes32& output) {
+  output = noir::Bytes32(strings[0]);
   return true;
 }
 

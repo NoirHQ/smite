@@ -16,11 +16,13 @@ extern "C" {
 
 namespace noir::p2p {
 
-std::shared_ptr<secret_connection> secret_connection::make_secret_connection(bytes& loc_priv_key) {
-  check(loc_priv_key.size() == 64, "unable to create a new create_connection: invalid private key size");
+std::shared_ptr<secret_connection> secret_connection::make_secret_connection(Bytes& loc_priv_key) {
+  if (!(loc_priv_key.size() == 64)) {
+    throw std::runtime_error("unable to create a new create_connection: invalid private key size");
+  }
   auto sc = std::make_shared<secret_connection>();
   sc->loc_priv_key = loc_priv_key;
-  sc->loc_pub_key = bytes(loc_priv_key.begin() + 32, loc_priv_key.end());
+  sc->loc_pub_key = Bytes(loc_priv_key.begin() + 32, loc_priv_key.end());
 
   // Generate ephemeral local keys
   randombytes_buf(sc->loc_eph_priv.data(), sc->loc_eph_priv.size());
@@ -30,13 +32,13 @@ std::shared_ptr<secret_connection> secret_connection::make_secret_connection(byt
   return sc;
 }
 
-std::optional<std::string> secret_connection::shared_eph_pub_key(bytes32& received_pub_key) {
+std::optional<std::string> secret_connection::shared_eph_pub_key(Bytes32& received_pub_key) {
   // By here, we have already exchanged eph_pub_keys with the other
   rem_eph_pub = received_pub_key;
 
   // Sort by lexical order
   bool loc_is_least = true;
-  bytes32 lo_eph_pub = loc_eph_pub, hi_eph_pub = rem_eph_pub;
+  Bytes32 lo_eph_pub = loc_eph_pub, hi_eph_pub = rem_eph_pub;
   if (loc_eph_pub > rem_eph_pub) {
     loc_is_least = false;
     lo_eph_pub = rem_eph_pub;
@@ -44,7 +46,7 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(bytes32& receiv
   }
 
   // Compute diffie hellman secret
-  bytes32 dh_secret;
+  Bytes32 dh_secret;
   if (crypto_scalarmult(reinterpret_cast<unsigned char*>(dh_secret.data()),
         reinterpret_cast<const unsigned char*>(loc_eph_priv.data()),
         reinterpret_cast<const unsigned char*>(rem_eph_pub.data())) != 0) {
@@ -57,13 +59,13 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(bytes32& receiv
     return "unable to derive secrets";
 
   if (loc_is_least) {
-    recv_secret = bytes32(std::span(key.data(), 32));
-    send_secret = bytes32(std::span(key.data() + 32, 32));
+    recv_secret = Bytes32(std::span(key.data(), 32));
+    send_secret = Bytes32(std::span(key.data() + 32, 32));
   } else {
-    send_secret = bytes32(std::span(key.data(), 32));
-    recv_secret = bytes32(std::span(key.data() + 32, 32));
+    send_secret = Bytes32(std::span(key.data(), 32));
+    recv_secret = Bytes32(std::span(key.data() + 32, 32));
   }
-  chal_secret = bytes32(std::span(key.data() + 64, 32));
+  chal_secret = Bytes32(std::span(key.data() + 64, 32));
 
   // Find challenge secret by applying merlin transcript
   merlin_transcript mctx{};
@@ -78,13 +80,13 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(bytes32& receiv
   merlin_transcript_challenge_bytes(&mctx, reinterpret_cast<const uint8_t*>("SECRET_CONNECTION_MAC"),
     strlen("SECRET_CONNECTION_MAC"), reinterpret_cast<uint8_t*>(chal_secret.data()), chal_secret.size());
 
-  // Sign challenge bytes for authentication
+  // Sign challenge Bytes for authentication
   uint8_t sm[32 + crypto_sign_BYTES];
   unsigned long long smlen;
   if (crypto_sign(sm, &smlen, reinterpret_cast<const unsigned char*>(chal_secret.data()), chal_secret.size(),
         reinterpret_cast<const unsigned char*>(loc_priv_key.data())) != 0)
     return "unable to sign challenge";
-  loc_signature = bytes(sm, sm + smlen);
+  loc_signature = Bytes(sm, sm + smlen);
   return {};
 }
 
@@ -102,7 +104,7 @@ std::optional<std::string> secret_connection::shared_auth_sig(auth_sig_message& 
   return {};
 }
 
-bytes secret_connection::derive_secrets(bytes32& dh_secret) {
+Bytes secret_connection::derive_secrets(Bytes32& dh_secret) {
   EVP_KDF* kdf;
   EVP_KDF_CTX* kctx;
   unsigned char key[32 + 32 + 32];

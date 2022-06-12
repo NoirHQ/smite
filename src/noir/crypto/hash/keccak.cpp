@@ -9,15 +9,15 @@
 
 namespace noir::crypto {
 
-hash<keccak256>& keccak256::init() {
+auto Keccak256::init() -> Keccak256& {
   if (!ctx) {
-    ctx = Keccak_HashInstance{};
+    ctx.emplace();
   }
   Keccak_HashInitialize_Keccak256(&*ctx);
   return *this;
 }
 
-hash<keccak256>& keccak256::update(std::span<const char> in) {
+auto Keccak256::update(BytesView in) -> Keccak256& {
   if (!ctx) {
     init();
   }
@@ -25,12 +25,8 @@ hash<keccak256>& keccak256::update(std::span<const char> in) {
   return *this;
 }
 
-void keccak256::final(std::span<char> out) {
+void Keccak256::final(BytesViewMut out) {
   Keccak_HashFinal(&*ctx, (BitSequence*)out.data());
-}
-
-std::size_t keccak256::digest_size() const {
-  return 32;
 }
 
 } // namespace noir::crypto

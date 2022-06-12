@@ -60,7 +60,7 @@ struct block_executor {
   std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> create_proposal_block(int64_t height,
     state& state_,
     const std::shared_ptr<commit>& commit_,
-    bytes& proposer_addr,
+    Bytes& proposer_addr,
     std::vector<std::optional<vote>>& votes) {
     auto max_bytes = state_.consensus_params_.block.max_bytes;
     auto max_gas = state_.consensus_params_.block.max_gas;
@@ -71,7 +71,7 @@ struct block_executor {
     auto max_data_bytes_ = max_data_bytes(max_bytes, ev_size, state_.validators->size());
 
     // TODO : remove following - no longer use prepared_proposal
-    std::vector<bytes> txs;
+    std::vector<Bytes> txs;
     auto prepared_proposal = proxyApp_->prepare_proposal_sync(request_prepare_proposal{txs, max_data_bytes_, votes});
     auto new_txs = prepared_proposal.block_data;
     int tx_size{};
@@ -87,7 +87,7 @@ struct block_executor {
 
   bool validate_block(state& state_, const std::shared_ptr<block>& block_) {
     auto hash = block_->get_hash();
-    if (cache.find(to_hex(hash)) != cache.end())
+    if (cache.find(hex::encode(hash)) != cache.end())
       return true;
 
     /// Validate block
@@ -157,7 +157,7 @@ struct block_executor {
 
     // check evidence // todo
 
-    cache[to_hex(hash)] = true;
+    cache[hex::encode(hash)] = true;
     return true;
   }
 
@@ -207,12 +207,12 @@ struct block_executor {
     auto commit_res = proxyApp_->commit_sync();
 
     ilog(fmt::format(
-      "committed state: height={}, num_txs... app_hash={}", block_->header.height, to_hex(commit_res.data)));
+      "committed state: height={}, num_txs... app_hash={}", block_->header.height, hex::encode(commit_res.data)));
 
     // Update mempool
     std::vector<consensus::tx> block_txs;
 
-    bytes app_hash = commit_res.data;
+    Bytes app_hash = commit_res.data;
     int64_t retain_height = commit_res.retain_height;
     /// commit() ends
 

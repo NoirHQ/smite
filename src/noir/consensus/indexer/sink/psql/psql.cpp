@@ -38,13 +38,14 @@ struct psql_event_sink_impl {
         return Error::format("begin-block events: {}", ok.error());
       if (auto ok = insert_events(tx, block_id.value(), 0, h.result_end_block.events); !ok)
         return Error::format("end-block events: {}", ok.error());
+      return success();
     });
   }
 
   Result<void> index_tx_events(const std::vector<tx_result>& txrs) {
     auto ts = get_utc_ts();
     for (const auto& txr : txrs) {
-      crypto::sha3_256 hash;
+      crypto::Sha3_256 hash;
       auto tx_hash = hash(txr.tx);
 
       auto ok = run_in_transaction([this, &txr, &ts, &tx_hash](pqxx::work& tx) -> Result<void> {
@@ -75,8 +76,10 @@ struct psql_event_sink_impl {
         // Insert events packaged with transaction
         if (auto ok = insert_events(tx, block_id.value(), tx_id.value(), txr.result.events); !ok)
           return Error::format("indexing transaction events: {}", ok.error());
+        return success();
       });
     }
+    return success();
   }
 
   Result<void> stop() {
@@ -84,6 +87,7 @@ struct psql_event_sink_impl {
       C->close();
     } catch (std::exception const& e) {
     }
+    return success();
   }
 
   void setup(const std::string& conn_str, const std::string& new_chain_id) {
@@ -99,6 +103,7 @@ private:
       return ok.error();
     }
     tx.commit();
+    return success();
   }
 
   Result<void> insert_events(pqxx::work& tx, uint32_t block_id, uint32_t tx_id, const std::vector<event>& evts) {
@@ -128,6 +133,7 @@ private:
         }
       }
     }
+    return success();
   }
 
   Result<uint32_t> query_with_id(pqxx::work& tx, const std::string& query, const pqxx::params& args) {

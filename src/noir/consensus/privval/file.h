@@ -47,7 +47,7 @@ struct file_pv_last_sign_state {
   int32_t round;
   sign_step step;
   std::string signature;
-  bytes signbytes; // hex? bytes?
+  Bytes signbytes; // hex? bytes?
   std::string file_path;
 
   /// \brief CheckHRS checks the given height, round, step (HRS) against that of the
@@ -154,7 +154,7 @@ struct file_pv : public noir::consensus::priv_validator {
 
   /// \brief returns the address of the validator
   /// \return address
-  bytes get_address() const {
+  Bytes get_address() const {
     return get_pub_key().address();
   }
 
@@ -190,7 +190,7 @@ struct file_pv : public noir::consensus::priv_validator {
     return {};
   }
 
-  Result<bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) override {
+  Result<Bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) override {
     return success();
   }
 
@@ -201,7 +201,7 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \brief resets all fields in the FilePV.
   /// \note Unsafe!
   void reset() {
-    save_signed(0, 0, sign_step::none, bytes{}, bytes{});
+    save_signed(0, 0, sign_step::none, Bytes{}, Bytes{});
   }
 
   /// \brief  persist height/round/step and signature
@@ -210,7 +210,7 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] step
   /// \param[in] sign_bytes
   /// \param[in] sig
-  void save_signed(int64_t height, int32_t round, sign_step step, const bytes& sign_bytes, const bytes& sig);
+  void save_signed(int64_t height, int32_t round, sign_step step, const Bytes& sign_bytes, const Bytes& sig);
 
 private:
   /// \brief load FilePV from given arguments

@@ -20,7 +20,7 @@ TEST_CASE("block: encode using datastream", "[noir][consensus]") {
 TEST_CASE("block: encode using protobuf", "[noir][consensus]") {
   block org{block_header{}, block_data{.txs = {{0}, {1}, {2}}}, nullptr};
   auto pb = block::to_proto(org);
-  bytes bz(pb->ByteSizeLong());
+  Bytes bz(pb->ByteSizeLong());
   pb->SerializeToArray(bz.data(), pb->ByteSizeLong());
 
   ::tendermint::types::Block pb_block;

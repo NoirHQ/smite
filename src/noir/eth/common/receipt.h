@@ -8,16 +8,18 @@
 
 namespace noir::eth {
 
+using Bytes256 = BytesN<256>;
+
 struct receipt {
   uint8_t type;
   uint64_t status;
   uint64_t cumulative_gas_used;
-  bytes256 bloom;
+  Bytes256 bloom;
   std::vector<log> logs;
-  bytes32 tx_hash;
-  bytes20 contract_address;
+  Bytes32 tx_hash;
+  Bytes20 contract_address;
   uint64_t gas_used;
-  bytes32 block_hash;
+  Bytes32 block_hash;
   uint256_t block_number;
   uint32_t transaction_index;
 };

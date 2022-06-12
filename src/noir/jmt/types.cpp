@@ -3,12 +3,12 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/common/types/bytes.h>
+#include <noir/common/bytes.h>
 #include <noir/jmt/types/common.h>
 
 namespace noir::jmt {
 
-size_t common_prefix_bits_len(const bytes32& a, const bytes32& b) {
+size_t common_prefix_bits_len(const Bytes32& a, const Bytes32& b) {
   auto a_bits = a.to_bitset();
   auto b_bits = b.to_bitset();
   auto a_pos = 0;
