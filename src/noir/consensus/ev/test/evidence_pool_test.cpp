@@ -83,7 +83,8 @@ TEST_CASE("evidence_pool: update", "[noir][consensus]") {
       std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::minutes(21)).count(),
     evidence_chain_id, *val);
   auto last_commit = make_commit(height, val->priv_key_.get_pub_key().address());
-  auto block = block::make_block(height + 1, {}, last_commit); // TODO: take evidence
+  auto block =
+    block::make_block(height + 1, {}, last_commit, std::make_shared<evidence_list>(evidence_list{.list = {ev}}));
 
   state.last_block_height = height + 1;
   state.last_block_time = get_default_evidence_time() +

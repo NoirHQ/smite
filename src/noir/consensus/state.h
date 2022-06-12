@@ -86,9 +86,10 @@ struct state {
   std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> make_block(int64_t height,
     std::vector<Bytes>& txs,
     const std::shared_ptr<commit>& commit_,
-    /* evidence, */ Bytes proposal_address) {
+    const std::shared_ptr<evidence_list>& evs,
+    Bytes proposal_address) {
     // Build base block
-    auto block_ = block::make_block(height, txs, commit_);
+    auto block_ = block::make_block(height, txs, commit_, evs);
 
     // Set time
     tstamp timestamp;

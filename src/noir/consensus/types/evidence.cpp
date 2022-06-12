@@ -102,4 +102,39 @@ bool light_client_attack_evidence::conflicting_header_is_invalid(
     trusted_header->last_results_hash != conflicting_block->s_header->header->last_results_hash;
 }
 
+template<typename T>
+T& operator<<(T& ds, const evidence& v) {
+  auto pb = evidence::to_proto(v);
+  check(pb.has_error(), pb.error().message());
+  bytes bz(pb.value()->ByteSizeLong());
+  pb.value()->SerializeToArray(bz.data(), pb.value()->ByteSizeLong());
+  ds << bz.size();
+  ds << bz;
+  return ds;
+}
+template<typename T>
+T& operator>>(T& ds, evidence& v) {
+  size_t len;
+  ds >> len;
+  bytes bz(len);
+  ds >> bz;
+  ::tendermint::types::Evidence pb;
+  pb.ParseFromArray(bz.data(), bz.size());
+  auto decoded = evidence::from_proto(pb);
+  check(decoded.has_error(), decoded.error().message());
+  v = *decoded.value();
+  return ds;
+}
+
+template<typename T>
+T& operator<<(T& ds, const evidence_list& v) {
+  ds << v.list;
+  return ds;
+}
+template<typename T>
+T& operator>>(T& ds, evidence_list& v) {
+  ds >> v.list;
+  return ds;
+}
+
 } // namespace noir::consensus
