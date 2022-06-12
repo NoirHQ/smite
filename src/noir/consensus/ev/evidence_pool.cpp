@@ -3,14 +3,14 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/codec/proto3.h>
+#include <noir/codec/protobuf.h>
 #include <noir/consensus/ev/evidence_pool.h>
 
 namespace noir::consensus::ev {
 
 void evidence_pool::mark_evidence_as_committed(evidence_list& evs, int64_t height) {
   std::set<std::string> block_evidence_map;
-  std::vector<bytes> batch_delete;
+  std::vector<Bytes> batch_delete;
 
   for (auto& ev : evs.list) {
     if (is_pending(ev)) {
@@ -18,7 +18,7 @@ void evidence_pool::mark_evidence_as_committed(evidence_list& evs, int64_t heigh
       block_evidence_map.insert(ev_map_key(ev));
     }
     auto key = key_committed(ev);
-    auto ev_bytes = noir::codec::proto3::encode(height);
+    auto ev_bytes = codec::bcs::encode(height);
     evidence_store->write_from_bytes(key, ev_bytes); // TODO: check
     dlog(fmt::format("marked evidence as committed: evidence{}", ev->get_string()));
   }
@@ -55,7 +55,7 @@ Result<std::pair<std::vector<std::shared_ptr<evidence>>, int64_t>> evidence_pool
 }
 
 std::pair<int64_t, tstamp> evidence_pool::remove_expired_pending_evidence() {
-  std::vector<bytes> batch_delete;
+  std::vector<Bytes> batch_delete;
 
   auto [height, time, block_evidence_map] = batch_expired_pending_evidence(batch_delete);
   if (block_evidence_map.empty())
@@ -68,7 +68,7 @@ std::pair<int64_t, tstamp> evidence_pool::remove_expired_pending_evidence() {
 }
 
 std::tuple<int64_t, tstamp, std::set<std::string>> evidence_pool::batch_expired_pending_evidence(
-  std::vector<bytes>& batch_delete) {
+  std::vector<Bytes>& batch_delete) {
   std::set<std::string> block_evidence_map;
   for (auto iter = evidence_store->lower_bound_from_bytes(prefix_to_bytes(prefix::prefix_pending));
        (*iter).second != std::nullopt; ++iter) {
@@ -86,32 +86,32 @@ std::tuple<int64_t, tstamp, std::set<std::string>> evidence_pool::batch_expired_
         block_evidence_map};
     }
     auto start = (*iter).second.value().data();
-    bytes key(start, start + (*iter).second.value().size()); // TODO : check
+    Bytes key(start, start + (*iter).second.value().size()); // TODO : check
     batch_delete.push_back(key);
     block_evidence_map.insert(ev_map_key(ev.value()));
   }
   return {state->last_block_height, state->last_block_time, block_evidence_map};
 }
 
-bytes evidence_pool::prefix_to_bytes(prefix p) {
-  return noir::codec::proto3::encode(static_cast<int64_t>(p));
+Bytes evidence_pool::prefix_to_bytes(prefix p) {
+  return codec::bcs::encode(static_cast<int64_t>(p));
 }
 
-bytes evidence_pool::key_committed(std::shared_ptr<evidence> ev) {
-  auto bz = noir::codec::proto3::encode(static_cast<int64_t>(prefix::prefix_committed));
-  auto bz1 = noir::codec::proto3::encode(ev->get_height());
+Bytes evidence_pool::key_committed(std::shared_ptr<evidence> ev) {
+  auto bz = codec::bcs::encode(static_cast<int64_t>(prefix::prefix_committed));
+  auto bz1 = codec::bcs::encode(ev->get_height());
   auto bz2 = ev->get_hash();
-  bz.insert(bz.end(), bz1.begin(), bz1.end());
-  bz.insert(bz.end(), bz2.begin(), bz2.end());
+  bz.raw().insert(bz.end(), bz1.begin(), bz1.end());
+  bz.raw().insert(bz.end(), bz2.begin(), bz2.end());
   return bz;
 }
 
-bytes evidence_pool::key_pending(std::shared_ptr<evidence> ev) {
-  auto bz = noir::codec::proto3::encode(static_cast<int64_t>(prefix::prefix_pending));
-  auto bz1 = noir::codec::proto3::encode(ev->get_height());
+Bytes evidence_pool::key_pending(std::shared_ptr<evidence> ev) {
+  auto bz = codec::bcs::encode(static_cast<int64_t>(prefix::prefix_pending));
+  auto bz1 = codec::bcs::encode(ev->get_height());
   auto bz2 = ev->get_hash();
-  bz.insert(bz.end(), bz1.begin(), bz1.end());
-  bz.insert(bz.end(), bz2.begin(), bz2.end());
+  bz.raw().insert(bz.end(), bz1.begin(), bz1.end());
+  bz.raw().insert(bz.end(), bz2.begin(), bz2.end());
   return bz;
 }
 

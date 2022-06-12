@@ -26,7 +26,7 @@ struct psql_event_sink : public event_sink {
     return Error::format("search_tx_events is not supported for postgres event_sink");
   }
 
-  Result<std::shared_ptr<tx_result>> get_tx_by_hash(bytes hash) override {
+  Result<std::shared_ptr<tx_result>> get_tx_by_hash(Bytes hash) override {
     return Error::format("get_tx_by_hash is not supported for postgres event_sink");
   }
 

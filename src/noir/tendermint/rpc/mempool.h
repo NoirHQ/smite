@@ -11,12 +11,12 @@ namespace noir::tendermint::rpc {
 
 class mempool {
 public:
-  result_broadcast_tx broadcast_tx_async(const bytes& tx);
-  result_broadcast_tx broadcast_tx_sync(const bytes& tx);
+  result_broadcast_tx broadcast_tx_async(const Bytes& tx);
+  result_broadcast_tx broadcast_tx_sync(const Bytes& tx);
   //  result_broadcast_tx_commit broadcast_tx_commit(const tx& t);
   result_unconfirmed_txs unconfirmed_txs(const uint32_t& limit_ptr);
   result_unconfirmed_txs num_unconfirmed_txs();
-  noir::consensus::response_check_tx& check_tx(const bytes& tx);
+  noir::consensus::response_check_tx& check_tx(const Bytes& tx);
 
   void set_tx_pool_ptr(noir::tx_pool::tx_pool* tx_pool_ptr) {
     this->tx_pool_ptr = tx_pool_ptr;

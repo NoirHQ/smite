@@ -28,7 +28,7 @@ constexpr int64_t max_total_voting_power{std::numeric_limits<int64_t>::max() / 8
 constexpr int64_t priority_window_size_factor{2};
 
 struct validator {
-  bytes address;
+  Bytes address;
   pub_key pub_key_;
   int64_t voting_power;
   int64_t proposer_priority;
@@ -95,9 +95,9 @@ public:
     return validators.size();
   }
 
-  bytes get_hash();
+  Bytes get_hash();
 
-  bool has_address(const bytes& address) {
+  bool has_address(const Bytes& address) {
     for (const auto& val : validators) {
       if (val.address == address)
         return true;
@@ -105,7 +105,7 @@ public:
     return false;
   }
 
-  std::optional<validator> get_by_address(const bytes& address) {
+  std::optional<validator> get_by_address(const Bytes& address) {
     for (auto val : validators) {
       if (val.address == address)
         return val;
@@ -113,7 +113,7 @@ public:
     return {};
   }
 
-  int32_t get_index_by_address(const bytes& address) {
+  int32_t get_index_by_address(const Bytes& address) {
     for (auto idx = 0; idx < validators.size(); idx++) {
       if (validators[idx].address == address)
         return idx;
@@ -259,7 +259,7 @@ public:
     std::vector<validator> changesCopy(changes);
     sort(changesCopy.begin(), changesCopy.end(), [](validator a, validator b) { return a.address < b.address; });
     std::vector<validator> updates, deletes;
-    bytes prevAddr;
+    Bytes prevAddr;
     for (auto val_update : changesCopy) {
       if (val_update.address == prevAddr) {
         elog("duplicate entry ${val_update} in changes", ("val_update", val_update.address));

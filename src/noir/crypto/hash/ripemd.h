@@ -5,23 +5,28 @@
 //
 #pragma once
 #include <noir/crypto/hash/hash.h>
+#include <optional>
 
 namespace noir::crypto {
 
 /// \brief generates ripemd160 hash
 /// \ingroup crypto
-struct ripemd160 : public hash<ripemd160> {
-  using crypto::hash<ripemd160>::final;
+struct Ripemd160 : public Hash<Ripemd160> {
+  using Hash::final;
+  using Hash::update;
 
-  crypto::hash<ripemd160>& init();
-  crypto::hash<ripemd160>& update(std::span<const char> in);
-  void final(std::span<char> out);
-  std::size_t digest_size() const;
+  auto init() -> Ripemd160&;
+  auto update(BytesView in) -> Ripemd160&;
+  void final(BytesViewMut out);
+
+  constexpr auto digest_size() const -> size_t {
+    return 20;
+  }
 
 private:
   uint32_t s[5];
   unsigned char buf[64];
-  uint64_t bytes = 0;
+  uint64_t bytes;
 
   bool inited{false};
 };

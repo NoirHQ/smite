@@ -51,7 +51,7 @@ public:
       return 0;
     }
     auto tmp = begin_it.key();
-    bytes key_{tmp.begin(), tmp.end()};
+    Bytes key_{tmp.begin(), tmp.end()};
     int64_t height_;
     check(decode_block_meta_key(key_, height_),
       fmt::format("unable to decode base key={}", to_string(key_))); // TODO: handle panic in consensus
@@ -67,7 +67,7 @@ public:
       return 0;
     }
     auto tmp = (--end_it).key();
-    bytes key_{tmp.begin(), tmp.end()};
+    Bytes key_{tmp.begin(), tmp.end()};
     int64_t height_;
     check(decode_block_meta_key(key_, height_),
       fmt::format("unable to decode height key={}", to_string(key_))); // TODO: handle panic in consensus
@@ -87,13 +87,13 @@ public:
   bool load_base_meta(block_meta& bl_meta) const {
     auto tmp_it = db_session_->lower_bound_from_bytes(encode_key<prefix::block_meta>(1));
     auto tmp_bytes = tmp_it.key();
-    bytes key_{tmp_bytes.begin(), tmp_bytes.end()};
+    Bytes key_{tmp_bytes.begin(), tmp_bytes.end()};
     int64_t height_;
     if (!decode_block_meta_key(key_, height_) || ((*tmp_it).second == std::nullopt)) {
       return false;
     }
     tmp_bytes = (*tmp_it).second.value();
-    bl_meta = decode<block_meta>(bytes{tmp_bytes.begin(), tmp_bytes.end()});
+    bl_meta = decode<block_meta>(Bytes{tmp_bytes.begin(), tmp_bytes.end()});
     return true;
   }
 
@@ -108,14 +108,14 @@ public:
     }
     auto parts_total = bl_meta.bl_id.parts.total;
     part part_{};
-    bytes data{};
+    Bytes data{};
     for (auto i = 0; i < parts_total; ++i) {
       // If the part is missing (e.g. since it has been deleted after we
       // loaded the block meta) we consider the whole block to be missing.
       if (!load_block_part(height_, i, part_)) {
         return false;
       }
-      data.insert(data.end(), part_.bytes_.begin(), part_.bytes_.end());
+      data.raw().insert(data.end(), part_.bytes_.begin(), part_.bytes_.end());
     }
     bl = decode<block>(data);
     return true;
@@ -125,8 +125,8 @@ public:
   /// \param[in] hash hash to load
   /// \param[out] bl loaded block object
   /// \return true on success, false otherwise
-  bool load_block_by_hash(const bytes& hash, block& bl) const {
-    auto tmp = db_session_->read_from_bytes(encode_key<prefix::block_hash>(hash));
+  bool load_block_by_hash(const Bytes& hash, block& bl) const {
+    auto tmp = db_session_->read_from_bytes(encode_key<prefix::block_hash>(hash.raw()));
     if (!tmp.has_value()) {
       return false;
     }
@@ -323,7 +323,7 @@ public:
   }
 
 private:
-  using batch_type = std::vector<std::pair<bytes, bytes>>;
+  using batch_type = std::vector<std::pair<Bytes, Bytes>>;
   enum class prefix : char {
     block_meta = 0,
     block_part = 1,
@@ -334,63 +334,63 @@ private:
 
   std::shared_ptr<db_session_type> db_session_;
 
-  static inline bytes encode_val(int64_t val) {
-    auto hex_ = from_hex(fmt::format("{:016x}", static_cast<uint64_t>(val)));
+  static inline Bytes encode_val(int64_t val) {
+    auto hex_ = hex::decode(fmt::format("{:016x}", static_cast<uint64_t>(val)));
     return {hex_.begin(), hex_.end()};
   }
 
-  static inline int64_t decode_val(bytes buf) {
-    auto height_hex = to_hex(buf);
+  static inline int64_t decode_val(Bytes buf) {
+    auto height_hex = hex::encode(buf);
     return stoull(height_hex, nullptr, 16);
   }
 
   template<typename... int64s>
-  static bytes encode_val(int64_t val, int64s... args) {
-    auto hex_ = from_hex(fmt::format("{:016x}", static_cast<uint64_t>(val)));
-    bytes lhs{hex_.begin(), hex_.end()};
+  static Bytes encode_val(int64_t val, int64s... args) {
+    auto hex_ = hex::decode(fmt::format("{:016x}", static_cast<uint64_t>(val)));
+    Bytes lhs{hex_.begin(), hex_.end()};
     auto rhs = append_key(args...);
-    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
+    lhs.raw().insert(lhs.end(), rhs.begin(), rhs.end());
     return lhs;
   }
 
   template<prefix key_prefix>
-  static bytes encode_key() {
-    bytes key_{};
-    key_.push_back(static_cast<char>(key_prefix));
+  static Bytes encode_key() {
+    Bytes key_{};
+    key_.raw().push_back(static_cast<char>(key_prefix));
     return key_;
   }
 
   template<prefix key_prefix>
-  static bytes encode_key(int64_t val) {
+  static Bytes encode_key(int64_t val) {
     auto lhs = encode_key<key_prefix>();
     auto rhs = encode_val(val); // TODO: might need reserve() to optimize
-    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
+    lhs.raw().insert(lhs.end(), rhs.begin(), rhs.end());
     return lhs;
   }
 
   template<prefix key_prefix, typename... int64s>
-  static bytes encode_key(int64_t val, int64s... args) {
+  static Bytes encode_key(int64_t val, int64s... args) {
     auto lhs = encode_key<key_prefix>(val);
     auto rhs = encode_val(args...); // TODO: might need reserve() to optimize
-    lhs.insert(lhs.end(), rhs.begin(), rhs.end());
+    lhs.raw().insert(lhs.end(), rhs.begin(), rhs.end());
     return lhs;
   }
 
   template<prefix key_prefix>
-  static bytes encode_key(bytes bytes_) {
+  static Bytes encode_key(Bytes bytes) {
     auto lhs = encode_key<key_prefix>();
     // std::string(bytes_.begin(), bytes_.end());
-    lhs.insert(lhs.end(), bytes_.begin(), bytes_.end());
+    lhs.raw().insert(lhs.end(), bytes.begin(), bytes.end());
     return lhs;
   }
 
-  static bool decode_block_meta_key(const bytes& key, int64_t& height_) {
+  static bool decode_block_meta_key(const Bytes& key, int64_t& height_) {
     static constexpr size_t size_ = sizeof(char) + sizeof(int64_t);
     if ((key.size() != size_) || (key[0] != static_cast<char>(prefix::block_meta))) {
       return false;
     }
 
-    height_ = decode_val(bytes{key.begin() + 1, key.end()});
+    height_ = decode_val(Bytes{key.begin() + 1, key.end()});
     return true;
   }
 
@@ -400,12 +400,12 @@ private:
     return true;
   }
 
-  using pre_deletion_hook_type = std::function<bool(const bytes& key, const bytes& val)>;
-  bool prune_range(const bytes& start,
-    const bytes& end,
+  using pre_deletion_hook_type = std::function<bool(const Bytes& key, const Bytes& val)>;
+  bool prune_range(const Bytes& start,
+    const Bytes& end,
     std::optional<pre_deletion_hook_type> pre_deletion_hook,
     uint64_t& total_pruned) {
-    bytes start_ = start;
+    Bytes start_ = start;
 
     // loop until we have finished iterating over all the keys by writing, opening a new batch
     // and incrementing through the next range of keys.
@@ -421,11 +421,11 @@ private:
     return true;
   }
 
-  bool batch_delete(const bytes& start,
-    const bytes& end,
+  bool batch_delete(const Bytes& start,
+    const Bytes& end,
     std::optional<pre_deletion_hook_type> pre_deletion_hook,
     uint64_t& total_pruned,
-    bytes& new_end) {
+    Bytes& new_end) {
     uint64_t pruned = 0;
 
     auto begin_ = db_session_->lower_bound_from_bytes(start);

@@ -112,7 +112,7 @@ public:
   block_id_type fork_head;
   uint32_t fork_head_num{0};
   fc::time_point last_close;
-  bytes20 conn_node_id;
+  Bytes20 conn_node_id;
   std::string remote_endpoint_ip;
   std::string remote_endpoint_port;
   std::string local_endpoint_ip;
@@ -274,7 +274,7 @@ public:
   const std::chrono::system_clock::duration peer_authentication_interval{std::chrono::seconds{1}};
 
   //  chain_id_type chain_id;
-  bytes20 node_id;
+  Bytes20 node_id;
   std::string user_agent_name;
 
   // External plugins
@@ -583,7 +583,7 @@ void p2p_impl::send_peer_error(const std::string& peer_id, std::span<const char>
       env->to = peer_id;
       env->broadcast = false;
       env->id = PeerError;
-      env->message = bytes(str_msg.begin(), str_msg.end());
+      env->message = Bytes(str_msg.begin(), str_msg.end());
       c->strand.post([c, env]() { c->enqueue(*env); });
       return false;
     }
@@ -658,7 +658,7 @@ void p2p::plugin_startup() {
       std::copy(node_id.begin(), node_id.end(), my->node_id.begin());
     } else {
       ilog("abci_plugin is not running; will be simply testing p2p activities");
-      fc::rand_pseudo_bytes(my->node_id.data(), my->node_id.size());
+      crypto::rand_bytes({my->node_id.data(), my->node_id.size()});
     }
     ilog("my node_id is ${id}", ("id", my->node_id.to_string()));
 
@@ -1081,7 +1081,7 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
     self->last_handshake_recv = handshake_message();
     self->last_handshake_sent = handshake_message();
     self->last_close = fc::time_point::now();
-    self->conn_node_id = bytes20();
+    self->conn_node_id = Bytes20();
   }
   if (has_last_req && !shutdown) {
     //    my_impl->dispatcher->retry_fetch( self->shared_from_this() );
@@ -1278,7 +1278,7 @@ void connection::start_read_message() {
 bool connection::process_next_message(uint32_t message_length) {
   try {
     latest_msg_time = get_time();
-    datastream<char> ds(pending_message_buffer.read_ptr(), message_length);
+    datastream<unsigned char> ds(reinterpret_cast<unsigned char*>(pending_message_buffer.read_ptr()), message_length);
     net_message msg;
     ds >> msg;
     msg_handler m(shared_from_this());
@@ -1459,7 +1459,7 @@ void connection::handle_message(const handshake_message& msg) {
     }
 
     std::unique_lock<std::mutex> g_conn(conn_mtx);
-    if (peer_address().empty() || last_handshake_recv.node_id == bytes32()) {
+    if (peer_address().empty() || last_handshake_recv.node_id == Bytes32()) {
       g_conn.unlock();
       dlog("checking for duplicate");
       std::shared_lock<std::shared_mutex> g_cnts(my_impl->connections_mtx);

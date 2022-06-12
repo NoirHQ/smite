@@ -5,14 +5,14 @@
 //
 #pragma once
 #include <noir/common/helper/rust.h>
-#include <noir/common/types/bytes_n.h>
+#include <noir/common/bytes.h>
 
 namespace noir::jmt {
 
 using version = uint64_t;
 
-size_t common_prefix_bits_len(const bytes32& a, const bytes32& b);
+size_t common_prefix_bits_len(const Bytes32& a, const Bytes32& b);
 
-extern bytes32 sparse_merkle_placeholder_hash;
+extern Bytes32 sparse_merkle_placeholder_hash;
 
 } // namespace noir::jmt

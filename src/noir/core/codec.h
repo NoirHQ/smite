@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-//#include <noir/codec/proto3.h>
+//#include <noir/codec/protobuf.h>
 #include <noir/codec/bcs.h>
 
 namespace noir {
@@ -18,17 +18,19 @@ constexpr size_t encode_size(const T& v) {
   ds << v;
   return ds.tellp();
 }
+
 template<typename T>
-std::vector<char> encode(const T& v) {
-  auto buffer = std::vector<char>(encode_size(v));
-  datastream<char> ds(buffer);
+Bytes encode(const T& v) {
+  Bytes buffer(encode_size(v));
+  datastream<unsigned char> ds(buffer);
   ds << v;
   return buffer;
 }
+
 template<typename T>
-T decode(std::span<const char> s) {
-  T v{};
-  datastream<const char> ds(s);
+T decode(std::span<const unsigned char> s) {
+  T v;
+  datastream<const unsigned char> ds(s);
   ds >> v;
   return v;
 }

@@ -24,7 +24,7 @@ inline p2p::block_id rand_block_id() {
 }
 
 inline std::shared_ptr<vote> make_mock_vote(
-  int64_t height, int32_t round, int32_t index, bytes addr, const p2p::block_id& block_id_, tstamp time) {
+  int64_t height, int32_t round, int32_t index, Bytes addr, const p2p::block_id& block_id_, tstamp time) {
   auto ret = std::make_shared<vote>();
   ret->type = noir::p2p::Precommit;
   ret->height = height;
@@ -74,7 +74,7 @@ inline tstamp get_default_evidence_time() {
   return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
 }
 
-inline p2p::block_id make_block_id(bytes hash, uint32_t part_set_size, bytes part_set_hash) {
+inline p2p::block_id make_block_id(Bytes hash, uint32_t part_set_size, Bytes part_set_hash) {
   return {.hash = std::move(hash), .parts = {.total = part_set_size, .hash = std::move(part_set_hash)}};
 }
 
@@ -132,13 +132,13 @@ inline std::shared_ptr<noir::consensus::db_store> initialize_validator_state(
   return initialize_state_from_validator_set(val_set, height);
 }
 
-inline std::shared_ptr<commit> make_commit(int64_t height, const bytes& val_addr) {
+inline std::shared_ptr<commit> make_commit(int64_t height, const Bytes& val_addr) {
   auto default_evidence_time = get_default_evidence_time();
   auto commit_sigs = std::vector<commit_sig>();
   commit_sigs.push_back(commit_sig{.flag = noir::consensus::FlagCommit,
     .validator_address = val_addr,
     .timestamp = default_evidence_time,
-    .signature = bytes{}});
+    .signature = Bytes{}});
   return commit::new_commit(height, 0, {}, commit_sigs);
 }
 
@@ -159,7 +159,7 @@ inline std::shared_ptr<noir::consensus::block> make_block(
   return block_;
 }
 
-inline std::shared_ptr<block_store> initialize_block_store(const state& state_, const bytes& val_addr) {
+inline std::shared_ptr<block_store> initialize_block_store(const state& state_, const Bytes& val_addr) {
   auto block_store_ = std::make_shared<noir::consensus::block_store>(make_session(true, block_store_path));
   auto default_evidence_time = get_default_evidence_time();
 

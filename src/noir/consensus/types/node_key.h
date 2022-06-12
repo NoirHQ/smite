@@ -21,9 +21,9 @@ struct node_key_json_obj {
 
 struct node_key {
   std::string node_id;
-  bytes priv_key;
+  Bytes priv_key;
 
-  bytes get_pub_key() {
+  Bytes get_pub_key() {
     check(priv_key.size() == 64, "unable to get a pub_key: invalid private key size");
     return {priv_key.begin() + 32, priv_key.end()};
   }
@@ -44,7 +44,7 @@ struct node_key {
 
   static std::shared_ptr<node_key> load_node_key(const std::filesystem::path& file_path);
 
-  static std::string node_id_from_pub_key(const bytes& pub_key);
+  static std::string node_id_from_pub_key(const Bytes& pub_key);
 
   void save_as(const std::filesystem::path& file_path);
 };

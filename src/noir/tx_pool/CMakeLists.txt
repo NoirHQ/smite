@@ -3,6 +3,8 @@ add_library(noir_tx_pool STATIC
 )
 target_link_libraries(noir_tx_pool
   noir::common
+  noir::codec
+  noir::core
   noir::crypto
   noir::proto_legacy
 )

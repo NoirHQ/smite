@@ -69,7 +69,7 @@ struct req_res {
 };
 
 struct request_begin_block {
-  bytes hash;
+  Bytes hash;
   block_header header_;
   last_commit_info last_commit_info_;
   // evidence
@@ -90,7 +90,7 @@ struct response_end_block {
 };
 
 struct response_commit {
-  bytes data;
+  Bytes data;
   int64_t retain_height;
 };
 
@@ -99,33 +99,33 @@ struct request_init_chain {
   std::string chain_id;
   consensus_params consensus_params_;
   std::vector<validator_update> validators;
-  bytes app_state_bytes;
+  Bytes app_state_bytes;
   int64_t initial_height;
 };
 
 struct response_init_chain {
   consensus_params consensus_params_;
   std::vector<validator_update> validators;
-  bytes app_hash;
+  Bytes app_hash;
 };
 
 struct request_prepare_proposal {
-  std::vector<bytes> block_data;
+  std::vector<Bytes> block_data;
   int64_t block_data_size;
   std::vector<std::optional<vote>> votes;
 };
 
 struct response_prepare_proposal {
-  std::vector<bytes> block_data;
+  std::vector<Bytes> block_data;
 };
 
 struct request_deliver_tx {
-  bytes tx;
+  Bytes tx;
 };
 
 struct response_deliver_tx {
   uint32_t code;
-  bytes data;
+  Bytes data;
   std::string log;
   std::string info;
   int64_t gas_wanted;
@@ -152,7 +152,7 @@ struct request_check_tx {
 
 struct response_check_tx {
   uint32_t code;
-  bytes data;
+  Bytes data;
   std::string log;
   std::string info;
   uint64_t gas_wanted;
@@ -168,7 +168,7 @@ struct response_check_tx {
 struct tx_result {
   int64_t height;
   uint32_t index;
-  bytes tx;
+  Bytes tx;
   response_deliver_tx result;
 };
 

@@ -15,12 +15,12 @@ using namespace noir;
 using namespace noir::jmt;
 
 auto random_bytes32() {
-  bytes32 out;
-  RAND_bytes((uint8_t*)out.data(), out.size());
+  Bytes32 out;
+  RAND_bytes(out.data(), out.size());
   return out;
 }
 
-auto update_nibble(bytes32& original_key, size_t n, uint8_t nibble) {
+auto update_nibble(Bytes32& original_key, size_t n, uint8_t nibble) {
   check(nibble < 16);
   auto key = original_key;
   key[n / 2] = !(n % 2) ? ((key[n / 2] & 0xf) | nibble << 4) : ((key[n / 2] & 0xf0) | nibble);
@@ -45,7 +45,7 @@ TEST_CASE("jmt: insert_to_empty_tree", "[noir][jmt]") {
 
 TEST_CASE("jmt: insert_to_pre_genesis", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
-  auto key1 = bytes32();
+  auto key1 = Bytes32();
   auto value1 = value_blob{1, 2};
   auto pre_genesis_root_key = node_key{pre_genesis_version};
   db.put_node(pre_genesis_root_key, node<value_blob>::leaf(key1, value1));
@@ -70,7 +70,7 @@ TEST_CASE("jmt: insert_at_leaf_with_internal_created", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
-  auto key1 = bytes32();
+  auto key1 = Bytes32();
   auto value1 = value_blob{1, 2};
 
   auto [_root0_hash, batch0] = *tree.batch_put_value_sets({{{key1, value1}}}, {}, 0);
@@ -109,7 +109,7 @@ TEST_CASE("jmt: insert_at_leaf_with_multiple_internals_created", "[noir][jmt]") 
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
-  auto key1 = bytes32();
+  auto key1 = Bytes32();
   auto value1 = value_blob{1, 2};
 
   auto [_root0_hash, batch0] = *tree.batch_put_value_sets({{{key1, value1}}}, {}, 0);
@@ -168,7 +168,7 @@ TEST_CASE("jmt: insert_at_leaf_with_multiple_internals_created", "[noir][jmt]") 
 }
 
 TEST_CASE("jmt: batch_insertion", "[noir][jmt]") {
-  auto key1 = bytes32();
+  auto key1 = Bytes32();
   auto value1 = value_blob{1};
 
   auto key2 = update_nibble(key1, 0, 2);
@@ -187,7 +187,7 @@ TEST_CASE("jmt: batch_insertion", "[noir][jmt]") {
   auto key6 = update_nibble(key1, 3, 6);
   auto value6 = value_blob{6};
 
-  using batch_type = std::vector<std::pair<bytes32, value_blob>>;
+  using batch_type = std::vector<std::pair<Bytes32, value_blob>>;
   auto batches = std::vector{
     batch_type{{key1, value1}},
     batch_type{{key2, value2}},
@@ -248,7 +248,7 @@ TEST_CASE("jmt: non_existence", "[noir][jmt]") {
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
-  auto key1 = bytes32();
+  auto key1 = Bytes32();
   auto value1 = value_blob{1};
 
   auto key2 = update_nibble(key1, 0, 15);
@@ -292,15 +292,16 @@ TEST_CASE("jmt: missing_root", "[noir][jmt]") {
 }
 
 TEST_CASE("jmt: put_value_sets", "[noir][jmt]") {
-  auto keys = std::vector<bytes32>{};
+  auto keys = std::vector<Bytes32>{};
   auto values = std::vector<value_blob>{};
   auto total_updates = 20;
   for (auto i = 0; i < total_updates; ++i) {
     keys.push_back(random_bytes32());
-    values.push_back(random_bytes32().to_bytes());
+    auto random_value = random_bytes32();
+    values.emplace_back(random_value.begin(), random_value.end());
   }
 
-  auto root_hashes_one_by_one = std::vector<bytes32>{};
+  auto root_hashes_one_by_one = std::vector<Bytes32>{};
   auto batch_one_by_one = tree_update_batch<value_blob>{};
   {
     auto zip = ranges::views::zip(keys, values);
@@ -308,7 +309,7 @@ TEST_CASE("jmt: put_value_sets", "[noir][jmt]") {
     auto db = mock_tree_store<value_blob>();
     auto tree = jellyfish_merkle_tree(db);
     for (auto version = 0; version < 10; ++version) {
-      auto keyed_value_set = std::vector<std::pair<bytes32, value_blob>>{};
+      auto keyed_value_set = std::vector<std::pair<Bytes32, value_blob>>{};
       for (auto i = 0; i < total_updates / 10; ++i) {
         keyed_value_set.push_back(*iter++);
       }
@@ -327,9 +328,9 @@ TEST_CASE("jmt: put_value_sets", "[noir][jmt]") {
     auto iter = std::begin(zip);
     auto db = mock_tree_store<value_blob>();
     auto tree = jellyfish_merkle_tree(db);
-    auto value_sets = std::vector<std::vector<std::pair<bytes32, value_blob>>>{};
+    auto value_sets = std::vector<std::vector<std::pair<Bytes32, value_blob>>>{};
     for (auto i = 0; i < 10; ++i) {
-      auto keyed_value_set = std::vector<std::pair<bytes32, value_blob>>{};
+      auto keyed_value_set = std::vector<std::pair<Bytes32, value_blob>>{};
       for (auto j = 0; j < total_updates / 10; ++j) {
         keyed_value_set.push_back(*iter++);
       }
@@ -343,16 +344,16 @@ TEST_CASE("jmt: put_value_sets", "[noir][jmt]") {
 
 void many_keys_get_proof_and_verify_tree_root(std::span<uint8_t> seed, size_t num_keys) {
   CHECK(seed.size() < 32);
-  auto actual_seed = bytes32(seed, false);
+  auto actual_seed = Bytes32(seed, false);
   std::seed_seq seq(actual_seed.begin(), actual_seed.end());
   std::mt19937 rng(seq);
 
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
-  auto kvs = std::vector<std::pair<bytes32, value_blob>>{};
+  auto kvs = std::vector<std::pair<Bytes32, value_blob>>{};
   for (auto i = 0; i < num_keys; ++i) {
-    auto key = bytes32();
+    auto key = Bytes32();
     auto value = value_blob{};
     for (auto& k : key) {
       k = rng();
@@ -380,18 +381,18 @@ TEST_CASE("jmt: 1000_keys", "[noir][jmt]") {
 
 void many_versions_get_proof_and_verify_tree_root(std::span<uint8_t> seed, size_t num_versions) {
   CHECK(seed.size() < 32);
-  auto actual_seed = bytes32(seed, false);
+  auto actual_seed = Bytes32(seed, false);
   std::seed_seq seq(actual_seed.begin(), actual_seed.end());
   std::mt19937 rng(seq);
 
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
-  auto kvs = std::vector<std::tuple<bytes32, value_blob, value_blob>>{};
-  auto roots = std::vector<bytes32>{};
+  auto kvs = std::vector<std::tuple<Bytes32, value_blob, value_blob>>{};
+  auto roots = std::vector<Bytes32>{};
 
   for (auto i = 0; i < num_versions; ++i) {
-    auto key = bytes32();
+    auto key = Bytes32();
     auto value = value_blob{};
     auto new_value = value_blob{};
     for (auto& k : key) {
@@ -439,7 +440,7 @@ TEST_CASE("jmt: insert_at_leaf_with_multiple_internals_created - non batch versi
   auto db = mock_tree_store<value_blob>();
   auto tree = jellyfish_merkle_tree(db);
 
-  auto key1 = bytes32();
+  auto key1 = Bytes32();
   auto value1 = value_blob{1, 2};
 
   auto [_root0_hash, batch0] = *tree.put_value_sets({{{key1, value1}}}, 0);

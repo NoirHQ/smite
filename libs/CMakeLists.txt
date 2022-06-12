@@ -29,6 +29,7 @@ include(cmake/XKCP.cmake)
 
 set(sodium_USE_STATIC_LIBS ON)
 include(cmake/Findsodium.cmake)
+set_target_properties(sodium PROPERTIES IMPORTED_GLOBAL TRUE)
 
 set_target_properties(appbase PROPERTIES DEBUG_POSTFIX "")
 set_target_properties(fc PROPERTIES DEBUG_POSTFIX "")

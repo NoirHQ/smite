@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/helper/variant.h> // FIXME: remove later
 #include <fc/log/logger_config.hpp>
 
 namespace noir::log {

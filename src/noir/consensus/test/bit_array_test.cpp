@@ -44,21 +44,21 @@ TEST_CASE("bit_array: Encode and decode bit_array", "[noir][consensus]") {
 TEST_CASE("bit_array: Check to_bytes", "[noir][consensus]") {
   auto ba = bit_array::new_bit_array(4);
   ba->set_index(3, true);
-  CHECK(ba->get_bytes() == bytes({'\x10'}));
+  CHECK(ba->get_bytes() == Bytes({'\x10'}));
 
   ba = bit_array::new_bit_array(9);
-  CHECK(ba->get_bytes() == bytes({0, 0}));
+  CHECK(ba->get_bytes() == Bytes({0, 0}));
   ba->set_index(7, true);
-  CHECK(ba->get_bytes() == bytes({1, 0}));
+  CHECK(ba->get_bytes() == Bytes({1, 0}));
   ba->set_index(8, true);
-  CHECK(ba->get_bytes() == bytes({1, '\x80'}));
+  CHECK(ba->get_bytes() == Bytes({1, 0x80}));
 
   ba = bit_array::new_bit_array(16);
-  CHECK(ba->get_bytes() == bytes({0, 0}));
+  CHECK(ba->get_bytes() == Bytes({0, 0}));
   ba->set_index(7, true);
-  CHECK(ba->get_bytes() == bytes({1, 0}));
+  CHECK(ba->get_bytes() == Bytes({1, 0}));
   ba->set_index(8, true);
-  CHECK(ba->get_bytes() == bytes({1, '\x80'}));
+  CHECK(ba->get_bytes() == Bytes({1, 0x80}));
   ba->set_index(9, true);
-  CHECK(ba->get_bytes() == bytes({1, '\xC0'}));
+  CHECK(ba->get_bytes() == Bytes({1, 0xC0}));
 }

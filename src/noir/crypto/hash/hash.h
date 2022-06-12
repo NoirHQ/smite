@@ -4,9 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <memory>
-#include <span>
-#include <vector>
+#include <noir/common/bytes.h>
 
 /// \brief crypto namespace
 /// \ingroup crypto
@@ -14,51 +12,49 @@ namespace noir::crypto {
 
 /// \brief abstracts hash function interface
 template<typename Derived>
-struct hash {
+struct Hash {
   /// \brief calculates and stores the hash value of input data to output buffer
   /// \param in input data
   /// \param out output buffer
-  void operator()(std::span<const char> in, std::span<char> out) {
-    init().update(in).final(out);
+  void operator()(ByteSequence auto&& in, ByteSequence auto& out) {
+    auto derived = static_cast<Derived*>(this);
+    auto in_view = BytesView{byte_pointer_cast(in.data()), in.size()};
+    auto out_view = BytesViewMut{byte_pointer_cast(out.data()), out.size()};
+    derived->init().update(in_view).final(out_view);
   }
 
   /// \brief calculates and returns the hash value of input data
   /// \param in input data
   /// \return byte array containing hash
-  std::vector<char> operator()(std::span<const char> in) {
-    return init().update(in).final();
-  }
-
-  /// \brief resets hash object context
-  hash<Derived>& init() {
-    return static_cast<Derived*>(this)->init();
+  auto operator()(ByteSequence auto&& in) {
+    auto derived = static_cast<Derived*>(this);
+    auto in_view = BytesView{byte_pointer_cast(in.data()), in.size()};
+    return derived->init().update(in_view).final();
   }
 
   /// \brief updates the hash object with byte array
-  hash<Derived>& update(std::span<const char> in) {
-    return static_cast<Derived*>(this)->update(in);
+  auto update(BytesViewConstructible auto&& in) -> Derived& {
+    auto derived = static_cast<Derived*>(this);
+    return derived->update(to_bytes_view(in));
   }
 
   /// \brief stores hash value to output buffer
-  void final(std::span<char> out) {
-    static_cast<Derived*>(this)->final(out);
+  void final(BytesViewConstructible auto& out) {
+    auto derived = static_cast<Derived*>(this);
+    return derived->update(to_bytes_view(out));
   }
 
   /// \brief returns hash value
   /// \return byte array containing hash
-  std::vector<char> final() {
-    std::vector<char> out(digest_size());
-    final(out);
+  auto final() -> Bytes {
+    auto derived = static_cast<Derived*>(this);
+    Bytes out(derived->digest_size());
+    derived->final(out);
     return out;
   }
 
-  /// \brief returns the size of hash value
-  std::size_t digest_size() const {
-    return static_cast<const Derived*>(this)->digest_size();
-  }
-
 protected:
-  hash() = default;
+  Hash() = default;
 };
 
 } // namespace noir::crypto

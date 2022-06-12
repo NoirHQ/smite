@@ -219,8 +219,8 @@ TEST_CASE("wal_codec: simple encode/decode", "[noir][consensus]") {
   }
 }
 
-inline noir::bytes gen_random_bytes(size_t num) {
-  noir::bytes ret(num);
+inline noir::Bytes gen_random_bytes(size_t num) {
+  noir::Bytes ret(num);
   noir::crypto::rand_bytes(ret);
   return ret;
 }

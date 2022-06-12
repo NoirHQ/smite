@@ -116,7 +116,7 @@ struct evidence_pool {
   }
 
   Result<void> check_evidence(const evidence_list& evs) {
-    std::vector<bytes> hashes(evs.list.size());
+    std::vector<Bytes> hashes(evs.list.size());
     int idx{0};
     for (auto& e : evs.list) {
       if (dynamic_cast<light_client_attack_evidence*>(e.get()) || !is_pending(e)) {
@@ -174,7 +174,7 @@ struct evidence_pool {
     auto evpb = evidence::to_proto(*ev);
     if (!evpb)
       return evpb.error();
-    bytes ev_bytes(evpb.value()->ByteSizeLong());
+    Bytes ev_bytes(evpb.value()->ByteSizeLong());
     evpb.value()->SerializeToArray(ev_bytes.data(), evpb.value()->ByteSizeLong()); // TODO: handle failure?
     auto key = key_pending(ev);
     evidence_store->write_from_bytes(key, ev_bytes); // TODO: check
@@ -189,7 +189,7 @@ struct evidence_pool {
 
   std::pair<int64_t, tstamp> remove_expired_pending_evidence();
 
-  std::tuple<int64_t, tstamp, std::set<std::string>> batch_expired_pending_evidence(std::vector<bytes>&);
+  std::tuple<int64_t, tstamp, std::set<std::string>> batch_expired_pending_evidence(std::vector<Bytes>&);
 
   void remove_evidence_from_list(std::set<std::string>& block_evidence_map) {
     for (auto e = ev_list->front(); e; e = e->get_next()) {
@@ -265,21 +265,21 @@ struct evidence_pool {
     consensus_buffer.clear();
   }
 
-  Result<std::shared_ptr<evidence>> bytes_to_ev(bytes ev_bytes) {
+  Result<std::shared_ptr<evidence>> bytes_to_ev(Bytes ev_bytes) {
     ::tendermint::types::Evidence evpb;
     evpb.ParseFromArray(ev_bytes.data(), ev_bytes.size());
     return evidence::from_proto(evpb);
   }
 
   std::string ev_map_key(std::shared_ptr<evidence> ev) {
-    return to_hex(ev->get_hash()); // TODO: check
+    return hex::encode(ev->get_hash()); // TODO: check
   }
 
-  bytes prefix_to_bytes(prefix);
+  Bytes prefix_to_bytes(prefix);
 
-  bytes key_committed(std::shared_ptr<evidence> ev);
+  Bytes key_committed(std::shared_ptr<evidence> ev);
 
-  bytes key_pending(std::shared_ptr<evidence> ev);
+  Bytes key_pending(std::shared_ptr<evidence> ev);
 
   /// verify
   Result<void> verify(const std::shared_ptr<evidence>& ev);

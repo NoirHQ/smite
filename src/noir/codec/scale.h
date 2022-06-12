@@ -21,13 +21,13 @@ NOIR_CODEC(scale) {
 // Boolean
 template<typename Stream, integral T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
-  ds.write((const char*)&v, sizeof(v));
+  ds.write((const unsigned char*)&v, sizeof(v));
   return ds;
 }
 
 template<typename Stream, integral T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
-  ds.read({(char*)&v, sizeof(v)});
+  ds.read((unsigned char*)&v, sizeof(v));
   return ds;
 }
 
@@ -35,14 +35,14 @@ template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const uint256_t& v) {
   uint64_t data[4] = {0};
   boost::multiprecision::export_bits(v, std::begin(data), 64, false);
-  ds << std::span((const char*)data, 32);
+  ds.write((const unsigned char*)data, 32);
   return ds;
 }
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, uint256_t& v) {
   uint64_t data[4] = {0};
-  ds >> std::span((char*)data, 32);
+  ds.read((unsigned char*)data, 32);
   boost::multiprecision::import_bits(v, std::begin(data), std::end(data), 64, false);
   return ds;
 }
@@ -62,8 +62,8 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, E& v) {
 }
 
 // Compact/general integers
-template<typename Stream, unsigned_integral T>
-datastream<Stream>& operator<<(datastream<Stream>& ds, const varint<T>& v) {
+template<typename Stream, UnsignedIntegral T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const Varint<T>& v) {
   using noir::pown;
   if (v < pown(2u, 6)) {
     ds.put(v.value << 2);
@@ -83,7 +83,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const varint<T>& v) {
     });
     auto trimmed = std::distance(nonzero, s.rend());
     ds.put(((trimmed - 4) << 2) | 0b11);
-    ds.write({s.data(), (size_t)trimmed});
+    ds.write(s.data(), (size_t)trimmed);
   } else {
     // TODO
     check(false, "not implemented");
@@ -91,9 +91,9 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const varint<T>& v) {
   return ds;
 }
 
-template<typename Stream, unsigned_integral T>
-datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
-  uint8_t tmp = ds.peek();
+template<typename Stream, UnsignedIntegral T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, Varint<T>& v) {
+  uint8_t tmp = ds.peek().value();
   switch (tmp & 0b11) {
   case 0b00: {
     uint8_t val = 0;
@@ -115,7 +115,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, varint<T>& v) {
   } break;
   case 0b11: {
     uint64_t val = 0;
-    auto size = uint8_t(ds.get()) >> 2;
+    auto size = uint8_t(ds.get().value()) >> 2;
     check(size <= 4, "not implemented");
     ds.read((char*)&val, size + 4);
     v = val;
@@ -204,7 +204,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, noir::expected<T, E>& v) 
 // TODO: Add other containers
 template<typename Stream, typename T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) {
-  ds << unsigned_int(v.size());
+  ds << Varuint32(v.size());
   for (const auto& i : v) {
     ds << i;
   }
@@ -213,7 +213,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::vector<T>& v) 
 
 template<typename Stream, typename T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::vector<T>& v) {
-  unsigned_int size;
+  Varuint32 size;
   ds >> size;
   v.resize(size);
   for (auto& i : v) {
@@ -240,14 +240,14 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T (&v)[N]) {
   return ds;
 }
 
-template<typename Stream, Byte T, size_t N>
-datastream<Stream>& operator<<(datastream<Stream>& ds, std::span<T, N> v) {
+template<typename Stream, ByteSequence T>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   ds.write(v.data(), v.size());
   return ds;
 }
 
-template<typename Stream, Byte T, size_t N>
-datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
+template<typename Stream, ByteSequence T>
+datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   ds.read(v.data(), v.size());
   return ds;
 }
@@ -255,7 +255,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::span<T, N> v) {
 // Strings
 template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
-  ds << unsigned_int(v.size());
+  ds << Varuint32(v.size());
   if (v.size()) {
     ds.write(v.data(), v.size());
   }
@@ -264,7 +264,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
 
 template<typename Stream>
 datastream<Stream>& operator>>(datastream<Stream>& ds, std::string& v) {
-  unsigned_int size;
+  Varuint32 size;
   ds >> size;
   v.resize(size);
   if (size) {
@@ -287,13 +287,13 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::tuple<Ts...>& v) {
 }
 
 // Data Structures
-template<typename Stream, foreachable T>
+template<typename Stream, Foreachable T>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const T& v) {
   for_each_field([&](const auto& val) { ds << val; }, v);
   return ds;
 }
 
-template<typename Stream, foreachable T>
+template<typename Stream, Foreachable T>
 datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   for_each_field([&](auto& val) { ds >> val; }, v);
   return ds;

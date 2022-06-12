@@ -19,8 +19,8 @@ constexpr uint signature_size{64};
 constexpr std::string_view key_type{"ed25519"};
 
 namespace detail {
-  Result<bytes> sign(const bytes& msg, const bytes& key) {
-    bytes sig(signature_size);
+  Result<Bytes> sign(const Bytes& msg, const Bytes& key) {
+    Bytes sig(signature_size);
     if (crypto_sign_detached(reinterpret_cast<unsigned char*>(sig.data()), nullptr,
           reinterpret_cast<const unsigned char*>(msg.data()), msg.size(),
           reinterpret_cast<const unsigned char*>(key.data())) == 0)
@@ -28,7 +28,7 @@ namespace detail {
     return Error::format("unable to sign");
   }
 
-  bool verify(const bytes& sig, const bytes& msg, const bytes& key) {
+  bool verify(const Bytes& sig, const Bytes& msg, const Bytes& key) {
     if (crypto_sign_verify_detached(reinterpret_cast<const unsigned char*>(sig.data()),
           reinterpret_cast<const unsigned char*>(msg.data()), msg.size(),
           reinterpret_cast<const unsigned char*>(key.data())) == 0)
@@ -37,13 +37,13 @@ namespace detail {
   }
 } // namespace detail
 
-bytes pub_key::address() {
+Bytes pub_key::address() {
   check(key.size() == pub_key_size, "pub_key: unable to derive address as key has incorrect size");
-  auto h = crypto::sha256()(key);
+  auto h = crypto::Sha256()(key);
   return {h.begin(), h.begin() + 20};
 }
 
-bool pub_key::verify_signature(const bytes& msg, const bytes& sig) {
+bool pub_key::verify_signature(const Bytes& msg, const Bytes& sig) {
   return detail::verify(sig, msg, key);
 }
 
@@ -52,13 +52,13 @@ std::string pub_key::get_type() const {
 }
 
 priv_key priv_key::new_priv_key() {
-  bytes pub_key_(pub_key_size), priv_key_(priv_key_size);
+  Bytes pub_key_(pub_key_size), priv_key_(priv_key_size);
   crypto_sign_keypair(
     reinterpret_cast<unsigned char*>(pub_key_.data()), reinterpret_cast<unsigned char*>(priv_key_.data()));
   return {.key = priv_key_};
 }
 
-bytes priv_key::sign(const bytes& msg) const {
+Bytes priv_key::sign(const Bytes& msg) const {
   auto sig = detail::sign(msg, key);
   // TODO: what do when sign failed?
   return sig.value();

@@ -189,7 +189,7 @@ void block_pool::transmit_new_envelope(
 
   const uint32_t payload_size = encode_size(msg);
   new_env->message.resize(payload_size);
-  datastream<char> ds(new_env->message.data(), payload_size);
+  datastream<unsigned char> ds(new_env->message.data(), payload_size);
   ds << msg;
 
   xmt_mq_channel.publish(priority, new_env);

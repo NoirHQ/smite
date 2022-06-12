@@ -42,9 +42,9 @@ struct state {
   consensus_params consensus_params_;
   int64_t last_height_consensus_params_changed;
 
-  bytes last_result_hash;
+  Bytes last_result_hash;
 
-  bytes app_hash;
+  Bytes app_hash;
 
   static state make_genesis_state(genesis_doc& gen_doc) {
     if (!gen_doc.validate_and_complete())
@@ -84,9 +84,9 @@ struct state {
   }
 
   std::tuple<std::shared_ptr<block>, std::shared_ptr<part_set>> make_block(int64_t height,
-    std::vector<bytes>& txs,
+    std::vector<Bytes>& txs,
     const std::shared_ptr<commit>& commit_,
-    /* evidence, */ bytes proposal_address) {
+    /* evidence, */ Bytes proposal_address) {
     // Build base block
     auto block_ = block::make_block(height, txs, commit_);
 

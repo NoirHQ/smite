@@ -58,7 +58,7 @@ struct vote : p2p::vote_message {
     return ret;
   }
 
-  static bytes vote_sign_bytes(const std::string& chain_id, const ::tendermint::types::Vote& v);
+  static Bytes vote_sign_bytes(const std::string& chain_id, const ::tendermint::types::Vote& v);
 };
 
 struct block_votes {

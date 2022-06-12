@@ -5,20 +5,23 @@
 //
 #include <noir/crypto/rand.h>
 #include <openssl/rand.h>
-#include <stdexcept>
 
 namespace noir::crypto {
 
-void rand_bytes(std::span<char> out) {
-  if (!RAND_bytes((unsigned char*)out.data(), out.size())) {
-    throw std::runtime_error("failed to generate random bytes");
+const auto err_rand_bytes = user_error_registry().register_error("failed to generate random bytes");
+
+Result<void> rand_bytes(BytesViewMut out) {
+  if (!RAND_bytes(out.data(), out.size())) {
+    return err_rand_bytes;
   }
+  return success();
 }
 
-void rand_priv_bytes(std::span<char> out) {
-  if (!RAND_priv_bytes((unsigned char*)out.data(), out.size())) {
-    throw std::runtime_error("failed to generate random bytes");
+Result<void> rand_priv_bytes(BytesViewMut out) {
+  if (!RAND_priv_bytes(out.data(), out.size())) {
+    return err_rand_bytes;
   }
+  return success();
 }
 
 } // namespace noir::crypto

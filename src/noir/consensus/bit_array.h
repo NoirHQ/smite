@@ -5,7 +5,7 @@
 //
 #pragma once
 #include <noir/common/for_each.h>
-#include <noir/common/types/bytes.h>
+#include <noir/common/bytes.h>
 
 #include <algorithm>
 #include <memory>
@@ -142,10 +142,10 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
     return ret;
   }
 
-  bytes get_bytes() const {
+  Bytes get_bytes() const {
     auto num_bytes = (bits + 7) / 8;
-    bytes bs;
-    bs.reserve(num_bytes);
+    Bytes bs;
+    bs.raw().reserve(num_bytes);
     for (auto i = 0; i < bits; i += 8) {
       uint8_t byte_{};
       for (auto j = 0; j < 8 && (j + i) < bits; j++) {
@@ -155,7 +155,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
           byte_ &= ~(1 << (7 - j));
         }
       }
-      bs.push_back(static_cast<char>(byte_));
+      bs.raw().push_back(static_cast<char>(byte_));
     }
     return bs;
   }
@@ -186,7 +186,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   template<typename T>
   inline friend T& operator<<(T& ds, const bit_array& v) {
     ds << v.bits;
-    bytes bs = v.get_bytes();
+    Bytes bs = v.get_bytes();
     ds << bs;
     return ds;
   }
@@ -197,7 +197,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
 
     auto num_bytes = (v.bits + 7) / 8;
     v.elem.resize(v.bits);
-    bytes bs;
+    Bytes bs;
     ds >> bs;
     int i{0};
     for (auto byte_ : bs) {
@@ -217,4 +217,4 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
 } // namespace noir::consensus
 
 template<>
-struct noir::is_foreachable<noir::consensus::bit_array> : std::false_type {};
+struct noir::IsForeachable<noir::consensus::bit_array> : std::false_type {};

@@ -38,7 +38,7 @@ namespace json {
 } // namespace json
 
 struct genesis_validator {
-  bytes address;
+  Bytes address;
   ::noir::consensus::pub_key pub_key;
   int64_t power;
   std::string name;
@@ -50,8 +50,8 @@ struct genesis_doc {
   int64_t initial_height;
   std::optional<consensus_params> cs_params;
   std::vector<genesis_validator> validators;
-  bytes app_hash;
-  bytes app_state;
+  Bytes app_hash;
+  Bytes app_state;
 
   static std::shared_ptr<genesis_doc> genesis_doc_from_file(const std::string& gen_doc_file);
 

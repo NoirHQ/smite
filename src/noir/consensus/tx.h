@@ -9,18 +9,18 @@
 namespace noir::consensus {
 
 // struct tx {};
-using tx = bytes;
+using tx = Bytes;
 
 using tx_ptr = std::shared_ptr<tx>;
 
-using address_type = bytes;
-using tx_hash = bytes32;
+using address_type = Bytes;
+using tx_hash = Bytes32;
 
 static tx_hash get_tx_hash(const tx& tx) {
   if (tx.size() == 0) {
     return tx_hash{};
   }
-  crypto::sha3_256 hash;
+  crypto::Sha3_256 hash;
   return tx_hash{hash(tx)}; // FIXME
 }
 

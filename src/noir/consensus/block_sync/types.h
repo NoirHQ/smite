@@ -5,7 +5,7 @@
 //
 #pragma once
 #include <noir/common/refl.h>
-#include <noir/common/types/bytes.h>
+#include <noir/common/bytes.h>
 #include <cinttypes>
 
 namespace noir::consensus {
@@ -15,7 +15,7 @@ struct block_request {
 };
 
 struct block_response {
-  bytes block_; // use serialized block (in order to avoid include conflicts)
+  Bytes block_; // use serialized block (in order to avoid include conflicts)
 };
 
 struct status_request {};

@@ -9,6 +9,6 @@
 namespace noir::codec {
 
 template<typename T>
-using datastream = basic_datastream<T>;
+using Datastream = BasicDatastream<T>;
 
 } // namespace noir::codec

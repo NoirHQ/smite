@@ -5,6 +5,7 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/clist/clist.h>
+#include <iostream>
 #include <thread>
 
 using namespace noir;

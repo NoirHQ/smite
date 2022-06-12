@@ -13,10 +13,10 @@ namespace noir::consensus::merkle {
 struct proof {
   int64_t total{};
   int64_t index{};
-  bytes leaf_hash{};
+  Bytes leaf_hash{};
   bytes_list aunts{};
 
-  std::optional<std::string> verify(const bytes& root_hash, const bytes& leaf) {
+  std::optional<std::string> verify(const Bytes& root_hash, const Bytes& leaf) {
     if (total < 0)
       return "proof total must be positive";
     if (index < 0)
@@ -30,13 +30,13 @@ struct proof {
     return {};
   }
 
-  bytes compute_root_hash() const {
+  Bytes compute_root_hash() const {
     return compute_hash_from_aunts(index, total, leaf_hash, aunts);
   }
 };
 
 struct proof_node {
-  bytes hash{};
+  Bytes hash{};
   std::shared_ptr<proof_node> parent{};
   std::shared_ptr<proof_node> left{};
   std::shared_ptr<proof_node> right{};
@@ -65,7 +65,7 @@ std::pair<std::vector<std::shared_ptr<proof_node>>, std::shared_ptr<proof_node>>
 /// \brief computes inclusion proof for given list
 /// \param items list of items used for generating proof
 /// \return list of proofs; proof[0] is the proof for list[0]
-std::pair<bytes, std::vector<std::shared_ptr<proof>>> proofs_from_bytes_list(const bytes_list& items);
+std::pair<Bytes, std::vector<std::shared_ptr<proof>>> proofs_from_bytes_list(const bytes_list& items);
 
 } // namespace noir::consensus::merkle
 

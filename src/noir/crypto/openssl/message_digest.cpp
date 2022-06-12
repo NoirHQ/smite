@@ -3,32 +3,32 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/crypto/openssl/hash.h>
+#include <noir/crypto/openssl/message_digest.h>
 
 namespace noir::openssl {
 
-hash::~hash() {
+MessageDigest::~MessageDigest() {
   if (ctx) {
     EVP_MD_CTX_free(ctx);
   }
 }
 
-void hash::init(const EVP_MD* type) {
+void MessageDigest::init(const EVP_MD* type) {
   if (!ctx) {
     ctx = EVP_MD_CTX_new();
   }
   EVP_DigestInit(ctx, type);
 }
 
-void hash::update(std::span<const char> in) {
+void MessageDigest::update(BytesView in) {
   EVP_DigestUpdate(ctx, in.data(), in.size());
 }
 
-void hash::final(std::span<char> out) {
-  EVP_DigestFinal(ctx, (unsigned char*)out.data(), nullptr);
+void MessageDigest::final(BytesViewMut out) {
+  EVP_DigestFinal(ctx, out.data(), nullptr);
 }
 
-std::size_t hash::digest_size(const EVP_MD* type) const {
+auto MessageDigest::digest_size(const EVP_MD* type) const -> size_t {
   return EVP_MD_size(type);
 }
 

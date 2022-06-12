@@ -630,7 +630,7 @@ TEST_CASE("tx_pool: Broadcast tx", "[noir][tx_pool]") {
   auto handle = app.get_channel<plugin_interface::egress::channels::transmit_message_queue>().subscribe(
     [&](const p2p::envelope_ptr& envelop) {
       CHECKED_IF(envelop->id == p2p::Transaction) {
-        datastream<char> ds(envelop->message.data(), envelop->message.size());
+        datastream<unsigned char> ds(envelop->message.data(), envelop->message.size());
         ds >> tx;
         result = true;
       }
@@ -674,7 +674,7 @@ TEST_CASE("tx_pool: Broadcast tx", "[noir][tx_pool]") {
 
     const uint32_t payload_size = encode_size(tx);
     new_env->message.resize(payload_size);
-    datastream<char> ds(new_env->message.data(), payload_size);
+    datastream<unsigned char> ds(new_env->message.data(), payload_size);
     ds << tx;
 
     auto size = tp.size();

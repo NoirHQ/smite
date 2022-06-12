@@ -24,7 +24,7 @@ struct priv_validator {
   virtual priv_key get_priv_key() const = 0;
   virtual std::optional<std::string> sign_vote(vote& vote_) = 0;
   virtual std::optional<std::string> sign_proposal(noir::p2p::proposal_message& proposal_) = 0;
-  virtual Result<bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) = 0;
+  virtual Result<Bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) = 0;
 };
 
 struct mock_pv : public priv_validator {
@@ -42,7 +42,7 @@ struct mock_pv : public priv_validator {
   }
   std::optional<std::string> sign_vote(vote& vote_) override;
   std::optional<std::string> sign_proposal(noir::p2p::proposal_message& proposal_) override;
-  Result<bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) override;
+  Result<Bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) override;
 };
 
 } // namespace noir::consensus

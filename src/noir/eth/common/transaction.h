@@ -4,6 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/bytes.h>
+#include <noir/common/inttypes.h>
 #include <memory>
 
 namespace noir::eth {
@@ -12,12 +14,12 @@ struct transaction {
   uint64_t nonce;
   uint256_t gas_price;
   uint64_t gas;
-  bytes20 to;
+  Bytes20 to;
   uint256_t value;
-  bytes data;
+  Bytes data;
   uint64_t v;
-  bytes32 r;
-  bytes32 s;
+  Bytes32 r;
+  Bytes32 s;
 
   uint256_t fee() const {
     // FIXME: wrap check_uint256_t instead of using it directly
@@ -28,7 +30,7 @@ struct transaction {
 using transaction_p = std::shared_ptr<transaction>;
 
 struct rpc_transaction : public transaction {
-  bytes32 block_hash;
+  Bytes32 block_hash;
   uint256_t block_number;
   uint64_t transaction_index;
 };

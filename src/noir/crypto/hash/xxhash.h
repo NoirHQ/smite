@@ -5,27 +5,33 @@
 //
 #pragma once
 #include <noir/crypto/hash/hash.h>
+#include <optional>
+
+#define XXH_STATIC_LINKING_ONLY
 #include <xxhash.h>
 
 namespace noir::crypto {
 
 /// \brief generates xxh64 hash
 /// \ingroup crypto
-struct xxh64 : public hash<xxh64> {
-  ~xxh64();
-  hash<xxh64>& init();
-  hash<xxh64>& update(std::span<const char> in);
-  void final(std::span<char> out);
-  uint64_t final();
-  std::size_t digest_size() const;
+struct Xxh64 : public Hash<Xxh64> {
+  using Hash::update;
 
-  uint64_t operator()(std::span<const char> in) {
-    init().update(in);
-    return final();
+  auto init() -> Xxh64&;
+  auto update(BytesView in) -> Xxh64&;
+  void final(BytesViewMut out);
+  auto final() -> uint64_t;
+
+  constexpr auto digest_size() const -> size_t {
+    return 8;
+  }
+
+  auto operator()(ByteSequence auto&& in) -> uint64_t {
+    return init().update(to_bytes_view(in)).final();
   }
 
 private:
-  XXH64_state_t* state = nullptr;
+  std::optional<XXH64_state_t> state;
 };
 
 } // namespace noir::crypto

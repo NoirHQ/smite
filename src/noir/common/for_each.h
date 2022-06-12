@@ -4,48 +4,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/foreachable.h>
 #include <noir/common/refl.h>
 #include <boost/pfr.hpp>
 
 namespace noir {
 
-template<typename T, typename = void>
-struct is_foreachable : std::false_type {};
-
 template<typename T>
-struct is_foreachable<T, std::enable_if_t<std::is_class_v<T>>> : std::true_type {};
+requires (std::is_class_v<T> && std::is_aggregate_v<T>)
+struct IsForeachable<T> : std::true_type {};
 
-template<typename T>
-constexpr bool is_foreachable_v = is_foreachable<T>::value;
-
-template<typename T>
-concept foreachable = is_foreachable_v<T>;
-
-template<typename F, typename T>
+template<typename F, Foreachable T>
 void for_each_field(F&& f, T& v) {
   if constexpr (refl::has_refl_v<T>) {
     refl::for_each_field(
-      [&](const auto& desc, auto& value) {
+      [f{std::forward<F>(f)}](const auto& desc, auto& value) {
         f(value);
         return true;
       },
       v);
   } else {
-    boost::pfr::for_each_field(v, f);
+    boost::pfr::for_each_field(v, std::forward<F>(f));
   }
 }
 
-template<typename F, typename T>
+template<typename F, Foreachable T>
 void for_each_field(F&& f, const T& v) {
   if constexpr (refl::has_refl_v<T>) {
     refl::for_each_field(
-      [&](const auto& desc, const auto& value) {
+      [f{std::forward<F>(f)}](const auto& desc, const auto& value) {
         f(value);
         return true;
       },
       v);
   } else {
-    boost::pfr::for_each_field(v, f);
+    boost::pfr::for_each_field(v, std::forward<F>(f));
   }
 }
 

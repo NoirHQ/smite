@@ -151,11 +151,11 @@ void from_hex(std::string_view s, uint256_t& v) {
   }
 }
 
-std::vector<char> from_hex(std::string_view s) {
+std::vector<unsigned char> from_hex(std::string_view s) {
   auto has_prefix = s.starts_with("0x");
   auto require_pad = s.size() % 2;
   auto size = (s.size() / 2) + require_pad - has_prefix;
-  std::vector<char> out(size);
+  std::vector<unsigned char> out(size);
   auto c = s.begin() + has_prefix * 2;
   auto r = out.begin();
   for (; c != s.end() && r != out.end(); ++c, ++r) {

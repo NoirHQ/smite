@@ -33,7 +33,7 @@ protected:
     const size_t buffer_size = header_size + payload_size;
 
     auto send_buffer = std::make_shared<std::vector<char>>(buffer_size);
-    datastream<char> ds(send_buffer->data(), buffer_size);
+    datastream<unsigned char> ds(reinterpret_cast<unsigned char*>(send_buffer->data()), buffer_size);
     ds.write(header, header_size);
     ds << m;
 

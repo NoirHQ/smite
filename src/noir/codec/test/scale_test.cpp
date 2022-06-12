@@ -184,11 +184,11 @@ TEST_CASE("scale: Strings", "[noir][codec]") {
 }
 
 TEST_CASE("scale: Tuples", "[noir][codec]") {
-  auto v = std::make_tuple((unsigned_int)3, false);
+  auto v = std::make_tuple((Varuint32)3, false);
   auto data = encode(v);
   CHECK(to_hex(data) == "0c00");
 
-  v = decode<std::tuple<unsigned_int, bool>>(data);
+  v = decode<std::tuple<Varuint32, bool>>(data);
   CHECK(v == std::make_tuple(3u, false));
 }
 

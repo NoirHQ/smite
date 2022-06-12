@@ -52,7 +52,7 @@ bool file_pv_key::load(const fs::path& key_file_path, file_pv_key& priv_key) {
   file_pv_key_json_obj json_obj;
   fc::from_variant(obj, json_obj);
   auto priv_key_str = fc::base64_decode(json_obj.priv_key.value);
-  priv_key.priv_key.key = bytes(priv_key_str.begin(), priv_key_str.end());
+  priv_key.priv_key.key = Bytes(priv_key_str.begin(), priv_key_str.end());
   priv_key.file_path = key_file_path.string();
   return true;
 }
@@ -147,8 +147,8 @@ std::string file_pv::string() const {
 }
 
 bool check_only_differ_by_timestamp(const noir::consensus::vote& obj,
-  const bytes& last_sign_bytes,
-  const bytes& new_sign_bytes,
+  const Bytes& last_sign_bytes,
+  const Bytes& new_sign_bytes,
   noir::tstamp& timestamp) {
   auto last_vote = decode<canonical_vote>(last_sign_bytes);
   auto new_vote = decode<canonical_vote>(new_sign_bytes);
@@ -165,8 +165,8 @@ bool check_only_differ_by_timestamp(const noir::consensus::vote& obj,
 }
 
 bool check_only_differ_by_timestamp(const noir::p2p::proposal_message& obj,
-  const bytes& last_sign_bytes,
-  const bytes& new_sign_bytes,
+  const Bytes& last_sign_bytes,
+  const Bytes& new_sign_bytes,
   noir::tstamp& timestamp) {
   auto last_vote = decode<canonical_proposal>(last_sign_bytes);
   auto new_vote = decode<canonical_proposal>(new_sign_bytes);
@@ -183,7 +183,7 @@ bool check_only_differ_by_timestamp(const noir::p2p::proposal_message& obj,
 }
 
 template<typename T>
-bool sign_internal(T& obj, const bytes& sign_bytes, file_pv& pv, sign_step step) {
+bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step) {
   auto& key = pv.key;
   auto& lss = pv.last_sign_state;
   auto height = obj.height;
@@ -233,7 +233,7 @@ bool file_pv::sign_proposal_internal(noir::p2p::proposal_message& proposal) {
     proposal, encode(canonical::canonicalize_proposal(proposal)), *this, sign_step::propose);
 }
 
-void file_pv::save_signed(int64_t height, int32_t round, sign_step step, const bytes& sign_bytes, const bytes& sig) {
+void file_pv::save_signed(int64_t height, int32_t round, sign_step step, const Bytes& sign_bytes, const Bytes& sig) {
   last_sign_state.height = height;
   last_sign_state.round = round;
   last_sign_state.step = step;

@@ -39,7 +39,7 @@ std::optional<std::string> verify_commit_single(std::string chain_id_,
   int32_t val_idx{0};
   int64_t tallied_voting_power{0};
   std::map<int32_t, int> seen_vals;
-  bytes vote_sign_bytes;
+  Bytes vote_sign_bytes;
 
   for (auto i = 0; i < commit_->signatures.size(); i++) {
     auto& commit_sig_ = commit_->signatures[i];

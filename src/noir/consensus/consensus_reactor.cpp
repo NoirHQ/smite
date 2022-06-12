@@ -62,7 +62,7 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
     return;
   }
 
-  datastream<char> ds(info->message.data(), info->message.size());
+  datastream<unsigned char> ds(info->message.data(), info->message.size());
   p2p::cs_reactor_message msg;
   ds >> msg;
 
@@ -464,7 +464,7 @@ void consensus_reactor::transmit_new_envelope(
 
   const uint32_t payload_size = encode_size(msg);
   new_env->message.resize(payload_size);
-  datastream<char> ds(new_env->message.data(), payload_size);
+  datastream<unsigned char> ds(new_env->message.data(), payload_size);
   ds << msg;
 
   xmt_mq_channel.publish(priority, new_env);

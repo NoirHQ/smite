@@ -25,12 +25,12 @@ struct node_id {
     return id + protocol_host_port;
   }
 
-  std::string node_id_from_pub_key(bytes pub_key) {
-    return to_hex(pub_key);
+  std::string node_id_from_pub_key(Bytes pub_key) {
+    return hex::encode(pub_key);
   }
 
-  bytes get_bytes() {
-    return from_hex(id);
+  Bytes get_bytes() {
+    return hex::decode(id);
   }
 
   bool validate() {

@@ -16,8 +16,8 @@ namespace noir::consensus {
 
 struct evidence {
   virtual std::vector<std::shared_ptr<::tendermint::abci::Evidence>> get_abci() = 0;
-  virtual bytes get_bytes() = 0;
-  virtual bytes get_hash() = 0;
+  virtual Bytes get_bytes() = 0;
+  virtual Bytes get_hash() = 0;
   virtual int64_t get_height() const = 0;
   virtual std::string get_string() = 0;
   virtual tstamp get_timestamp() = 0;
@@ -85,15 +85,15 @@ struct duplicate_vote_evidence : public evidence {
     return {ev};
   }
 
-  bytes get_bytes() override {
+  Bytes get_bytes() override {
     auto pbe = to_proto(*this);
-    bytes ret(pbe->ByteSizeLong());
+    Bytes ret(pbe->ByteSizeLong());
     pbe->SerializeToArray(ret.data(), pbe->ByteSizeLong());
     return ret;
   }
 
-  bytes get_hash() override {
-    return crypto::sha256()(get_bytes());
+  Bytes get_hash() override {
+    return crypto::Sha256()(get_bytes());
   }
 
   int64_t get_height() const override {
@@ -173,23 +173,23 @@ struct light_client_attack_evidence : public evidence {
 
   std::vector<std::shared_ptr<::tendermint::abci::Evidence>> get_abci() override;
 
-  bytes get_bytes() override {
+  Bytes get_bytes() override {
     auto pbe = to_proto(*this);
     if (!pbe)
       check(false, fmt::format("converting light client attack evidence to proto: {}", pbe.error()));
-    bytes ret(pbe.value()->ByteSizeLong());
+    Bytes ret(pbe.value()->ByteSizeLong());
     pbe.value()->SerializeToArray(ret.data(), pbe.value()->ByteSizeLong());
     return ret;
   }
 
-  bytes get_hash() override;
+  Bytes get_hash() override;
 
   int64_t get_height() const override {
     return common_height;
   }
 
   std::string get_string() override {
-    return fmt::format("light_client_attack_evidence #{}", to_hex(get_hash()));
+    return fmt::format("light_client_attack_evidence #{}", hex::encode(get_hash()));
   }
 
   tstamp get_timestamp() override {
@@ -295,8 +295,8 @@ struct light_client_attack_evidence : public evidence {
 struct evidence_list {
   std::vector<std::shared_ptr<evidence>> list;
 
-  bytes hash() {
-    std::vector<bytes> bytes_list;
+  Bytes hash() {
+    std::vector<Bytes> bytes_list;
     for (auto& e : list)
       bytes_list.push_back(e->get_hash());
     return consensus::merkle::hash_from_bytes_list(bytes_list);
@@ -332,7 +332,7 @@ struct evidence_list {
 
 // NOIR_REFLECT_NO_DESC(noir::consensus::evidence, );
 template<>
-struct noir::is_foreachable<noir::consensus::evidence> : std::false_type {};
+struct noir::IsForeachable<noir::consensus::evidence> : std::false_type {};
 
 // NOIR_REFLECT_DERIVED(noir::consensus::duplicate_vote_evidence,
 //   noir::consensus::evidence,
@@ -351,4 +351,4 @@ struct noir::is_foreachable<noir::consensus::evidence> : std::false_type {};
 
 // NOIR_REFLECT(noir::consensus::evidence_list, list);
 template<>
-struct noir::is_foreachable<noir::consensus::evidence_list> : std::false_type {};
+struct noir::IsForeachable<noir::consensus::evidence_list> : std::false_type {};

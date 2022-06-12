@@ -37,9 +37,9 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
     for (auto& val : vals) {
       auto addr = from_hex(val.address);
       auto pub_key_str = fc::base64_decode(val.pub_key.value);
-      ::noir::consensus::pub_key pub_key_{.key = bytes{pub_key_str.begin(), pub_key_str.end()}};
+      ::noir::consensus::pub_key pub_key_{.key = Bytes{pub_key_str.begin(), pub_key_str.end()}};
       gen_doc->validators.push_back(genesis_validator{
-        .address = bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});
+        .address = Bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});
     }
   } catch (std::exception const& ex) {
     elog(fmt::format("error reading genesis from {}: {}", gen_doc_file, ex.what()));

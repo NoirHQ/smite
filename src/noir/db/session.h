@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <noir/common/types.h>
+#include <noir/common/bytes.h>
 #include <noir/db/shared_bytes.h>
 
 namespace noir::db::session {
@@ -178,11 +178,11 @@ public:
 
   std::optional<shared_bytes> read(const shared_bytes& key);
   void write(const shared_bytes& key, const shared_bytes& value);
-  std::optional<bytes> read_from_bytes(const bytes& key);
-  void write_from_bytes(const bytes& key, const bytes& value);
+  std::optional<Bytes> read_from_bytes(const Bytes& key);
+  void write_from_bytes(const Bytes& key, const Bytes& value);
   bool contains(const shared_bytes& key);
   void erase(const shared_bytes& key);
-  void erase_from_bytes(const bytes& key);
+  void erase_from_bytes(const Bytes& key);
   void clear();
 
   /// \brief Reads a batch of keys from this session.
@@ -226,7 +226,7 @@ public:
   /// \param key The key to search for.
   /// \return An iterator to the key if found, the end iterator otherwise.
   iterator find(const shared_bytes& key);
-  iterator find_from_bytes(const bytes& key);
+  iterator find_from_bytes(const Bytes& key);
   iterator begin();
   iterator end();
 
@@ -235,7 +235,7 @@ public:
   /// \return An iterator to the first key that is not less than the given key, or the end iterator if there is no key
   /// that matches that criteria.
   iterator lower_bound(const shared_bytes& key);
-  iterator lower_bound_from_bytes(const bytes& key);
+  iterator lower_bound_from_bytes(const Bytes& key);
 
 private:
   /// \brief Sets the lower/upper bounds of the session's cache based on the parent's cache lower/upper bound
@@ -584,7 +584,7 @@ void session<Parent>::write(const shared_bytes& key, const shared_bytes& value) 
 
 // TODO: decide K/V type of session
 template<typename Parent>
-std::optional<bytes> session<Parent>::read_from_bytes(const bytes& key) {
+std::optional<Bytes> session<Parent>::read_from_bytes(const Bytes& key) {
   auto ret = read(shared_bytes(key.data(), key.size()));
   if (ret == std::nullopt) {
     return std::nullopt;
@@ -593,7 +593,7 @@ std::optional<bytes> session<Parent>::read_from_bytes(const bytes& key) {
 }
 // TODO: decide K/V type of session
 template<typename Parent>
-void session<Parent>::write_from_bytes(const bytes& key, const bytes& value) {
+void session<Parent>::write_from_bytes(const Bytes& key, const Bytes& value) {
   write(shared_bytes(key.data(), key.size()), shared_bytes(value.data(), value.size()));
 }
 
@@ -634,7 +634,7 @@ void session<Parent>::erase(const shared_bytes& key) {
 }
 
 template<typename Parent>
-void session<Parent>::erase_from_bytes(const bytes& key) {
+void session<Parent>::erase_from_bytes(const Bytes& key) {
   erase(shared_bytes(key.data(), key.size()));
 }
 
@@ -768,7 +768,7 @@ typename session<Parent>::iterator session<Parent>::find(const shared_bytes& key
 }
 
 template<typename Parent>
-typename session<Parent>::iterator session<Parent>::find_from_bytes(const bytes& key) {
+typename session<Parent>::iterator session<Parent>::find_from_bytes(const Bytes& key) {
   return find(shared_bytes(key.data(), key.size()));
 }
 
@@ -864,7 +864,7 @@ typename session<Parent>::iterator session<Parent>::lower_bound(const shared_byt
 
 // TODO: decide K/V type of session
 template<typename Parent>
-typename session<Parent>::iterator session<Parent>::lower_bound_from_bytes(const bytes& key) {
+typename session<Parent>::iterator session<Parent>::lower_bound_from_bytes(const Bytes& key) {
   return lower_bound(shared_bytes(key.data(), key.size()));
 }
 

@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/bytes.h>
 #include <noir/common/refl.h>
-#include <noir/common/types/bytes_n.h>
 
 #include <cinttypes>
 #include <memory>
@@ -14,7 +14,7 @@
 
 namespace noir::p2p {
 
-using block_id_type = bytes32;
+using block_id_type = Bytes32;
 
 /**
  * default value initializers
@@ -102,7 +102,7 @@ struct envelope {
   std::string from;
   std::string to;
   bool broadcast;
-  bytes message; ///< one of reactor_messages or peer_error, serialized
+  Bytes message; ///< one of reactor_messages or peer_error, serialized
   channel_id id;
 };
 using envelope_ptr = std::shared_ptr<envelope>;

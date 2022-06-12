@@ -35,8 +35,8 @@ inline std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>
   return std::make_shared<noir::db::session::session<noir::db::session::rocksdb_t>>(std::move(rocksdb), 16);
 }
 
-inline noir::bytes gen_random_bytes(size_t num) {
-  noir::bytes ret(num);
+inline noir::Bytes gen_random_bytes(size_t num) {
+  noir::Bytes ret(num);
   noir::crypto::rand_bytes(ret);
   return ret;
 }

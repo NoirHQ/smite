@@ -4,166 +4,131 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/check.h>
-#include <span>
-#include <stdexcept>
-#include <vector>
+#include <noir/common/bytes.h>
+#include <noir/core/core.h>
 
-/// \defgroup codec Codec
-/// \brief Data (de)serialization
-
-/// \brief codec namespace
-/// \ingroup codec
 namespace noir::codec {
 
-/// \addtogroup codec
-/// \{
+extern const Error err_out_of_range;
 
-/// \brief wraps a buffer of characters and provides high-level input/output interface
 template<typename T>
-class basic_datastream {
-  static_assert(std::is_same_v<std::remove_cv_t<T>, char> || std::is_same_v<std::remove_cv_t<T>, unsigned char>,
-    "datastream can be initialized by char type only");
+class BasicDatastream {
+  static_assert(std::is_same_v<std::remove_cv_t<T>, unsigned char>);
 
 public:
-  /// \brief constructs new datastream object
-  /// \param s contiguous sequence of characters
-  basic_datastream(std::span<T> s): buf(s), pos(s.begin()) {}
+  BasicDatastream(std::span<T> buf): buf(buf), pos(buf.begin()) {}
+  BasicDatastream(T* data, size_t size): BasicDatastream(std::span(data, size)) {}
+  BasicDatastream(BytesViewConstructible auto& buf): BasicDatastream(to_bytes_view(buf)) {}
 
-  /// \brief constructs new datastream object
-  /// \param s pointer to the first element of the sequence
-  /// \param count number of elements in the sequence
-  basic_datastream(T* s, size_t count): buf(s, count), pos(buf.begin()) {}
-
-  /// \brief move forward the position indicator without extracting
-  /// \param s offset from the current position
-  /// \return `*this`
-  auto& skip(size_t s) {
+  auto skip(size_t s) -> Result<void> {
+    if (remaining() < s) {
+      return err_out_of_range;
+    }
     pos += s;
-    return *this;
+    return success();
   }
 
-  /// \brief extracts characters from stream
-  /// \param reference to the range of characters to store the characters to
-  /// \return `*this`
-  auto& read(std::span<char> s) {
-    check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to read past the end");
-    std::copy(pos, pos + s.size(), s.begin());
-    pos += s.size();
-    return *this;
+  auto read(ByteSequence auto&& out) -> Result<void> {
+    if (remaining() < out.size()) {
+      return err_out_of_range;
+    }
+    std::copy(pos, pos + out.size(), out.begin());
+    pos += out.size();
+    return success();
   }
 
-  /// \brief extracts characters from stream
-  /// \param s pointer to the character array to store the characters to
-  /// \param count  number of characters to read
-  /// \return `*this`
-  auto& read(char* s, size_t count) {
-    return read({s, count});
+  auto read(BytePointer auto data, size_t size) -> Result<void> {
+    return read(std::span{byte_pointer_cast(data), size});
   }
 
-  /// \brief extracts characters from stream in reverse order
-  /// \param reference to the range of characters to store the characters to
-  /// \return `*this`
-  auto& reverse_read(std::span<char> s) {
-    check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to read past the end");
-    std::reverse_copy(pos, pos + s.size(), s.begin());
-    pos += s.size();
-    return *this;
+  auto reverse_read(ByteSequence auto&& out) -> Result<void> {
+    if (remaining() < out.size()) {
+      return err_out_of_range;
+    }
+    std::reverse_copy(pos, pos + out.size(), out.begin());
+    pos += out.size();
+    return success();
   }
 
-  /// \brief reads the next character without extracting it
-  /// \return the next character
-  int peek() {
-    check<std::out_of_range>(remaining() >= 1, "datastream attempted to read past the end");
+  auto peek() -> Result<int> {
+    if (remaining() < 1) {
+      return err_out_of_range;
+    }
     return *pos;
   }
 
-  /// \brief extracts a character
-  /// \return the extracted character
-  int get() {
-    auto c = peek();
-    ++pos;
-    return c;
+  auto get() -> Result<int> {
+    auto res = peek();
+    if (res) {
+      pos += 1;
+    }
+    return res;
   }
 
-  /// \brief extracts a character
-  /// \param reference to the character to write the result to
-  /// \return `*this`
-  auto& get(char& c) {
-    c = get();
-    return *this;
+  auto get(Byte auto& c) -> Result<void> {
+    auto res = get();
+    if (res) {
+      c = res.value();
+      return success();
+    }
+    return res.error();
   }
 
-  /// \brief makes the most recently extracted character available again
-  /// \return `*this`
-  auto& unget() {
-    check<std::out_of_range>(tellp() >= 1, "datastream attempted to read past the beginning");
-    --pos;
-    return *this;
+  auto unget() -> Result<void> {
+    if (tellp() < 1) {
+      return err_out_of_range;
+    }
+    pos -= 1;
+    return success();
   }
 
-  /// \brief inserts characters to stream
-  /// \param s contiguous sequence of characters
-  /// \return `*this`
-  auto& write(std::span<const char> s) {
-    check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to write past the end");
-    std::copy(s.begin(), s.end(), pos);
-    pos += s.size();
-    return *this;
+  auto write(ByteSequence auto&& in) -> Result<void> {
+    if (remaining() < in.size()) {
+      return err_out_of_range;
+    }
+    std::copy(in.begin(), in.end(), pos);
+    pos += in.size();
+    return success();
   }
 
-  /// \brief inserts characters to stream
-  /// \param s pointer to the character string to write
-  /// \param count number of characters to write
-  /// \return `*this`
-  auto& write(const void* c, size_t count) {
-    return write({(const char*)c, count});
+  auto write(const void* data, size_t size) -> Result<void> {
+    return write(std::span{reinterpret_cast<const unsigned char*>(data), size});
   }
 
-  /// \brief inserts characters to stream in reverse order
-  /// \param s contiguous sequence of characters
-  /// \return `*this`
-  auto& reverse_write(std::span<const char> s) {
-    check<std::out_of_range>(remaining() >= s.size(), "datastream attempted to write past the end");
-    std::reverse_copy(s.begin(), s.end(), pos);
-    pos += s.size();
-    return *this;
+  auto reverse_write(ByteSequence auto&& in) -> Result<void> {
+    if (remaining() < in.size()) {
+      return err_out_of_range;
+    }
+    std::reverse_copy(in.begin(), in.end(), pos);
+    pos += in.size();
+    return success();
   }
 
-  /// \brief inserts a character
-  /// \param c character to write
-  /// \return `*this`
-  auto& put(char c) {
-    check<std::out_of_range>(remaining() >= 1, "datastream attempted to write past the end");
+  auto put(unsigned char c) -> Result<void> {
+    if (remaining() < 1) {
+      return err_out_of_range;
+    }
     *pos++ = c;
-    return *this;
+    return success();
   }
 
-  /// \brief sets the position indicator
-  /// \param p offset from the first element of underlying buffer
-  /// \return `*this`
-  auto& seekp(size_t p) {
+  auto seekp(size_t p) -> Result<void> {
+    if (p >= buf.size()) {
+      return err_out_of_range;
+    }
     pos = buf.begin() + p;
-    return *this;
+    return success();
   }
 
-  /// \brief returns the position indicator
-  /// \return offset from the first element of underlying buffer
-  size_t tellp() const {
+  auto tellp() const -> size_t {
     return std::distance(buf.begin(), pos);
   }
 
-  /// \brief returns the remaining size
-  /// \return offset to the end of underlying buffer
-  size_t remaining() const {
+  auto remaining() const -> size_t {
     return std::distance(pos, buf.end());
   }
 
-  std::span<T> subspan(size_t offset, size_t count) {
-    return buf.subspan(offset, count);
-  }
-
-  T* ptr() {
+  auto ptr() -> T* {
     return &*pos;
   }
 
@@ -172,65 +137,39 @@ private:
   typename std::span<T>::iterator pos;
 };
 
-/// \brief calculates the size needed for serialization
-/// \ingroup codec
 template<>
-class basic_datastream<size_t> {
+class BasicDatastream<size_t> {
 public:
-  /// \brief constructs new datastream object
-  /// \param init_size initial size
-  constexpr basic_datastream(size_t init_size = 0): size(init_size) {}
+  constexpr BasicDatastream(size_t init_size = 0): size(init_size) {}
 
-  /// \brief increase the size indicator
-  /// \param s value to be added to the calculated size
-  /// \return `*this`
-  constexpr auto& skip(size_t s) {
+  constexpr void skip(size_t s) {
     size += s;
-    return *this;
   }
 
-  /// \brief increase the calculated size by the size of the given range
-  /// \param s contiguous sequence of characters
-  constexpr auto& write(std::span<const char> s) {
-    size += s.size();
-    return *this;
+  constexpr void write(ByteSequence auto&& in) {
+    size += in.size();
   }
 
-  /// \brief increase the calculated size by the given value
-  /// \param s value to be added to the calculated size
-  constexpr auto& write(const void*, size_t s) {
+  constexpr void write(const void*, size_t s) {
     size += s;
-    return *this;
   }
 
-  /// \brief increase the calculated size by the size of the given range
-  /// \param s contiguous sequence of characters
-  constexpr auto& reverse_write(std::span<const char> s) {
-    size += s.size();
-    return *this;
+  constexpr void reverse_write(ByteSequence auto&& in) {
+    size += in.size();
   }
 
-  /// \brief increase the calculated size by 1
-  constexpr auto& put(char) {
-    ++size;
-    return *this;
+  constexpr void put(char) {
+    size += 1;
   }
 
-  /// \brief set the size indicator
-  /// \param p value to be set to the calculated size
-  /// \return `*this`
-  constexpr auto& seekp(size_t p) {
+  constexpr void seekp(size_t p) {
     size = p;
-    return *this;
   }
 
-  /// \brief returns the calculated size
-  /// \return calculated size
   constexpr size_t tellp() const {
     return size;
   }
 
-  /// \brief always returns 0
   constexpr size_t remaining() const {
     return 0;
   }
@@ -239,16 +178,14 @@ private:
   size_t size;
 };
 
-/// \}
-
 } // namespace noir::codec
 
 #define NOIR_CODEC(CODEC) \
   namespace noir::codec::CODEC { \
     template<typename T> \
-    class datastream : public basic_datastream<T> { \
+    class datastream : public BasicDatastream<T> { \
     public: \
-      using basic_datastream<T>::basic_datastream; \
+      using BasicDatastream<T>::BasicDatastream; \
     }; \
     template<typename T> \
     constexpr size_t encode_size(const T& v) { \
@@ -257,16 +194,16 @@ private:
       return ds.tellp(); \
     } \
     template<typename T> \
-    std::vector<char> encode(const T& v) { \
-      auto buffer = std::vector<char>(encode_size(v)); \
-      datastream<char> ds(buffer); \
+    Bytes encode(const T& v) { \
+      Bytes buffer(encode_size(v)); \
+      datastream<unsigned char> ds(buffer); \
       ds << v; \
       return buffer; \
     } \
     template<typename T> \
-    T decode(std::span<const char> s) { \
-      T v{}; \
-      datastream<const char> ds(s); \
+    T decode(std::span<const unsigned char> s) { \
+      T v; \
+      datastream<const unsigned char> ds(s); \
       ds >> v; \
       return v; \
     } \

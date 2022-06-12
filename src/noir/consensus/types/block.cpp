@@ -48,7 +48,7 @@ std::shared_ptr<vote_set> commit_to_vote_set(
   return std::move(vote_set_);
 }
 
-bytes commit::get_hash() {
+Bytes commit::get_hash() {
   if (hash.empty()) {
     merkle::bytes_list items;
     for (const auto& sig : signatures) {
@@ -73,18 +73,18 @@ std::shared_ptr<part_set> part_set::new_part_set_from_header(const p2p::part_set
   return ret;
 }
 
-std::shared_ptr<part_set> part_set::new_part_set_from_data(const bytes& data, uint32_t part_size) {
+std::shared_ptr<part_set> part_set::new_part_set_from_data(const Bytes& data, uint32_t part_size) {
   // Divide data into 4KB parts
   uint32_t total = (data.size() + part_size - 1) / part_size;
   std::vector<std::shared_ptr<part>> parts(total);
-  std::vector<bytes> parts_bytes(total);
+  std::vector<Bytes> parts_bytes(total);
   auto parts_bit_array = bit_array::new_bit_array(total);
   for (auto i = 0; i < total; i++) {
     auto first = data.begin() + (i * part_size);
     auto last = data.begin() + (std::min((uint32_t)data.size(), (i + 1) * part_size));
     auto part_ = std::make_shared<part>();
     part_->index = i;
-    std::copy(first, last, std::back_inserter(part_->bytes_));
+    std::copy(first, last, std::back_inserter(part_->bytes_.raw()));
     parts[i] = part_;
     parts_bytes[i] = part_->bytes_;
     parts_bit_array->set_index(i, true);
@@ -134,13 +134,13 @@ bool part_set::add_part(std::shared_ptr<part> part_) {
   return true;
 }
 
-bytes part_set::get_hash() {
+Bytes part_set::get_hash() {
   if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
     return merkle::hash_from_bytes_list({});
   return hash;
 }
 
-bytes block_data::get_hash() {
+Bytes block_data::get_hash() {
   if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
     return merkle::hash_from_bytes_list({});
   if (hash.empty()) {
@@ -152,7 +152,7 @@ bytes block_data::get_hash() {
   return hash;
 }
 
-bytes block_header::get_hash() {
+Bytes block_header::get_hash() {
   // if (validators_hash.empty()) // TODO
   //   return {};
   merkle::bytes_list items;
@@ -177,10 +177,10 @@ std::shared_ptr<block> block::new_block_from_part_set(const std::shared_ptr<part
   if (!ps->is_complete())
     return {};
 
-  bytes data;
-  data.reserve(ps->byte_size);
+  Bytes data;
+  data.raw().reserve(ps->byte_size);
   for (const auto& p : ps->parts)
-    std::copy(p->bytes_.begin(), p->bytes_.end(), std::back_inserter(data));
+    std::copy(p->bytes_.begin(), p->bytes_.end(), std::back_inserter(data.raw()));
   auto block_ = decode<block>(data);
   return std::make_shared<block>(block_);
 }

@@ -27,6 +27,10 @@ namespace noir::db::session {
 /// \remarks To instantiate a RocksDB session use the following syntax <code>auto db = session<rocksdb_t>{...};</code>
 struct rocksdb_t {};
 
+inline rocksdb::Slice to_slice(ByteSequence auto&& bytes) {
+  return rocksdb::Slice{reinterpret_cast<const char*>(bytes.data()), bytes.size()};
+}
+
 /// \brief A specialization of session that interacts with a RocksDB instance instead of an in-memory cache.
 /// \remarks The interface on this session type should work just like the non specialized version of session.
 /// For more documentation on methods in this header, refer to the session header file.
@@ -64,8 +68,8 @@ public:
     bool operator!=(const rocks_iterator& other) const;
 
     shared_bytes key() const;
-    bytes key_from_bytes() const;
-    std::optional<bytes> value_from_bytes() const;
+    Bytes key_from_bytes() const;
+    std::optional<Bytes> value_from_bytes() const;
     bool deleted() const;
 
   private:
@@ -104,11 +108,11 @@ public:
 
   std::optional<shared_bytes> read(const shared_bytes& key);
   void write(const shared_bytes& key, const shared_bytes& value);
-  std::optional<bytes> read_from_bytes(const bytes& key);
-  void write_from_bytes(const bytes& key, const bytes& value);
+  std::optional<Bytes> read_from_bytes(const Bytes& key);
+  void write_from_bytes(const Bytes& key, const Bytes& value);
   bool contains(const shared_bytes& key);
   void erase(const shared_bytes& key);
-  void erase_from_bytes(const bytes& key);
+  void erase_from_bytes(const Bytes& key);
   void clear();
   bool is_deleted(const shared_bytes& key) const;
 
@@ -132,11 +136,11 @@ public:
   void read_from(Other_data_store& ds, const Iterable& keys);
 
   iterator find(const shared_bytes& key);
-  iterator find_from_bytes(const bytes& key);
+  iterator find_from_bytes(const Bytes& key);
   iterator begin();
   iterator end();
   iterator lower_bound(const shared_bytes& key);
-  iterator lower_bound_from_bytes(const bytes& key);
+  iterator lower_bound_from_bytes(const Bytes& key);
 
   void undo();
   void commit();
@@ -280,7 +284,7 @@ inline bool session<rocksdb_t>::is_deleted(const shared_bytes& key) const {
 }
 
 inline std::optional<shared_bytes> session<rocksdb_t>::read(const shared_bytes& key) {
-  auto key_slice = rocksdb::Slice{key.data(), key.size()};
+  auto key_slice = to_slice(key);
   auto pinnable_value = rocksdb::PinnableSlice{};
   auto status = m_db->Get(m_read_options, column_family_(), key_slice, &pinnable_value);
 
@@ -292,37 +296,37 @@ inline std::optional<shared_bytes> session<rocksdb_t>::read(const shared_bytes& 
 }
 
 inline void session<rocksdb_t>::write(const shared_bytes& key, const shared_bytes& value) {
-  auto key_slice = rocksdb::Slice{key.data(), key.size()};
-  auto value_slice = rocksdb::Slice{value.data(), value.size()};
+  auto key_slice = to_slice(key);
+  auto value_slice = to_slice(value);
   auto status = m_db->Put(m_write_options, column_family_(), key_slice, value_slice);
 }
 
 // TODO: decide K/V type of session
-inline std::optional<bytes> session<rocksdb_t>::read_from_bytes(const bytes& key) {
+inline std::optional<Bytes> session<rocksdb_t>::read_from_bytes(const Bytes& key) {
   auto ret = read(shared_bytes(key.data(), key.size()));
   if (ret == std::nullopt) {
     return std::nullopt;
   }
   auto val = ret.value();
-  return {bytes{val.begin(), val.end()}};
+  return {Bytes{val.begin(), val.end()}};
 }
 // TODO: decide K/V type of session
-inline void session<rocksdb_t>::write_from_bytes(const bytes& key, const bytes& value) {
+inline void session<rocksdb_t>::write_from_bytes(const Bytes& key, const Bytes& value) {
   write(shared_bytes(key.data(), key.size()), shared_bytes(value.data(), value.size()));
 }
 
 inline bool session<rocksdb_t>::contains(const shared_bytes& key) {
-  auto key_slice = rocksdb::Slice{key.data(), key.size()};
+  auto key_slice = to_slice(key);
   auto value = std::string{};
   return m_db->KeyMayExist(m_read_options, column_family_(), key_slice, &value);
 }
 
 inline void session<rocksdb_t>::erase(const shared_bytes& key) {
-  auto key_slice = rocksdb::Slice{key.data(), key.size()};
+  auto key_slice = to_slice(key);
   auto status = m_db->Delete(m_write_options, column_family_(), key_slice);
 }
 
-inline void session<rocksdb_t>::erase_from_bytes(const bytes& key) {
+inline void session<rocksdb_t>::erase_from_bytes(const Bytes& key) {
   erase(shared_bytes(key.data(), key.size()));
 }
 
@@ -370,7 +374,7 @@ void session<rocksdb_t>::write(const Iterable& key_values) {
   auto batch = rocksdb::WriteBatch{1024 * 1024};
 
   for (const auto& kv : key_values) {
-    batch.Put(column_family_(), {kv.first.data(), kv.first.size()}, {kv.second.data(), kv.second.size()});
+    batch.Put(column_family_(), to_slice(kv.first), to_slice(kv.second));
   }
 
   auto status = m_db->Write(m_write_options, &batch);
@@ -382,7 +386,7 @@ void session<rocksdb_t>::write_from_bytes(const Iterable& key_values) {
   auto batch = rocksdb::WriteBatch{1024 * 1024};
 
   for (const auto& kv : key_values) {
-    batch.Put(column_family_(), {kv.first.data(), kv.first.size()}, {kv.second.data(), kv.second.size()});
+    batch.Put(column_family_(), to_slice(kv.first), to_slice(kv.second));
   }
 
   auto status = m_db->Write(m_write_options, &batch);
@@ -391,7 +395,7 @@ void session<rocksdb_t>::write_from_bytes(const Iterable& key_values) {
 template<typename Iterable>
 void session<rocksdb_t>::erase(const Iterable& keys) {
   for (const auto& key : keys) {
-    auto key_slice = rocksdb::Slice{key.data(), key.size()};
+    auto key_slice = to_slice(key);
     auto status = m_db->Delete(m_write_options, column_family_(), key_slice);
   }
 }
@@ -432,7 +436,7 @@ typename session<rocksdb_t>::iterator session<rocksdb_t>::make_iterator_(const P
 
 inline typename session<rocksdb_t>::iterator session<rocksdb_t>::find(const shared_bytes& key) {
   auto predicate = [&](auto& it) {
-    auto key_slice = rocksdb::Slice{key.data(), key.size()};
+    auto key_slice = to_slice(key);
     it.Seek(key_slice);
     if (it.Valid() && it.key().compare(key_slice) != 0) {
       // Get an invalid iterator
@@ -442,7 +446,7 @@ inline typename session<rocksdb_t>::iterator session<rocksdb_t>::find(const shar
   return make_iterator_(predicate);
 }
 
-inline typename session<rocksdb_t>::iterator session<rocksdb_t>::find_from_bytes(const bytes& key) {
+inline typename session<rocksdb_t>::iterator session<rocksdb_t>::find_from_bytes(const Bytes& key) {
   return find(shared_bytes(key.data(), key.size()));
 }
 
@@ -455,10 +459,10 @@ inline typename session<rocksdb_t>::iterator session<rocksdb_t>::end() {
 }
 
 inline typename session<rocksdb_t>::iterator session<rocksdb_t>::lower_bound(const shared_bytes& key) {
-  return make_iterator_([&](auto& it) { it.Seek(rocksdb::Slice{key.data(), key.size()}); });
+  return make_iterator_([&](auto& it) { it.Seek(to_slice(key)); });
 }
 
-inline typename session<rocksdb_t>::iterator session<rocksdb_t>::lower_bound_from_bytes(const bytes& key) {
+inline typename session<rocksdb_t>::iterator session<rocksdb_t>::lower_bound_from_bytes(const Bytes& key) {
   return lower_bound(shared_bytes(key.data(), key.size()));
 }
 
@@ -617,7 +621,7 @@ shared_bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key() const {
 }
 
 template<typename Iterator_traits>
-bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key_from_bytes() const {
+Bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key_from_bytes() const {
   if (!m_iterator->Valid()) {
     return {};
   }
@@ -628,13 +632,13 @@ bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key_from_bytes() cons
 }
 
 template<typename Iterator_traits>
-std::optional<bytes> session<rocksdb_t>::rocks_iterator<Iterator_traits>::value_from_bytes() const {
+std::optional<Bytes> session<rocksdb_t>::rocks_iterator<Iterator_traits>::value_from_bytes() const {
 
   if (!operator*().second.has_value()) {
     return std::nullopt;
   }
   auto tmp = operator*().second.value();
-  return std::optional<bytes>{bytes{tmp.begin(), tmp.end()}};
+  return std::optional<Bytes>{Bytes{tmp.begin(), tmp.end()}};
 }
 
 template<typename Iterator_traits>

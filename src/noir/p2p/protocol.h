@@ -21,7 +21,7 @@ struct handshake_message {
   uint16_t network_version = 0; ///< incremental value above a computed base
   //  chain_id_type chain_id; ///< used to identify chain bytes32 node_id; ///< used to identify peers and prevent
   //  self-connect
-  bytes20 node_id; ///< used to identify peers and prevent self-connect
+  Bytes20 node_id; ///< used to identify peers and prevent self-connect
   tstamp time{0};
   std::string p2p_address;
   uint32_t head_num = 0;
@@ -53,7 +53,7 @@ inline bool is_vote_type_valid(signed_msg_type type) {
 
 struct part_set_header {
   uint32_t total;
-  bytes hash;
+  Bytes hash;
 
   bool operator==(const part_set_header& rhs) const {
     return (total == rhs.total) && (hash == rhs.hash);
@@ -79,7 +79,7 @@ struct part_set_header {
 };
 
 struct block_id {
-  bytes hash;
+  Bytes hash;
   part_set_header parts;
 
   bool operator==(const block_id& rhs) const {
@@ -97,7 +97,7 @@ struct block_id {
   std::string key() {
     // returns a machine-readable string representation of the block_id
     // todo
-    return to_hex(hash) + to_hex(parts.hash) + std::to_string(parts.total);
+    return hex::encode(hash) + hex::encode(parts.hash) + std::to_string(parts.total);
   }
 
   static std::unique_ptr<::tendermint::types::BlockID> to_proto(const block_id& b) {
@@ -139,7 +139,7 @@ struct proposal_message {
   int32_t pol_round;
   block_id block_id_;
   tstamp timestamp{0};
-  bytes signature;
+  Bytes signature;
 };
 
 struct proposal_pol_message {
@@ -152,7 +152,7 @@ struct block_part_message {
   int64_t height;
   int32_t round;
   uint32_t index;
-  bytes bytes_;
+  Bytes bytes_;
   consensus::merkle::proof proof;
 };
 
@@ -162,9 +162,9 @@ struct vote_message {
   int32_t round;
   block_id block_id_;
   tstamp timestamp;
-  bytes validator_address;
+  Bytes validator_address;
   int32_t validator_index;
-  bytes signature;
+  Bytes signature;
 };
 
 struct has_vote_message {
@@ -228,7 +228,7 @@ struct go_away_message {
   go_away_message(go_away_reason r = no_reason): reason(r), node_id() {}
 
   go_away_reason reason{no_reason};
-  bytes20 node_id; ///< for duplicate notification
+  Bytes20 node_id; ///< for duplicate notification
 };
 
 /// \brief network messages that will be exchanged between peers

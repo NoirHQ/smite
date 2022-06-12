@@ -293,14 +293,14 @@ void tx_pool::broadcast_tx(const consensus::tx& tx) {
 
   const uint32_t payload_size = encode_size(tx);
   new_env->message.resize(payload_size);
-  datastream<char> ds(new_env->message.data(), payload_size);
+  datastream<unsigned char> ds(new_env->message.data(), payload_size);
   ds << tx;
 
   xmt_mq_channel_.publish(appbase::priority::medium, new_env);
 }
 
 void tx_pool::handle_msg(p2p::envelope_ptr msg) {
-  datastream<char> ds(msg->message.data(), msg->message.size());
+  datastream<unsigned char> ds(msg->message.data(), msg->message.size());
   consensus::tx tx;
   ds >> tx;
 

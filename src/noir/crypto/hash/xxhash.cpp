@@ -7,39 +7,29 @@
 
 namespace noir::crypto {
 
-xxh64::~xxh64() {
-  if (state) {
-    XXH64_freeState(state);
-  }
-}
-
-hash<xxh64>& xxh64::init() {
+auto Xxh64::init() -> Xxh64& {
   if (!state) {
-    state = XXH64_createState();
+    state.emplace();
   }
-  XXH64_reset(state, 0);
+  XXH64_reset(&*state, 0);
   return *this;
 }
 
-hash<xxh64>& xxh64::update(std::span<const char> in) {
+auto Xxh64::update(BytesView in) -> Xxh64& {
   if (!state) {
     init();
   }
-  XXH64_update(state, in.data(), in.size());
+  XXH64_update(&*state, in.data(), in.size());
   return *this;
 }
 
-void xxh64::final(std::span<char> out) {
-  auto hash = XXH64_digest(state);
-  std::copy((char*)&hash, (char*)&hash + sizeof(decltype(hash)), out.begin());
+void Xxh64::final(BytesViewMut out) {
+  auto hash = XXH64_digest(&*state);
+  std::memcpy(out.data(), (const unsigned char*)&hash, sizeof(decltype(hash)));
 }
 
-uint64_t xxh64::final() {
-  return XXH64_digest(state);
-}
-
-std::size_t xxh64::digest_size() const {
-  return 8;
+auto Xxh64::final() -> uint64_t {
+  return XXH64_digest(&*state);
 }
 
 } // namespace noir::crypto

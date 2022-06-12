@@ -7,15 +7,15 @@
 
 namespace noir::crypto {
 
-hash<sha3_256>& sha3_256::init() {
+auto Sha3_256::init() -> Sha3_256& {
   if (!ctx) {
-    ctx = Keccak_HashInstance{};
+    ctx.emplace();
   }
   Keccak_HashInitialize_SHA3_256(&*ctx);
   return *this;
 }
 
-hash<sha3_256>& sha3_256::update(std::span<const char> in) {
+auto Sha3_256::update(BytesView in) -> Sha3_256& {
   if (!ctx) {
     init();
   }
@@ -23,12 +23,8 @@ hash<sha3_256>& sha3_256::update(std::span<const char> in) {
   return *this;
 }
 
-void sha3_256::final(std::span<char> out) {
+void Sha3_256::final(BytesViewMut out) {
   Keccak_HashFinal(&*ctx, (BitSequence*)out.data());
-}
-
-std::size_t sha3_256::digest_size() const {
-  return 32;
 }
 
 } // namespace noir::crypto

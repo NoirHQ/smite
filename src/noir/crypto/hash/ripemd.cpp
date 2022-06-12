@@ -242,18 +242,18 @@ void Transform(uint32_t* s, const unsigned char* chunk)
 
 namespace noir::crypto {
 
-crypto::hash<ripemd160>& ripemd160::init() {
-  bytes = 0;
+auto Ripemd160::Ripemd160::init() -> Ripemd160& {
   impl::Initialize(s);
+  bytes = 0;
   inited = true;
   return *this;
 }
 
-crypto::hash<ripemd160>& ripemd160::update(std::span<const char> in) {
+auto Ripemd160::update(BytesView in) -> Ripemd160& {
   if (!inited) {
     init();
   }
-  auto data = reinterpret_cast<const unsigned char*>(in.data());
+  auto data = in.data();
   auto len = in.size();
   const unsigned char* end = data + len;
   size_t bufsize = bytes % 64;
@@ -279,8 +279,8 @@ crypto::hash<ripemd160>& ripemd160::update(std::span<const char> in) {
   return *this;
 }
 
-void ripemd160::final(std::span<char> out) {
-  auto hash = reinterpret_cast<unsigned char*>(out.data());
+void Ripemd160::final(BytesViewMut out) {
+  auto hash = out.data();
   static const unsigned char pad[64] = {0x80};
   unsigned char sizedesc[8];
   WriteLE64(sizedesc, bytes << 3);
@@ -291,10 +291,6 @@ void ripemd160::final(std::span<char> out) {
   WriteLE32(hash + 8, s[2]);
   WriteLE32(hash + 12, s[3]);
   WriteLE32(hash + 16, s[4]);
-}
-
-std::size_t ripemd160::digest_size() const {
-  return 20;
 }
 
 } // namespace noir::crypto
