@@ -70,7 +70,8 @@ namespace detail {
 
     auto send_bytes(BytesPtr bytes) -> asio::awaitable<Result<bool>>;
     auto is_send_pending() -> bool;
-    auto write_packet_msg_to(noir::BufferedWriterUptr<noir::net::TcpConn>& w) -> asio::awaitable<Result<std::size_t>>;
+    auto write_packet_msg_to(noir::BufferedWriterUptr<noir::net::Conn<noir::net::TcpConn>>& w)
+      -> asio::awaitable<Result<std::size_t>>;
     void set_next_packet_msg(PacketMsg* msg);
     auto recv_packet_msg(const PacketMsg& packet) -> Result<noir::Bytes>;
     void update_stats();
@@ -143,7 +144,7 @@ public:
     }
   }
 
-  void set_conn(std::shared_ptr<noir::net::TcpConn>&& tcp_conn);
+  void set_conn(std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>&& tcp_conn);
   void start(Chan<noir::Done>& done);
   void set_recv_last_msg_at(noir::Time&& t);
   auto get_last_message_at() -> noir::Time;
@@ -174,8 +175,8 @@ private:
 private:
   asio::io_context& io_context;
   detail::LastMsgRecv last_msg_recv;
-  std::shared_ptr<noir::net::TcpConn> conn;
-  noir::BufferedWriterUptr<noir::net::TcpConn> buf_conn_writer;
+  std::shared_ptr<noir::net::Conn<noir::net::TcpConn>> conn;
+  noir::BufferedWriterUptr<noir::net::Conn<noir::net::TcpConn>> buf_conn_writer;
   std::mutex stop_mtx;
   MConnConfig config;
 

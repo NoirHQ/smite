@@ -66,7 +66,8 @@ namespace detail {
     }
   }
 
-  auto Channel::write_packet_msg_to(BufferedWriterUptr<net::TcpConn>& writer) -> asio::awaitable<Result<std::size_t>> {
+  auto Channel::write_packet_msg_to(BufferedWriterUptr<net::Conn<net::TcpConn>>& writer)
+    -> asio::awaitable<Result<std::size_t>> {
     Packet packet{};
     PacketMsg* msg = packet.mutable_packet_msg();
     set_next_packet_msg(msg);
@@ -99,9 +100,9 @@ namespace detail {
   }
 } //namespace detail
 
-void MConnection::set_conn(std::shared_ptr<noir::net::TcpConn>&& tcp_conn) {
+void MConnection::set_conn(std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>&& tcp_conn) {
   conn = std::move(tcp_conn);
-  buf_conn_writer = std::make_unique<noir::BufferedWriter<noir::net::TcpConn>>(conn);
+  buf_conn_writer = std::make_unique<noir::BufferedWriter<noir::net::Conn<noir::net::TcpConn>>>(conn);
 }
 
 void MConnection::start(Chan<Done>& done) {
