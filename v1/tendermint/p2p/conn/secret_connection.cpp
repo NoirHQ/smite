@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <tendermint/p2p/conn/binary.h>
 #include <tendermint/p2p/conn/merlin.h>
 #include <tendermint/p2p/conn/secret_connection.h>
 
@@ -139,6 +140,105 @@ Bytes SecretConnection::derive_secrets(Bytes32& dh_secret) {
   if (kdf_res)
     return {};
   return {key, key + sizeof(key) / sizeof(key[0])};
+}
+
+auto SecretConnection::read(std::span<unsigned char>& data) -> asio::awaitable<Result<std::size_t>> {
+  std::scoped_lock _{recv_mtx};
+
+  // read off and update the recvBuffer, if non-empty
+  if (recv_buffer) {
+    if (data.size() < recv_buffer->size() - read_pos) {
+      std::copy(recv_buffer->begin() + read_pos, recv_buffer->begin() + read_pos + data.size(), data.data());
+      read_pos += data.size();
+      co_return data.size();
+    } else {
+      std::copy(recv_buffer->begin() + read_pos, recv_buffer->end(), data.data());
+      std::size_t n = recv_buffer->size() - read_pos;
+      recv_buffer.reset();
+      read_pos = 0;
+      co_return n;
+    }
+  }
+
+  // read off the conn
+  std::vector<unsigned char> sealed_frame(total_frame_size + aead_size_overhead);
+  auto res = co_await conn->read(std::span(sealed_frame.data(), sealed_frame.size()));
+  if (res.has_error()) {
+    co_return res.error();
+  }
+
+  std::vector<unsigned char> frame(total_frame_size);
+  unsigned long long frame_size;
+  auto nonce_bytes = recv_nonce.get();
+
+  crypto_aead_chacha20poly1305_ietf_decrypt(frame.data(),
+    &frame_size,
+    nullptr,
+    reinterpret_cast<const unsigned char*>(sealed_frame.data()),
+    sealed_frame.size(),
+    nullptr,
+    0,
+    reinterpret_cast<const unsigned char*>(nonce_bytes.data()),
+    reinterpret_cast<const unsigned char*>(recv_secret.data()));
+
+  recv_nonce.increment();
+  auto chunk_length = LittleEndian::uint32(frame);
+  if (chunk_length > data_max_size) {
+    co_return Error("chunk_length is greater than data_max_size");
+  }
+  std::vector<unsigned char> chunk(frame.begin() + data_len_size, frame.begin() + data_len_size + chunk_length);
+  std::size_t n;
+  if (data.size() < chunk_length) {
+    std::copy(chunk.begin(), chunk.begin() + data.size(), data.data());
+    n = data.size();
+    recv_buffer = std::make_unique<std::vector<ByteType>>(chunk.begin() + data.size(), chunk.end());
+  } else {
+    std::copy(chunk.begin(), chunk.end(), data.data());
+    n = chunk_length;
+  }
+  co_return n;
+}
+
+auto SecretConnection::write(std::span<unsigned char>& data) -> asio::awaitable<std::tuple<std::size_t, Result<void>>> {
+  std::scoped_lock _{send_mtx};
+
+  std::size_t n = 0;
+  while (!data.empty()) {
+    std::shared_ptr<Bytes> chunk;
+    std::vector<unsigned char> frame(total_frame_size);
+    std::vector<unsigned char> sealed_frame(total_frame_size + aead_size_overhead);
+    if (data_max_size < data.size()) {
+      chunk = std::make_shared<Bytes>(data.begin(), data.begin() + data_max_size);
+      data = data.subspan(data_max_size);
+    } else {
+      chunk = std::make_shared<Bytes>(data.begin(), data.end());
+      data = data.subspan(data.size());
+    }
+    auto chunk_length = chunk->size();
+    LittleEndian::put_uint32(frame, chunk_length);
+    std::copy(chunk->begin(), chunk->end(), frame.begin() + data_len_size);
+
+    auto nonce_bytes = send_nonce.get();
+    unsigned long long int sealed_frame_size;
+    crypto_aead_chacha20poly1305_ietf_encrypt(sealed_frame.data(),
+      &sealed_frame_size,
+      frame.data(),
+      frame.size(),
+      nullptr,
+      0,
+      nullptr,
+      reinterpret_cast<const unsigned char*>(nonce_bytes.data()),
+      reinterpret_cast<const unsigned char*>(send_secret.data()));
+
+    send_nonce.increment();
+
+    auto res = co_await conn->write(std::span<const unsigned char>(sealed_frame.data(), sealed_frame.size()));
+    if (res.has_error()) {
+      co_return std::make_tuple(n, res.error());
+    }
+    n += chunk->size();
+  }
+  co_return std::make_tuple(n, success());
 }
 
 } //namespace tendermint::p2p::conn
