@@ -8,7 +8,7 @@ endif(CCACHE_FOUND)
 
 project(noir)
 
-option(NOIR_BUILD_TESTS "Build tests" OFF)
+option(NOIR_BUILD_TESTS "Build tests" ON)
 option(NOIR_UNITY_BUILD "Enable unity build" OFF)
 
 if(NOIR_BUILD_TESTS)
@@ -20,7 +20,7 @@ set(CMAKE_CXX_STANDARD 20)
 add_compile_definitions(BOOST_ASIO_HAS_STD_INVOKE_RESULT)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.0)
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.0)
     message(FATAL_ERROR "GCC version 10 or later is required")
   endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
