@@ -75,14 +75,15 @@ struct block_executor {
     auto prepared_proposal = proxyApp_->prepare_proposal_sync(request_prepare_proposal{txs, max_data_bytes_, votes});
     auto new_txs = prepared_proposal.block_data;
     int tx_size{};
-    for (auto tx : new_txs) {
+    for (const auto& tx : new_txs) {
       tx_size += tx.size();
       if (max_data_bytes_ < tx_size)
         throw std::runtime_error("block data exceeds max amount of allowed bytes");
     }
     auto modified_txs = prepared_proposal.block_data;
 
-    return state_.make_block(height, modified_txs, commit_, proposer_addr);
+    return state_.make_block(
+      height, modified_txs, commit_, std::make_shared<evidence_list>(evidence_list{.list = evidence}), proposer_addr);
   }
 
   bool validate_block(state& state_, const std::shared_ptr<block>& block_) {

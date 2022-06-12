@@ -153,7 +153,7 @@ inline std::vector<noir::consensus::tx> make_txs(int64_t height, int num) {
 inline std::shared_ptr<noir::consensus::block> make_block(
   int64_t height, const noir::consensus::state& st, const std::shared_ptr<noir::consensus::commit>& commit_) {
   auto txs = make_txs(st.last_block_height, 10);
-  auto [block_, part_set_] = const_cast<noir::consensus::state&>(st).make_block(height, txs, commit_, /* {}, */ {});
+  auto [block_, part_set_] = const_cast<noir::consensus::state&>(st).make_block(height, txs, commit_, {}, {});
   // TODO: temparary workaround to set block
   block_->header.height = height;
   return block_;

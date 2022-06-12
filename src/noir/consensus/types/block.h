@@ -414,35 +414,59 @@ struct block_header {
   }
 };
 
+struct evidence_list;
+struct evidence_data {
+  std::shared_ptr<evidence_list> evs{};
+  bytes hash{};
+  int64_t byte_size{};
+
+  evidence_data() {}
+  evidence_data(std::shared_ptr<evidence_list>&& evs_): evs(std::move(evs_)) {}
+
+  bytes get_hash();
+
+  static Result<std::unique_ptr<::tendermint::types::EvidenceList>> to_proto(const evidence_data& e);
+  static Result<std::shared_ptr<evidence_data>> from_proto(const ::tendermint::types::EvidenceList& pb);
+};
+
 struct block {
   block_header header;
   block_data data;
-  // evidence evidence;
-  std::unique_ptr<commit> last_commit;
+  evidence_data evidence;
+  std::unique_ptr<commit> last_commit{};
 
   std::mutex mtx;
 
   block() {}
   ~block() {}
-  block(block_header&& header_, block_data&& data_, std::unique_ptr<commit>&& last_commit_)
-    : header(std::move(header_)), data(std::move(data_)), last_commit(std::move(last_commit_)) {}
+  block(block_header&& header_, block_data&& data_, evidence_data&& evidence_, std::unique_ptr<commit>&& last_commit_)
+    : header(std::move(header_)),
+      data(std::move(data_)),
+      evidence(std::move(evidence_)),
+      last_commit(std::move(last_commit_)) {}
   block(const block& b)
-    : header(b.header), data(b.data), last_commit(b.last_commit ? std::make_unique<commit>(*b.last_commit) : nullptr) {}
+    : header(b.header),
+      data(b.data),
+      evidence(b.evidence),
+      last_commit(b.last_commit ? std::make_unique<commit>(*b.last_commit) : nullptr) {}
   auto& operator=(const block& b) {
     std::scoped_lock g(mtx);
     header = b.header;
     data = b.data;
-    // evidence = b.evidence;
+    evidence = b.evidence;
     last_commit = b.last_commit ? std::make_unique<commit>(*b.last_commit) : nullptr;
     return *this;
   }
   block(block&& b) noexcept
-    : header(std::move(b.header)), data(std::move(b.data)), last_commit(std::move(b.last_commit)) {}
+    : header(std::move(b.header)),
+      data(std::move(b.data)),
+      evidence(std::move(b.evidence)),
+      last_commit(std::move(b.last_commit)) {}
   auto& operator=(block&& b) noexcept {
     std::scoped_lock g(mtx);
     header = std::move(b.header);
     data = std::move(b.data);
-    // evidence = b.evidence;
+    evidence = std::move(b.evidence);
     last_commit = std::move(b.last_commit);
     return *this;
   }
@@ -470,16 +494,21 @@ struct block {
       header.last_commit_hash = last_commit->get_hash();
     if (header.data_hash.empty())
       header.data_hash = data.get_hash();
-    // if (header.evidence_hash.empty())
-    //   header.evidence_hash =
+    if (header.evidence_hash.empty())
+      header.evidence_hash = evidence.get_hash();
   }
 
-  static std::shared_ptr<block> make_block(
-    int64_t height, const std::vector<tx>& txs, const std::shared_ptr<commit>& last_commit /*, evidence */) {
-    auto block_ = std::make_shared<block>(block{block_header{{.block = block_protocol, .app = 0}, "", height},
-      block_data{txs}, std::make_unique<commit>(*last_commit)});
-    block_->fill_header();
-    return block_;
+  static std::shared_ptr<block> make_block(int64_t height,
+    const std::vector<tx>& txs,
+    const std::shared_ptr<commit>& last_commit_,
+    const std::shared_ptr<evidence_list>& evs_) {
+    auto new_block = std::make_shared<block>();
+    new_block->header = {{.block = block_protocol, .app = 0}, "", height};
+    new_block->data = {txs};
+    new_block->evidence.evs = evs_;
+    new_block->last_commit = std::make_unique<commit>(*last_commit_);
+    new_block->fill_header();
+    return new_block;
   }
 
   /**
@@ -504,50 +533,13 @@ struct block {
     return get_hash() == hash;
   }
 
-  static std::unique_ptr<::tendermint::types::Block> to_proto(const block& b) {
-    auto ret = std::make_unique<::tendermint::types::Block>();
-    ret->set_allocated_header(block_header::to_proto(b.header).release());
-    ret->set_allocated_data(block_data::to_proto(b.data).release());
-    if (b.last_commit)
-      ret->set_allocated_last_commit(commit::to_proto(*b.last_commit).release());
-
-    // TODO: add evidence
-
-    return ret;
-  }
-
-  static std::shared_ptr<block> from_proto(const ::tendermint::types::Block& pb) {
-    auto ret = std::make_shared<block>();
-    ret->header = *block_header::from_proto(pb.header());
-    ret->data = *block_data::from_proto(pb.data());
-    if (pb.has_last_commit())
-      ret->last_commit = commit::from_proto(pb.last_commit());
-    ret->validate_basic(); // TODO
-    return ret;
-  }
+  static std::unique_ptr<::tendermint::types::Block> to_proto(const block& b);
+  static std::shared_ptr<block> from_proto(const ::tendermint::types::Block& pb);
 
   template<typename T>
-  inline friend T& operator<<(T& ds, const block& v) {
-    ds << v.header;
-    ds << v.data;
-    ds << bool(!!v.last_commit);
-    if (!!v.last_commit)
-      ds << *v.last_commit;
-    return ds;
-  }
-
+  friend T& operator<<(T& ds, const block& v);
   template<typename T>
-  inline friend T& operator>>(T& ds, block& v) {
-    ds >> v.header;
-    ds >> v.data;
-    bool b;
-    ds >> b;
-    if (b) {
-      v.last_commit = std::make_unique<commit>();
-      ds >> *v.last_commit;
-    }
-    return ds;
-  }
+  friend T& operator>>(T& ds, block& v);
 };
 
 /// \brief  CommitToVoteSet constructs a VoteSet from the Commit and validator set. Panics if signatures from the commit
@@ -572,6 +564,5 @@ NOIR_REFLECT(noir::consensus::block_header, version, chain_id, height, time, las
 
 template<>
 struct noir::IsForeachable<noir::consensus::commit> : std::false_type {};
-
 template<>
 struct noir::IsForeachable<noir::consensus::block> : std::false_type {};

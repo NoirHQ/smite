@@ -27,14 +27,10 @@ struct evidence {
   static Result<std::shared_ptr<evidence>> from_proto(const ::tendermint::types::Evidence&);
 
   template<typename T>
-  inline friend T& operator<<(T& ds, const evidence& v) {
-    return ds;
-  }
+  friend T& operator<<(T& ds, const evidence& v);
 
   template<typename T>
-  inline friend T& operator>>(T& ds, evidence& v) {
-    return ds;
-  }
+  friend T& operator>>(T& ds, evidence& v);
 };
 
 struct duplicate_vote_evidence : public evidence {
@@ -317,38 +313,39 @@ struct evidence_list {
     return false;
   }
 
-  template<typename T>
-  inline friend T& operator<<(T& ds, const evidence_list& v) {
-    return ds;
+  static Result<std::unique_ptr<::tendermint::types::EvidenceList>> to_proto(const evidence_list& evs) {
+    auto ret = std::make_unique<::tendermint::types::EvidenceList>();
+    auto evi = ret->evidence();
+    for (auto& ev : evs.list) {
+      auto pb = evidence::to_proto(*ev);
+      if (!pb)
+        return pb.error();
+      evi.AddAllocated(pb.value().release());
+    }
+    return ret;
+  }
+
+  static Result<std::shared_ptr<evidence_list>> from_proto(const ::tendermint::types::EvidenceList& pb) {
+    auto ret = std::make_shared<evidence_list>();
+    for (auto& i : pb.evidence()) {
+      auto ev = evidence::from_proto(i);
+      if (!ev)
+        return ev.error();
+      ret->list.push_back(ev.value());
+    }
+    return ret;
   }
 
   template<typename T>
-  inline friend T& operator>>(T& ds, evidence_list& v) {
-    return ds;
-  }
+  friend T& operator<<(T& ds, const evidence_list& v);
+
+  template<typename T>
+  friend T& operator>>(T& ds, evidence_list& v);
 };
 
 } // namespace noir::consensus
 
-// NOIR_REFLECT_NO_DESC(noir::consensus::evidence, );
 template<>
 struct noir::IsForeachable<noir::consensus::evidence> : std::false_type {};
-
-// NOIR_REFLECT_DERIVED(noir::consensus::duplicate_vote_evidence,
-//   noir::consensus::evidence,
-//   vote_a,
-//   vote_b,
-//   total_voting_power,
-//   validator_power,
-//   timestamp);
-// NOIR_REFLECT_DERIVED(noir::consensus::light_client_attack_evidence,
-//   noir::consensus::evidence,
-//   conflicting_block,
-//   common_height,
-//   byzantine_validators,
-//   total_voting_power,
-//   timestamp);
-
-// NOIR_REFLECT(noir::consensus::evidence_list, list);
 template<>
 struct noir::IsForeachable<noir::consensus::evidence_list> : std::false_type {};
