@@ -11,10 +11,10 @@ jobs:
   linux_build:
     name: Linux
     runs-on: ubuntu-latest
-    env:
-      CC: /usr/bin/gcc-10
-      CXX: /usr/bin/g++-10
     steps:
+      - uses: egor-tensin/setup-gcc@v1
+        with:
+          version: 11
       # install conan
       - uses: turtlebrowser/get-conan@main
       # setup build dependencies
