@@ -20,21 +20,23 @@
 
 namespace noir {
 
+namespace detail {
+  template<size_t S>
+  struct BytesBackend {
+    using type = std::array<unsigned char, S>;
+  };
+  template<>
+  struct BytesBackend<std::dynamic_extent> {
+    using type = std::vector<unsigned char>;
+  };
+} // namespace detail
+
 // fixed or dynamic sized byte sequence
 template<size_t N>
 class BytesN {
 private:
-  template<size_t S>
-  struct Backend {
-    using type = std::array<unsigned char, S>;
-  };
-  template<>
-  struct Backend<std::dynamic_extent> {
-    using type = std::vector<unsigned char>;
-  };
-
   // array used for fixed, vector used for dynamic
-  typename Backend<N>::type backend;
+  typename detail::BytesBackend<N>::type backend;
 
 public:
   using raw_type = decltype(backend);
