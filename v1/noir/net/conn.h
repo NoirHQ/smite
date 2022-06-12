@@ -42,7 +42,7 @@ public:
     co_return bytes_transferred.value();
   }
 
-  auto write(std::span<const unsigned char> buffer) -> boost::asio::awaitable<Result<void>> {
+  auto write(std::span<const unsigned char> buffer) -> boost::asio::awaitable<Result<std::size_t>> {
     return write(boost::asio::const_buffer(buffer.data(), buffer.size()));
   }
 
@@ -106,6 +106,10 @@ public:
 
   auto close() -> Result<void> {
     return static_cast<Derived*>(this)->close();
+  }
+
+  auto connect() -> boost::asio::awaitable<Result<void>> {
+    return static_cast<Derived*>(this)->connect();
   }
 
   boost::asio::strand<boost::asio::io_context::executor_type> strand;
