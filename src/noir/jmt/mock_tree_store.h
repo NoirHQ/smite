@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/jmt/types/node.h>
+#include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
 
