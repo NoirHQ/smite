@@ -93,7 +93,7 @@ auto MConnTransport::accept(Chan<Done>& done) -> awaitable<Result<MConnConnectio
     co_return Error("transport is not listening");
   }
 
-  auto con_ch = Chan<std::shared_ptr<TcpConn>>{io_context};
+  auto con_ch = Chan<std::shared_ptr<Conn<TcpConn>>>{io_context};
   auto err_ch = Chan<Error>{io_context};
 
   co_spawn(
@@ -130,7 +130,7 @@ auto MConnTransport::dial(Chan<Done>& done, const std::string& endpoint) -> awai
   if (endpoint_res.has_error()) {
     co_return endpoint_res.error();
   }
-  auto tcp_conn = TcpConn::create(endpoint, io_context);
+  std::shared_ptr<Conn<TcpConn>> tcp_conn = TcpConn::create(endpoint, io_context);
   auto res = co_await tcp_conn->connect();
   if (res.has_error()) {
     co_return res.error();

@@ -26,7 +26,7 @@ using MConnMessagePtr = std::shared_ptr<MConnMessage>;
 class MConnConnection {
 public:
   MConnConnection(boost::asio::io_context& io_context,
-    std::shared_ptr<noir::net::TcpConn>& conn,
+    std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>& conn,
     conn::MConnConfig& mconn_config,
     std::vector<conn::ChannelDescriptorPtr>& channel_descs)
     : io_context(io_context),
@@ -47,7 +47,7 @@ public:
 
 private:
   boost::asio::io_context& io_context;
-  std::shared_ptr<noir::net::TcpConn> conn;
+  std::shared_ptr<noir::net::Conn<noir::net::TcpConn>> conn;
   conn::MConnConfig mconn_config;
   std::vector<conn::ChannelDescriptorPtr> channel_descs;
   noir::Chan<MConnMessage> receive_ch;
