@@ -68,8 +68,7 @@ public:
   }
 
   template<typename T>
-  requires (ConvertibleTo<T, BytesView> || BytesViewConstructible<T>)
-  BytesN(T&& bytes, bool canonical = true) {
+  requires(ConvertibleTo<T, BytesView> || BytesViewConstructible<T>) BytesN(T&& bytes, bool canonical = true) {
     if constexpr (N != std::dynamic_extent) {
       auto size = bytes.size();
       if (canonical && size != N) {
@@ -86,7 +85,7 @@ public:
 
   BytesN(std::vector<unsigned char>& vec, bool canonical = true): BytesN(std::span(vec), canonical) {}
 
-  BytesN(std::vector<unsigned char>&& vec) requires (N == std::dynamic_extent) {
+  BytesN(std::vector<unsigned char>&& vec) requires(N == std::dynamic_extent) {
     std::swap(backend, vec);
   }
 
@@ -94,7 +93,7 @@ public:
 
   template<typename It, typename End>
   BytesN(It first, End last): BytesN(std::span(&*first, &*last)) {}
-  
+
   BytesN(std::initializer_list<unsigned char> init): backend(init) {}
 
   raw_type& raw() {
@@ -178,8 +177,7 @@ public:
     }
     return true;
   }
-  void resize(size_type size) requires (N == std::dynamic_extent)
-  {
+  void resize(size_type size) requires(N == std::dynamic_extent) {
     backend.resize(size);
   }
 
@@ -191,7 +189,7 @@ public:
     std::fill(backend.begin(), backend.end(), 0);
   }
 
-  constexpr std::bitset<8 * N> to_bitset() const requires (N != std::dynamic_extent) {
+  constexpr std::bitset<8 * N> to_bitset() const requires(N != std::dynamic_extent) {
     std::bitset<8 * N> out;
     return std::accumulate(backend.begin(), backend.end(), out, [](auto out, uint8_t v) {
       decltype(out) current(v);

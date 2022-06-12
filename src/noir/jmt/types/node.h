@@ -5,8 +5,8 @@
 //
 #pragma once
 #include <noir/codec/bcs.h>
-#include <noir/common/overloaded.h>
 #include <noir/common/bytes.h>
+#include <noir/common/overloaded.h>
 #include <noir/crypto/hash/xxhash.h>
 #include <noir/jmt/types/common.h>
 #include <noir/jmt/types/nibble.h>

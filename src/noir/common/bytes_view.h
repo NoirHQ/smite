@@ -25,15 +25,14 @@ using BytesView = std::span<const unsigned char>;
 using BytesViewMut = std::span<unsigned char>;
 
 template<typename T>
-concept ByteSequence = requires (T v) {
-                         { v.data() } -> BytePointer;
-                         { v.size() } -> ConvertibleTo<size_t>;
-                       };
+concept ByteSequence = requires(T v) {
+  { v.data() } -> BytePointer;
+  { v.size() } -> ConvertibleTo<size_t>;
+};
 
 // concept for convertible to bytes view (no implicit)
 template<typename T>
-concept BytesViewConstructible = !
-std::is_convertible_v<T, BytesView>&& ByteSequence<T>;
+concept BytesViewConstructible = !std::is_convertible_v<T, BytesView> && ByteSequence<T>;
 
 auto byte_pointer_cast(Pointer auto pointer) {
   if constexpr (ConstPointer<decltype(pointer)>) {

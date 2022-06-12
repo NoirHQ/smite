@@ -459,7 +459,7 @@ struct block {
     // if (last_commit.height == 0)
     //   return "unknown last_commit";
 
-   // if (last_commit.get_hash() != header.last_commit_hash)
+    // if (last_commit.get_hash() != header.last_commit_hash)
     //  return "wrong last_commit_hash";
 
     return {};

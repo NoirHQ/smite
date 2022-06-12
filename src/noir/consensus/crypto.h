@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/refl.h>
 #include <noir/common/bytes.h>
+#include <noir/common/refl.h>
 #include <noir/core/result.h>
 #include <tendermint/crypto/keys.pb.h>
 
