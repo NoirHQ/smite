@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/helper/rust.h>
 #include <noir/common/bytes.h>
+#include <noir/common/helper/rust.h>
 
 namespace noir::jmt {
 

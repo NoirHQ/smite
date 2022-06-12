@@ -20,16 +20,16 @@ using boost::multiprecision::int256_t;
 using boost::multiprecision::uint256_t;
 
 template<typename Stream, typename T>
-requires (!std::is_base_of_v<std::ostream, Stream> && (std::is_same_v<T, int256_t> || std::is_same_v<T, uint256_t>))
-void write_int256le(Stream& ds, const T& v) {
+requires(!std::is_base_of_v<std::ostream, Stream> &&
+  (std::is_same_v<T, int256_t> || std::is_same_v<T, uint256_t>)) void write_int256le(Stream& ds, const T& v) {
   uint64_t data[4] = {0};
   boost::multiprecision::export_bits(v, std::begin(data), 64, false);
   ds.write((const char*)data, 32);
 }
 
 template<typename Stream, typename T>
-requires (!std::is_base_of_v<std::istream, Stream> && (std::is_same_v<T, int256_t> || std::is_same_v<T, uint256_t>))
-void read_int256le(Stream& ds, T& v) {
+requires(!std::is_base_of_v<std::istream, Stream> &&
+  (std::is_same_v<T, int256_t> || std::is_same_v<T, uint256_t>)) void read_int256le(Stream& ds, T& v) {
   uint64_t data[4] = {0};
   ds.read((char*)data, 32);
   boost::multiprecision::import_bits(v, std::begin(data), std::end(data), 64, false);

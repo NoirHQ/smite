@@ -5,8 +5,8 @@
 //
 #pragma once
 #include <noir/crypto/hash/hash.h>
-#include <optional>
 #include <blake2.h>
+#include <optional>
 
 namespace noir::crypto {
 

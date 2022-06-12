@@ -248,8 +248,7 @@ template<>
 struct hash<noir::jmt::nibble_path> {
   std::size_t operator()(const noir::jmt::nibble_path& n) const noexcept {
     noir::crypto::Xxh64 hash;
-    hash
-      .update({(unsigned char*)&n.num_nibbles, sizeof(n.num_nibbles)})
+    hash.update({(unsigned char*)&n.num_nibbles, sizeof(n.num_nibbles)})
       .update({(const unsigned char*)n.bytes.data(), n.bytes.size()});
     return hash.final();
   }

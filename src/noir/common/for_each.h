@@ -11,8 +11,8 @@
 namespace noir {
 
 template<typename T>
-requires (std::is_class_v<T> && std::is_aggregate_v<T>)
-struct IsForeachable<T> : std::true_type {};
+requires(std::is_class_v<T>&& std::is_aggregate_v<T>) struct IsForeachable<T> : std::true_type {
+};
 
 template<typename F, Foreachable T>
 void for_each_field(F&& f, T& v) {

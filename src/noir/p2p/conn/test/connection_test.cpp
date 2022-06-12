@@ -50,11 +50,13 @@ TEST_CASE("secret_connection: derive_secrets", "[noir][p2p]") {
 }
 
 TEST_CASE("secret_connection: verify key exchanges", "[noir][p2p]") {
-  auto priv_key_str_peer1 = base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
+  auto priv_key_str_peer1 =
+    base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
   Bytes loc_priv_key_peer1(priv_key_str_peer1.begin(), priv_key_str_peer1.end());
   auto c_peer1 = p2p::secret_connection::make_secret_connection(loc_priv_key_peer1);
 
-  auto priv_key_str_peer2 = base64::decode("x1eX2WKe+mhZwO7PLVgLdMZ4Ucr4NfdBxMtD/59mOfmk8GO0T1p8YNpObegcTLZmqnK6ffVtjvWjDSSVgVwGAw==");
+  auto priv_key_str_peer2 =
+    base64::decode("x1eX2WKe+mhZwO7PLVgLdMZ4Ucr4NfdBxMtD/59mOfmk8GO0T1p8YNpObegcTLZmqnK6ffVtjvWjDSSVgVwGAw==");
   Bytes loc_priv_key_peer2(priv_key_str_peer2.begin(), priv_key_str_peer2.end());
   auto c_peer2 = p2p::secret_connection::make_secret_connection(loc_priv_key_peer2);
 
@@ -103,7 +105,8 @@ TEST_CASE("secret_connection: libsodium - key gen : crypto_sign", "[noir][p2p]")
 
 TEST_CASE("secret_connection: libsodium - derive pub_key from priv_key", "[noir][p2p]") {
   unsigned char sk[crypto_sign_SECRETKEYBYTES];
-  auto priv_key = base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
+  auto priv_key =
+    base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
   Bytes raw(priv_key.begin(), priv_key.end());
   auto rec_pub_key = crypto_sign_recover_public_key(raw.data());
   CHECK(rec_pub_key == "UXs1p10Mp60h62I+tNg7eruoGu0+VHNaYnp8O2+SQG0=");
@@ -183,12 +186,9 @@ TEST_CASE("secret_connection: openssl - hkdf", "[noir][p2p]") {
   // std::cout << "key1_hex = " << to_hex(std::span((const byte_type*)key, 32)) << std::endl;
   // std::cout << "key2_hex = " << to_hex(std::span((const byte_type*)(key+32), 32)) << std::endl;
   // std::cout << "challenge_hex = " << to_hex(std::span((const byte_type*)(key+64), 32)) << std::endl;
-  CHECK(
-    to_hex(std::span(key, 32)) == "80a83ad6afcb6f8175192e41973aed31dd75e3c106f813d986d9567a4865eb2f");
-  CHECK(to_hex(std::span(key + 32, 32)) ==
-    "96362a04f628a0666d9866147326898bb0847b8db8680263ad19e6336d4eed9e");
-  CHECK(to_hex(std::span(key + 64, 32)) ==
-    "2632c3fd20f456c5383ed16aa1d56dc7875a2b0fc0d5ff053c3ada8934098c69");
+  CHECK(to_hex(std::span(key, 32)) == "80a83ad6afcb6f8175192e41973aed31dd75e3c106f813d986d9567a4865eb2f");
+  CHECK(to_hex(std::span(key + 32, 32)) == "96362a04f628a0666d9866147326898bb0847b8db8680263ad19e6336d4eed9e");
+  CHECK(to_hex(std::span(key + 64, 32)) == "2632c3fd20f456c5383ed16aa1d56dc7875a2b0fc0d5ff053c3ada8934098c69");
 }
 
 TEST_CASE("secret_connection: libsodium - chacha20", "[noir][p2p]") {
