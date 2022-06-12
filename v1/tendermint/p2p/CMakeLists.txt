@@ -14,7 +14,7 @@ target_link_libraries(tendermint_p2p
   tendermint::proto
   ${OPENSSL_SSL_LIBRARY}
   ${OPENSSL_CRYPTO_LIBRARY}
-  sodium
+  ${sodium_LIBRARY_RELEASE}
 )
 
 add_library(tendermint::p2p ALIAS tendermint_p2p)
