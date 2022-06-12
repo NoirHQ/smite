@@ -5,6 +5,7 @@
 //
 
 #include <noir/consensus/types/block.h>
+#include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/vote.h>
 #include <noir/core/codec.h>
 #include <fmt/core.h>
@@ -173,6 +174,34 @@ Bytes block_header::get_hash() {
   return merkle::hash_from_bytes_list(items);
 }
 
+bytes evidence_data::get_hash() {
+  if (hash.empty()) {
+    if (!evs)
+      evs = std::make_shared<evidence_list>();
+    hash = evs->hash();
+  }
+  return hash;
+}
+
+Result<std::unique_ptr<::tendermint::types::EvidenceList>> evidence_data::to_proto(const evidence_data& e) {
+  if (!e.evs)
+    return std::make_unique<::tendermint::types::EvidenceList>();
+  return evidence_list::to_proto(*e.evs);
+}
+
+Result<std::shared_ptr<evidence_data>> evidence_data::from_proto(const ::tendermint::types::EvidenceList& pb) {
+  auto ret = std::make_shared<evidence_data>();
+  ret->evs = std::make_shared<evidence_list>();
+  for (auto& i : pb.evidence()) {
+    auto ev = evidence::from_proto(i);
+    if (!ev)
+      return ev.error();
+    ret->evs->list.push_back(ev.value());
+  }
+  ret->byte_size = pb.ByteSizeLong();
+  return ret;
+}
+
 std::shared_ptr<block> block::new_block_from_part_set(const std::shared_ptr<part_set>& ps) {
   if (!ps->is_complete())
     return {};
@@ -189,6 +218,63 @@ std::shared_ptr<part_set> block::make_part_set(uint32_t part_size) {
   std::scoped_lock g(mtx);
   auto bz = encode(*this);
   return part_set::new_part_set_from_data(bz, part_size);
+}
+
+std::unique_ptr<::tendermint::types::Block> block::to_proto(const block& b) {
+  auto ret = std::make_unique<::tendermint::types::Block>();
+  ret->set_allocated_header(block_header::to_proto(b.header).release());
+  ret->set_allocated_data(block_data::to_proto(b.data).release());
+  if (b.last_commit)
+    ret->set_allocated_last_commit(commit::to_proto(*b.last_commit).release());
+  auto ev = evidence_data::to_proto(b.evidence); // TODO : handle error
+  ret->set_allocated_evidence(ev.value().release());
+  return ret;
+}
+
+std::shared_ptr<block> block::from_proto(const ::tendermint::types::Block& pb) {
+  auto ret = std::make_shared<block>();
+  ret->header = *block_header::from_proto(pb.header());
+  ret->data = *block_data::from_proto(pb.data());
+  if (pb.has_last_commit())
+    ret->last_commit = commit::from_proto(pb.last_commit());
+  ret->evidence = *evidence_data::from_proto(pb.evidence()).value(); // TODO : handle error
+  ret->validate_basic(); // TODO
+  return ret;
+}
+
+template<typename T>
+T& operator<<(T& ds, const block& v) {
+  ds << v.header;
+  ds << v.data;
+  //  ds << bool(!!v.evidence.evs);
+  //  if (!!v.evidence.evs)
+  //    ds << *v.evidence.evs;
+  ds << v.evidence.hash;
+  ds << v.evidence.byte_size;
+  ds << bool(!!v.last_commit);
+  if (!!v.last_commit)
+    ds << *v.last_commit;
+  return ds;
+}
+
+template<typename T>
+T& operator>>(T& ds, block& v) {
+  ds >> v.header;
+  ds >> v.data;
+  //  ds >> b;
+  //  if (b) {
+  //    v.evidence.evs = std::make_shared<evidence_list>();
+  //    ds >> *v.evidence.evs;
+  //  }
+  ds >> v.evidence.hash;
+  ds >> v.evidence.byte_size;
+  bool b;
+  ds >> b;
+  if (b) {
+    v.last_commit = std::make_unique<commit>();
+    ds >> *v.last_commit;
+  }
+  return ds;
 }
 
 } // namespace noir::consensus
