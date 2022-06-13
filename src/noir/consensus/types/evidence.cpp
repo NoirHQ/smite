@@ -106,7 +106,7 @@ template<typename T>
 T& operator<<(T& ds, const evidence& v) {
   auto pb = evidence::to_proto(v);
   check(pb.has_error(), pb.error().message());
-  bytes bz(pb.value()->ByteSizeLong());
+  Bytes bz(pb.value()->ByteSizeLong());
   pb.value()->SerializeToArray(bz.data(), pb.value()->ByteSizeLong());
   ds << bz.size();
   ds << bz;
@@ -116,7 +116,7 @@ template<typename T>
 T& operator>>(T& ds, evidence& v) {
   size_t len;
   ds >> len;
-  bytes bz(len);
+  Bytes bz(len);
   ds >> bz;
   ::tendermint::types::Evidence pb;
   pb.ParseFromArray(bz.data(), bz.size());
