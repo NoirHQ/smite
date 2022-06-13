@@ -308,11 +308,12 @@ inline std::optional<Bytes> session<rocksdb_t>::read_from_bytes(const Bytes& key
     return std::nullopt;
   }
   auto val = ret.value();
-  return {Bytes{val.begin(), val.end()}};
+  return {Bytes{std::vector<unsigned char>{val.begin(), val.end()}}};
 }
 // TODO: decide K/V type of session
 inline void session<rocksdb_t>::write_from_bytes(const Bytes& key, const Bytes& value) {
-  write(shared_bytes(key.data(), key.size()), shared_bytes(value.data(), value.size()));
+  write(shared_bytes(reinterpret_cast<const int8_t*>(key.data()), key.size()),
+    shared_bytes(reinterpret_cast<const int8_t*>(value.data()), value.size()));
 }
 
 inline bool session<rocksdb_t>::contains(const shared_bytes& key) {
@@ -628,17 +629,16 @@ Bytes session<rocksdb_t>::rocks_iterator<Iterator_traits>::key_from_bytes() cons
 
   auto key_slice = m_iterator->key();
   auto tmp = shared_bytes(key_slice.data(), key_slice.size());
-  return {tmp.begin(), tmp.end()};
+  return {std::vector<unsigned char>{tmp.begin(), tmp.end()}};
 }
 
 template<typename Iterator_traits>
 std::optional<Bytes> session<rocksdb_t>::rocks_iterator<Iterator_traits>::value_from_bytes() const {
-
   if (!operator*().second.has_value()) {
     return std::nullopt;
   }
   auto tmp = operator*().second.value();
-  return std::optional<Bytes>{Bytes{tmp.begin(), tmp.end()}};
+  return std::optional<Bytes>{Bytes{std::vector<unsigned char>{tmp.begin(), tmp.end()}}};
 }
 
 template<typename Iterator_traits>

@@ -155,7 +155,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
           byte_ &= ~(1 << (7 - j));
         }
       }
-      bs.raw().push_back(static_cast<char>(byte_));
+      bs.raw().push_back(static_cast<unsigned char>(byte_));
     }
     return bs;
   }
@@ -197,7 +197,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
 
     auto num_bytes = (v.bits + 7) / 8;
     v.elem.resize(v.bits);
-    Bytes bs;
+    Bytes bs(num_bytes);
     ds >> bs;
     int i{0};
     for (auto byte_ : bs) {
