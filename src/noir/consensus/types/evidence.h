@@ -25,12 +25,6 @@ struct evidence {
 
   static Result<std::unique_ptr<::tendermint::types::Evidence>> to_proto(const evidence&);
   static Result<std::shared_ptr<evidence>> from_proto(const ::tendermint::types::Evidence&);
-
-  template<typename T>
-  friend T& operator<<(T& ds, const evidence& v);
-
-  template<typename T>
-  friend T& operator>>(T& ds, evidence& v);
 };
 
 struct duplicate_vote_evidence : public evidence {
@@ -155,6 +149,29 @@ struct duplicate_vote_evidence : public evidence {
     ret->validator_power = pb.validator_power();
     ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp());
     return ret;
+  }
+
+  template<typename T>
+  friend T& operator<<(T& ds, const duplicate_vote_evidence& v) {
+    auto pb = duplicate_vote_evidence::to_proto(v);
+    Bytes bz(pb->ByteSizeLong());
+    pb->SerializeToArray(bz.data(), pb->ByteSizeLong());
+    ds << bz.size();
+    ds << bz;
+    return ds;
+  }
+  template<typename T>
+  friend T& operator>>(T& ds, duplicate_vote_evidence& v) {
+    size_t len;
+    ds >> len;
+    Bytes bz(len);
+    ds >> bz;
+    ::tendermint::types::DuplicateVoteEvidence pb;
+    pb.ParseFromArray(bz.data(), bz.size());
+    auto decoded = duplicate_vote_evidence::from_proto(pb);
+    // check(!!decoded, decoded.error().message());
+    v = *decoded.value();
+    return ds;
   }
 };
 
@@ -286,6 +303,28 @@ struct light_client_attack_evidence : public evidence {
     const std::shared_ptr<validator_set>& common_vals, const std::shared_ptr<signed_header>& trusted);
 
   bool conflicting_header_is_invalid(const std::shared_ptr<block_header>& trusted_header) const;
+
+  template<typename T>
+  friend T& operator<<(T& ds, const light_client_attack_evidence& v) {
+    auto pb = light_client_attack_evidence::to_proto(v);
+    Bytes bz(pb.value()->ByteSizeLong());
+    pb.value()->SerializeToArray(bz.data(), pb.value()->ByteSizeLong());
+    ds << bz.size();
+    ds << bz;
+  }
+  template<typename T>
+  friend T& operator>>(T& ds, light_client_attack_evidence& v) {
+    size_t len;
+    ds >> len;
+    Bytes bz(len);
+    ds >> bz;
+    ::tendermint::types::LightClientAttackEvidence pb;
+    pb.ParseFromArray(bz.data(), bz.size());
+    auto decoded = light_client_attack_evidence::from_proto(pb);
+    // check(!!decoded, decoded.error().message());
+    v = *decoded.value();
+    return ds;
+  }
 };
 
 struct evidence_list {
@@ -337,15 +376,43 @@ struct evidence_list {
   }
 
   template<typename T>
-  friend T& operator<<(T& ds, const evidence_list& v);
+  friend T& operator<<(T& ds, const evidence_list& v) {
+    ds << v.list.size();
+    for (auto& e : v.list) {
+      auto pb = evidence::to_proto(*e);
+      // check(!!pb, pb.error().message());
+      Bytes bz(pb.value()->ByteSizeLong());
+      pb.value()->SerializeToArray(bz.data(), pb.value()->ByteSizeLong());
+      ds << bz.size();
+      ds << bz;
+    }
+    return ds;
+  }
 
   template<typename T>
-  friend T& operator>>(T& ds, evidence_list& v);
+  friend T& operator>>(T& ds, evidence_list& v) {
+    size_t size{0};
+    ds >> size;
+    for (auto i = 0; i < size; i++) {
+      size_t len;
+      ds >> len;
+      Bytes bz(len);
+      ds >> bz;
+      ::tendermint::types::Evidence pb;
+      pb.ParseFromArray(bz.data(), bz.size());
+      auto decoded = evidence::from_proto(pb);
+      // check(!!decoded, decoded.error().message());
+      v.list.push_back(decoded.value());
+    }
+    return ds;
+  }
 };
 
 } // namespace noir::consensus
 
 template<>
-struct noir::IsForeachable<noir::consensus::evidence> : std::false_type {};
+struct noir::IsForeachable<noir::consensus::duplicate_vote_evidence> : std::false_type {};
+template<>
+struct noir::IsForeachable<noir::consensus::light_client_attack_evidence> : std::false_type {};
 template<>
 struct noir::IsForeachable<noir::consensus::evidence_list> : std::false_type {};

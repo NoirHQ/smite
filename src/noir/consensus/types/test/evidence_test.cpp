@@ -102,7 +102,7 @@ TEST_CASE("evidence: verify generated hash", "[noir][consensus]") {
   CHECK(ev_list.hash() == from_hex("b34b4bb0b31dba1c38185ea0e09b70fa8cd451431dfc3d15f4a234c3e9c0bd23"));
 }
 
-TEST_CASE("evidence: serialization", "[noir][consensus]") {
+TEST_CASE("evidence: serialization using protobuf", "[noir][consensus]") {
   auto ev_dup = random_duplicate_vote_evidence();
 
   SECTION("duplicate evidence") {
@@ -163,4 +163,25 @@ TEST_CASE("evidence: serialization", "[noir][consensus]") {
     // std::cout << "pb = " << to_hex(bz) << std::endl;
     // TODO : test vote
   }
+}
+
+TEST_CASE("evidence: serialization using datastream", "[noir][consensus]") {
+  evidence_list evs;
+  auto ev_dup = random_duplicate_vote_evidence();
+  evs.list.push_back(ev_dup);
+
+  auto bz_list = encode(evs);
+  auto decoded = decode<evidence_list>(bz_list);
+  CHECK(evs.list.size() == decoded.list.size());
+  CHECK(evs.list[0]->get_string() == decoded.list[0]->get_string());
+
+  auto bz_dup = encode(*ev_dup);
+  auto decoded_dup = decode<duplicate_vote_evidence>(bz_dup);
+  CHECK(ev_dup->get_hash() == decoded_dup.get_hash());
+
+  block org{block_header{}, block_data{.txs = {{0}, {1}, {2}}}, {}, std::make_unique<commit>()};
+  org.evidence.evs = std::make_shared<evidence_list>(evs);
+  auto data = encode(org);
+  auto decoded_block = decode<block>(data);
+  CHECK(org.data.get_hash() == decoded_block.data.get_hash());
 }
