@@ -417,13 +417,13 @@ struct block_header {
 struct evidence_list;
 struct evidence_data {
   std::shared_ptr<evidence_list> evs{};
-  bytes hash{};
+  Bytes hash{};
   int64_t byte_size{};
 
   evidence_data() {}
   evidence_data(std::shared_ptr<evidence_list>&& evs_): evs(std::move(evs_)) {}
 
-  bytes get_hash();
+  Bytes get_hash();
 
   static Result<std::unique_ptr<::tendermint::types::EvidenceList>> to_proto(const evidence_data& e);
   static Result<std::shared_ptr<evidence_data>> from_proto(const ::tendermint::types::EvidenceList& pb);

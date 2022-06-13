@@ -174,7 +174,7 @@ Bytes block_header::get_hash() {
   return merkle::hash_from_bytes_list(items);
 }
 
-bytes evidence_data::get_hash() {
+Bytes evidence_data::get_hash() {
   if (hash.empty()) {
     if (!evs)
       evs = std::make_shared<evidence_list>();
