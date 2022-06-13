@@ -50,6 +50,10 @@ public:
     return success();
   }
 
+  auto reverse_read(BytePointer auto data, size_t size) -> Result<void> {
+    return reverse_read(std::span{byte_pointer_cast(data), size});
+  }
+
   auto peek() -> Result<int> {
     if (remaining() < 1) {
       return err_out_of_range;
@@ -102,6 +106,10 @@ public:
     std::reverse_copy(in.begin(), in.end(), pos);
     pos += in.size();
     return success();
+  }
+
+  auto reverse_write(const void* data, size_t size) -> Result<void> {
+    return reverse_write(std::span{byte_pointer_cast(data), size});
   }
 
   auto put(unsigned char c) -> Result<void> {
