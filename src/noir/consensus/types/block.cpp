@@ -3,7 +3,6 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/vote.h>
@@ -246,9 +245,9 @@ template<typename T>
 T& operator<<(T& ds, const block& v) {
   ds << v.header;
   ds << v.data;
-  //  ds << bool(!!v.evidence.evs);
-  //  if (!!v.evidence.evs)
-  //    ds << *v.evidence.evs;
+  ds << bool(!!v.evidence.evs);
+  if (!!v.evidence.evs)
+    ds << *v.evidence.evs;
   ds << v.evidence.hash;
   ds << v.evidence.byte_size;
   ds << bool(!!v.last_commit);
@@ -261,14 +260,14 @@ template<typename T>
 T& operator>>(T& ds, block& v) {
   ds >> v.header;
   ds >> v.data;
-  //  ds >> b;
-  //  if (b) {
-  //    v.evidence.evs = std::make_shared<evidence_list>();
-  //    ds >> *v.evidence.evs;
-  //  }
+  bool b;
+  ds >> b;
+  if (b) {
+    v.evidence.evs = std::make_shared<evidence_list>();
+    ds >> *v.evidence.evs;
+  }
   ds >> v.evidence.hash;
   ds >> v.evidence.byte_size;
-  bool b;
   ds >> b;
   if (b) {
     v.last_commit = std::make_unique<commit>();
