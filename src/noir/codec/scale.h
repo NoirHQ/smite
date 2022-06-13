@@ -252,6 +252,26 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, T& v) {
   return ds;
 }
 
+template<typename Stream, size_t N>
+datastream<Stream>& operator<<(datastream<Stream>& ds, const BytesN<N>& v) {
+  if constexpr (N == std::dynamic_extent) {
+    ds << Varuint32(v.size());
+  }
+  ds.write(v.data(), v.size());
+  return ds;
+}
+
+template<typename Stream, size_t N>
+datastream<Stream>& operator>>(datastream<Stream>& ds, BytesN<N>& v) {
+  if constexpr (N == std::dynamic_extent) {
+    Varuint32 size = 0;
+    ds >> size;
+    v.resize(size);
+  }
+  ds.read(v.data(), v.size());
+  return ds;
+}
+
 // Strings
 template<typename Stream>
 datastream<Stream>& operator<<(datastream<Stream>& ds, const std::string& v) {
