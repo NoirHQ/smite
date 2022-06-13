@@ -258,7 +258,7 @@ private:
 
   bool load_internal(state& st) const {
     auto ret = db_session_->read_from_bytes(state_key_);
-    if (ret == std::nullopt || ret->empty()) {
+    if (ret == std::nullopt || ret->size() == 0) {
       return false;
     }
     st = decode<state>(ret.value());
@@ -281,7 +281,7 @@ private:
 
   bool load_validators_info(int64_t height, validators_info& v_info) const {
     auto ret = db_session_->read_from_bytes(encode_key<prefix::validators>(height));
-    if (ret == std::nullopt || ret->empty()) {
+    if (ret == std::nullopt || ret->size() == 0) {
       return false;
     }
     v_info = decode<validators_info>(ret.value());
@@ -306,7 +306,7 @@ private:
 
   bool load_consensus_params_info(int64_t height, consensus_params_info& cs_param_info) const {
     auto ret = db_session_->read_from_bytes(encode_key<prefix::consensus_params>(height));
-    if (ret == std::nullopt || ret->empty()) {
+    if (ret == std::nullopt || ret->size() == 0) {
       return false;
     }
     cs_param_info = decode<consensus_params_info>(ret.value());
@@ -322,7 +322,7 @@ private:
 
   bool load_abci_response_internal(int64_t height, abci_responses& rsp) const {
     auto ret = db_session_->read_from_bytes(encode_key<prefix::abci_response>(height));
-    if (ret == std::nullopt || ret->empty()) {
+    if (ret == std::nullopt || ret->size() == 0) {
       return false;
     }
     rsp = decode<abci_responses>(ret.value());
@@ -401,7 +401,7 @@ private:
       db_session_->erase(it.key());
       if (++size == 1000) {
         auto key_ = it.key();
-        new_end = Bytes{key_.begin(), key_.end()};
+        new_end = Bytes{std::vector<unsigned char>{key_.begin(), key_.end()}};
         break;
       } else if (it == start_it) {
         new_end = start;

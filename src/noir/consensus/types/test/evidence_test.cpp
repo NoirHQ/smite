@@ -161,24 +161,6 @@ TEST_CASE("evidence: serialization", "[noir][consensus]") {
     Bytes bz(pb->ByteSizeLong());
     pb->SerializeToArray(bz.data(), pb->ByteSizeLong());
     // std::cout << "pb = " << to_hex(bz) << std::endl;
-
-    // auto v2 = *ev_dup->vote_a;
-    auto v2 = (p2p::vote_message)(*ev_dup->vote_a);
-    auto data = codec::bcs::encode(v2);
-    // std::cout << "ds = " << to_hex(data) << std::endl;
-    // type, height, round, block_id_, timestamp, validator_address, validator_index, signature
-    // std::cout << "type " << to_hex(codec::bcs::encode(v2.type)) << std::endl;
-    // std::cout << "height " << to_hex(codec::bcs::encode(v2.height)) << std::endl;
-    // std::cout << "round " << to_hex(codec::bcs::encode(v2.round)) << std::endl;
-    // std::cout << "block_id " << to_hex(codec::bcs::encode(v2.block_id_)) << std::endl;
-    // std::cout << "timestamp " << to_hex(codec::bcs::encode(v2.timestamp)) << std::endl;
-    // std::cout << "validator_address " << to_hex(codec::bcs::encode(v2.validator_address)) << std::endl;
-    // std::cout << "validator_index " << to_hex(codec::bcs::encode(v2.validator_index)) << std::endl;
-    // std::cout << "signature " << to_hex(codec::bcs::encode(v2.signature)) << std::endl;
-    CHECK(codec::bcs::encode(v2.type) == from_hex("01"));
-    CHECK(codec::bcs::encode(v2.height) == from_hex("0a"));
-    CHECK(codec::bcs::encode(v2.round) == from_hex("02"));
-    CHECK(codec::bcs::encode(v2.block_id_) == from_hex("0a09626c6f636b68617368120e08e8071209706172747368617368"));
-    // CHECK(codec::bcs::encode(v2.timestamp) == from_hex("060880faa8e105")); // TODO: requires encoding of tstamp
+    // TODO : test vote
   }
 }

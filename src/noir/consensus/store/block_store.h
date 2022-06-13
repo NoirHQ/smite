@@ -51,7 +51,7 @@ public:
       return 0;
     }
     auto tmp = begin_it.key();
-    Bytes key_{tmp.begin(), tmp.end()};
+    Bytes key_{std::vector<unsigned char>{tmp.begin(), tmp.end()}};
     int64_t height_;
     check(decode_block_meta_key(key_, height_),
       fmt::format("unable to decode base key={}", to_string(key_))); // TODO: handle panic in consensus
@@ -67,7 +67,7 @@ public:
       return 0;
     }
     auto tmp = (--end_it).key();
-    Bytes key_{tmp.begin(), tmp.end()};
+    Bytes key_{std::vector<unsigned char>{tmp.begin(), tmp.end()}};
     int64_t height_;
     check(decode_block_meta_key(key_, height_),
       fmt::format("unable to decode height key={}", to_string(key_))); // TODO: handle panic in consensus
@@ -87,13 +87,13 @@ public:
   bool load_base_meta(block_meta& bl_meta) const {
     auto tmp_it = db_session_->lower_bound_from_bytes(encode_key<prefix::block_meta>(1));
     auto tmp_bytes = tmp_it.key();
-    Bytes key_{tmp_bytes.begin(), tmp_bytes.end()};
+    Bytes key_{std::vector<unsigned char>{tmp_bytes.begin(), tmp_bytes.end()}};
     int64_t height_;
     if (!decode_block_meta_key(key_, height_) || ((*tmp_it).second == std::nullopt)) {
       return false;
     }
     tmp_bytes = (*tmp_it).second.value();
-    bl_meta = decode<block_meta>(Bytes{tmp_bytes.begin(), tmp_bytes.end()});
+    bl_meta = decode<block_meta>(Bytes{std::vector<unsigned char>{tmp_bytes.begin(), tmp_bytes.end()}});
     return true;
   }
 
@@ -141,7 +141,7 @@ public:
   /// \return true on success, false otherwise
   bool load_block_part(int64_t height_, int index, part& part_) const {
     auto tmp = db_session_->read_from_bytes(encode_key<prefix::block_part>(height_, index));
-    if ((!tmp.has_value()) || tmp.value().empty()) {
+    if ((!tmp.has_value()) || tmp.value().size() == 0) {
       return false;
     }
     part_ = decode<part>(tmp.value());
@@ -154,7 +154,7 @@ public:
   /// \return true on success, false otherwise
   bool load_block_meta(int64_t height_, block_meta& block_meta_) const {
     auto tmp = db_session_->read_from_bytes(encode_key<prefix::block_meta>(height_));
-    if ((!tmp.has_value()) || tmp.value().empty()) {
+    if ((!tmp.has_value()) || tmp.value().size() == 0) {
       return false;
     }
     block_meta_ = decode<block_meta>(tmp.value());
@@ -167,7 +167,7 @@ public:
   /// \return true on success, false otherwise
   bool load_block_commit(int64_t height_, commit& commit_) const {
     auto tmp = db_session_->read_from_bytes(encode_key<prefix::block_commit>(height_));
-    if ((!tmp.has_value()) || tmp.value().empty()) {
+    if ((!tmp.has_value()) || tmp.value().size() == 0) {
       return false;
     }
     commit_ = decode<commit>(tmp.value());
@@ -181,7 +181,7 @@ public:
   /// \return true on success, false otherwise
   bool load_seen_commit(commit& commit_) const {
     auto tmp = db_session_->read_from_bytes(encode_key<prefix::seen_commit>());
-    if ((!tmp.has_value()) || tmp.value().empty()) {
+    if ((!tmp.has_value()) || tmp.value().size() == 0) {
       return false;
     }
     commit_ = decode<commit>(tmp.value());
@@ -347,7 +347,7 @@ private:
   template<typename... int64s>
   static Bytes encode_val(int64_t val, int64s... args) {
     auto hex_ = hex::decode(fmt::format("{:016x}", static_cast<uint64_t>(val)));
-    Bytes lhs{hex_.begin(), hex_.end()};
+    Bytes lhs{std::vector<unsigned char>{hex_.begin(), hex_.end()}};
     auto rhs = append_key(args...);
     lhs.raw().insert(lhs.end(), rhs.begin(), rhs.end());
     return lhs;
@@ -390,7 +390,7 @@ private:
       return false;
     }
 
-    height_ = decode_val(Bytes{key.begin() + 1, key.end()});
+    height_ = decode_val(Bytes{std::vector<unsigned char>{key.begin() + 1, key.end()}});
     return true;
   }
 
