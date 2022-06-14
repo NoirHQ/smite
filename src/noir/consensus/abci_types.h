@@ -72,7 +72,7 @@ struct request_begin_block {
   Bytes hash;
   block_header header_;
   last_commit_info last_commit_info_;
-  // evidence
+  std::vector<std::shared_ptr<::tendermint::abci::Evidence>> byzantine_validators;
 };
 
 struct response_begin_block {

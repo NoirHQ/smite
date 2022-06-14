@@ -156,7 +156,13 @@ struct block_executor {
     }
     /// End of validate block
 
-    // check evidence // todo
+    // check evidence
+    if (block_->evidence.evs) {
+      if (auto ok = ev_pool->check_evidence(*block_->evidence.evs); !ok) {
+        elog(ok.error().message());
+        return false;
+      }
+    }
 
     cache[hex::encode(hash)] = true;
     return true;
@@ -217,6 +223,9 @@ struct block_executor {
     int64_t retain_height = commit_res.retain_height;
     /// commit() ends
 
+    // Update evpool with latest state
+    ev_pool->update(new_state_.value(), *block_->evidence.evs);
+
     // Update app_hash and save the state
     new_state_->app_hash = app_hash;
     if (!store_->save(new_state_.value())) {
@@ -254,9 +263,17 @@ struct block_executor {
     // auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
     last_commit_info commit_info; // todo - remove later
 
+    std::vector<std::shared_ptr<::tendermint::abci::Evidence>> byz_vals;
+    if (block_->evidence.evs) {
+      for (auto& ev : block_->evidence.evs->list) {
+        auto abci = ev->get_abci();
+        byz_vals.insert(byz_vals.end(), abci.begin(), abci.end());
+      }
+    }
+
     // begin block
     abci_responses_->begin_block =
-      proxyAppConn->begin_block_sync(request_begin_block{block_->get_hash(), block_->header, commit_info});
+      proxyAppConn->begin_block_sync(request_begin_block{block_->get_hash(), block_->header, commit_info, byz_vals});
 
     // run txs of block
     for (const auto& tx : block_->data.txs) {
@@ -399,15 +416,14 @@ struct block_executor {
       .result_end_block = abci_rsp.end_block,
     });
 
-    // TODO: evidence
-    // if (block_.evidence.evidence.size()) {
-    //   for (auto ev : block_.evidence.evidence) {
-    //     event_bus_->publish_event_new_evidence(events::event_data_new_evidence{
-    //       .evidence = ev,
-    //       .height = block_.header.height,
-    //     });
-    //   }
-    // }
+    if (block_.evidence.evs && !block_.evidence.evs->list.empty()) {
+      for (auto& ev : block_.evidence.evs->list) {
+        event_bus_->publish_event_new_evidence(events::event_data_new_evidence{
+          .ev = ev,
+          .height = block_.header.height,
+        });
+      }
+    }
 
     for (uint32_t i = 0; auto tx : block_.data.txs) {
       event_bus_->publish_event_tx(events::event_data_tx{
