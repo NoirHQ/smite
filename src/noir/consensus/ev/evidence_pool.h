@@ -67,7 +67,7 @@ struct evidence_pool {
     return ret;
   }
 
-  std::pair<std::vector<std::shared_ptr<evidence>>, int64_t> pending_evidence(int64_t max_bytes) {
+  virtual std::pair<std::vector<std::shared_ptr<evidence>>, int64_t> pending_evidence(int64_t max_bytes) {
     if (get_size() == 0)
       return {{}, 0};
     auto ok = list_evidence(prefix::prefix_pending, max_bytes);
@@ -78,7 +78,7 @@ struct evidence_pool {
     return ok.value();
   }
 
-  void update(noir::consensus::state& new_state, evidence_list evs) {
+  virtual void update(noir::consensus::state& new_state, const evidence_list& evs) {
     if (new_state.last_block_height <= state->last_block_height)
       check(false, fmt::format("failed evidence.update: new state has less or equal height than previous height"));
     dlog(fmt::format("updating evidence_pool: last_block_height={}", new_state.last_block_height));
@@ -91,7 +91,7 @@ struct evidence_pool {
       std::tie(pruning_height, pruning_time) = remove_expired_pending_evidence();
   }
 
-  Result<void> add_evidence(std::shared_ptr<evidence> ev) {
+  virtual Result<void> add_evidence(std::shared_ptr<evidence> ev) {
     dlog("attempting to add evidence");
     if (is_pending(ev)) {
       dlog("evidence already pending; ignoring");
@@ -115,7 +115,7 @@ struct evidence_pool {
     consensus_buffer.push_back(duplicate_vote_set{vote_a, vote_b});
   }
 
-  Result<void> check_evidence(const evidence_list& evs) {
+  virtual Result<void> check_evidence(const evidence_list& evs) {
     std::vector<Bytes> hashes(evs.list.size());
     int idx{0};
     for (auto& e : evs.list) {
@@ -182,7 +182,7 @@ struct evidence_pool {
     return success();
   }
 
-  void mark_evidence_as_committed(evidence_list& evs, int64_t height);
+  void mark_evidence_as_committed(const evidence_list& evs, int64_t height);
 
   Result<std::pair<std::vector<std::shared_ptr<evidence>>, int64_t>> list_evidence(
     prefix prefix_key, int64_t max_bytes);
@@ -290,6 +290,21 @@ struct evidence_pool {
     std::shared_ptr<signed_header> trusted_header,
     std::shared_ptr<validator_set> common_vals);
   Result<std::shared_ptr<signed_header>> get_signed_header(int64_t height);
+};
+
+// NOTE: used for tests where evidence is not needed
+struct empty_evidence_pool : evidence_pool {
+  std::pair<std::vector<std::shared_ptr<evidence>>, int64_t> pending_evidence(int64_t max_bytes) override {
+    return {};
+  }
+  Result<void> add_evidence(std::shared_ptr<evidence> ev) override {
+    return success();
+  }
+  void update(noir::consensus::state& new_state, const evidence_list& evs) override {}
+  Result<void> check_evidence(const evidence_list& evs) override {
+    return success();
+  }
+  void report_conflicting_votes(std::shared_ptr<vote> vote_a, std::shared_ptr<vote> vote_b) {}
 };
 
 } // namespace noir::consensus::ev

@@ -48,7 +48,8 @@ TEST_CASE("block_executor: Apply block", "[noir][consensus]") {
   auto proxyApp = std::make_shared<app_connection>();
   auto bls = std::make_shared<noir::consensus::block_store>(session);
   auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
-  auto [ev_pool, _] = ev::default_test_pool(1);
+  // auto [ev_pool, _] = ev::default_test_pool(1);
+  auto ev_pool = std::make_shared<ev::empty_evidence_pool>();
   auto block_exec = block_executor::new_block_executor(state_db, proxyApp, ev_pool, bls, ev_bus);
 
   auto block_ = ev::make_block(1, state_, std::make_shared<commit>());

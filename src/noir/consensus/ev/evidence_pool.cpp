@@ -8,7 +8,7 @@
 
 namespace noir::consensus::ev {
 
-void evidence_pool::mark_evidence_as_committed(evidence_list& evs, int64_t height) {
+void evidence_pool::mark_evidence_as_committed(const evidence_list& evs, int64_t height) {
   std::set<std::string> block_evidence_map;
   std::vector<Bytes> batch_delete;
 
