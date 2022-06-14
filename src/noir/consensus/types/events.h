@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/common.h>
+#include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/round_state.h>
 
 namespace noir::consensus::events {
@@ -154,8 +154,8 @@ struct event_data_new_block_header {
 };
 
 struct event_data_new_evidence {
-  // noir::consensus::evidence evidence;
-  int64_t height;
+  std::shared_ptr<noir::consensus::evidence> ev{};
+  int64_t height{};
 };
 
 struct event_data_tx {
