@@ -16,13 +16,14 @@ using namespace noir::consensus::ev;
 
 constexpr int64_t default_voting_power = 10;
 
-Result<bool> sign_add_vote(
-  const std::shared_ptr<priv_validator>& priv_val, vote& vote_, const std::shared_ptr<vote_set>& vote_set_) {
-  auto v = vote::to_proto(vote_);
+Result<bool> sign_add_vote(const std::shared_ptr<priv_validator>& priv_val,
+  const std::shared_ptr<vote>& vote_,
+  const std::shared_ptr<vote_set>& vote_set_) {
+  auto v = vote::to_proto(*vote_);
   if (auto ok = priv_val->sign_vote_pb(vote_set_->chain_id, *v); !ok)
     return ok.error();
   else
-    vote_.signature = ok.value();
+    vote_->signature = ok.value();
   auto [added, err] = vote_set_->add_vote(vote_);
   if (!err)
     return err;
@@ -37,13 +38,13 @@ Result<std::shared_ptr<commit>> make_commit(const p2p::block_id& block_id_,
   tstamp now) {
   for (auto i = 0; i < validators.size(); i++) {
     auto pub_key_ = validators[i]->get_pub_key();
-    vote vote_{{.type = noir::p2p::Precommit,
+    auto vote_ = std::make_shared<vote>(vote{{.type = noir::p2p::Precommit,
       .height = height,
       .round = round,
       .block_id_ = block_id_,
       .timestamp = now,
       .validator_address = pub_key_.address(),
-      .validator_index = i}};
+      .validator_index = i}});
     if (auto ok = sign_add_vote(validators[i], vote_, vote_set_); !ok)
       return ok.error();
   }

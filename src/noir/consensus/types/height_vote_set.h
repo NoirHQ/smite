@@ -118,20 +118,20 @@ struct height_vote_set {
     return -1;
   }
 
-  std::pair<bool, Error> add_vote(vote vote_, node_id peer_id) {
+  std::pair<bool, Error> add_vote(const std::shared_ptr<vote>& vote_, const node_id& peer_id) {
     std::scoped_lock g(mtx);
-    if (!p2p::is_vote_type_valid(vote_.type))
+    if (!p2p::is_vote_type_valid(vote_->type))
       return std::make_pair(false, Error{});
-    auto vote_set_ = get_vote_set(vote_.round, vote_.type);
+    auto vote_set_ = get_vote_set(vote_->round, vote_->type);
     if (vote_set_ == nullptr) {
       auto it = peer_catchup_rounds.find(peer_id);
       if (it == peer_catchup_rounds.end() || it->second.size() >= 2) {
         // punish peer
         return std::make_pair(false, ErrGotVoteFromUnwantedRound);
       }
-      add_round(vote_.round);
-      vote_set_ = get_vote_set(vote_.round, vote_.type);
-      it->second.push_back(vote_.round);
+      add_round(vote_->round);
+      vote_set_ = get_vote_set(vote_->round, vote_->type);
+      it->second.push_back(vote_->round);
     }
     return vote_set_->add_vote(vote_);
   }
