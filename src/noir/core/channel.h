@@ -6,6 +6,4 @@ namespace noir {
 template<typename... Ts>
 using Chan = boost::asio::experimental::concurrent_channel<void(boost::system::error_code, Ts...)>;
 
-struct Done {};
-
 } // namespace noir
