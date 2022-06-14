@@ -170,6 +170,8 @@ void sign_add_votes(config& config_,
   p2p::part_set_header header) {}
 
 bool validate_votes(const std::shared_ptr<vote_set>& votes, const Bytes& address, const Bytes& block_hash) {
+  if (!votes->val_set)
+    return false;
   auto index = votes->val_set->get_index_by_address(address);
   if (index < 0) {
     return false;

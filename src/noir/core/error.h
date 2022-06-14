@@ -48,6 +48,7 @@ inline const std::error_category& user_category() {
 class Error {
 public:
   constexpr Error() noexcept = default;
+  virtual ~Error() = default;
 
   // NOTE: Do not set default value for 2nd parameter (error_category),
   // it makes `noir::Error` constructible from int, and break implicit construction of Result<int> from value.

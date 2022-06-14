@@ -10,6 +10,16 @@
 
 namespace noir::consensus {
 
+const Error ErrGotVoteFromUnwantedRound =
+  user_error_registry().register_error("peer has sent a vote that does not match our round for more than one round");
+const Error ErrVoteInvalidValidatorIndex = user_error_registry().register_error("invalid validator index");
+const Error ErrVoteInvalidValidatorAddress = user_error_registry().register_error("invalid validator address");
+const Error ErrVoteNonDeterministicSignature = user_error_registry().register_error("non-deterministic signature");
+const Error ErrVoteConflictingVotes = user_error_registry().register_error("ErrVoteConflictingVotes");
+ErrVoteConflictingVotesWithData::ErrVoteConflictingVotesWithData(
+  const std::shared_ptr<vote>& a, const std::shared_ptr<vote>& b)
+  : Error(ErrVoteConflictingVotes.value(), ErrVoteConflictingVotes.category()) {}
+
 Bytes vote::vote_sign_bytes(const std::string& chain_id, const ::tendermint::types::Vote& v) {
   auto pb = canonical::canonicalize_vote_pb(chain_id, v);
   Bytes sign_bytes(pb.ByteSizeLong());
@@ -94,7 +104,7 @@ std::pair<bool, Error> vote_set::add_vote(const std::shared_ptr<vote>& vote_) {
 
   // Add vote and get conflicting vote if any
   auto voting_power = val->voting_power;
-  std::optional<vote> conflicting;
+  std::shared_ptr<vote> conflicting{};
 
   // Already exists in vote_set.votes?
   if (votes.size() > 0 && votes.size() >= val_index && votes[val_index]) {
@@ -102,7 +112,7 @@ std::pair<bool, Error> vote_set::add_vote(const std::shared_ptr<vote>& vote_) {
     if (existing->block_id_ == vote_->block_id_) {
       check(false, "add_vote() does not expect duplicate votes");
     } else {
-      conflicting = existing;
+      conflicting = std::make_shared<vote>(existing.value());
     }
     // Replace vote if block_key matches vote_set.maj23
     if (maj23.has_value() && maj23.value().key() == block_key) {
@@ -122,14 +132,14 @@ std::pair<bool, Error> vote_set::add_vote(const std::shared_ptr<vote>& vote_) {
     new_votes_by_block = votes_by_block[block_key];
     if (conflicting && votes_by_block[block_key]->peer_maj23) {
       // There's a conflict and no peer claims that this block is special.
-      return {false, NewConflictingVoteError};
+      return {false, ErrVoteConflictingVotesWithData{conflicting, vote_}};
     }
     // We'll add the vote in a bit.
   } else {
     if (conflicting) {
       // there's a conflicting vote.
       // We're not even tracking this blockKey, so just forget it.
-      return {false, NewConflictingVoteError};
+      return {false, ErrVoteConflictingVotesWithData{conflicting, vote_}};
     }
     // Start tracking this blockKey
     new_votes_by_block = block_votes::new_block_votes(false, val_set->size());

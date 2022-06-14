@@ -110,7 +110,7 @@ struct evidence_pool {
     return success();
   }
 
-  void report_conflicting_votes(std::shared_ptr<vote> vote_a, std::shared_ptr<vote> vote_b) {
+  void report_conflicting_votes(const std::shared_ptr<vote>& vote_a, const std::shared_ptr<vote>& vote_b) {
     std::scoped_lock _(mtx);
     consensus_buffer.push_back(duplicate_vote_set{vote_a, vote_b});
   }
