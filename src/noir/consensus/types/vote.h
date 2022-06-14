@@ -76,7 +76,7 @@ struct vote : p2p::vote_message {
 struct block_votes {
   bool peer_maj23{};
   std::shared_ptr<bit_array> bit_array_;
-  std::vector<std::optional<vote>> votes;
+  std::vector<std::shared_ptr<vote>> votes;
   int64_t sum{};
 
   static std::shared_ptr<block_votes> new_block_votes(bool peer_maj23_, int num_validators) {
@@ -84,13 +84,14 @@ struct block_votes {
     ret->peer_maj23 = peer_maj23_;
     ret->bit_array_ = bit_array::new_bit_array(num_validators);
     ret->votes.resize(num_validators);
+    // std::fill(ret->votes.begin(), ret->votes.end(), nullptr);
     return ret;
   }
 
-  void add_verified_vote(const vote& vote_, int64_t voting_power) {
-    auto val_index = vote_.validator_index;
+  void add_verified_vote(const std::shared_ptr<vote>& vote_, int64_t voting_power) {
+    auto val_index = vote_->validator_index;
     if (votes.size() > val_index) {
-      if (!votes[val_index].has_value()) {
+      if (!votes[val_index]) {
         bit_array_->set_index(val_index, true);
         votes[val_index] = vote_;
         sum += voting_power;
@@ -98,7 +99,7 @@ struct block_votes {
     }
   }
 
-  std::optional<vote> get_by_index(int32_t index) {
+  std::shared_ptr<vote> get_by_index(int32_t index) {
     if (!votes.empty() && votes.size() > index)
       return votes[index];
     return {};
@@ -148,7 +149,7 @@ struct vote_set {
 
   std::mutex mtx;
   std::shared_ptr<bit_array> votes_bit_array{};
-  std::vector<std::optional<vote>> votes;
+  std::vector<std::shared_ptr<vote>> votes;
   int64_t sum;
   std::optional<p2p::block_id> maj23;
   std::map<std::string, std::shared_ptr<block_votes>> votes_by_block;
@@ -168,7 +169,7 @@ struct vote_set {
 
   std::pair<bool, Error> add_vote(const std::shared_ptr<vote>& vote_);
 
-  std::optional<vote> get_vote(int32_t val_index, const std::string& block_key) {
+  std::shared_ptr<vote> get_vote(int32_t val_index, const std::string& block_key) {
     if (votes.size() > 0 && votes.size() > val_index && votes[val_index]) {
       auto& existing = votes[val_index];
       if (existing->block_id_.key() == block_key)
@@ -176,7 +177,7 @@ struct vote_set {
     }
     if (votes_by_block.contains(block_key)) {
       auto existing = votes_by_block[block_key]->get_by_index(val_index);
-      if (existing.has_value())
+      if (!existing)
         return existing;
     }
     return {};
@@ -285,7 +286,7 @@ struct vote_set_reader {
   bool is_commit;
   p2p::signed_msg_type type;
   int size;
-  std::vector<std::optional<vote>> votes;
+  std::vector<std::shared_ptr<vote>> votes;
 
   vote_set_reader() = delete;
   vote_set_reader(const vote_set_reader&) = delete;
@@ -306,8 +307,8 @@ struct vote_set_reader {
     size = commit_.signatures.size();
     int i{0};
     for (auto sig : commit_.signatures) {
-      votes.push_back(vote{p2p::Precommit, commit_.height, commit_.round, sig.get_block_id(commit_.my_block_id),
-        sig.timestamp, sig.validator_address, i++, sig.signature});
+      votes.push_back(std::make_shared<vote>(vote{p2p::Precommit, commit_.height, commit_.round,
+        sig.get_block_id(commit_.my_block_id), sig.timestamp, sig.validator_address, i++, sig.signature}));
     }
   }
   explicit vote_set_reader(const vote_set& vote_set_) {

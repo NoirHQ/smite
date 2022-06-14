@@ -61,7 +61,7 @@ struct block_executor {
     state& state_,
     const std::shared_ptr<commit>& commit_,
     Bytes& proposer_addr,
-    std::vector<std::optional<vote>>& votes) {
+    const std::vector<std::shared_ptr<vote>>& votes) {
     auto max_bytes = state_.consensus_params_.block.max_bytes;
     auto max_gas = state_.consensus_params_.block.max_gas;
 

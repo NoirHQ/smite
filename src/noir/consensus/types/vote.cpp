@@ -112,17 +112,17 @@ std::pair<bool, Error> vote_set::add_vote(const std::shared_ptr<vote>& vote_) {
     if (existing->block_id_ == vote_->block_id_) {
       check(false, "add_vote() does not expect duplicate votes");
     } else {
-      conflicting = std::make_shared<vote>(existing.value());
+      conflicting = existing;
     }
     // Replace vote if block_key matches vote_set.maj23
     if (maj23.has_value() && maj23.value().key() == block_key) {
-      votes[val_index] = *vote_;
+      votes[val_index] = vote_;
       votes_bit_array->set_index(val_index, true);
     }
     // Otherwise, don't add to vote_set.votes
   } else {
     // Add to vote_set.votes and increase sum
-    votes[val_index] = *vote_;
+    votes[val_index] = vote_;
     votes_bit_array->set_index(val_index, true);
     sum += voting_power;
   }
@@ -152,7 +152,7 @@ std::pair<bool, Error> vote_set::add_vote(const std::shared_ptr<vote>& vote_) {
   auto quorum = val_set->get_total_voting_power() * 2 / 3 + 1;
 
   // Add vote to votesByBlock
-  new_votes_by_block->add_verified_vote(*vote_, voting_power);
+  new_votes_by_block->add_verified_vote(vote_, voting_power);
 
   // If we just crossed the quorum threshold and have 2/3 majority...
   if (orig_sum < quorum && quorum <= new_votes_by_block->sum) {
