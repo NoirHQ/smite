@@ -112,7 +112,7 @@ struct response_init_chain {
 struct request_prepare_proposal {
   std::vector<Bytes> block_data;
   int64_t block_data_size;
-  std::vector<std::optional<vote>> votes;
+  std::vector<std::shared_ptr<vote>> votes;
 };
 
 struct response_prepare_proposal {
