@@ -11,6 +11,9 @@
 
 namespace noir::consensus {
 
+const Error ErrGotVoteFromUnwantedRound =
+  user_error_registry().register_error("peer has sent a vote that does not match our round for more than one round");
+
 struct round_vote_set {
   std::shared_ptr<vote_set> prevotes;
   std::shared_ptr<vote_set> precommits;
@@ -115,17 +118,16 @@ struct height_vote_set {
     return -1;
   }
 
-  bool add_vote(vote vote_, node_id peer_id) {
+  std::pair<bool, Error> add_vote(vote vote_, node_id peer_id) {
     std::scoped_lock g(mtx);
     if (!p2p::is_vote_type_valid(vote_.type))
-      return false;
+      return std::make_pair(false, Error{});
     auto vote_set_ = get_vote_set(vote_.round, vote_.type);
     if (vote_set_ == nullptr) {
       auto it = peer_catchup_rounds.find(peer_id);
       if (it == peer_catchup_rounds.end() || it->second.size() >= 2) {
-        // punish peer // todo - how?
-        elog("peer has sent a vote that does not match our round for more than one round");
-        return false;
+        // punish peer
+        return std::make_pair(false, ErrGotVoteFromUnwantedRound);
       }
       add_round(vote_.round);
       vote_set_ = get_vote_set(vote_.round, vote_.type);

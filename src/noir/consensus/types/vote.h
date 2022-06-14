@@ -13,6 +13,12 @@
 
 namespace noir::consensus {
 
+const Error ErrVoteInvalidValidatorIndex = user_error_registry().register_error("invalid validator index");
+const Error ErrVoteInvalidValidatorAddress = user_error_registry().register_error("invalid validator address");
+const Error ErrVoteNonDeterministicSignature = user_error_registry().register_error("non-deterministic signature");
+const Error ErrVoteConflictingVotes = user_error_registry().register_error("ErrVoteConflictingVotes");
+const Error NewConflictingVoteError = user_error_registry().register_error("NewConflictingVoteError");
+
 using P2PID = std::string;
 
 /**
@@ -154,7 +160,7 @@ struct vote_set {
     return val_set->size();
   }
 
-  bool add_vote(std::optional<vote> vote_);
+  std::pair<bool, Error> add_vote(std::optional<vote> vote_);
 
   std::optional<vote> get_vote(int32_t val_index, const std::string& block_key) {
     if (votes.size() > 0 && votes.size() > val_index && votes[val_index]) {
