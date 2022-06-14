@@ -37,13 +37,9 @@ std::shared_ptr<vote_set> commit_to_vote_set(
       continue; // OK, some precommits can be missing.
     }
 
-    std::optional<vote> opt_{std::nullopt};
     auto vote_ = commit_.get_vote(static_cast<int32_t>(index));
-    if (vote_) {
-      opt_ = {*std::move(vote_)};
-    }
-    opt_->block_id_ = commit_.my_block_id; // TODO: is this right? [Sam: added 20220313]
-    auto [_, err] = vote_set_->add_vote(opt_);
+    vote_->block_id_ = commit_.my_block_id; // TODO : is this right?
+    auto [_, err] = vote_set_->add_vote(vote_);
     check(!err, fmt::format("Failed to reconstruct LastCommit {}", err.message()));
   }
   return std::move(vote_set_);

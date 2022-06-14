@@ -225,7 +225,7 @@ struct event_data_complete_proposal {
 };
 
 struct event_data_vote {
-  noir::consensus::vote vote;
+  std::shared_ptr<noir::consensus::vote> vote;
 };
 
 struct event_data_string {

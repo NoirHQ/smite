@@ -311,9 +311,9 @@ public:
                  },
                  [&](const events::event_data_vote& msg) {
                    // std::cout << "event_data_vote received!!" << std::endl;
-                   ret.height = msg.vote.height;
-                   ret.round = msg.vote.round;
-                   ret.vote_type = msg.vote.type;
+                   ret.height = msg.vote->height;
+                   ret.round = msg.vote->round;
+                   ret.vote_type = msg.vote->type;
                  },
                  [&](const events::event_data_string& str) {
                    // std::cout << "event_data_string received!!" << std::endl;

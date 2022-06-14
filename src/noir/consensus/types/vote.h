@@ -160,7 +160,7 @@ struct vote_set {
     return val_set->size();
   }
 
-  std::pair<bool, Error> add_vote(std::optional<vote> vote_);
+  std::pair<bool, Error> add_vote(const std::shared_ptr<vote>& vote_);
 
   std::optional<vote> get_vote(int32_t val_index, const std::string& block_key) {
     if (votes.size() > 0 && votes.size() > val_index && votes[val_index]) {
