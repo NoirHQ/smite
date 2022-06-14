@@ -43,10 +43,9 @@ std::shared_ptr<bit_array> vote_set::get_bit_array() {
   return votes_bit_array->copy();
 }
 
-bool vote_set::add_vote(std::optional<vote> vote_) {
+std::pair<bool, Error> vote_set::add_vote(std::optional<vote> vote_) {
   if (!vote_)
-    throw std::runtime_error("add_vote() on empty vote_set");
-
+    check(false, "add_vote() on empty vote_set");
   std::scoped_lock g(mtx);
 
   auto val_index = vote_->validator_index;
@@ -54,55 +53,44 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   auto block_key = vote_->block_id_.key();
 
   // Ensure that validator index is set
-  if (val_index < 0) {
-    elog("add_vote(): validator index < 0");
-    return false;
-  }
-  if (val_addr.empty()) {
-    elog("add_vote(): invalid validator address");
-    return false;
-  }
+  if (val_index < 0)
+    return {false, Error::format("index < 0: {}", ErrVoteInvalidValidatorIndex.message())};
+  if (val_addr.empty())
+    return {false, Error::format("empty address: {}", ErrVoteInvalidValidatorAddress.message())};
 
   // Make sure step matches
   if ((vote_->height != height) || (vote_->round != round) || (vote_->type != signed_msg_type_)) {
-    elog(fmt::format(
-      "expected {}/{}/{} but got {}/{}/{}", vote_->height, vote_->round, vote_->type, height, round, signed_msg_type_));
-    return false;
+    return {false,
+      Error::format("expected {}/{}/{} but got {}/{}/{}", vote_->height, vote_->round, vote_->type, height, round,
+        signed_msg_type_)};
   }
 
   // Ensure that signer is a validator
   auto val = val_set->get_by_index(val_index);
-  if (!val) {
-    elog(fmt::format("cannot find validator {} in val_set of size {}", val_index, val_set->validators.size()));
-    return false;
-  }
+  if (!val)
+    return {
+      false, Error::format("cannot find validator {} in val_set of size {}", val_index, val_set->validators.size())};
 
   // Ensure that signer has the right address
-  if (val_addr != val->address) {
-    elog("add_vote() failed: signer has wrong addres");
-    return false;
-  }
+  if (val_addr != val->address)
+    return {false, Error::format("signer has wrong address")};
 
   // Check if the same vote exists
   if (auto existing = get_vote(val_index, block_key); existing) {
     if (existing->signature == vote_->signature) {
       // duplicate
-      return false;
+      return {false, Error{}};
     }
-    elog("add_vote() failed: same vote exists");
-    return false;
+    elog("same vote exists");
+    return {false, ErrVoteNonDeterministicSignature};
   }
 
   // Check signature
-  if (val->pub_key_.address() != val_addr) {
-    elog("add_vote() failed: invalid validator address");
-    return false;
-  }
+  if (val->pub_key_.address() != val_addr)
+    return {false, Error::format("invalid validator address")};
   auto vote_sign_bytes_ = encode(canonical::canonicalize_vote(*vote_));
-  if (!val->pub_key_.verify_signature(vote_sign_bytes_, vote_->signature)) {
-    elog("add_vote() failed: invalid signature");
-    return false;
-  }
+  if (!val->pub_key_.verify_signature(vote_sign_bytes_, vote_->signature))
+    return {false, Error::format("invalid signature")};
 
   // Add vote and get conflicting vote if any
   auto voting_power = val->voting_power;
@@ -112,7 +100,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
   if (votes.size() > 0 && votes.size() >= val_index && votes[val_index]) {
     auto& existing = votes[val_index];
     if (existing->block_id_ == vote_->block_id_) {
-      throw std::runtime_error("add_vote() does not expect duplicate votes");
+      check(false, "add_vote() does not expect duplicate votes");
     } else {
       conflicting = existing;
     }
@@ -134,14 +122,14 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     new_votes_by_block = votes_by_block[block_key];
     if (conflicting && votes_by_block[block_key]->peer_maj23) {
       // There's a conflict and no peer claims that this block is special.
-      return false;
+      return {false, NewConflictingVoteError};
     }
     // We'll add the vote in a bit.
   } else {
     if (conflicting) {
       // there's a conflicting vote.
       // We're not even tracking this blockKey, so just forget it.
-      return false;
+      return {false, NewConflictingVoteError};
     }
     // Start tracking this blockKey
     new_votes_by_block = block_votes::new_block_votes(false, val_set->size());
@@ -167,7 +155,7 @@ bool vote_set::add_vote(std::optional<vote> vote_) {
     }
   }
 
-  return true;
+  return {true, Error{}};
 }
 
 } // namespace noir::consensus

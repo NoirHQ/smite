@@ -1125,17 +1125,41 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node
   return added;
 }
 
-bool consensus_state::try_add_vote(p2p::vote_message& msg, node_id peer_id) {
+Result<bool> consensus_state::try_add_vote(p2p::vote_message& msg, node_id peer_id) {
   auto vote_ = vote{msg};
-  auto added = add_vote(vote_, peer_id);
+  auto [added, err] = add_vote(vote_, peer_id);
+  if (!err) {
+    // If the vote height is off, we'll just ignore it,
+    // But if it's a conflicting sig, add it to the cs.evpool.
+    // If it's otherwise invalid, punish peer.
+    if (err == ErrVoteConflictingVotes) {
+      if (local_priv_validator_pub_key.empty())
+        return Error::format("pubkey is not set. Look for \"Can't get private validator pubkey\" errors");
+      if (vote_.validator_address == local_priv_validator_pub_key.address()) {
+        elog(fmt::format(
+          "found conflicting vote from ourselves; did you unsafe_reset a validator? height={}", vote_.height));
+        return err;
+      }
 
-  // todo - implement; it's very long
-  // todo - must handle err from add_vote
-
+      // report conflicting votes to ev_pool
+      // ev_pool->report_conflicting_votes(); // TODO
+      dlog(fmt::format("found and sent conflicting votes to ev_pool"));
+      return err;
+    } else if (err == ErrVoteNonDeterministicSignature) {
+      dlog(fmt::format("vote has non-deterministic signature: {}", err.message()));
+    } else {
+      // Either
+      // 1) bad peer OR
+      // 2) not a bad peer? this can also err sometimes with "Unexpected step" OR
+      // 3) tmkms use with multiple validators connecting to a single tmkms instance
+      ilog(fmt::format("failed attempting to add vote: {}", err.message()));
+      return Error::format("error adding vote");
+    }
+  }
   return added;
 }
 
-bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
+std::pair<bool, Error> consensus_state::add_vote(vote& vote_, node_id peer_id) {
   dlog(fmt::format("adding vote: height={} type={} index={} cs_height={}", vote_.height, vote_.type,
     vote_.validator_index, rs.height));
 
@@ -1143,12 +1167,12 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
   // These come in while we wait timeoutCommit
   if (vote_.height + 1 == rs.height && vote_.type == p2p::Precommit) {
     if (rs.step != round_step_type::NewHeight) {
-      dlog("precommit vote came in after commit timeout and has been ignored");
-      return false;
+      dlog(fmt::format("precommit vote came in after commit timeout and has been ignored"));
+      return {false, Error{}};
     }
-    auto added = rs.last_commit->add_vote(vote_);
+    auto [added, err] = rs.last_commit->add_vote(vote_);
     if (!added)
-      return false;
+      return {false, err};
 
     dlog("added vote to last precommits");
     event_bus_->publish_event_vote(events::event_data_vote{.vote = vote_});
@@ -1163,7 +1187,7 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
       // cs.scheduleTimeout(time.Duration(0), cs.Height, 0, cstypes.RoundStepNewHeight)
       enter_new_round(rs.height, 0);
     }
-    return false;
+    return {false, err};
   }
 
   // Height mismatch is ignored.
@@ -1171,14 +1195,14 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
   if (vote_.height != rs.height) {
     dlog(fmt::format(
       "vote ignored and not added: vote_height={} cs_height={} peer_id={}", vote_.height, rs.height, peer_id));
-    return false;
+    return {false, Error{}};
   }
 
   auto height = rs.height;
-  auto added = rs.votes->add_vote(vote_, peer_id);
+  auto [added, err] = rs.votes->add_vote(vote_, peer_id); // TODO : have add_vote() return error
   if (!added) {
     // Either duplicate, or error upon cs.Votes.AddByIndex()
-    return false;
+    return {false, err};
   }
 
   event_bus_->publish_event_vote(events::event_data_vote{.vote = vote_});
@@ -1276,10 +1300,9 @@ bool consensus_state::add_vote(vote& vote_, node_id peer_id) {
     break;
   }
   default:
-    throw std::runtime_error(fmt::format("unexpected vote type={}", vote_.type));
+    check(false, fmt::format("unexpected vote type={}", vote_.type));
   }
-
-  return added;
+  return {added, err};
 }
 
 std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, Bytes hash, p2p::part_set_header header) {

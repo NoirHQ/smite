@@ -23,7 +23,10 @@ Result<bool> sign_add_vote(
     return ok.error();
   else
     vote_.signature = ok.value();
-  return vote_set_->add_vote(vote_);
+  auto [added, err] = vote_set_->add_vote(vote_);
+  if (!err)
+    return err;
+  return added;
 }
 
 Result<std::shared_ptr<commit>> make_commit(const p2p::block_id& block_id_,
