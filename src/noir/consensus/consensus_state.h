@@ -92,7 +92,7 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   bool add_proposal_block_part(p2p::block_part_message& msg, node_id peer_id);
 
   /// \brief attempt to add vote; if it's a duplicate signature, dupeout the validator
-  Result<bool> try_add_vote(p2p::vote_message& msg, node_id peer_id);
+  Result<bool> try_add_vote(p2p::vote_message& msg, const node_id& peer_id);
   std::pair<bool, Error> add_vote(const std::shared_ptr<vote>& vote_, const node_id& peer_id);
   std::optional<vote> sign_vote(p2p::signed_msg_type msg_type, Bytes hash, p2p::part_set_header header);
   tstamp vote_time();

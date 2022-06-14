@@ -1125,7 +1125,7 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node
   return added;
 }
 
-Result<bool> consensus_state::try_add_vote(p2p::vote_message& msg, node_id peer_id) {
+Result<bool> consensus_state::try_add_vote(p2p::vote_message& msg, const node_id& peer_id) {
   auto vote_ = std::make_shared<vote>(vote{msg});
   auto [added, err] = add_vote(vote_, peer_id);
   if (!err) {
@@ -1142,8 +1142,10 @@ Result<bool> consensus_state::try_add_vote(p2p::vote_message& msg, node_id peer_
       }
 
       // report conflicting votes to ev_pool
-      // ev_pool->report_conflicting_votes(); // TODO
-      dlog(fmt::format("found and sent conflicting votes to ev_pool"));
+      if (auto err_data = dynamic_cast<const ErrVoteConflictingVotesWithData*>(&err); err_data) {
+        ev_pool->report_conflicting_votes(err_data->vote_a, err_data->vote_b);
+        dlog(fmt::format("found and sent conflicting votes to ev_pool"));
+      }
       return err;
     } else if (err == ErrVoteNonDeterministicSignature) {
       dlog(fmt::format("vote has non-deterministic signature: {}", err.message()));

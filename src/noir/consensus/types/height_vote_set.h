@@ -11,9 +11,6 @@
 
 namespace noir::consensus {
 
-const Error ErrGotVoteFromUnwantedRound =
-  user_error_registry().register_error("peer has sent a vote that does not match our round for more than one round");
-
 struct round_vote_set {
   std::shared_ptr<vote_set> prevotes;
   std::shared_ptr<vote_set> precommits;
