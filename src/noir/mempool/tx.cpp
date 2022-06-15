@@ -29,7 +29,7 @@ auto TxStore::size() -> size_t {
 auto TxStore::get_all_txs() -> std::vector<std::shared_ptr<WrappedTx>> {
   std::shared_lock g{mtx};
   auto wtxs = std::vector<std::shared_ptr<WrappedTx>>(txs.size());
-  for (auto [i, wtx] : ranges::views::enumerate(txs.get<0>())) {
+  for (auto [i, wtx] : ranges::views::enumerate(txs.get<TxStore::by_key>())) {
     wtxs[i] = wtx;
   }
   return wtxs;
@@ -41,7 +41,7 @@ auto TxStore::get_tx_by_sender(const std::string& sender) -> std::shared_ptr<Wra
     return nullptr;
   }
   std::shared_lock g{mtx};
-  auto& sender_txs = txs.get<1>();
+  auto& sender_txs = txs.get<TxStore::by_sender>();
   if (auto wtx = sender_txs.find(sender); wtx != sender_txs.end()) {
     return *wtx;
   }
@@ -50,7 +50,7 @@ auto TxStore::get_tx_by_sender(const std::string& sender) -> std::shared_ptr<Wra
 
 auto TxStore::get_tx_by_hash(const types::TxKey& hash) -> std::shared_ptr<WrappedTx> {
   std::shared_lock g{mtx};
-  auto& hash_txs = txs.get<0>();
+  auto& hash_txs = txs.get<TxStore::by_key>();
   if (auto wtx = hash_txs.find(hash); wtx != hash_txs.end()) {
     return *wtx;
   }
@@ -59,7 +59,7 @@ auto TxStore::get_tx_by_hash(const types::TxKey& hash) -> std::shared_ptr<Wrappe
 
 auto TxStore::is_tx_removed(const types::TxKey& hash) -> bool {
   std::shared_lock g{mtx};
-  auto& hash_txs = txs.get<0>();
+  auto& hash_txs = txs.get<TxStore::by_key>();
   if (auto wtx = hash_txs.find(hash); wtx != hash_txs.end()) {
     return (*wtx)->removed;
   }
@@ -80,7 +80,7 @@ void TxStore::remove_tx(const std::shared_ptr<WrappedTx>& wtx) {
 auto TxStore::tx_has_peer(const types::TxKey& hash, uint16_t peer_id) -> bool {
   std::shared_lock g{mtx};
 
-  auto& hash_txs = txs.get<0>();
+  auto& hash_txs = txs.get<TxStore::by_key>();
   auto wtx = hash_txs.find(hash);
   if (wtx == hash_txs.end()) {
     return false;
@@ -91,7 +91,7 @@ auto TxStore::tx_has_peer(const types::TxKey& hash, uint16_t peer_id) -> bool {
 auto TxStore::get_or_set_peer_by_tx_hash(const types::TxKey& hash, uint16_t peer_id) -> std::pair<std::shared_ptr<WrappedTx>, bool> {
   std::unique_lock g{mtx};
 
-  auto& hash_txs = txs.get<0>();
+  auto& hash_txs = txs.get<TxStore::by_key>();
   auto wtx = hash_txs.find(hash);
   if (wtx == hash_txs.end()) {
     return {nullptr, false};

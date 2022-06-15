@@ -14,7 +14,7 @@ auto TxPriorityQueue::get_evictable_txs(int64_t priority, int64_t tx_size, int64
 
   std::vector<std::shared_ptr<WrappedTx>> to_evict;
   auto curr_size = total_size;
-  auto& heap = txs.get<1>();
+  auto& heap = txs.get<TxPriorityQueue::by_priority>();
   for (auto& tx : heap) {
     if (tx->priority >= priority) {
       break;
@@ -53,7 +53,7 @@ void TxPriorityQueue::push_tx(std::shared_ptr<WrappedTx>&& tx) {
 auto TxPriorityQueue::pop_tx() -> std::shared_ptr<WrappedTx> {
   std::unique_lock g{mtx};
 
-  auto& heap = txs.get<1>();
+  auto& heap = txs.get<TxPriorityQueue::by_priority>();
   if (!heap.size()) {
     return nullptr;
   }
