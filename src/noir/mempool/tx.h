@@ -45,18 +45,6 @@ struct WrappedTx {
 };
 
 class TxStore {
-  // clang-format off
-  using Txs = boost::multi_index_container<
-    std::shared_ptr<WrappedTx>,
-    boost::multi_index::indexed_by<
-      // FIXME: According to original implementation, following two indices should be ordered_unique,
-      // but put these ordered_non_unique temporarily for testing
-      boost::multi_index::ordered_non_unique<boost::multi_index::key<&WrappedTx::key>>,
-      boost::multi_index::ordered_non_unique<boost::multi_index::member<WrappedTx, std::string, &WrappedTx::sender>>
-    >
-  >;
-  // clang-format on
-
 public:
   auto size() -> size_t;
   [[nodiscard]] auto get_all_txs() -> std::vector<std::shared_ptr<WrappedTx>>;
@@ -68,7 +56,25 @@ public:
   auto tx_has_peer(const types::TxKey& hash, uint16_t peer_id) -> bool;
   auto get_or_set_peer_by_tx_hash(const types::TxKey& hash, uint16_t peer_id) -> std::pair<std::shared_ptr<WrappedTx>, bool>;
 
+  struct by_key;
+  struct by_sender;
+
 private:
+  template<typename T>
+  using tag = boost::multi_index::tag<T>;
+
+  // clang-format off
+  using Txs = boost::multi_index_container<
+    std::shared_ptr<WrappedTx>,
+    boost::multi_index::indexed_by<
+      // FIXME: According to original implementation, following two indices should be ordered_unique,
+      // but put these ordered_non_unique temporarily for testing
+      boost::multi_index::ordered_non_unique<tag<by_key>, boost::multi_index::key<&WrappedTx::key>>,
+      boost::multi_index::ordered_non_unique<tag<by_sender>, boost::multi_index::key<&WrappedTx::sender>>
+    >
+  >;
+  // clang-format on
+
   std::shared_mutex mtx;
   Txs txs;
 };
