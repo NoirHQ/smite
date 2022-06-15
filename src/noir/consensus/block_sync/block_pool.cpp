@@ -3,8 +3,10 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/block_pool.h>
 #include <noir/core/codec.h>
+#include <tendermint/blocksync/types.pb.h>
 
 namespace noir::consensus::block_sync {
 
@@ -168,7 +170,7 @@ void block_pool::make_next_requester() {
 void block_pool::send_request(int64_t height_, std::string peer_id_) {
   if (!is_running)
     return;
-  transmit_new_envelope("", peer_id_, noir::consensus::block_request{height_});
+  transmit_new_envelope(peer_id_, noir::consensus::block_request{height_});
 }
 
 void block_pool::send_error(std::string err, std::string peer_id_) {
@@ -177,20 +179,51 @@ void block_pool::send_error(std::string err, std::string peer_id_) {
   app.get_method<plugin_interface::methods::send_error_to_peer>()(peer_id_, err);
 }
 
-void block_pool::transmit_new_envelope(
-  const std::string& from, const std::string& to, const p2p::bs_reactor_message& msg, bool broadcast, int priority) {
-  auto dest = broadcast ? "all" : to;
-  dlog(fmt::format("[bs_reactor] send msg: from={}, to={}, type={}, broadcast={}", from, dest, msg.index(), broadcast));
+void block_pool::transmit_new_envelope(const std::string& to, const p2p::bs_reactor_message& bs_msg, int priority) {
+  dlog(fmt::format("[bs_reactor] send msg: to={}, type={}", to, bs_msg.index()));
   auto new_env = std::make_shared<p2p::envelope>();
-  new_env->from = from;
+  new_env->from = "";
   new_env->to = to;
   new_env->broadcast = false; // always false for block_sync
   new_env->id = p2p::BlockSync;
 
-  const uint32_t payload_size = encode_size(msg);
+#if false
+  // Use datastream
+  const uint32_t payload_size = encode_size(bs_msg);
   new_env->message.resize(payload_size);
   datastream<unsigned char> ds(new_env->message.data(), payload_size);
-  ds << msg;
+  ds << bs_msg;
+#else
+  // Use protobuf
+  ::tendermint::blocksync::Message pb_msg;
+  std::visit(
+    overloaded{
+      ///
+      /*********************************************************************************************************/
+      [&pb_msg](const consensus::block_request& msg) {
+        auto req = pb_msg.mutable_block_request();
+        req->set_height(msg.height);
+      },
+      [&pb_msg](const consensus::block_response& msg) {
+        auto res = pb_msg.mutable_block_response();
+        auto block_ = decode<block>(msg.block_); // TODO : requires clean up
+        res->set_allocated_block(block::to_proto(block_).release());
+      },
+      [&pb_msg](const consensus::status_request& msg) { auto req = pb_msg.mutable_status_request(); },
+      [&pb_msg](const consensus::status_response& msg) {
+        auto res = pb_msg.mutable_status_response();
+        res->set_height(msg.height);
+        res->set_base(msg.base);
+      },
+      [&pb_msg](const consensus::no_block_response& msg) {
+        auto res = pb_msg.mutable_no_block_response();
+        res->set_height(msg.height);
+      },
+    },
+    bs_msg);
+  new_env->message.resize(pb_msg.ByteSizeLong());
+  pb_msg.SerializeToArray(new_env->message.data(), pb_msg.ByteSizeLong());
+#endif
 
   xmt_mq_channel.publish(priority, new_env);
 }

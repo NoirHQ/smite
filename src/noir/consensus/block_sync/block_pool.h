@@ -138,11 +138,8 @@ struct block_pool : std::enable_shared_from_this<block_pool> {
 
   void send_error(std::string err, std::string peer_id_);
 
-  void transmit_new_envelope(const std::string& from,
-    const std::string& to,
-    const p2p::bs_reactor_message& msg,
-    bool broadcast = false,
-    int priority = appbase::priority::medium);
+  void transmit_new_envelope(
+    const std::string& to, const p2p::bs_reactor_message& msg, int priority = appbase::priority::medium);
 };
 
 /// \brief periodically requests until block is received for a height

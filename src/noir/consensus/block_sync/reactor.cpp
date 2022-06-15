@@ -6,6 +6,7 @@
 #include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/reactor.h>
 #include <noir/consensus/types/validation.h>
+#include <tendermint/blocksync/types.pb.h>
 
 #include <utility>
 
@@ -16,7 +17,7 @@ void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
     "[bs_reactor] peer update: peer_id={}, status={}", info->peer_id, p2p::peer_status_to_str(info->status)));
   switch (info->status) {
   case p2p::peer_status::up: {
-    pool->transmit_new_envelope("", info->peer_id, status_response{store->height(), store->base()});
+    pool->transmit_new_envelope(info->peer_id, status_response{store->height(), store->base()});
     break;
   }
   case p2p::peer_status::down: {
@@ -32,12 +33,49 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
   auto from = info->from;
   auto to = info->broadcast ? "all" : info->to;
 
+  p2p::bs_reactor_message bs_msg;
+#if false
+  // Use datastream
   datastream<unsigned char> ds(info->message.data(), info->message.size());
-  p2p::bs_reactor_message msg;
-  ds >> msg;
+  ds >> bs_msg;
+#else
+  // Use protobuf
+  ::tendermint::blocksync::Message pb_msg;
+  pb_msg.ParseFromArray(info->message.data(), info->message.size());
+  if (!pb_msg.IsInitialized()) {
+    elog("unable to parse envelop message: size=${size}", ("size", info->message.size()));
+    return;
+  }
+  switch (pb_msg.sum_case()) {
+  case tendermint::blocksync::Message::kBlockRequest: {
+    const auto& m = pb_msg.block_request();
+    bs_msg = block_request{.height = m.height()};
+  } break;
+  case tendermint::blocksync::Message::kNoBlockResponse: {
+    const auto& m = pb_msg.no_block_response();
+    bs_msg = no_block_response{.height = m.height()};
+  } break;
+  case tendermint::blocksync::Message::kBlockResponse: {
+    const auto& m = pb_msg.block_response();
+    auto temp_block = block::from_proto(m.block());
+    Bytes bz = encode<block>(*temp_block); // TODO : requires clean up
+    bs_msg = block_response{.block_ = bz};
+  } break;
+  case tendermint::blocksync::Message::kStatusRequest: {
+    // const auto& m = pb_msg.status_request();
+    bs_msg = status_request{};
+  } break;
+  case tendermint::blocksync::Message::kStatusResponse: {
+    const auto& m = pb_msg.status_response();
+    bs_msg = status_response{.height = m.height(), .base = m.base()};
+  } break;
+  default:
+    elog("block_sync receive failed: unable to determine message type type=${type}", ("type", pb_msg.sum_case()));
+    return;
+  }
+#endif
 
-  dlog(fmt::format(
-    "[bs_reactor] recv msg. from={}, to={}, type={}, broadcast={}", from, to, msg.index(), info->broadcast));
+  dlog(fmt::format("[bs_reactor] recv msg. from={}, to={}, type={}", from, to, bs_msg.index()));
 
   std::visit(
     overloaded{///
@@ -54,7 +92,7 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
         }
       },
       [this, &from](consensus::status_request& msg) {
-        pool->transmit_new_envelope("", from, status_response{store->height(), store->base()});
+        pool->transmit_new_envelope(from, status_response{store->height(), store->base()});
       },
       [this, &from](consensus::status_response& msg) {
         if (!block_sync)
@@ -64,7 +102,7 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
       [](consensus::no_block_response& msg) {
         dlog(fmt::format("peer does not have the requested block: height={}", msg.height));
       }},
-    msg);
+    bs_msg);
 }
 
 void reactor::request_routine() {
@@ -74,7 +112,7 @@ void reactor::request_routine() {
         return;
       auto peer_ids = pool->get_peer_ids();
       for (const auto& peer_id : peer_ids)
-        pool->transmit_new_envelope("", peer_id, status_request{});
+        pool->transmit_new_envelope(peer_id, status_request{});
       std::this_thread::sleep_for(status_update_interval);
     }
   });
@@ -173,11 +211,11 @@ void reactor::respond_to_peer(std::shared_ptr<consensus::block_request> msg, con
   if (store->load_block(msg->height, block_)) {
     auto response = block_response{};
     response.block_ = encode(block_); // block is serialized when put into a response
-    pool->transmit_new_envelope("", peer_id, response);
+    pool->transmit_new_envelope(peer_id, response);
     return;
   }
   ilog("peer requested a block we do not have: peer=${peer_id} height=${h}", ("peer_id", peer_id)("h", msg->height));
-  pool->transmit_new_envelope("", peer_id, no_block_response{msg->height});
+  pool->transmit_new_envelope(peer_id, no_block_response{msg->height});
 }
 
 } // namespace noir::consensus::block_sync
