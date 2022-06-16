@@ -18,7 +18,7 @@ class BasicDatastream {
 public:
   BasicDatastream(std::span<T> buf): buf(buf), pos(buf.begin()) {}
   BasicDatastream(T* data, size_t size): BasicDatastream(std::span(data, size)) {}
-  BasicDatastream(BytesViewConstructible auto& buf): BasicDatastream(to_bytes_view(buf)) {}
+  BasicDatastream(BytesViewConstructible auto& buf): BasicDatastream(bytes_view(buf)) {}
 
   auto skip(size_t s) -> Result<void> {
     if (remaining() < s) {

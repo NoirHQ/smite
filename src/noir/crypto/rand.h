@@ -11,18 +11,18 @@ namespace noir::crypto {
 
 /// \brief generates random bytes
 /// \ingroup crypto
-Result<void> rand_bytes(BytesViewMut out);
+Result<void> rand_bytes(std::span<unsigned char> out);
 
 Result<void> rand_bytes(BytesViewConstructible auto& out) {
-  return rand_bytes(to_bytes_view(out));
+  return rand_bytes(bytes_view(out));
 }
 
 /// \brief generates random bytes using separated PRNG
 /// \ingroup crypto
-Result<void> rand_priv_bytes(BytesViewMut out);
+Result<void> rand_priv_bytes(std::span<unsigned char> out);
 
 Result<void> rand_priv_bytes(BytesViewConstructible auto& out) {
-  return rand_priv_bytes(to_bytes_view(out));
+  return rand_priv_bytes(bytes_view(out));
 }
 
 } // namespace noir::crypto

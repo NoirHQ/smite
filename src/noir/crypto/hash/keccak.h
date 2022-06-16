@@ -20,8 +20,8 @@ struct Keccak256 : public Hash<Keccak256> {
   using Hash::update;
 
   auto init() -> Keccak256&;
-  auto update(BytesView in) -> Keccak256&;
-  void final(BytesViewMut out);
+  auto update(std::span<const unsigned char> in) -> Keccak256&;
+  void final(std::span<unsigned char> out);
 
   constexpr auto digest_size() const -> size_t {
     return 32;

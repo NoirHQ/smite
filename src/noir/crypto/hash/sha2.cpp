@@ -12,7 +12,7 @@ auto Sha256::init() -> Sha256& {
   return *this;
 }
 
-auto Sha256::update(BytesView in) -> Sha256& {
+auto Sha256::update(std::span<const unsigned char> in) -> Sha256& {
   if (!ctx) {
     init();
   }
@@ -20,7 +20,7 @@ auto Sha256::update(BytesView in) -> Sha256& {
   return *this;
 }
 
-void Sha256::final(BytesViewMut out) {
+void Sha256::final(std::span<unsigned char> out) {
   MessageDigest::final(out);
 }
 

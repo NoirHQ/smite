@@ -16,8 +16,8 @@ struct Ripemd160 : public Hash<Ripemd160> {
   using Hash::update;
 
   auto init() -> Ripemd160&;
-  auto update(BytesView in) -> Ripemd160&;
-  void final(BytesViewMut out);
+  auto update(std::span<const unsigned char> in) -> Ripemd160&;
+  void final(std::span<unsigned char> out);
 
   constexpr auto digest_size() const -> size_t {
     return 20;

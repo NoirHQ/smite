@@ -15,7 +15,7 @@ auto Blake2b256::init() -> Blake2b256& {
   return *this;
 }
 
-auto Blake2b256::update(BytesView in) -> Blake2b256& {
+auto Blake2b256::update(std::span<const unsigned char> in) -> Blake2b256& {
   if (!state) {
     init();
   }
@@ -23,7 +23,7 @@ auto Blake2b256::update(BytesView in) -> Blake2b256& {
   return *this;
 }
 
-void Blake2b256::final(BytesViewMut out) {
+void Blake2b256::final(std::span<unsigned char> out) {
   blake2b_final(&*state, out.data(), digest_size());
 }
 

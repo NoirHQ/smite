@@ -249,7 +249,7 @@ auto Ripemd160::Ripemd160::init() -> Ripemd160& {
   return *this;
 }
 
-auto Ripemd160::update(BytesView in) -> Ripemd160& {
+auto Ripemd160::update(std::span<const unsigned char> in) -> Ripemd160& {
   if (!inited) {
     init();
   }
@@ -279,7 +279,7 @@ auto Ripemd160::update(BytesView in) -> Ripemd160& {
   return *this;
 }
 
-void Ripemd160::final(BytesViewMut out) {
+void Ripemd160::final(std::span<unsigned char> out) {
   auto hash = out.data();
   static const unsigned char pad[64] = {0x80};
   unsigned char sizedesc[8];
