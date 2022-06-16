@@ -12,7 +12,7 @@ namespace noir::consensus {
 std::optional<std::string> mock_pv::sign_vote(vote& vote_) {
   // TODO: add some validation checks
 
-  auto vote_sign_bytes = encode(canonical::canonicalize_vote(vote_));
+  auto vote_sign_bytes = vote::vote_sign_bytes("", *vote::to_proto(vote_));
   auto sig = priv_key_.sign(vote_sign_bytes);
   vote_.signature = sig;
   return {};
@@ -28,7 +28,7 @@ std::optional<std::string> mock_pv::sign_proposal(noir::p2p::proposal_message& p
 }
 
 Result<Bytes> mock_pv::sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) {
-  auto sign_bytes = vote::vote_sign_bytes(chain_id, v);
+  auto sign_bytes = vote::vote_sign_bytes("" /*chain_id*/, v);
   auto sig = priv_key_.sign(sign_bytes);
   return sig;
 }

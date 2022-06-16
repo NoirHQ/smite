@@ -150,18 +150,16 @@ bool check_only_differ_by_timestamp(const noir::consensus::vote& obj,
   const Bytes& last_sign_bytes,
   const Bytes& new_sign_bytes,
   noir::tstamp& timestamp) {
-  auto last_vote = decode<canonical_vote>(last_sign_bytes);
-  auto new_vote = decode<canonical_vote>(new_sign_bytes);
-  timestamp = last_vote.timestamp;
-  // set the times to the same value and check equality
+  ::tendermint::types::CanonicalVote last_vote;
+  last_vote.ParseFromArray(last_sign_bytes.data(), last_sign_bytes.size());
+  ::tendermint::types::CanonicalVote new_vote;
+  new_vote.ParseFromArray(new_sign_bytes.data(), new_sign_bytes.size());
+  timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(last_vote.timestamp());
+  // set times to the same value and check equality
   auto now = get_time();
-  last_vote.timestamp = now;
-  new_vote.timestamp = now;
-
-  // FIXME: compare reflected value before encoding
-  auto lhs = encode<canonical_vote>(last_vote);
-  auto rhs = encode<canonical_vote>(new_vote);
-  return lhs == rhs;
+  *last_vote.mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(now);
+  *new_vote.mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(now);
+  return last_vote.SerializeAsString() == new_vote.SerializeAsString();
 }
 
 bool check_only_differ_by_timestamp(const noir::p2p::proposal_message& obj,
@@ -225,7 +223,7 @@ bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step)
 
 bool file_pv::sign_vote_internal(noir::consensus::vote& vote) {
   return sign_internal<noir::consensus::vote>(
-    vote, encode(canonical::canonicalize_vote(vote)), *this, vote_to_step(vote));
+    vote, vote::vote_sign_bytes("", *vote::to_proto(vote)), *this, vote_to_step(vote));
 }
 
 bool file_pv::sign_proposal_internal(noir::p2p::proposal_message& proposal) {

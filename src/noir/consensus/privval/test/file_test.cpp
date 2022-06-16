@@ -188,7 +188,7 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
         std::for_each(signature_tests.begin(), signature_tests.end(), [&](const signature_test_case& st) {
           vote_.type = st.type;
           ++vote_.height;
-          auto data_vote1 = noir::encode(canonical::canonicalize_vote(vote_));
+          auto data_vote1 = vote::vote_sign_bytes("", *vote::to_proto(vote_));
           // std::cout << "data_vote1=" << to_hex(data_vote1) << std::endl;
           // std::cout << "digest1=" << fc::Sha256::hash(data_vote1).str() << std::endl;
           std::optional<std::string> sig_org;
@@ -198,7 +198,7 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
             CHECK_NOTHROW(sig_org = file_pv_ptr->sign_vote(vote_));
             // std::cout << "sig=" << std::string(vote_.signature.begin(), vote_.signature.end()) << std::endl;
 
-            auto data_vote2 = noir::encode(canonical::canonicalize_vote(vote_));
+            auto data_vote2 = vote::vote_sign_bytes("", *vote::to_proto(vote_));
             // std::cout << "data_vote2=" << to_hex(data_vote2) << std::endl;
             // std::cout << "digest2=" << fc::Sha256::hash(data_vote2).str() << std::endl;
             auto result = file_pv_ptr->get_pub_key().verify_signature(data_vote2, vote_.signature);
