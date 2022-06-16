@@ -98,7 +98,7 @@ std::pair<bool, Error> vote_set::add_vote(const std::shared_ptr<vote>& vote_) {
   // Check signature
   if (val->pub_key_.address() != val_addr)
     return {false, Error::format("invalid validator address")};
-  auto vote_sign_bytes_ = encode(canonical::canonicalize_vote(*vote_));
+  auto vote_sign_bytes_ = vote::vote_sign_bytes("", *vote::to_proto(*vote_));
   if (!val->pub_key_.verify_signature(vote_sign_bytes_, vote_->signature))
     return {false, Error::format("invalid signature")};
 

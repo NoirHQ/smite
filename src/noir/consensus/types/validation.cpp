@@ -28,9 +28,9 @@ std::optional<std::string> verify_basic_vals_and_commit(const std::shared_ptr<va
 }
 
 /// \brief check all signatures included in a commit
-std::optional<std::string> verify_commit_single(std::string chain_id_,
-  std::shared_ptr<validator_set> vals,
-  std::shared_ptr<commit> commit_,
+std::optional<std::string> verify_commit_single(const std::string& chain_id_,
+  const std::shared_ptr<validator_set>& vals,
+  const std::shared_ptr<commit>& commit_,
   int64_t voting_power_needed,
   bool count_all_signatures,
   bool lookup_by_index) {
@@ -65,7 +65,7 @@ std::optional<std::string> verify_commit_single(std::string chain_id_,
 
     auto vote_ = commit_->get_vote(i);
     vote_->block_id_ = commit_->my_block_id; // TODO: is this right? [Sam: added 20220313]
-    vote_sign_bytes = encode(canonical::canonicalize_vote(*vote_));
+    vote_sign_bytes = vote::vote_sign_bytes("" /*chain_id_*/, *vote::to_proto(*vote_));
     if (!val.pub_key_.verify_signature(vote_sign_bytes, commit_sig_.signature))
       return fmt::format("verification failed: wrong signature - index={}", i);
 
@@ -81,11 +81,11 @@ std::optional<std::string> verify_commit_single(std::string chain_id_,
 
 /// \brief verifies +2/3 of set has signed given commit
 /// Used by the light client and does not check all signatures
-std::optional<std::string> verify_commit_light(std::string chain_id_,
-  std::shared_ptr<validator_set> vals,
-  p2p::block_id block_id_,
+std::optional<std::string> verify_commit_light(const std::string& chain_id_,
+  const std::shared_ptr<validator_set>& vals,
+  const p2p::block_id& block_id_,
   int64_t height,
-  std::shared_ptr<commit> commit_) {
+  const std::shared_ptr<commit>& commit_) {
   // Validate params
   if (auto err = verify_basic_vals_and_commit(vals, commit_, height, block_id_); err.has_value())
     return err;
