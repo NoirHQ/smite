@@ -14,8 +14,9 @@ add_library(noir_consensus STATIC
   types/block.cpp
   types/evidence.cpp
   types/genesis.cpp
-  types/priv_validator.cpp
   types/node_key.cpp
+  types/priv_validator.cpp
+  types/proposal.cpp
   types/validation.cpp
   types/validator.cpp
   types/vote.cpp

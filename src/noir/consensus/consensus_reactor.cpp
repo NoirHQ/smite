@@ -5,6 +5,7 @@
 //
 #include <noir/common/overloaded.h>
 #include <noir/consensus/consensus_reactor.h>
+#include <noir/consensus/types/proposal.h>
 #include <noir/core/codec.h>
 #include <tendermint/consensus/types.pb.h>
 
@@ -233,16 +234,8 @@ p2p::cs_reactor_message consensus_reactor::process_data_ch(const Bytes& msg) {
   }
   switch (pb_msg.sum_case()) {
   case tendermint::consensus::Message::kProposal: {
-    const auto& m = pb_msg.proposal().proposal(); // proposal within proposal
-    p2p::proposal_message ret;
-    ret.type = static_cast<p2p::signed_msg_type>(m.type());
-    ret.height = m.height();
-    ret.round = m.round();
-    ret.pol_round = m.pol_round();
-    ret.block_id_ = *p2p::block_id::from_proto(m.block_id());
-    ret.timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(m.timestamp());
-    ret.signature = m.signature();
-    return ret;
+    const auto& m = pb_msg.proposal();
+    return p2p::proposal_message{*proposal::from_proto(m.proposal())};
   }
   case tendermint::consensus::Message::kProposalPol: {
     const auto& m = pb_msg.proposal_pol();
@@ -616,15 +609,7 @@ void consensus_reactor::transmit_new_envelope(
       [&](const p2p::proposal_message& msg) {
         new_env->id = p2p::Data;
         auto m = pb_msg.mutable_proposal();
-        auto pb_proposal = std::make_unique<::tendermint::types::Proposal>();
-        pb_proposal->set_type(static_cast<tendermint::types::SignedMsgType>(msg.type));
-        pb_proposal->set_height(msg.height);
-        pb_proposal->set_round(msg.round);
-        pb_proposal->set_pol_round(msg.pol_round);
-        pb_proposal->set_allocated_block_id(p2p::block_id::to_proto(msg.block_id_).release());
-        *pb_proposal->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(msg.timestamp);
-        pb_proposal->set_signature({msg.signature.begin(), msg.signature.end()});
-        m->set_allocated_proposal(pb_proposal.release());
+        m->set_allocated_proposal(proposal::to_proto(proposal{msg}).release());
       },
       [&](const p2p::proposal_pol_message& msg) {
         new_env->id = p2p::Data;
