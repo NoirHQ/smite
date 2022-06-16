@@ -6,6 +6,8 @@
 #pragma once
 #include <noir/common/for_each.h>
 #include <noir/consensus/merkle/tree.h>
+#include <tendermint/crypto/proof.pb.h>
+
 #include <optional>
 
 namespace noir::consensus::merkle {
@@ -32,6 +34,27 @@ struct proof {
 
   Bytes compute_root_hash() const {
     return compute_hash_from_aunts(index, total, leaf_hash, aunts);
+  }
+
+  static std::unique_ptr<::tendermint::crypto::Proof> to_proto(const proof& p) {
+    auto ret = std::make_unique<::tendermint::crypto::Proof>();
+    ret->set_total(p.total);
+    ret->set_index(p.index);
+    ret->set_leaf_hash({p.leaf_hash.begin(), p.leaf_hash.end()});
+    auto pb_aunts = ret->aunts();
+    for (auto& aunt : p.aunts)
+      pb_aunts.Add(aunt.begin(), aunt.end());
+    return ret;
+  }
+
+  static std::shared_ptr<proof> from_proto(const ::tendermint::crypto::Proof& pb) {
+    auto ret = std::make_shared<proof>();
+    ret->total = pb.total();
+    ret->index = pb.index();
+    ret->leaf_hash = pb.leaf_hash(); // TODO : check
+    for (auto& aunt : pb.aunts())
+      ret->aunts.push_back(aunt);
+    return ret;
   }
 };
 

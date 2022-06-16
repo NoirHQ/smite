@@ -70,7 +70,7 @@ struct part_set_header {
     return ret;
   }
 
-  static std::shared_ptr<part_set_header> from_proto(::tendermint::types::PartSetHeader& pb) {
+  static std::shared_ptr<part_set_header> from_proto(const ::tendermint::types::PartSetHeader& pb) {
     auto ret = std::make_shared<part_set_header>();
     ret->total = pb.total();
     ret->hash = {pb.hash().begin(), pb.hash().end()};

@@ -57,7 +57,7 @@ struct vote : p2p::vote_message {
     return ret;
   }
 
-  static std::shared_ptr<vote> from_proto(::tendermint::types::Vote& pb) {
+  static std::shared_ptr<vote> from_proto(const ::tendermint::types::Vote& pb) {
     auto ret = std::make_shared<vote>();
     ret->type = (p2p::signed_msg_type)pb.type();
     ret->height = pb.height();

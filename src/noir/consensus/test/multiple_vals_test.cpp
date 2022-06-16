@@ -23,12 +23,14 @@ public:
 
   plugin_interface::incoming::channels::bs_reactor_message_queue::channel_type& bs_reactor_mq_channel;
   plugin_interface::incoming::channels::cs_reactor_message_queue::channel_type& cs_reactor_mq_channel;
+  plugin_interface::incoming::channels::es_reactor_message_queue::channel_type& es_reactor_mq_channel;
 
   channel_stub() = delete;
   explicit channel_stub(appbase::application& app)
     : update_peer_status_channel(app.get_channel<plugin_interface::channels::update_peer_status>()),
       bs_reactor_mq_channel(app.get_channel<plugin_interface::incoming::channels::bs_reactor_message_queue>()),
-      cs_reactor_mq_channel(app.get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>()) {}
+      cs_reactor_mq_channel(app.get_channel<plugin_interface::incoming::channels::cs_reactor_message_queue>()),
+      es_reactor_mq_channel(app.get_channel<plugin_interface::incoming::channels::es_reactor_message_queue>()) {}
 };
 
 std::atomic<int> node_tokens = 0;
@@ -110,15 +112,20 @@ public:
   void handle_message(const p2p::envelope_ptr& env) {
     ilog(fmt::format("receive msg. from={}, to={}, id={}, broadcast={}", env->from, env->to, env->id, env->broadcast));
     switch (env->id) {
-    case p2p::Consensus: {
+    case p2p::State:
+    case p2p::Data:
+    case p2p::Vote:
+    case p2p::VoteSetBits:
       channel_stub_->cs_reactor_mq_channel.publish(appbase::priority::medium, env);
       break;
-    }
 
-    case p2p::BlockSync: {
+    case p2p::BlockSync:
       channel_stub_->bs_reactor_mq_channel.publish(appbase::priority::medium, env);
       break;
-    }
+
+    case p2p::Evidence:
+      channel_stub_->es_reactor_mq_channel.publish(appbase::priority::medium, env);
+      break;
 
     case p2p::PeerError:
     default:

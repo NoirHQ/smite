@@ -91,8 +91,11 @@ constexpr auto peer_status_to_str(peer_status status) {
 }
 
 enum channel_id {
-  Consensus = 1,
-  BlockSync,
+  State = 0x20, // Consensus
+  Data = 0x21, // Consensus
+  Vote = 0x22, // Consensus
+  VoteSetBits = 0x23, // Consensus
+  BlockSync = 0x40,
   Transaction,
   Evidence = 0x38,
   PeerError
