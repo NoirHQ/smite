@@ -15,7 +15,7 @@ auto Sha3_256::init() -> Sha3_256& {
   return *this;
 }
 
-auto Sha3_256::update(BytesView in) -> Sha3_256& {
+auto Sha3_256::update(std::span<const unsigned char> in) -> Sha3_256& {
   if (!ctx) {
     init();
   }
@@ -23,7 +23,7 @@ auto Sha3_256::update(BytesView in) -> Sha3_256& {
   return *this;
 }
 
-void Sha3_256::final(BytesViewMut out) {
+void Sha3_256::final(std::span<unsigned char> out) {
   Keccak_HashFinal(&*ctx, (BitSequence*)out.data());
 }
 

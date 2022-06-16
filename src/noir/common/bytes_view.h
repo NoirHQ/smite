@@ -18,12 +18,6 @@ namespace noir {
 template<typename T>
 concept BytePointer = Pointer<T> && Byte<Deref<T>>;
 
-// not-owned readonly byte sequence
-using BytesView = std::span<const unsigned char>;
-
-// not-owned mutable byte sequence
-using BytesViewMut = std::span<unsigned char>;
-
 template<typename T>
 concept ByteSequence = requires(T v) {
   { v.data() } -> BytePointer;
@@ -32,7 +26,7 @@ concept ByteSequence = requires(T v) {
 
 // concept for convertible to bytes view (no implicit)
 template<typename T>
-concept BytesViewConstructible = !std::is_convertible_v<T, BytesView> && ByteSequence<T>;
+concept BytesViewConstructible = !std::is_convertible_v<T, std::span<const unsigned char>> && ByteSequence<T>;
 
 auto byte_pointer_cast(Pointer auto pointer) {
   if constexpr (ConstPointer<decltype(pointer)>) {
@@ -42,29 +36,25 @@ auto byte_pointer_cast(Pointer auto pointer) {
   }
 }
 
-auto to_bytes_view(BytesViewConstructible auto& bytes) {
-  if constexpr (ConstPointer<decltype(bytes.data())>) {
-    return BytesView{byte_pointer_cast(bytes.data()), bytes.size()};
-  } else {
-    return BytesViewMut{byte_pointer_cast(bytes.data()), bytes.size()};
-  }
+auto bytes_view(ByteSequence auto& bytes) {
+  return std::span(byte_pointer_cast(bytes.data()), bytes.size());
 }
 
-inline bool operator==(BytesView lhs, BytesView rhs) {
+inline bool operator==(std::span<const unsigned char> lhs, std::span<const unsigned char> rhs) {
   if (lhs.size() != rhs.size()) {
     return false;
   }
   return !std::memcmp(lhs.data(), rhs.data(), lhs.size());
 }
 
-inline bool operator!=(BytesView lhs, BytesView rhs) {
+inline bool operator!=(std::span<const unsigned char> lhs, std::span<const unsigned char> rhs) {
   if (lhs.size() != rhs.size()) {
     return true;
   }
   return std::memcmp(lhs.data(), rhs.data(), lhs.size());
 }
 
-inline bool operator<(BytesView lhs, BytesView rhs) {
+inline bool operator<(std::span<const unsigned char> lhs, std::span<const unsigned char> rhs) {
   auto cmp = std::memcmp(lhs.data(), rhs.data(), std::min(lhs.size(), rhs.size()));
   if (cmp < 0) {
     return true;
@@ -74,7 +64,7 @@ inline bool operator<(BytesView lhs, BytesView rhs) {
   return false;
 }
 
-inline bool operator<=(BytesView lhs, BytesView rhs) {
+inline bool operator<=(std::span<const unsigned char> lhs, std::span<const unsigned char> rhs) {
   auto cmp = std::memcmp(lhs.data(), rhs.data(), std::min(lhs.size(), rhs.size()));
   if (cmp < 0) {
     return true;
@@ -84,7 +74,7 @@ inline bool operator<=(BytesView lhs, BytesView rhs) {
   return false;
 }
 
-inline bool operator>(BytesView lhs, BytesView rhs) {
+inline bool operator>(std::span<const unsigned char> lhs, std::span<const unsigned char> rhs) {
   auto cmp = std::memcmp(lhs.data(), rhs.data(), std::min(lhs.size(), rhs.size()));
   if (cmp > 0) {
     return true;
@@ -94,7 +84,7 @@ inline bool operator>(BytesView lhs, BytesView rhs) {
   return false;
 }
 
-inline bool operator>=(BytesView lhs, BytesView rhs) {
+inline bool operator>=(std::span<const unsigned char> lhs, std::span<const unsigned char> rhs) {
   auto cmp = std::memcmp(lhs.data(), rhs.data(), std::min(lhs.size(), rhs.size()));
   if (cmp > 0) {
     return true;

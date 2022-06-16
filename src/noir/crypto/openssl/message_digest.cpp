@@ -20,11 +20,11 @@ void MessageDigest::init(const EVP_MD* type) {
   EVP_DigestInit(ctx, type);
 }
 
-void MessageDigest::update(BytesView in) {
+void MessageDigest::update(std::span<const unsigned char> in) {
   EVP_DigestUpdate(ctx, in.data(), in.size());
 }
 
-void MessageDigest::final(BytesViewMut out) {
+void MessageDigest::final(std::span<unsigned char> out) {
   EVP_DigestFinal(ctx, out.data(), nullptr);
 }
 

@@ -18,8 +18,8 @@ struct Xxh64 : public Hash<Xxh64> {
   using Hash::update;
 
   auto init() -> Xxh64&;
-  auto update(BytesView in) -> Xxh64&;
-  void final(BytesViewMut out);
+  auto update(std::span<const unsigned char> in) -> Xxh64&;
+  void final(std::span<unsigned char> out);
   auto final() -> uint64_t;
 
   constexpr auto digest_size() const -> size_t {
@@ -27,7 +27,7 @@ struct Xxh64 : public Hash<Xxh64> {
   }
 
   auto operator()(ByteSequence auto&& in) -> uint64_t {
-    return init().update(to_bytes_view(in)).final();
+    return init().update(bytes_view(in)).final();
   }
 
 private:

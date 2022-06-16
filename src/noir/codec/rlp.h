@@ -15,7 +15,7 @@ NOIR_CODEC(rlp) {
 
 namespace detail {
   template<typename Stream>
-  void encode_bytes(datastream<Stream>& ds, BytesView s, unsigned char mod) {
+  void encode_bytes(datastream<Stream>& ds, std::span<const unsigned char> s, unsigned char mod) {
     auto nonzero = std::find_if(s.rbegin(), s.rend(), [](const auto& c) {
       if (c != 0)
         return true;
@@ -53,7 +53,7 @@ namespace detail {
   }
 
   template<typename Stream>
-  void decode_bytes(datastream<Stream>& ds, BytesViewMut s, unsigned char prefix, unsigned char mod) {
+  void decode_bytes(datastream<Stream>& ds, std::span<unsigned char> s, unsigned char prefix, unsigned char mod) {
     // decode a value less than 128 (0x80)
     if (prefix < 0x80) {
       s[0] = prefix;

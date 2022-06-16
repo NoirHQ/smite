@@ -17,8 +17,8 @@ struct Blake2b256 : public Hash<Blake2b256> {
   using Hash::update;
 
   auto init() -> Blake2b256&;
-  auto update(BytesView in) -> Blake2b256&;
-  void final(BytesViewMut out);
+  auto update(std::span<const unsigned char> in) -> Blake2b256&;
+  void final(std::span<unsigned char> out);
 
   constexpr auto digest_size() const -> size_t {
     return 32;

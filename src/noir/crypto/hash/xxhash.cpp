@@ -15,7 +15,7 @@ auto Xxh64::init() -> Xxh64& {
   return *this;
 }
 
-auto Xxh64::update(BytesView in) -> Xxh64& {
+auto Xxh64::update(std::span<const unsigned char> in) -> Xxh64& {
   if (!state) {
     init();
   }
@@ -23,7 +23,7 @@ auto Xxh64::update(BytesView in) -> Xxh64& {
   return *this;
 }
 
-void Xxh64::final(BytesViewMut out) {
+void Xxh64::final(std::span<unsigned char> out) {
   auto hash = XXH64_digest(&*state);
   std::memcpy(out.data(), (const unsigned char*)&hash, sizeof(decltype(hash)));
 }

@@ -16,8 +16,8 @@ struct Sha256 : public Hash<Sha256>, openssl::MessageDigest {
   using Hash::update;
 
   auto init() -> Sha256&;
-  auto update(BytesView in) -> Sha256&;
-  void final(BytesViewMut out);
+  auto update(std::span<const unsigned char> in) -> Sha256&;
+  void final(std::span<unsigned char> out);
 
   auto digest_size() const -> size_t;
 };

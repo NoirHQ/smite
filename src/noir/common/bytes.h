@@ -69,8 +69,8 @@ public:
     }
   }
 
-  template<typename T>
-  requires(ConvertibleTo<T, BytesView> || BytesViewConstructible<T>) BytesN(T&& bytes, bool canonical = true) {
+  BytesN(auto&& bytes, bool canonical = true) requires(
+    ConvertibleTo<decltype(bytes), std::span<const unsigned char>> || BytesViewConstructible<decltype(bytes)>) {
     if constexpr (N != std::dynamic_extent) {
       auto size = bytes.size();
       if (canonical && size != N) {

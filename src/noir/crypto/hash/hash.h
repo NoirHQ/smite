@@ -18,9 +18,7 @@ struct Hash {
   /// \param out output buffer
   void operator()(ByteSequence auto&& in, ByteSequence auto& out) {
     auto derived = static_cast<Derived*>(this);
-    auto in_view = BytesView{byte_pointer_cast(in.data()), in.size()};
-    auto out_view = BytesViewMut{byte_pointer_cast(out.data()), out.size()};
-    derived->init().update(in_view).final(out_view);
+    derived->init().update(bytes_view(in)).final(bytes_view(out));
   }
 
   /// \brief calculates and returns the hash value of input data
@@ -28,20 +26,19 @@ struct Hash {
   /// \return byte array containing hash
   auto operator()(ByteSequence auto&& in) {
     auto derived = static_cast<Derived*>(this);
-    auto in_view = BytesView{byte_pointer_cast(in.data()), in.size()};
-    return derived->init().update(in_view).final();
+    return derived->init().update(bytes_view(in)).final();
   }
 
   /// \brief updates the hash object with byte array
   auto update(BytesViewConstructible auto&& in) -> Derived& {
     auto derived = static_cast<Derived*>(this);
-    return derived->update(to_bytes_view(in));
+    return derived->update(bytes_view(in));
   }
 
   /// \brief stores hash value to output buffer
   void final(BytesViewConstructible auto& out) {
     auto derived = static_cast<Derived*>(this);
-    return derived->update(to_bytes_view(out));
+    derived->final(bytes_view(out));
   }
 
   /// \brief returns hash value

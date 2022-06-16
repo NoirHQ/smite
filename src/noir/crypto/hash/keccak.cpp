@@ -17,7 +17,7 @@ auto Keccak256::init() -> Keccak256& {
   return *this;
 }
 
-auto Keccak256::update(BytesView in) -> Keccak256& {
+auto Keccak256::update(std::span<const unsigned char> in) -> Keccak256& {
   if (!ctx) {
     init();
   }
@@ -25,7 +25,7 @@ auto Keccak256::update(BytesView in) -> Keccak256& {
   return *this;
 }
 
-void Keccak256::final(BytesViewMut out) {
+void Keccak256::final(std::span<unsigned char> out) {
   Keccak_HashFinal(&*ctx, (BitSequence*)out.data());
 }
 

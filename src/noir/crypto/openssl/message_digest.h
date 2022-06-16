@@ -14,8 +14,8 @@ struct MessageDigest {
   ~MessageDigest();
 
   void init(const EVP_MD* type);
-  void update(BytesView in);
-  void final(BytesViewMut out);
+  void update(std::span<const unsigned char> in);
+  void final(std::span<unsigned char> out);
   size_t digest_size(const EVP_MD* type) const;
 
 protected:
