@@ -60,6 +60,20 @@ struct canonical {
     ret.set_chain_id(chain_id);
     return ret;
   }
+
+  static ::tendermint::types::CanonicalProposal canonicalize_proposal_pb(
+    const std::string& chain_id, const ::tendermint::types::Proposal& pb) {
+    ::tendermint::types::CanonicalProposal ret;
+    ret.set_type(tendermint::types::SIGNED_MSG_TYPE_PROPOSAL);
+    ret.set_height(pb.height());
+    ret.set_round(pb.round());
+    ret.set_pol_round(pb.pol_round());
+    if (auto b = canonicalize_block_id(pb.block_id()); b)
+      ret.set_allocated_block_id(b.release());
+    *ret.mutable_timestamp() = pb.timestamp();
+    ret.set_chain_id(chain_id);
+    return ret;
+  }
 };
 
 } // namespace noir::consensus
