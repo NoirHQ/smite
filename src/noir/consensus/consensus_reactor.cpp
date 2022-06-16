@@ -6,6 +6,7 @@
 #include <noir/common/overloaded.h>
 #include <noir/consensus/consensus_reactor.h>
 #include <noir/core/codec.h>
+#include <tendermint/consensus/types.pb.h>
 
 namespace noir::consensus {
 
@@ -47,13 +48,6 @@ void consensus_reactor::process_peer_update(plugin_interface::peer_status_info_p
 }
 
 void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
-  if (info->broadcast) {
-    /* TODO: how to handle broadcast?
-     * need to check if msg is known (look up in a cache)
-     * if already seen one, discard
-     */
-  }
-
   auto from = info->from;
   auto to = info->broadcast ? "all" : info->to;
 
@@ -62,12 +56,33 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
     return;
   }
 
-  datastream<unsigned char> ds(info->message.data(), info->message.size());
-  p2p::cs_reactor_message msg;
-  ds >> msg;
+  // Use datastream // TODO : remove later
+  // datastream<unsigned char> ds(info->message.data(), info->message.size());
+  // p2p::cs_reactor_message cs_msg;
+  // ds >> cs_msg;
+
+  // Use protobuf
+  p2p::cs_reactor_message cs_msg;
+  switch (info->id) {
+  case p2p::State:
+    cs_msg = process_state_ch(info->message);
+    break;
+  case p2p::Data:
+    cs_msg = process_data_ch(info->message);
+    break;
+  case p2p::Vote:
+    cs_msg = process_vote_ch(info->message);
+    break;
+  case p2p::VoteSetBits:
+    cs_msg = process_vote_set_bits_ch(info->message);
+    break;
+  default:
+    wlog("unable to process message from peer: unknown channel_id=${channel_id}", ("channel_id", info->id));
+    return;
+  }
 
   dlog(fmt::format(
-    "[cs_reactor] recv msg. from={}, to={}, type={}, broadcast={}", from, to, msg.index(), info->broadcast));
+    "[cs_reactor] recv msg. from={}, to={}, type={}, broadcast={}", from, to, cs_msg.index(), info->broadcast));
   auto ps = get_peer_state(from);
   if (!ps) {
     wlog(fmt::format("unable to find peer_state for from='{}'", from));
@@ -171,7 +186,113 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
           ps->apply_vote_set_bits_message(msg, nullptr);
         }
       }},
-    msg);
+    cs_msg);
+}
+
+p2p::cs_reactor_message consensus_reactor::process_state_ch(const Bytes& msg) {
+  ::tendermint::consensus::Message pb_msg;
+  pb_msg.ParseFromArray(msg.data(), msg.size());
+  if (!pb_msg.IsInitialized()) {
+    elog("unable to parse envelop message: size=${size}", ("size", msg.size()));
+    return {};
+  }
+  switch (pb_msg.sum_case()) {
+  case tendermint::consensus::Message::kNewRoundStep: {
+    const auto& m = pb_msg.new_round_step();
+    return p2p::new_round_step_message{m.height(), m.round(), static_cast<p2p::round_step_type>(m.step()),
+      m.seconds_since_start_time(), m.last_commit_round()};
+  }
+  case tendermint::consensus::Message::kNewValidBlock: {
+    const auto& m = pb_msg.new_valid_block();
+    p2p::new_valid_block_message ret;
+    ret.height = m.height();
+    ret.round = m.round();
+    ret.block_part_set_header = *p2p::part_set_header::from_proto(m.block_part_set_header());
+    ret.block_parts = bit_array::from_proto(m.block_parts());
+    ret.is_commit = m.is_commit();
+    return ret;
+  }
+  case tendermint::consensus::Message::kHasVote: {
+    const auto& m = pb_msg.has_vote_();
+    return p2p::has_vote_message{m.height(), m.round(), static_cast<p2p::signed_msg_type>(m.type()), m.index()};
+  }
+  case tendermint::consensus::Message::kVoteSetMaj23: {
+    const auto& m = pb_msg.vote_set_maj23();
+    return p2p::vote_set_maj23_message{
+      m.height(), m.round(), static_cast<p2p::signed_msg_type>(m.type()), *p2p::block_id::from_proto(m.block_id())};
+  }
+  }
+  return {};
+}
+p2p::cs_reactor_message consensus_reactor::process_data_ch(const Bytes& msg) {
+  ::tendermint::consensus::Message pb_msg;
+  pb_msg.ParseFromArray(msg.data(), msg.size());
+  if (!pb_msg.IsInitialized()) {
+    elog("unable to parse envelop message: size=${size}", ("size", msg.size()));
+    return {};
+  }
+  switch (pb_msg.sum_case()) {
+  case tendermint::consensus::Message::kProposal: {
+    const auto& m = pb_msg.proposal().proposal(); // proposal within proposal
+    p2p::proposal_message ret;
+    ret.type = static_cast<p2p::signed_msg_type>(m.type());
+    ret.height = m.height();
+    ret.round = m.round();
+    ret.pol_round = m.pol_round();
+    ret.block_id_ = *p2p::block_id::from_proto(m.block_id());
+    ret.timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(m.timestamp());
+    ret.signature = m.signature();
+    return ret;
+  }
+  case tendermint::consensus::Message::kProposalPol: {
+    const auto& m = pb_msg.proposal_pol();
+    return p2p::proposal_pol_message{m.height(), m.proposal_pol_round(), bit_array::from_proto(m.proposal_pol())};
+  }
+  case tendermint::consensus::Message::kBlockPart: {
+    const auto& m = pb_msg.block_part();
+    p2p::block_part_message ret;
+    ret.height = m.height();
+    ret.round = m.round();
+    const auto& m_part = m.part();
+    ret.index = m_part.index();
+    ret.bytes_ = m_part.bytes();
+    ret.proof = *merkle::proof::from_proto(m_part.proof());
+    return ret;
+  }
+  }
+  return {};
+}
+p2p::cs_reactor_message consensus_reactor::process_vote_ch(const Bytes& msg) {
+  ::tendermint::consensus::Message pb_msg;
+  pb_msg.ParseFromArray(msg.data(), msg.size());
+  if (!pb_msg.IsInitialized()) {
+    elog("unable to parse envelop message: size=${size}", ("size", msg.size()));
+    return {};
+  }
+  if (pb_msg.sum_case() == tendermint::consensus::Message::kVote) {
+    const auto& m = pb_msg.vote();
+    return p2p::vote_message{*vote::from_proto(m.vote())};
+  }
+  return {};
+}
+p2p::cs_reactor_message consensus_reactor::process_vote_set_bits_ch(const Bytes& msg) {
+  ::tendermint::consensus::Message pb_msg;
+  pb_msg.ParseFromArray(msg.data(), msg.size());
+  if (!pb_msg.IsInitialized()) {
+    elog("unable to parse envelop message: size=${size}", ("size", msg.size()));
+    return {};
+  }
+  if (pb_msg.sum_case() == tendermint::consensus::Message::kVoteSetBits) {
+    const auto& m = pb_msg.vote_set_bits();
+    p2p::vote_set_bits_message ret;
+    ret.height = m.height();
+    ret.round = m.round();
+    ret.type = static_cast<p2p::signed_msg_type>(m.type());
+    ret.block_id_ = *p2p::block_id::from_proto(m.block_id());
+    ret.votes = bit_array::from_proto(m.votes());
+    return ret;
+  }
+  return {};
 }
 
 void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
@@ -453,19 +574,111 @@ void consensus_reactor::send_new_round_step_message(std::string peer_id) {
 }
 
 void consensus_reactor::transmit_new_envelope(
-  std::string from, std::string to, const p2p::cs_reactor_message& msg, bool broadcast, int priority) {
+  std::string from, std::string to, const p2p::cs_reactor_message& cs_msg, bool broadcast, int priority) {
   auto dest = broadcast ? "all" : to;
-  dlog(fmt::format("[cs_reactor] send msg: from={}, to={}, type={}, broadcast={}", from, dest, msg.index(), broadcast));
+  dlog(
+    fmt::format("[cs_reactor] send msg: from={}, to={}, type={}, broadcast={}", from, dest, cs_msg.index(), broadcast));
   auto new_env = std::make_shared<p2p::envelope>();
   new_env->from = from;
   new_env->to = to;
   new_env->broadcast = broadcast;
-  new_env->id = p2p::Consensus;
 
-  const uint32_t payload_size = encode_size(msg);
-  new_env->message.resize(payload_size);
-  datastream<unsigned char> ds(new_env->message.data(), payload_size);
-  ds << msg;
+  // Use datastream // TODO : remove later
+  // const uint32_t payload_size = encode_size(msg);
+  // new_env->message.resize(payload_size);
+  // datastream<unsigned char> ds(new_env->message.data(), payload_size);
+  // ds << msg;
+
+  // Use protobuf
+  ::tendermint::consensus::Message pb_msg;
+  std::visit(
+    overloaded{
+      ///
+      /*********************************************************************************************************/
+      [&](const p2p::new_round_step_message& msg) {
+        new_env->id = p2p::State;
+        auto m = pb_msg.mutable_new_round_step();
+        m->set_height(msg.height);
+        m->set_round(msg.round);
+        m->set_step(static_cast<uint32_t>(msg.step));
+        m->set_seconds_since_start_time(msg.seconds_since_start_time);
+        m->set_last_commit_round(msg.last_commit_round);
+      },
+      [&](const p2p::new_valid_block_message& msg) {
+        new_env->id = p2p::State;
+        auto m = pb_msg.mutable_new_valid_block();
+        m->set_height(msg.height);
+        m->set_round(msg.round);
+        m->set_allocated_block_part_set_header(p2p::part_set_header::to_proto(msg.block_part_set_header).release());
+        m->set_allocated_block_parts(bit_array::to_proto(*msg.block_parts).release());
+        m->set_is_commit(msg.is_commit);
+      },
+      [&](const p2p::proposal_message& msg) {
+        new_env->id = p2p::Data;
+        auto m = pb_msg.mutable_proposal();
+        auto pb_proposal = std::make_unique<::tendermint::types::Proposal>();
+        pb_proposal->set_type(static_cast<tendermint::types::SignedMsgType>(msg.type));
+        pb_proposal->set_height(msg.height);
+        pb_proposal->set_round(msg.round);
+        pb_proposal->set_pol_round(msg.pol_round);
+        pb_proposal->set_allocated_block_id(p2p::block_id::to_proto(msg.block_id_).release());
+        *pb_proposal->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(msg.timestamp);
+        pb_proposal->set_signature({msg.signature.begin(), msg.signature.end()});
+        m->set_allocated_proposal(pb_proposal.release());
+      },
+      [&](const p2p::proposal_pol_message& msg) {
+        new_env->id = p2p::Data;
+        auto m = pb_msg.mutable_proposal_pol();
+        m->set_height(msg.height);
+        m->set_proposal_pol_round(msg.proposal_pol_round);
+        m->set_allocated_proposal_pol(bit_array::to_proto(*msg.proposal_pol).release());
+      },
+      [&](const p2p::block_part_message& msg) {
+        new_env->id = p2p::Data;
+        auto m = pb_msg.mutable_block_part();
+        m->set_height(msg.height);
+        m->set_round(msg.round);
+        auto pb_part = std::make_unique<::tendermint::types::Part>();
+        pb_part->set_index(msg.index);
+        pb_part->set_bytes({msg.bytes_.begin(), msg.bytes_.end()});
+        pb_part->set_allocated_proof(merkle::proof::to_proto(msg.proof).release());
+        m->set_allocated_part(pb_part.release());
+      },
+      [&](const p2p::vote_message& msg) {
+        new_env->id = p2p::Vote;
+        auto m = pb_msg.mutable_vote();
+        m->set_allocated_vote(vote::to_proto(vote{msg}).release());
+      },
+      [&](const p2p::has_vote_message& msg) {
+        new_env->id = p2p::State;
+        auto m = pb_msg.mutable_has_vote_();
+        m->set_height(msg.height);
+        m->set_round(msg.round);
+        m->set_type(static_cast<tendermint::types::SignedMsgType>(msg.type));
+        m->set_index(msg.index);
+      },
+      [&](const p2p::vote_set_maj23_message& msg) {
+        new_env->id = p2p::State;
+        auto m = pb_msg.mutable_vote_set_maj23();
+        m->set_height(msg.height);
+        m->set_round(msg.round);
+        m->set_type(static_cast<tendermint::types::SignedMsgType>(msg.type));
+        m->set_allocated_block_id(p2p::block_id::to_proto(msg.block_id_).release());
+      },
+      [&](const p2p::vote_set_bits_message& msg) {
+        new_env->id = p2p::VoteSetBits;
+        auto m = pb_msg.mutable_vote_set_bits();
+        m->set_height(msg.height);
+        m->set_round(msg.round);
+        m->set_type(static_cast<tendermint::types::SignedMsgType>(msg.type));
+        m->set_allocated_block_id(p2p::block_id::to_proto(msg.block_id_).release());
+        m->set_allocated_votes(bit_array::to_proto(*msg.votes).release());
+      },
+      //[&](const auto& msg) {},
+    },
+    cs_msg);
+  new_env->message.resize(pb_msg.ByteSizeLong());
+  pb_msg.SerializeToArray(new_env->message.data(), pb_msg.ByteSizeLong());
 
   xmt_mq_channel.publish(priority, new_env);
 }

@@ -129,6 +129,10 @@ struct consensus_reactor {
   void process_peer_update(plugin_interface::peer_status_info_ptr info);
 
   void process_peer_msg(p2p::envelope_ptr info);
+  p2p::cs_reactor_message process_state_ch(const Bytes& msg);
+  p2p::cs_reactor_message process_data_ch(const Bytes& msg);
+  p2p::cs_reactor_message process_vote_ch(const Bytes& msg);
+  p2p::cs_reactor_message process_vote_set_bits_ch(const Bytes& msg);
 
   void gossip_data_routine(std::shared_ptr<peer_state> ps);
 

@@ -842,7 +842,10 @@ struct msg_handler {
       return;
     }
     switch (msg.id) {
-    case Consensus:
+    case State:
+    case Data:
+    case Vote:
+    case VoteSetBits:
       my_impl->cs_reactor_mq_channel.publish( ///< notify consensus reactor to take additional actions
         appbase::priority::medium, std::make_shared<envelope>(msg));
       break;

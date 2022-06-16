@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/bytes.h>
 #include <noir/common/for_each.h>
+#include <tendermint/libs/bits/types.pb.h>
 
 #include <algorithm>
 #include <memory>
@@ -209,8 +210,24 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
         i++;
       }
     }
-
     return ds;
+  }
+
+  static std::unique_ptr<::tendermint::libs::bits::BitArray> to_proto(const bit_array& b) {
+    auto ret = std::make_unique<::tendermint::libs::bits::BitArray>();
+    ret->set_bits(b.bits);
+    auto pb_elem = ret->elems();
+    for (auto e : b.elem)
+      pb_elem.Add(e);
+    return ret;
+  }
+
+  static std::shared_ptr<bit_array> from_proto(const ::tendermint::libs::bits::BitArray& pb) {
+    auto ret = std::make_shared<bit_array>();
+    ret->bits = pb.bits();
+    for (auto& e : pb.elems())
+      ret->elem.push_back(e);
+    return ret;
   }
 };
 
