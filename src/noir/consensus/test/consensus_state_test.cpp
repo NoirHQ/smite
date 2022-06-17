@@ -6,6 +6,7 @@
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/types/canonical.h>
+#include <noir/consensus/types/proposal.h>
 
 using namespace noir;
 using namespace noir::consensus;
@@ -64,13 +65,13 @@ TEST_CASE("consensus_state: Verify proposal signature", "[noir][consensus]") {
   noir::p2p::proposal_message proposal_{};
   proposal_.timestamp = get_time();
 
-  auto data_proposal1 = encode(canonical::canonicalize_proposal(proposal_));
+  auto data_proposal1 = proposal::proposal_sign_bytes("", *proposal::to_proto({proposal_}));
   // std::cout << "data_proposal1=" << to_hex(data_proposal1) << std::endl;
   // std::cout << "digest1=" << fc::Sha256::hash(data_proposal1).str() << std::endl;
   auto sig_org = local_priv_validator->sign_proposal(proposal_);
   // std::cout << "sig=" << std::string(proposal_.signature.begin(), proposal_.signature.end()) << std::endl;
 
-  auto data_proposal2 = encode(canonical::canonicalize_proposal(proposal_));
+  auto data_proposal2 = proposal::proposal_sign_bytes("", *proposal::to_proto({proposal_}));
   // std::cout << "data_proposal2=" << to_hex(data_proposal2) << std::endl;
   // std::cout << "digest2=" << fc::Sha256::hash(data_proposal2).str() << std::endl;
   auto result = local_priv_validator->get_pub_key().verify_signature(data_proposal2, proposal_.signature);

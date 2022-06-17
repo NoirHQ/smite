@@ -5,7 +5,7 @@
 //
 #include <noir/common/helper/go.h>
 #include <noir/consensus/consensus_state.h>
-#include <noir/consensus/types/canonical.h>
+#include <noir/consensus/types/proposal.h>
 #include <noir/core/codec.h>
 
 #include <appbase/application.hpp>
@@ -1040,8 +1040,8 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
   }
 
   // Verify signature
-  auto proposal_sign_bytes = encode(canonical::canonicalize_proposal(msg));
-  if (!rs.validators->get_proposer()->pub_key_.verify_signature(proposal_sign_bytes, msg.signature)) {
+  auto sign_bytes = proposal::proposal_sign_bytes("", *proposal::to_proto({msg}));
+  if (!rs.validators->get_proposer()->pub_key_.verify_signature(sign_bytes, msg.signature)) {
     dlog("set_proposal; error invalid proposal signature");
     return;
   }
@@ -1128,7 +1128,7 @@ bool consensus_state::add_proposal_block_part(p2p::block_part_message& msg, node
 Result<bool> consensus_state::try_add_vote(p2p::vote_message& msg, const node_id& peer_id) {
   auto vote_ = std::make_shared<vote>(vote{msg});
   auto [added, err] = add_vote(vote_, peer_id);
-  if (!err) {
+  if (err) {
     // If the vote height is off, we'll just ignore it,
     // But if it's a conflicting sig, add it to the cs.evpool.
     // If it's otherwise invalid, punish peer.
