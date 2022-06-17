@@ -31,7 +31,7 @@ std::shared_ptr<SecretConnection> SecretConnection::make_secret_connection(Bytes
   return sc;
 }
 
-std::optional<std::string> SecretConnection::shared_eph_pub_key(Bytes32& received_pub_key) {
+auto SecretConnection::shared_eph_pub_key(Bytes32& received_pub_key) -> noir::Result<void> {
   // By here, we have already exchanged eph_pub_keys with the other
   rem_eph_pub = received_pub_key;
 
@@ -49,13 +49,13 @@ std::optional<std::string> SecretConnection::shared_eph_pub_key(Bytes32& receive
   if (crypto_scalarmult(reinterpret_cast<unsigned char*>(dh_secret.data()),
         reinterpret_cast<const unsigned char*>(loc_eph_priv.data()),
         reinterpret_cast<const unsigned char*>(rem_eph_pub.data())) != 0) {
-    return "unable to compute dh_secret";
+    return Error("unable to compute dh_secret");
   }
 
   // Generate secret keys used for receiving, sending, challenging via HKDF-SHA2
   auto key = derive_secrets(dh_secret);
   if (key.size() < 96)
-    return "unable to derive secrets";
+    return Error("unable to derive secrets");
 
   if (loc_is_least) {
     recv_secret = Bytes32(std::span(key.data(), 32));
@@ -99,12 +99,12 @@ std::optional<std::string> SecretConnection::shared_eph_pub_key(Bytes32& receive
         reinterpret_cast<const unsigned char*>(chal_secret.data()),
         chal_secret.size(),
         reinterpret_cast<const unsigned char*>(loc_priv_key.data())) != 0)
-    return "unable to sign challenge";
+    return Error("unable to sign challenge");
   loc_signature = Bytes(sm, sm + smlen);
   return {};
 }
 
-std::optional<std::string> SecretConnection::shared_auth_sig(AuthSigMessage& received_msg) {
+auto SecretConnection::shared_auth_sig(AuthSigMessage& received_msg) -> noir::Result<void> {
   // By here, we have already exchanged auth_sig_message with the other
   rem_pub_key = received_msg.key;
 
@@ -116,7 +116,7 @@ std::optional<std::string> SecretConnection::shared_auth_sig(AuthSigMessage& rec
         reinterpret_cast<const unsigned char*>(received_msg.sig.data()),
         received_msg.sig.size(),
         reinterpret_cast<const unsigned char*>(rem_pub_key.data())) != 0)
-    return "unable to verify challenge";
+    return Error("unable to verify challenge");
   is_authorized = true;
   return {};
 }
@@ -142,7 +142,7 @@ Bytes SecretConnection::derive_secrets(Bytes32& dh_secret) {
   return {key, key + sizeof(key) / sizeof(key[0])};
 }
 
-auto SecretConnection::read(std::span<unsigned char>& data) -> asio::awaitable<Result<std::size_t>> {
+auto SecretConnection::read(std::span<unsigned char> data) -> asio::awaitable<Result<std::size_t>> {
   std::scoped_lock _{recv_mtx};
 
   // read off and update the recvBuffer, if non-empty
@@ -199,7 +199,7 @@ auto SecretConnection::read(std::span<unsigned char>& data) -> asio::awaitable<R
   co_return n;
 }
 
-auto SecretConnection::write(std::span<unsigned char>& data) -> asio::awaitable<std::tuple<std::size_t, Result<void>>> {
+auto SecretConnection::write(std::span<unsigned char> data) -> asio::awaitable<std::tuple<std::size_t, Result<void>>> {
   std::scoped_lock _{send_mtx};
 
   std::size_t n = 0;

@@ -21,8 +21,6 @@ struct MConnMessage {
   std::shared_ptr<noir::Bytes> payload;
 };
 
-using MConnMessagePtr = std::shared_ptr<MConnMessage>;
-
 class MConnConnection {
 public:
   MConnConnection(boost::asio::io_context& io_context,
@@ -35,12 +33,14 @@ public:
       channel_descs(channel_descs),
       receive_ch(io_context),
       error_ch(io_context, 1),
-      done_ch(io_context) {}
-  auto handshake(noir::Chan<noir::Done>& done, NodeInfo& node_info, noir::Bytes32& priv_key)
-    -> boost::asio::awaitable<Result<std::tuple<NodeInfo, std::shared_ptr<noir::Bytes>>>>;
-  auto send_message(noir::Chan<noir::Done>& done, ChannelId ch_id, std::shared_ptr<noir::Bytes>& msg)
+      close_ch(io_context) {}
+  auto handshake_inner(NodeInfo& node_info, noir::Bytes& priv_key)
+    -> boost::asio::awaitable<Result<std::tuple<std::shared_ptr<conn::MConnection>, NodeInfo, noir::Bytes>>>;
+  auto handshake(noir::Chan<std::monostate>& done, NodeInfo& node_info, noir::Bytes& priv_key)
+    -> boost::asio::awaitable<Result<std::tuple<NodeInfo, noir::Bytes>>>;
+  auto send_message(noir::Chan<std::monostate>& done, ChannelId ch_id, std::shared_ptr<noir::Bytes>& msg)
     -> boost::asio::awaitable<Result<void>>;
-  auto receive_message(noir::Chan<noir::Done>& done)
+  auto receive_message(noir::Chan<std::monostate>& done)
     -> boost::asio::awaitable<noir::Result<std::tuple<ChannelId, std::shared_ptr<noir::Bytes>>>>;
   auto remote_endpoint() -> std::string;
   auto close() -> noir::Result<void>;
@@ -52,9 +52,9 @@ private:
   std::vector<conn::ChannelDescriptorPtr> channel_descs;
   noir::Chan<MConnMessage> receive_ch;
   noir::Chan<noir::Error> error_ch;
-  noir::Chan<noir::Done> done_ch;
+  noir::Chan<std::monostate> close_ch;
 
-  std::unique_ptr<conn::MConnection> mconn; // set during Handshake()
+  std::shared_ptr<conn::MConnection> mconn; // set during Handshake()
 };
 
 // MConnTransportOptions sets options for MConnTransport.
@@ -77,19 +77,18 @@ public:
     : io_context(io_context), mconn_config(mconn_config), options(options), done_ch(io_context) {}
 
   auto listen(const std::string& endpoint) -> noir::Result<void>;
-  auto accept(noir::Chan<noir::Done>& done) -> boost::asio::awaitable<noir::Result<MConnConnection>>;
-  auto dial(noir::Chan<noir::Done>& done, const std::string& endpoint)
-    -> boost::asio::awaitable<noir::Result<MConnConnection>>;
+  auto accept(noir::Chan<std::monostate>& done) -> boost::asio::awaitable<noir::Result<MConnConnection>>;
+  auto dial(const std::string& endpoint) -> boost::asio::awaitable<noir::Result<MConnConnection>>;
   auto close() -> noir::Result<void>;
   void add_channel_descriptor(std::vector<conn::ChannelDescriptorPtr>& channel_descs);
-  auto validate_endpoint(const std::string& endpoint) -> noir::Result<void>;
+  static auto validate_endpoint(const std::string& endpoint) -> noir::Result<void>;
 
 private:
   boost::asio::io_context& io_context;
   MConnTransportOptions options;
   conn::MConnConfig mconn_config;
   std::vector<conn::ChannelDescriptorPtr> channel_descs;
-  noir::Chan<noir::Done> done_ch;
+  noir::Chan<std::monostate> done_ch;
   std::shared_ptr<noir::net::TcpListener> listener;
 };
 

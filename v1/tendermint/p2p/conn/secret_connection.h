@@ -49,17 +49,19 @@ struct AuthSigMessage {
 class SecretConnection {
 public:
   static auto make_secret_connection(noir::Bytes& loc_priv_key) -> std::shared_ptr<SecretConnection>;
-  auto shared_eph_pub_key(noir::Bytes32& received_pub_key) -> std::optional<std::string>;
-  auto shared_auth_sig(AuthSigMessage& received_msg) -> std::optional<std::string>;
+  auto shared_eph_pub_key(noir::Bytes32& received_pub_key) -> noir::Result<void>;
+  auto shared_auth_sig(AuthSigMessage& received_msg) -> noir::Result<void>;
   auto derive_secrets(noir::Bytes32& dh_secret) -> noir::Bytes;
-  auto read(std::span<unsigned char>& data) -> boost::asio::awaitable<noir::Result<std::size_t>>;
-  auto write(std::span<unsigned char>& msg) -> boost::asio::awaitable<std::tuple<std::size_t, noir::Result<void>>>;
+  auto read(std::span<unsigned char> data) -> boost::asio::awaitable<noir::Result<std::size_t>>;
+  auto write(std::span<unsigned char> msg) -> boost::asio::awaitable<std::tuple<std::size_t, noir::Result<void>>>;
 
 public:
   bool is_authorized{};
 
   noir::Bytes loc_pub_key;
   noir::Bytes loc_signature;
+
+  noir::Bytes rem_pub_key;
 
   noir::Bytes32 loc_eph_pub;
   noir::Bytes32 recv_secret;
@@ -68,7 +70,6 @@ public:
 
 private:
   noir::Bytes loc_priv_key;
-  noir::Bytes rem_pub_key; // other's pub key
 
   noir::Bytes32 loc_eph_priv;
   noir::Bytes32 rem_eph_pub; // other's ephemeral pub key

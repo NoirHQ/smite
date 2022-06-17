@@ -9,10 +9,10 @@
 #include <noir/common/ticker.h>
 #include <noir/common/types.h>
 #include <noir/core/core.h>
-#include <noir/net/conn.h>
 #include <noir/net/tcp_conn.h>
 #include <tendermint/core/core.h>
 #include <tendermint/p2p/conn.pb.h>
+#include <tendermint/p2p/conn/secret_connection.h>
 
 namespace tendermint::p2p::conn {
 
@@ -53,8 +53,6 @@ using ChannelDescriptorPtr = std::shared_ptr<ChannelDescriptor>;
 using BytesPtr = std::shared_ptr<noir::Bytes>;
 
 namespace detail {
-  auto serialize_packet(Packet& msg) -> noir::Bytes;
-
   struct LastMsgRecv {
     std::mutex mtx;
     noir::Time at;
@@ -121,11 +119,49 @@ private:
 
 class MConnection {
 public:
-  MConnection(asio::io_context& io_context,
+  static auto new_mconnection_with_config(asio::io_context& io_context,
+    std::shared_ptr<SecretConnection> conn,
     std::vector<ChannelDescriptorPtr>& ch_descs,
-    std::function<void(noir::Chan<noir::Done>& done, ChannelId channel_id, noir::Bytes msg_bytes)>&& on_receive,
-    std::function<void(noir::Chan<noir::Done>& done, noir::Error error)>&& on_error,
-    MConnConfig config = MConnConfig{})
+    std::function<boost::asio::awaitable<void>(ChannelId channel_id, std::shared_ptr<noir::Bytes> payload)>&&
+      on_receive,
+    std::function<boost::asio::awaitable<void>(noir::Error error)>&& on_error,
+    MConnConfig config = MConnConfig{}) -> std::shared_ptr<MConnection> {
+    return std::make_shared<MConnection>(io_context,
+      conn,
+      ch_descs,
+      std::move(on_receive),
+      std::move(on_error),
+      config);
+  }
+
+  void start(Chan<noir::Done>& done);
+  void set_recv_last_msg_at(noir::Time&& t);
+  auto get_last_message_at() -> noir::Time;
+  auto stop_services() -> bool;
+  void stop();
+  auto string() -> std::string;
+  auto flush() -> asio::awaitable<void>;
+  auto send(ChannelId ch_id, BytesPtr msg_bytes) -> asio::awaitable<Result<bool>>;
+  auto send_routine(Chan<noir::Done>& done) -> asio::awaitable<noir::Result<void>>;
+  auto send_some_packet_msgs(Chan<noir::Done>& done) -> asio::awaitable<Result<bool>>;
+  auto send_packet_msg(Chan<noir::Done>& done) -> asio::awaitable<Result<bool>>;
+  auto recv_routine(Chan<noir::Done>& done) -> asio::awaitable<noir::Result<void>>;
+  auto stop_for_error(const noir::Error& err) -> boost::asio::awaitable<void>;
+
+  static auto calc_max_packet_msg_size(std::size_t max_packet_msg_payload_size) -> std::size_t {
+    PacketMsg msg{};
+    msg.set_channel_id(1);
+    msg.set_eof(true);
+    msg.set_data(std::string(max_packet_msg_payload_size, ' '));
+    return msg.ByteSizeLong();
+  }
+  MConnection(asio::io_context& io_context,
+    std::shared_ptr<SecretConnection> conn,
+    std::vector<ChannelDescriptorPtr>& ch_descs,
+    std::function<boost::asio::awaitable<void>(ChannelId channel_id, std::shared_ptr<noir::Bytes> payload)>&&
+      on_receive,
+    std::function<boost::asio::awaitable<void>(noir::Error error)>&& on_error,
+    MConnConfig config)
     : io_context(io_context),
       config(config),
       quit_send_routine_ch(io_context),
@@ -142,29 +178,6 @@ public:
     for (auto& desc : ch_descs) {
       channels_idx[desc->id] = std::make_unique<detail::Channel>(io_context, desc, config.max_packet_msg_payload_size);
     }
-  }
-
-  void set_conn(std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>&& tcp_conn);
-  void start(Chan<noir::Done>& done);
-  void set_recv_last_msg_at(noir::Time&& t);
-  auto get_last_message_at() -> noir::Time;
-  auto stop_services() -> bool;
-  void stop();
-  auto string() -> std::string;
-  auto flush() -> asio::awaitable<void>;
-  auto send(ChannelId ch_id, BytesPtr msg_bytes) -> asio::awaitable<Result<bool>>;
-  auto send_routine(Chan<noir::Done>& done) -> asio::awaitable<void>;
-  auto send_some_packet_msgs(Chan<noir::Done>& done) -> asio::awaitable<Result<bool>>;
-  auto send_packet_msg(Chan<noir::Done>& done) -> asio::awaitable<Result<bool>>;
-  auto recv_routine(Chan<noir::Done>& done) -> asio::awaitable<void>;
-  void stop_for_error(Chan<noir::Done>& done, const noir::Error& err);
-
-  static auto calc_max_packet_msg_size(std::size_t max_packet_msg_payload_size) -> std::size_t {
-    PacketMsg msg{};
-    msg.set_channel_id(1);
-    msg.set_eof(true);
-    msg.set_data(std::string(max_packet_msg_payload_size, ' '));
-    return msg.ByteSizeLong();
   }
 
 private:
@@ -196,8 +209,8 @@ private:
   noir::Time created;
   std::size_t max_packet_msg_size;
 
-  std::function<void(noir::Chan<noir::Done>& done, ChannelId channel_id, noir::Bytes msg_bytes)> on_receive;
-  std::function<void(noir::Chan<noir::Done>& done, noir::Error error)> on_error;
+  std::function<boost::asio::awaitable<void>(ChannelId channel_id, std::shared_ptr<noir::Bytes> msg_bytes)> on_receive;
+  std::function<boost::asio::awaitable<void>(noir::Error error)> on_error;
 
   const std::size_t num_batch_packet_msgs = 10;
   constexpr static std::chrono::milliseconds update_stats_interval{2000};
