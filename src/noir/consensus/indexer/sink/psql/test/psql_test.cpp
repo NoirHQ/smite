@@ -19,7 +19,7 @@ using namespace noir::consensus::indexer;
 using namespace std::chrono_literals;
 
 constexpr auto conn_str = "postgresql://noir:1234@127.0.0.1/postgres?sslmode=disable";
-constexpr auto chain_id = "my_chain";
+constexpr auto chain_id = "test_chain";
 
 bool table_exists(std::string table_name) {
   try {
