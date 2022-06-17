@@ -15,7 +15,7 @@ TEST_CASE("Varint", "[noir][common]") {
   std::array<unsigned char, 10> buffer;
 
   SECTION("leb128 - uint32_t") {
-    auto tests = std::to_array<std::pair<uint32_t, std::string_view>>({
+    auto tests = std::to_array<std::pair<uint32_t, std::string>>({
       {0, "00"},
       {1, "01"},
       {624485, "e58e26"},
@@ -61,7 +61,7 @@ TEST_CASE("Varint", "[noir][common]") {
   }
 
   SECTION("leb128 - uint64_t") {
-    auto tests = std::to_array<std::pair<uint64_t, std::string_view>>({
+    auto tests = std::to_array<std::pair<uint64_t, std::string>>({
       {0, "00"},
       {1, "01"},
       {0x7fff'ffff'ffff'ffffull, "ffffffffffffffff7f"},
@@ -91,7 +91,7 @@ TEST_CASE("Varint", "[noir][common]") {
   }
 
   SECTION("leb128 - int32_t") {
-    auto tests = std::to_array<std::pair<int32_t, std::string_view>>({
+    auto tests = std::to_array<std::pair<int32_t, std::string>>({
       {0, "00"},
       {1, "01"},
       {2'147'483'647, "ffffffff07"},
@@ -107,7 +107,7 @@ TEST_CASE("Varint", "[noir][common]") {
   }
 
   SECTION("zigzag - int32_t") {
-    auto tests = std::to_array<std::pair<int32_t, std::string_view>>({
+    auto tests = std::to_array<std::pair<int32_t, std::string>>({
       {0, "00"},
       {-1, "01"},
       {1, "02"},

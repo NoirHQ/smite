@@ -5,7 +5,6 @@ include(cmake/CachedLibs.cmake)
 # add subdirectories if cached libs not found
 add_subdirectory_if(softfloat NOT TARGET softfloat)
 add_subdirectory_if(appbase NOT TARGET appbase)
-add_subdirectory_if(Catch2 NOT TARGET Catch2)
 
 # websocketpp in conan requires the specific version of boost and other dependencies.
 # Let's include as header-only library here.
@@ -33,9 +32,3 @@ set_target_properties(sodium PROPERTIES IMPORTED_GLOBAL TRUE)
 
 set_target_properties(appbase PROPERTIES DEBUG_POSTFIX "")
 set_target_properties(fc PROPERTIES DEBUG_POSTFIX "")
-if(TARGET Catch2)
-  set_target_properties(Catch2 PROPERTIES DEBUG_POSTFIX "")
-endif()
-if(TARGET Catch2WithMain)
-  set_target_properties(Catch2WithMain PROPERTIES DEBUG_POSTFIX "")
-endif()
