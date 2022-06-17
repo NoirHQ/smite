@@ -66,7 +66,7 @@ std::optional<std::string> verify_commit_single(const std::string& chain_id_,
 
     auto vote_ = commit_->get_vote(i);
     vote_->block_id_ = commit_->my_block_id; // TODO: is this right? [Sam: added 20220313]
-    vote_sign_bytes = vote::vote_sign_bytes("" /*chain_id_*/, *vote::to_proto(*vote_));
+    vote_sign_bytes = vote::vote_sign_bytes(chain_id_, *vote::to_proto(*vote_));
     if (!val.pub_key_.verify_signature(vote_sign_bytes, commit_sig_.signature))
       return fmt::format("verification failed: wrong signature - index={}", i);
 

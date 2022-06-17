@@ -1344,7 +1344,7 @@ std::optional<vote> consensus_state::sign_vote(p2p::signed_msg_type msg_type, By
     timeout = std::chrono::seconds(1);
   }
 
-  local_priv_validator->sign_vote(vote_);
+  local_priv_validator->sign_vote(local_state.chain_id, vote_);
   // vote_.signature = v.signature; // TODO: remove; no need as vote_.signature is already updated
   // vote_.timestamp = v.timestamp; // TODO: need to implement inside sign_vote
   return vote_;

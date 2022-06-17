@@ -220,9 +220,9 @@ bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step)
   return true;
 }
 
-bool file_pv::sign_vote_internal(noir::consensus::vote& vote) {
+bool file_pv::sign_vote_internal(const std::string& chain_id, noir::consensus::vote& vote) {
   return sign_internal<noir::consensus::vote>(
-    vote, vote::vote_sign_bytes("", *vote::to_proto(vote)), *this, vote_to_step(vote));
+    vote, vote::vote_sign_bytes(chain_id, *vote::to_proto(vote)), *this, vote_to_step(vote));
 }
 
 bool file_pv::sign_proposal_internal(const std::string& chain_id, noir::p2p::proposal_message& msg) {
