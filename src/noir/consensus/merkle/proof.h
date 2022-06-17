@@ -41,9 +41,9 @@ struct proof {
     ret->set_total(p.total);
     ret->set_index(p.index);
     ret->set_leaf_hash({p.leaf_hash.begin(), p.leaf_hash.end()});
-    auto pb_aunts = ret->aunts();
+    auto pb_aunts = ret->mutable_aunts();
     for (auto& aunt : p.aunts)
-      pb_aunts.Add(aunt.begin(), aunt.end());
+      pb_aunts->Add(aunt.begin(), aunt.end());
     return ret;
   }
 

@@ -216,9 +216,9 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   static std::unique_ptr<::tendermint::libs::bits::BitArray> to_proto(const bit_array& b) {
     auto ret = std::make_unique<::tendermint::libs::bits::BitArray>();
     ret->set_bits(b.bits);
-    auto pb_elem = ret->elems();
+    auto pb_elem = ret->mutable_elems();
     for (auto e : b.elem)
-      pb_elem.Add(e);
+      pb_elem->Add(e);
     return ret;
   }
 
