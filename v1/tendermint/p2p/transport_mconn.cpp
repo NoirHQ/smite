@@ -249,9 +249,10 @@ auto MConnTransport::accept(Chan<std::monostate>& done) -> asio::awaitable<Resul
       if (res.has_error()) {
         co_await (done.async_receive(use_awaitable) ||
           err_ch.async_send(boost::system::error_code{}, res.error(), use_awaitable));
+      } else {
+        co_await (done.async_receive(use_awaitable) ||
+          con_ch.async_send(boost::system::error_code{}, res.value(), use_awaitable));
       }
-      co_await (done.async_receive(use_awaitable) ||
-        con_ch.async_send(boost::system::error_code{}, res.value(), use_awaitable));
     },
     detached);
 
