@@ -15,7 +15,6 @@
 
 #include <boost/endian/detail/intrinsic.hpp>
 
-#include <fc/crypto/base64.hpp>
 #include <fc/io/datastream.hpp>
 #include <fc/io/raw.hpp>
 #include <fmt/core.h>

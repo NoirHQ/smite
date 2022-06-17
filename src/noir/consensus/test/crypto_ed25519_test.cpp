@@ -6,7 +6,7 @@
 #include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
 #include <noir/consensus/crypto.h>
-#include <fc/crypto/base64.hpp>
+#include <cppcodec/base64_default_rfc4648.hpp>
 
 extern "C" {
 #include <sodium.h>
@@ -30,11 +30,11 @@ TEST_CASE("crypto: sign and validate ed25519", "[noir][consensus]") {
 
 TEST_CASE("crypto: encode keys", "[noir][consensus]") {
   auto priv_key_str =
-    fc::base64_decode("i1QCJs9d74qK70C8aemx0FfjJCSa/UxkwIUGaS5T5IC1vmuNDpE1j3OD3oXDD2ilutJzr9+pU5JNtelPYKC3yA==");
+    base64::decode("i1QCJs9d74qK70C8aemx0FfjJCSa/UxkwIUGaS5T5IC1vmuNDpE1j3OD3oXDD2ilutJzr9+pU5JNtelPYKC3yA==");
   priv_key priv_key_{.key = Bytes(priv_key_str.begin(), priv_key_str.end())};
   auto pub_key_ = priv_key_.get_pub_key();
   std::string addr = to_hex(pub_key_.address());
   std::transform(addr.begin(), addr.end(), addr.begin(), ::toupper);
-  CHECK(fc::base64_encode(pub_key_.key.data(), pub_key_.key.size()) == "tb5rjQ6RNY9zg96Fww9opbrSc6/fqVOSTbXpT2Cgt8g=");
+  CHECK(base64::encode(pub_key_.key.data(), pub_key_.key.size()) == "tb5rjQ6RNY9zg96Fww9opbrSc6/fqVOSTbXpT2Cgt8g=");
   CHECK(addr == "BEB5FACCA0E17CF6C63DED5475A6E266120E692A");
 }

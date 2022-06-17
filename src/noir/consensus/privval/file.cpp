@@ -8,11 +8,12 @@
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/types/canonical.h>
 #include <noir/consensus/types/proposal.h>
-#include <fc/crypto/base64.hpp>
-#include <fc/variant_object.hpp>
 
 #include <noir/common/helper/variant.h>
 #include <noir/core/codec.h>
+
+#include <cppcodec/base64_default_rfc4648.hpp>
+#include <fc/variant_object.hpp>
 
 namespace noir::consensus::privval {
 namespace fs = std::filesystem;
@@ -35,9 +36,9 @@ void file_pv_key::save() {
   // TODO: save file in thread safe context (eg.tendermint tempfile)
   // https://pkg.go.dev/github.com/tendermint/tendermint/internal/libs/tempfile
   file_pv_key_json_obj json_obj;
-  json_obj.priv_key.value = fc::base64_encode(priv_key.key.data(), priv_key.key.size());
+  json_obj.priv_key.value = base64::encode(priv_key.key.data(), priv_key.key.size());
   auto pub_key_ = priv_key.get_pub_key();
-  json_obj.pub_key.value = fc::base64_encode(pub_key_.key.data(), pub_key_.key.size());
+  json_obj.pub_key.value = base64::encode(pub_key_.key.data(), pub_key_.key.size());
   std::string addr = to_hex(pub_key_.address());
   std::transform(addr.begin(), addr.end(), addr.begin(), ::toupper);
   json_obj.address = addr;
@@ -52,7 +53,7 @@ bool file_pv_key::load(const fs::path& key_file_path, file_pv_key& priv_key) {
   fc::variant obj = fc::json::from_file(key_file_path.string());
   file_pv_key_json_obj json_obj;
   fc::from_variant(obj, json_obj);
-  auto priv_key_str = fc::base64_decode(json_obj.priv_key.value);
+  auto priv_key_str = base64::decode(json_obj.priv_key.value);
   priv_key.priv_key.key = Bytes(priv_key_str.begin(), priv_key_str.end());
   priv_key.file_path = key_file_path.string();
   return true;
@@ -199,7 +200,7 @@ bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step)
   // If they only differ by timestamp, use last timestamp and signature
   // Otherwise, return error
   if (same_hrs.value()) {
-    auto decode_sig = fc::base64_decode(lss.signature);
+    auto decode_sig = base64::decode(lss.signature);
     if (sign_bytes == lss.signbytes) {
       obj.signature = {decode_sig.begin(), decode_sig.end()};
     } else if (check_only_differ_by_timestamp(obj, lss.signbytes, sign_bytes, timestamp)) {
@@ -215,7 +216,7 @@ bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step)
   // It passed the checks. Sign the vote
   auto sig = key.priv_key.sign(sign_bytes);
   pv.save_signed(height, round, step, sign_bytes, sig);
-  auto decode_sig = fc::base64_decode(lss.signature);
+  auto decode_sig = base64::decode(lss.signature);
   obj.signature = {decode_sig.begin(), decode_sig.end()};
   return true;
 }
@@ -234,7 +235,7 @@ void file_pv::save_signed(int64_t height, int32_t round, sign_step step, const B
   last_sign_state.height = height;
   last_sign_state.round = round;
   last_sign_state.step = step;
-  last_sign_state.signature = fc::base64_encode(sig.data(), sig.size());
+  last_sign_state.signature = base64::encode(sig.data(), sig.size());
   last_sign_state.signbytes = sign_bytes;
   last_sign_state.save();
 }

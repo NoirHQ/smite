@@ -7,7 +7,7 @@
 #include <noir/consensus/types/node_key.h>
 #include <noir/crypto/rand.h>
 
-#include <fc/crypto/base64.hpp>
+#include <cppcodec/base64_default_rfc4648.hpp>
 #include <fc/io/json.hpp>
 #include <fc/variant_object.hpp>
 
@@ -29,7 +29,7 @@ std::shared_ptr<node_key> node_key::load_node_key(const std::filesystem::path& f
     fc::variant obj = fc::json::from_file(file_path.string());
     fc::from_variant(obj, json_obj);
     key = std::make_shared<node_key>();
-    auto key_str = fc::base64_decode(json_obj.priv_key.value);
+    auto key_str = base64::decode(json_obj.priv_key.value);
     key->priv_key = Bytes(key_str.begin(), key_str.end());
     key->node_id = node_id_from_pub_key(key->get_pub_key());
   } catch (...) {
@@ -52,7 +52,7 @@ void node_key::save_as(const std::filesystem::path& file_path) {
     std::filesystem::create_directories(dir_path);
   node_key_json_obj json_obj;
   json_obj.priv_key.type = "tendermint/PrivKeyEd25519";
-  json_obj.priv_key.value = fc::base64_encode(priv_key.data(), priv_key.size());
+  json_obj.priv_key.value = base64::encode(priv_key.data(), priv_key.size());
   fc::variant vo;
   fc::to_variant<node_key_json_obj>(json_obj, vo);
   fc::json::save_to_file(vo, file_path);
