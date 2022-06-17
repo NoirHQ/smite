@@ -354,12 +354,12 @@ struct evidence_list {
 
   static Result<std::unique_ptr<::tendermint::types::EvidenceList>> to_proto(const evidence_list& evs) {
     auto ret = std::make_unique<::tendermint::types::EvidenceList>();
-    auto evi = ret->evidence();
+    auto evi = ret->mutable_evidence();
     for (auto& ev : evs.list) {
       auto pb = evidence::to_proto(*ev);
       if (!pb)
         return pb.error();
-      evi.AddAllocated(pb.value().release());
+      evi->AddAllocated(pb.value().release());
     }
     return ret;
   }
