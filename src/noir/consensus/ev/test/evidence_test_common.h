@@ -95,7 +95,7 @@ inline std::shared_ptr<vote> make_vote(mock_pv& val,
   ret->type = noir::p2p::Prevote;
   ret->block_id_ = block_id_;
   ret->timestamp = time;
-  val.sign_vote(*ret);
+  val.sign_vote(chain_id, *ret);
   return ret;
 }
 

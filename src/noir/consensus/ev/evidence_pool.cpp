@@ -202,9 +202,9 @@ Result<void> evidence_pool::verify_duplicate_vote(
 
   auto vote_a = vote::to_proto(*ev.vote_a);
   auto vote_b = vote::to_proto(*ev.vote_b);
-  if (!pub_key_.verify_signature(vote::vote_sign_bytes("" /*chain_id*/, *vote_a), ev.vote_a->signature))
+  if (!pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, *vote_a), ev.vote_a->signature))
     return Error::format("verifying vote_a: invalid signature");
-  if (!pub_key_.verify_signature(vote::vote_sign_bytes("" /*chain_id*/, *vote_b), ev.vote_b->signature))
+  if (!pub_key_.verify_signature(vote::vote_sign_bytes(chain_id, *vote_b), ev.vote_b->signature))
     return Error::format("verifying vote_b: invalid signature");
   return success();
 }

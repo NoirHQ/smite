@@ -173,8 +173,8 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \brief signs a canonical representation of the vote, along with the chainID
   /// \param[in] vote_
   /// \return
-  std::optional<std::string> sign_vote(noir::consensus::vote& vote) override {
-    if (!sign_vote_internal(vote)) {
+  std::optional<std::string> sign_vote(const std::string& chain_id, noir::consensus::vote& vote) override {
+    if (!sign_vote_internal(chain_id, vote)) {
       return "error signing vote";
     }
     return {};
@@ -183,7 +183,8 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \brief signs a canonical representation of the proposal, along with the chainID
   /// \param[in] proposal_
   /// \return
-  std::optional<std::string> sign_proposal(const std::string& chain_id, noir::p2p::proposal_message& proposal) override {
+  std::optional<std::string> sign_proposal(
+    const std::string& chain_id, noir::p2p::proposal_message& proposal) override {
     if (!sign_proposal_internal(chain_id, proposal)) {
       return "error signing proposal";
     }
@@ -226,7 +227,7 @@ private:
   /// vote hit the WAL).
   /// \param[in] vote
   /// \return true on success, false otherwise
-  bool sign_vote_internal(noir::consensus::vote& vote);
+  bool sign_vote_internal(const std::string& chain_id, noir::consensus::vote& vote);
 
   /// \brief signProposal checks if the proposal is good to sign and sets the proposal signature.
   /// It may need to set the timestamp as well if the proposal is otherwise the same as

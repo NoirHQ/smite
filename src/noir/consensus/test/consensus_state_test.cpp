@@ -11,6 +11,8 @@
 using namespace noir;
 using namespace noir::consensus;
 
+constexpr auto test_chain_id = "test_chain";
+
 TEST_CASE("consensus_state: Proposer Selection 0", "[noir][consensus]") {
   auto local_config = config_setup();
   auto [cs1, vss] = rand_cs(local_config, 1);
@@ -86,13 +88,13 @@ TEST_CASE("consensus_state: Verify vote signature", "[noir][consensus]") {
   vote vote_{};
   vote_.timestamp = get_time();
 
-  auto data_vote1 = vote::vote_sign_bytes("", *vote::to_proto(vote_));
+  auto data_vote1 = vote::vote_sign_bytes(test_chain_id, *vote::to_proto(vote_));
   // std::cout << "data_vote1=" << to_hex(data_vote1) << std::endl;
   // std::cout << "digest1=" << fc::Sha256::hash(data_vote1).str() << std::endl;
-  auto sig_org = local_priv_validator->sign_vote(vote_);
+  auto sig_org = local_priv_validator->sign_vote(test_chain_id, vote_);
   // std::cout << "sig=" << std::string(vote_.signature.begin(), vote_.signature.end()) << std::endl;
 
-  auto data_vote2 = vote::vote_sign_bytes("", *vote::to_proto(vote_));
+  auto data_vote2 = vote::vote_sign_bytes(test_chain_id, *vote::to_proto(vote_));
   // std::cout << "data_vote2=" << to_hex(data_vote2) << std::endl;
   // std::cout << "digest2=" << fc::Sha256::hash(data_vote2).str() << std::endl;
   auto result = local_priv_validator->get_pub_key().verify_signature(data_vote2, vote_.signature);
