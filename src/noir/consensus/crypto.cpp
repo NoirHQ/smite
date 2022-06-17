@@ -5,7 +5,6 @@
 //
 #include <noir/consensus/common.h>
 #include <noir/consensus/crypto.h>
-#include <fc/crypto/base64.hpp>
 
 extern "C" {
 #include <sodium.h>

@@ -7,7 +7,7 @@
 #include <noir/common/time.h>
 #include <noir/consensus/types/genesis.h>
 
-#include <fc/crypto/base64.hpp>
+#include <cppcodec/base64_default_rfc4648.hpp>
 #include <fc/io/json.hpp>
 #include <fc/variant_object.hpp>
 #include <fmt/core.h>
@@ -36,7 +36,7 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
     fc::from_variant(obj["validators"], vals);
     for (auto& val : vals) {
       auto addr = from_hex(val.address);
-      auto pub_key_str = fc::base64_decode(val.pub_key.value);
+      auto pub_key_str = base64::decode(val.pub_key.value);
       ::noir::consensus::pub_key pub_key_{.key = Bytes{pub_key_str.begin(), pub_key_str.end()}};
       gen_doc->validators.push_back(genesis_validator{
         .address = Bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});

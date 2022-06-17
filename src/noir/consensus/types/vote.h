@@ -320,7 +320,7 @@ struct vote_set_reader {
     else
       is_commit = vote_set_.maj23.has_value();
     type = vote_set_.signed_msg_type_;
-    size = vote_set_.val_set->size();
+    size = vote_set_.val_set ? vote_set_.val_set->size() : 0;
     votes = vote_set_.votes;
   }
 

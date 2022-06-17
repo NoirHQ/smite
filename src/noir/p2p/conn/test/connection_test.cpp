@@ -9,7 +9,6 @@
 #include <noir/p2p/conn/merlin.h>
 #include <noir/p2p/conn/secret_connection.h>
 
-//#include <fc/crypto/base64.hpp>
 #include <cppcodec/base64_default_rfc4648.hpp>
 
 extern "C" {
