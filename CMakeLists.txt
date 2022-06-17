@@ -43,6 +43,7 @@ endif()
 include(${CMAKE_CURRENT_BINARY_DIR}/conan.cmake)
 
 set(CONAN_PACKAGES
+  catch2/3.0.1
   cppcodec/0.2
   fmt/8.1.1
   libb2/20190723
@@ -83,6 +84,7 @@ if(APPLE)
   set(OPENSSL_ROOT_DIR "${BREW_ROOT}/openssl" CACHE STRING "openssl root directory")
 endif()
 
+find_package(Catch2)
 find_package(Boost REQUIRED)
 find_package(cppcodec REQUIRED)
 find_package(fmt REQUIRED)

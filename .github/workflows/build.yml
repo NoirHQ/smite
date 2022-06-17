@@ -30,15 +30,6 @@ jobs:
         with:
           path: build/libs/appbase/libappbase.a
           key: ${{ runner.os }}-appbase-${{ steps.appbase-cache.outputs.version }}
-      # restore cache (Catch2)
-      - id: Catch2-cache
-        run: echo "::set-output name=version::$(git submodule status | awk '/Catch2/{ print $1 }')"
-      - uses: actions/cache@v2
-        with:
-          path: |
-            build/libs/Catch2/src/libCatch2.a
-            build/libs/Catch2/src/libCatch2Main.a
-          key: ${{ runner.os }}-Catch2-${{ steps.Catch2-cache.outputs.version }}
       # restore cache (softfloat)
       - id: softfloat-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/softfloat/{ print $1 }')"
@@ -73,15 +64,6 @@ jobs:
         with:
           path: build/libs/appbase/libappbase.a
           key: ${{ runner.os }}-appbase-${{ steps.appbase-cache.outputs.version }}
-      # restore cache (Catch2)
-      - id: Catch2-cache
-        run: echo "::set-output name=version::$(git submodule status | awk '/Catch2/{ print $1 }')"
-      - uses: actions/cache@v2
-        with:
-          path: |
-            build/libs/Catch2/src/libCatch2.a
-            build/libs/Catch2/src/libCatch2Main.a
-          key: ${{ runner.os }}-Catch2-${{ steps.Catch2-cache.outputs.version }}
       # restore cache (softfloat)
       - id: softfloat-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/softfloat/{ print $1 }')"

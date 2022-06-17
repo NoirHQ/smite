@@ -1,9 +1,6 @@
 [submodule "libs/appbase"]
 	path = libs/appbase
 	url = https://github.com/noir-protocol/appbase
-[submodule "libs/Catch2"]
-	path = libs/Catch2
-	url = https://github.com/catchorg/Catch2
 [submodule "libs/expected"]
 	path = libs/expected
 	url = https://github.com/noir-protocol/expected
