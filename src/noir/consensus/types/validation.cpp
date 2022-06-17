@@ -6,6 +6,7 @@
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/canonical.h>
 #include <noir/consensus/types/validation.h>
+#include <noir/consensus/types/vote.h>
 #include <noir/core/codec.h>
 
 namespace noir::consensus {

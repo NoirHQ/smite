@@ -3,8 +3,8 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <noir/consensus/types/canonical.h>
 #include <noir/consensus/types/priv_validator.h>
+#include <noir/consensus/types/proposal.h>
 #include <noir/core/codec.h>
 
 namespace noir::consensus {
@@ -18,12 +18,12 @@ std::optional<std::string> mock_pv::sign_vote(vote& vote_) {
   return {};
 }
 
-std::optional<std::string> mock_pv::sign_proposal(noir::p2p::proposal_message& proposal_) {
+std::optional<std::string> mock_pv::sign_proposal(noir::p2p::proposal_message& msg) {
   // TODO: add some validation checks
 
-  auto proposal_sign_bytes = encode(canonical::canonicalize_proposal(proposal_));
-  auto sig = priv_key_.sign(proposal_sign_bytes);
-  proposal_.signature = sig;
+  auto sign_bytes = proposal::proposal_sign_bytes("", *proposal::to_proto({msg}));
+  auto sig = priv_key_.sign(sign_bytes);
+  msg.signature = sig;
   return {};
 }
 

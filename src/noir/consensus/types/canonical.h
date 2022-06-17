@@ -4,31 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/consensus/types/vote.h>
+#include <noir/p2p/protocol.h>
 #include <tendermint/types/canonical.pb.h>
 
 namespace noir::consensus {
 
-struct canonical_proposal {
-  p2p::signed_msg_type type;
-  int64_t height{};
-  int32_t round{};
-  int32_t pol_round{};
-  p2p::block_id block_id_;
-  tstamp timestamp{};
-};
-
 struct canonical {
-
-  static canonical_proposal canonicalize_proposal(const p2p::proposal_message& proposal_) {
-    return {.type = proposal_.type,
-      .height = proposal_.height,
-      .round = proposal_.round,
-      .pol_round = proposal_.pol_round,
-      .block_id_ = proposal_.block_id_,
-      .timestamp = proposal_.timestamp};
-  }
-
   static ::tendermint::types::CanonicalPartSetHeader canonicalize_part_set_header(
     const ::tendermint::types::PartSetHeader& p) {
     ::tendermint::types::CanonicalPartSetHeader ret;
@@ -77,5 +58,3 @@ struct canonical {
 };
 
 } // namespace noir::consensus
-
-NOIR_REFLECT(noir::consensus::canonical_proposal, type, height, round, pol_round, block_id_, timestamp);

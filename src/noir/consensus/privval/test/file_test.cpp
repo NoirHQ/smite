@@ -3,13 +3,13 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-
 #include <catch2/catch_all.hpp>
 #include <noir/common/hex.h>
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/common.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/types/canonical.h>
+#include <noir/consensus/types/proposal.h>
 #include <noir/core/codec.h>
 #include <noir/crypto/rand.h>
 #include <filesystem>
@@ -157,13 +157,13 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
         noir::p2p::proposal_message proposal_{};
         proposal_.timestamp = noir::get_time();
 
-        auto data_proposal1 = noir::encode(canonical::canonicalize_proposal(proposal_));
+        auto data_proposal1 = proposal::proposal_sign_bytes("", *proposal::to_proto({proposal_}));
         // std::cout << "data_proposal1=" << to_hex(data_proposal1) << std::endl;
         // std::cout << "digest1=" << fc::Sha256::hash(data_proposal1).str() << std::endl;
         auto sig_org = file_pv_ptr->sign_proposal(proposal_);
         // std::cout << "sig=" << std::string(proposal_.signature.begin(), proposal_.signature.end()) << std::endl;
 
-        auto data_proposal2 = noir::encode(canonical::canonicalize_proposal(proposal_));
+        auto data_proposal2 = proposal::proposal_sign_bytes("", *proposal::to_proto({proposal_}));
         // std::cout << "data_proposal2=" << to_hex(data_proposal2) << std::endl;
         // std::cout << "digest2=" << fc::Sha256::hash(data_proposal2).str() << std::endl;
         auto result = file_pv_ptr->get_pub_key().verify_signature(data_proposal2, proposal_.signature);

@@ -7,6 +7,7 @@
 #include <noir/common/hex.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/types/canonical.h>
+#include <noir/consensus/types/proposal.h>
 #include <fc/crypto/base64.hpp>
 #include <fc/variant_object.hpp>
 
@@ -166,18 +167,16 @@ bool check_only_differ_by_timestamp(const noir::p2p::proposal_message& obj,
   const Bytes& last_sign_bytes,
   const Bytes& new_sign_bytes,
   noir::tstamp& timestamp) {
-  auto last_vote = decode<canonical_proposal>(last_sign_bytes);
-  auto new_vote = decode<canonical_proposal>(new_sign_bytes);
-  timestamp = last_vote.timestamp;
-  // set the times to the same value and check equality
+  ::tendermint::types::CanonicalProposal last_vote;
+  last_vote.ParseFromArray(last_sign_bytes.data(), last_sign_bytes.size());
+  ::tendermint::types::CanonicalProposal new_vote;
+  new_vote.ParseFromArray(new_sign_bytes.data(), new_sign_bytes.size());
+  timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(last_vote.timestamp());
+  // set times to the same value and check equality
   auto now = get_time();
-  last_vote.timestamp = now;
-  new_vote.timestamp = now;
-
-  // FIXME: compare reflected value before encoding
-  auto lhs = encode<canonical_proposal>(last_vote);
-  auto rhs = encode<canonical_proposal>(new_vote);
-  return lhs == rhs;
+  *last_vote.mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(now);
+  *new_vote.mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(now);
+  return last_vote.SerializeAsString() == new_vote.SerializeAsString();
 }
 
 template<typename T>
@@ -226,9 +225,9 @@ bool file_pv::sign_vote_internal(noir::consensus::vote& vote) {
     vote, vote::vote_sign_bytes("", *vote::to_proto(vote)), *this, vote_to_step(vote));
 }
 
-bool file_pv::sign_proposal_internal(noir::p2p::proposal_message& proposal) {
+bool file_pv::sign_proposal_internal(noir::p2p::proposal_message& msg) {
   return sign_internal<noir::p2p::proposal_message>(
-    proposal, encode(canonical::canonicalize_proposal(proposal)), *this, sign_step::propose);
+    msg, proposal::proposal_sign_bytes("", *proposal::to_proto({msg})), *this, sign_step::propose);
 }
 
 void file_pv::save_signed(int64_t height, int32_t round, sign_step step, const Bytes& sign_bytes, const Bytes& sig) {
