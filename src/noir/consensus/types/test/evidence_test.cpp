@@ -25,7 +25,7 @@ std::shared_ptr<duplicate_vote_evidence> random_duplicate_vote_evidence() {
   auto val = mock_pv();
   val.priv_key_ = priv_key::new_priv_key();
   val.pub_key_ = val.priv_key_.get_pub_key();
-  std::string chain_id = "my_chain";
+  std::string chain_id = evidence_chain_id;
   auto default_vote_time = get_default_evidence_time();
   ret->vote_a = make_vote(val, chain_id, 0, 10, 2, 1, block_id, default_vote_time);
   ret->vote_b = make_vote(val, chain_id, 0, 10, 2, 1, block_id2,
@@ -60,7 +60,7 @@ TEST_CASE("evidence: duplicate vote validation", "[noir][consensus]") {
     make_block_id(string_to_bytes("blockhash"), std::numeric_limits<int32_t>::max(), string_to_bytes("partshash"));
   auto block_id2 =
     make_block_id(string_to_bytes("blockhash2"), std::numeric_limits<int32_t>::max(), string_to_bytes("partshash"));
-  std::string chain_id = "my_chain";
+  std::string chain_id = evidence_chain_id;
   auto default_vote_time = get_default_evidence_time();
 
   SECTION("good duplicate") {

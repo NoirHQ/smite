@@ -19,6 +19,8 @@ using namespace noir::consensus::privval;
 using namespace noir::consensus;
 namespace fs = std::filesystem;
 
+constexpr auto test_chain_id = "test_chain";
+
 auto prepare_test_dir = []() {
   auto temp_dir = std::make_shared<fc::temp_directory>();
   auto tmp_path = temp_dir->path().string();
@@ -157,13 +159,13 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
         noir::p2p::proposal_message proposal_{};
         proposal_.timestamp = noir::get_time();
 
-        auto data_proposal1 = proposal::proposal_sign_bytes("", *proposal::to_proto({proposal_}));
+        auto data_proposal1 = proposal::proposal_sign_bytes(test_chain_id, *proposal::to_proto({proposal_}));
         // std::cout << "data_proposal1=" << to_hex(data_proposal1) << std::endl;
         // std::cout << "digest1=" << fc::Sha256::hash(data_proposal1).str() << std::endl;
-        auto sig_org = file_pv_ptr->sign_proposal(proposal_);
+        auto sig_org = file_pv_ptr->sign_proposal(test_chain_id, proposal_);
         // std::cout << "sig=" << std::string(proposal_.signature.begin(), proposal_.signature.end()) << std::endl;
 
-        auto data_proposal2 = proposal::proposal_sign_bytes("", *proposal::to_proto({proposal_}));
+        auto data_proposal2 = proposal::proposal_sign_bytes(test_chain_id, *proposal::to_proto({proposal_}));
         // std::cout << "data_proposal2=" << to_hex(data_proposal2) << std::endl;
         // std::cout << "digest2=" << fc::Sha256::hash(data_proposal2).str() << std::endl;
         auto result = file_pv_ptr->get_pub_key().verify_signature(data_proposal2, proposal_.signature);

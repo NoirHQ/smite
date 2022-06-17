@@ -225,9 +225,9 @@ bool file_pv::sign_vote_internal(noir::consensus::vote& vote) {
     vote, vote::vote_sign_bytes("", *vote::to_proto(vote)), *this, vote_to_step(vote));
 }
 
-bool file_pv::sign_proposal_internal(noir::p2p::proposal_message& msg) {
+bool file_pv::sign_proposal_internal(const std::string& chain_id, noir::p2p::proposal_message& msg) {
   return sign_internal<noir::p2p::proposal_message>(
-    msg, proposal::proposal_sign_bytes("", *proposal::to_proto({msg})), *this, sign_step::propose);
+    msg, proposal::proposal_sign_bytes(chain_id, *proposal::to_proto({msg})), *this, sign_step::propose);
 }
 
 void file_pv::save_signed(int64_t height, int32_t round, sign_step step, const Bytes& sign_bytes, const Bytes& sig) {

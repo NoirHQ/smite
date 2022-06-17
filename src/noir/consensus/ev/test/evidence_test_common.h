@@ -14,7 +14,7 @@
 
 namespace noir::consensus::ev {
 
-constexpr auto evidence_chain_id = "my_chain";
+constexpr auto evidence_chain_id = "test_chain";
 constexpr auto evidence_store_path = "/tmp/ev";
 constexpr auto state_store_path = "/tmp/ev_state";
 constexpr auto block_store_path = "/tmp/ev_block";

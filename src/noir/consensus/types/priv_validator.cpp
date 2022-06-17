@@ -18,10 +18,10 @@ std::optional<std::string> mock_pv::sign_vote(vote& vote_) {
   return {};
 }
 
-std::optional<std::string> mock_pv::sign_proposal(noir::p2p::proposal_message& msg) {
+std::optional<std::string> mock_pv::sign_proposal(const std::string& chain_id, noir::p2p::proposal_message& msg) {
   // TODO: add some validation checks
 
-  auto sign_bytes = proposal::proposal_sign_bytes("", *proposal::to_proto({msg}));
+  auto sign_bytes = proposal::proposal_sign_bytes(chain_id, *proposal::to_proto({msg}));
   auto sig = priv_key_.sign(sign_bytes);
   msg.signature = sig;
   return {};

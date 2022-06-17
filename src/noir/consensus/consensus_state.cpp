@@ -671,7 +671,7 @@ void consensus_state::decide_proposal(int64_t height, int32_t round) {
   auto prop_block_id = p2p::block_id{block_->get_hash(), block_parts_->header()};
   auto proposal_ = p2p::proposal_message{p2p::Proposal, height, round, rs.valid_round, prop_block_id, get_time()};
 
-  if (auto err = local_priv_validator->sign_proposal(proposal_); !err.has_value()) {
+  if (auto err = local_priv_validator->sign_proposal(local_state.chain_id, proposal_); !err.has_value()) {
     // proposal_.signature = p.signature; // TODO: no need; already updated proposal_.signature
 
     // Send proposal and block_parts
@@ -1040,7 +1040,7 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
   }
 
   // Verify signature
-  auto sign_bytes = proposal::proposal_sign_bytes("", *proposal::to_proto({msg}));
+  auto sign_bytes = proposal::proposal_sign_bytes(local_state.chain_id, *proposal::to_proto({msg}));
   if (!rs.validators->get_proposer()->pub_key_.verify_signature(sign_bytes, msg.signature)) {
     dlog("set_proposal; error invalid proposal signature");
     return;
