@@ -6,6 +6,7 @@ target_link_libraries(noir_clist
   fmt::fmt
   noir::common
   noir::core
+  eo::eo
 )
 set_target_properties(noir_clist PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
