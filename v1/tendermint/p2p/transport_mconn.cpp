@@ -96,7 +96,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
       co_await secret_conn->read(std::span<unsigned char>(buf));
       codec::datastream<const unsigned char> ds(buf);
       auto dni = proto_readwrite::read_msg<DefaultNodeInfo, codec::datastream<const unsigned char>>(ds);
-      peer_info = node_info_from_proto(dni);
+      peer_info = NodeInfo::from_proto(dni);
       co_await rcvd_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
     },
     detached);
@@ -142,7 +142,6 @@ auto MConnConnection::handshake(Chan<std::monostate>& done, NodeInfo& node_info,
         peer_key = std::get<2>(tup);
         co_await res_ch.async_send(boost::system::error_code{}, success(), asio::use_awaitable);
       } else {
-        boost::system::error_code ec{};
         co_await res_ch.async_send(boost::system::error_code{}, res.error(), asio::use_awaitable);
       }
     },
@@ -221,20 +220,21 @@ auto MConnConnection::close() -> Result<void> {
   return success();
 }
 
-auto MConnTransport::listen(const std::string& endpoint) -> Result<void> {
+auto MConnTransport::listen(const std::string& endpoint) -> asio::awaitable<Result<void>> {
   if (listener) {
-    return Error("transport is already listening");
+    co_return Error("transport is already listening");
   }
   auto endpoint_res = validate_endpoint(endpoint);
   if (endpoint_res.has_error()) {
-    return endpoint_res.error();
+    co_return endpoint_res.error();
   }
   listener = TcpListener::create(io_context);
+  co_await listener->listen(endpoint);
 
-  return success();
+  co_return success();
 }
 
-auto MConnTransport::accept(Chan<std::monostate>& done) -> asio::awaitable<Result<MConnConnection>> {
+auto MConnTransport::accept(Chan<std::monostate>& done) -> asio::awaitable<Result<std::shared_ptr<MConnConnection>>> {
   if (!listener) {
     co_return Error("transport is not listening");
   }
@@ -266,13 +266,13 @@ auto MConnTransport::accept(Chan<std::monostate>& done) -> asio::awaitable<Resul
     co_return std::get<2>(res);
   } else if (res.index() == 3) {
     auto tcp_conn = std::get<3>(res);
-    co_return MConnConnection(io_context, tcp_conn, mconn_config, channel_descs);
+    co_return MConnConnection::new_mconn_connection(io_context, tcp_conn, mconn_config, channel_descs);
   } else {
     co_return err_unreachable;
   }
 }
 
-auto MConnTransport::dial(const std::string& endpoint) -> asio::awaitable<Result<MConnConnection>> {
+auto MConnTransport::dial(const std::string& endpoint) -> asio::awaitable<Result<std::shared_ptr<MConnConnection>>> {
   auto endpoint_res = validate_endpoint(endpoint);
   if (endpoint_res.has_error()) {
     co_return endpoint_res.error();
@@ -282,7 +282,7 @@ auto MConnTransport::dial(const std::string& endpoint) -> asio::awaitable<Result
   if (res.has_error()) {
     co_return res.error();
   }
-  co_return MConnConnection(io_context, tcp_conn, mconn_config, channel_descs);
+  co_return MConnConnection::new_mconn_connection(io_context, tcp_conn, mconn_config, channel_descs);
 }
 
 auto MConnTransport::close() -> Result<void> {
