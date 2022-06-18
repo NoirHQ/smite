@@ -38,7 +38,7 @@ freely, subject to the following restrictions:
 
 #include <string>
 
-namespace tendermint {
+namespace noir {
 
 static std::string const base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                         "abcdefghijklmnopqrstuvwxyz"
