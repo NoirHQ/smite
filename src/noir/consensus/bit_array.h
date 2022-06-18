@@ -66,7 +66,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
     return true;
   }
 
-  std::shared_ptr<bit_array> update(std::shared_ptr<bit_array> o) {
+  std::shared_ptr<bit_array> update(const std::shared_ptr<bit_array>& o) {
     if (o == nullptr)
       return nullptr;
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
@@ -74,28 +74,26 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
     return shared_from_this();
   }
 
-  std::shared_ptr<bit_array> sub(std::shared_ptr<bit_array> o) {
+  std::shared_ptr<bit_array> sub(const std::shared_ptr<bit_array>& o) {
     if (this == nullptr || o == nullptr) ///< NOT a very nice way of coding; need to refactor later
       return nullptr;
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     auto c = copy_bits(bits);
     auto smaller = std::min(elem.size(), o->elem.size());
-    for (auto i = 0; i < smaller; i++) {
+    for (auto i = 0; i < smaller; i++)
       c->elem[i] = c->elem[i] & (~o->elem[i]); // and not
-    }
     return c; // TODO: check if sub is correctly implemented
   }
 
   /// \brief returns a bit_array resulting from a bitwise OR of two bit_arrays
-  std::shared_ptr<bit_array> or_op(std::shared_ptr<bit_array> o) {
+  std::shared_ptr<bit_array> or_op(const std::shared_ptr<bit_array>& o) {
     if (o == nullptr)
       return copy();
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     auto c = copy_bits(std::max(bits, o->bits));
     auto smaller = std::min(elem.size(), o->elem.size());
-    for (auto i = 0; i < smaller; i++) {
+    for (auto i = 0; i < smaller; i++)
       c->elem[i] = c->elem[i] | (o->elem[i]); // or
-    }
     return c;
   }
 
@@ -118,18 +116,16 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
     return copy;
   }
 
-  std::shared_ptr<bit_array> copy_bits(int bits) const {
-    if (bits > elem.size())
-      bits = elem.size();
+  std::shared_ptr<bit_array> copy_bits(int bits_) const {
     auto ret = std::make_shared<bit_array>();
-    ret->bits = bits;
-    ret->elem.resize(bits);
-    std::copy(elem.begin(), elem.begin() + bits, ret->elem.begin());
+    ret->bits = bits_;
+    ret->elem.resize(bits_);
+    std::copy(elem.begin(), elem.begin() + bits_, ret->elem.begin());
     return ret;
   }
 
-  int num_elems(const int bits) const {
-    return (bits + 63) / 64;
+  int num_elems(const int bits_) const {
+    return (bits_ + 63) / 64;
   }
 
   std::string string() const {
@@ -151,9 +147,9 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
       uint8_t byte_{};
       for (auto j = 0; j < 8 && (j + i) < bits; j++) {
         if (elem[j + i]) {
-          byte_ |= 1 << (7 - j);
+          byte_ |= 1 << j;
         } else {
-          byte_ &= ~(1 << (7 - j));
+          byte_ &= ~(1 << j);
         }
       }
       bs.raw().push_back(static_cast<unsigned char>(byte_));
@@ -195,15 +191,14 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   template<typename T>
   inline friend T& operator>>(T& ds, bit_array& v) {
     ds >> v.bits;
-
     auto num_bytes = (v.bits + 7) / 8;
     v.elem.resize(v.bits);
     Bytes bs(num_bytes);
     ds >> bs;
     int i{0};
-    for (auto byte_ : bs) {
+    for (const auto& byte_ : bs) {
       for (auto j = 0; j < 8; j++) {
-        if ((byte_ >> (7 - j)) & 1)
+        if ((byte_ >> j) & 1)
           v.set_index(i, true);
         else
           v.set_index(i, false);
@@ -216,8 +211,19 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   static std::unique_ptr<::tendermint::libs::bits::BitArray> to_proto(const bit_array& b) {
     auto ret = std::make_unique<::tendermint::libs::bits::BitArray>();
     ret->set_bits(b.bits);
+
+    size_t elems_size = b.num_elems(b.bits);
+    std::vector<uint64_t> elems(elems_size);
+    auto bz = b.get_bytes();
+    int bz_i{0};
+    for (auto& elem : elems) {
+      elem = 0;
+      for (auto i = 0; i < 8 && bz_i < bz.size(); i++, bz_i++)
+        elem |= (uint64_t)bz[bz_i] << (i * 8);
+    }
+
     auto pb_elem = ret->mutable_elems();
-    for (auto e : b.elem)
+    for (const auto& e : elems)
       pb_elem->Add(e);
     return ret;
   }
@@ -225,8 +231,17 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   static std::shared_ptr<bit_array> from_proto(const ::tendermint::libs::bits::BitArray& pb) {
     auto ret = std::make_shared<bit_array>();
     ret->bits = pb.bits();
-    for (auto& e : pb.elems())
-      ret->elem.push_back(e);
+    ret->elem.resize(ret->bits);
+    int i{0};
+    for (auto e : pb.elems()) {
+      for (auto j = 0; j < 64; j++) {
+        if ((e >> j) & 1)
+          ret->set_index(i, true);
+        else
+          ret->set_index(i, false);
+        i++;
+      }
+    }
     return ret;
   }
 };
