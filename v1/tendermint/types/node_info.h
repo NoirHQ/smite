@@ -46,6 +46,22 @@ public:
     return dni;
   }
 
+  static auto from_proto(tendermint::p2p::DefaultNodeInfo& pb) -> NodeInfo {
+    return NodeInfo{.protocol_version =
+                      ProtocolVersion{
+                        .p2p = pb.protocol_version().p2p(),
+                        .block = pb.protocol_version().block(),
+                        .app = pb.protocol_version().app(),
+                      },
+      .node_id = pb.default_node_id(),
+      .listen_addr = pb.listen_addr(),
+      .network = pb.network(),
+      .version = pb.version(),
+      .channels = noir::Bytes{pb.channels().begin(), pb.channels().end()},
+      .moniker = pb.moniker(),
+      .other = NodeInfoOther{.tx_index = pb.other().tx_index(), .rpc_address = pb.other().rpc_address()}};
+  }
+
 public:
   ProtocolVersion protocol_version;
   NodeId node_id;
@@ -56,21 +72,5 @@ public:
   std::string moniker;
   NodeInfoOther other;
 };
-
-auto node_info_from_proto(p2p::DefaultNodeInfo& pb) -> NodeInfo {
-  return NodeInfo{.protocol_version =
-                    ProtocolVersion{
-                      .p2p = pb.protocol_version().p2p(),
-                      .block = pb.protocol_version().block(),
-                      .app = pb.protocol_version().app(),
-                    },
-    .node_id = pb.default_node_id(),
-    .listen_addr = pb.listen_addr(),
-    .network = pb.network(),
-    .version = pb.version(),
-    .channels = noir::Bytes{pb.channels().begin(), pb.channels().end()},
-    .moniker = pb.moniker(),
-    .other = NodeInfoOther{.tx_index = pb.other().tx_index(), .rpc_address = pb.other().rpc_address()}};
-}
 
 } //namespace tendermint
