@@ -3,7 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include <tendermint/p2p/conn/binary.h>
+#include <noir/common/binary.h>
 #include <tendermint/p2p/conn/merlin.h>
 #include <tendermint/p2p/conn/secret_connection.h>
 

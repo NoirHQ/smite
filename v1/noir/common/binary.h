@@ -7,7 +7,7 @@
 #include <numeric>
 #include <vector>
 
-namespace tendermint {
+namespace noir {
 
 class LittleEndian {
 public:
