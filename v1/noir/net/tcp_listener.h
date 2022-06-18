@@ -34,13 +34,11 @@ public:
     auto port = address.substr(colon + 1);
 
     std::shared_ptr<boost::asio::ip::tcp::resolver> resolver = std::make_shared<boost::asio::ip::tcp::resolver>(strand);
-    auto [ec, endpoints] = co_await resolver->async_resolve(boost::asio::ip::tcp::v4(),
-      host,
-      port,
-      boost::asio::experimental::as_tuple(boost::asio::use_awaitable));
-    if (ec)
-      co_return ec;
+    auto res = co_await resolver->async_resolve(boost::asio::ip::tcp::v4(), host, port, as_result(boost::asio::use_awaitable));
+    if (res.has_error())
+      co_return res.error();
 
+    auto endpoints = res.value();
     listen_endpoint = std::move(endpoints->endpoint());
     acceptor.open(listen_endpoint.protocol());
     acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
@@ -51,7 +49,7 @@ public:
 
   auto accept() -> boost::asio::awaitable<Result<std::shared_ptr<TcpConn>>> {
     if (!acceptor.is_open()) {
-      co_return Error::format("acceptor closed");
+      co_return Error("acceptor closed");
     }
 
     auto [ec, socket] = co_await acceptor.async_accept(boost::asio::experimental::as_tuple(boost::asio::use_awaitable));
