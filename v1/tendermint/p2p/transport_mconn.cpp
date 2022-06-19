@@ -26,7 +26,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
   Chan<std::monostate> sent_ch{io_context, 1};
   Chan<std::monostate> rcvd_ch{io_context, 1};
 
-  auto secret_conn = conn::SecretConnection::make_secret_connection(priv_key);
+  auto secret_conn = conn::SecretConnection::make_secret_connection(priv_key, conn);
 
   // share eph pub
   co_spawn(
@@ -83,7 +83,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
     [&]() -> asio::awaitable<void> {
       auto loc_node = node_info.to_proto();
       auto buf = ProtoReadWrite::write_msg<DefaultNodeInfo, unsigned char>(loc_node);
-      co_await secret_conn->write(std::span<unsigned char>(buf));
+      co_await secret_conn->write(std::span<const unsigned char>(buf));
       co_await sent_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
     },
     detached);
