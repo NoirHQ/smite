@@ -25,5 +25,6 @@ target_link_libraries(noir
   softfloat
 )
 
+add_subdirectory(eo)
 add_subdirectory(noir)
 #add_subdirectory(tendermint)
