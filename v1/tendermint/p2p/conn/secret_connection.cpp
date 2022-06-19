@@ -17,11 +17,13 @@ namespace tendermint::p2p::conn {
 
 using namespace noir;
 
-std::shared_ptr<SecretConnection> SecretConnection::make_secret_connection(Bytes& loc_priv_key) {
+std::shared_ptr<SecretConnection> SecretConnection::make_secret_connection(Bytes& loc_priv_key,
+  std::shared_ptr<net::Conn<net::TcpConn>>& conn) {
   check(loc_priv_key.size() == 64, "unable to create a new create_connection: invalid private key size");
   auto sc = std::make_shared<SecretConnection>();
   sc->loc_priv_key = loc_priv_key;
   sc->loc_pub_key = Bytes(loc_priv_key.begin() + 32, loc_priv_key.end());
+  sc->conn = conn;
 
   // Generate ephemeral local keys
   randombytes_buf(sc->loc_eph_priv.data(), sc->loc_eph_priv.size());
@@ -199,7 +201,8 @@ auto SecretConnection::read(std::span<unsigned char> data) -> asio::awaitable<Re
   co_return n;
 }
 
-auto SecretConnection::write(std::span<unsigned char> data) -> asio::awaitable<std::tuple<std::size_t, Result<void>>> {
+auto SecretConnection::write(std::span<const unsigned char> data)
+  -> asio::awaitable<std::tuple<std::size_t, Result<void>>> {
   std::scoped_lock _{send_mtx};
 
   std::size_t n = 0;

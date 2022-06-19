@@ -48,12 +48,13 @@ struct AuthSigMessage {
 
 class SecretConnection {
 public:
-  static auto make_secret_connection(noir::Bytes& loc_priv_key) -> std::shared_ptr<SecretConnection>;
+  static auto make_secret_connection(noir::Bytes& loc_priv_key,
+    std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>& conn) -> std::shared_ptr<SecretConnection>;
   auto shared_eph_pub_key(noir::Bytes32& received_pub_key) -> noir::Result<void>;
   auto shared_auth_sig(AuthSigMessage& received_msg) -> noir::Result<void>;
   auto derive_secrets(noir::Bytes32& dh_secret) -> noir::Bytes;
   auto read(std::span<unsigned char> data) -> boost::asio::awaitable<noir::Result<std::size_t>>;
-  auto write(std::span<unsigned char> msg) -> boost::asio::awaitable<std::tuple<std::size_t, noir::Result<void>>>;
+  auto write(std::span<const unsigned char> msg) -> boost::asio::awaitable<std::tuple<std::size_t, noir::Result<void>>>;
 
 public:
   bool is_authorized{};
