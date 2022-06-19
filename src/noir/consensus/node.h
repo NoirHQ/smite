@@ -54,12 +54,13 @@ struct node {
     validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
     priv_validators.push_back(std::move(priv_val.value()));
 
-    auto gen_doc = genesis_doc::genesis_doc_from_file(new_config->consensus.root_dir + "/config/genesis.json");
-    if (!gen_doc) {
+    std::shared_ptr<genesis_doc> gen_doc{};
+    if (auto ok = genesis_doc::genesis_doc_from_file(new_config->consensus.root_dir + "/config/genesis.json"); !ok) {
       wlog("Unable to load genesis from json.file. Will load default genesis.");
-      gen_doc = std::make_shared<genesis_doc>();
-      *gen_doc = genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators};
-      gen_doc->save(new_config->consensus.root_dir + "/config/genesis.json");
+      gen_doc = std::make_shared<genesis_doc>(genesis_doc{get_time(), new_config->base.chain_id, 1, {}, validators});
+      // gen_doc->save(new_config->consensus.root_dir + "/config/genesis.json");
+    } else {
+      gen_doc = ok.value();
     }
 
     // Load or generate node_key

@@ -16,7 +16,7 @@
 
 namespace noir::consensus {
 
-std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::string& gen_doc_file) {
+Result<std::shared_ptr<genesis_doc>> genesis_doc::genesis_doc_from_file(const std::string& gen_doc_file) {
   auto gen_doc = std::make_shared<genesis_doc>();
   try {
     fc::variant obj = fc::json::from_file(gen_doc_file);
@@ -29,8 +29,7 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
       gen_doc->genesis_time = std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
       ilog(fmt::format("genesis time : {}", gen_doc->genesis_time));
     } else {
-      elog(fmt::format("error reading genesis from {}: unable to parse genesis_time", gen_doc_file));
-      return {};
+      return Error::format("error reading genesis from {}: unable to parse genesis_time", gen_doc_file);
     }
     std::vector<json::genesis_validator_json_obj> vals;
     fc::from_variant(obj["validators"], vals);
@@ -41,9 +40,15 @@ std::shared_ptr<genesis_doc> genesis_doc::genesis_doc_from_file(const std::strin
       gen_doc->validators.push_back(genesis_validator{
         .address = Bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});
     }
+    try {
+      consensus_params params;
+      fc::from_variant(obj["consensus_params"], params);
+      gen_doc->cs_params = params;
+    } catch (std::exception const& ex) {
+      dlog("genesis.json: missing consensus_params");
+    }
   } catch (std::exception const& ex) {
-    elog(fmt::format("error reading genesis from {}: {}", gen_doc_file, ex.what()));
-    return {};
+    return Error::format("error reading genesis from {}: {}", gen_doc_file, ex.what());
   }
   return gen_doc;
 }
@@ -109,6 +114,8 @@ void genesis_doc::save(const std::string& file_path) {
     val.name = validator.name;
     json_obj.validators.push_back(val);
   }
+
+  json_obj.cs_params = cs_params.value();
 
   json_obj.app_hash = to_string(app_hash);
   json_obj.app_state = to_string(app_state);

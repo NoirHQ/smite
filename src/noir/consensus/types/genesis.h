@@ -31,6 +31,7 @@ namespace json {
     std::string genesis_time;
     std::string chain_id;
     std::string initial_height;
+    consensus_params cs_params;
     std::vector<genesis_validator_json_obj> validators;
     std::string app_hash;
     std::string app_state;
@@ -53,7 +54,7 @@ struct genesis_doc {
   Bytes app_hash;
   Bytes app_state;
 
-  static std::shared_ptr<genesis_doc> genesis_doc_from_file(const std::string& gen_doc_file);
+  static Result<std::shared_ptr<genesis_doc>> genesis_doc_from_file(const std::string& gen_doc_file);
 
   void save(const std::string& file_path);
   bool validate_and_complete();
