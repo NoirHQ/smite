@@ -10,7 +10,7 @@ function(add_noir_test TARGET)
   endif()
 endfunction()
 
-set(NOIR_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(noir STATIC)
 target_link_libraries(noir
