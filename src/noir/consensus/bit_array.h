@@ -102,8 +102,8 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
       return nullptr;
     std::scoped_lock g(mtx);
     auto c = copy();
-    for (auto i = 0; i < c->elem.size(); i++)
-      c->elem[i] = ~(c->elem[i]);
+    for (auto && e : c->elem)
+      e = !e;
     return c;
   }
 
