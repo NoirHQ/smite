@@ -43,13 +43,14 @@ public:
 
   CElement() = default;
 
-  CElement(T v) {
+  template<typename U>
+  CElement(U&& v) {
     prev_ = nullptr;
     prev_wg = wait_group_1();
     next_ = nullptr;
     next_wg = wait_group_1();
     removed_ = false;
-    value = std::forward<T>(v);
+    value = std::forward<U>(v);
   }
 
   auto next_wait() -> CElementPtr<T> {
@@ -264,10 +265,11 @@ public:
     return wait_ch;
   }
 
-  auto push_back(T v) -> CElementPtr<T> {
+  template<typename U>
+  auto push_back(U&& v) -> CElementPtr<T> {
     std::unique_lock g{mtx};
 
-    auto e = std::make_shared<CElement<T>>(v);
+    auto e = std::make_shared<CElement<T>>(std::forward<U>(v));
 
     if (len_ == 0) {
       wg->done();
