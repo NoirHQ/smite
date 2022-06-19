@@ -1,5 +1,5 @@
 add_library(tendermint_common STATIC lib.cpp)
-target_include_directories(tendermint_common PUBLIC ${NOIR_SOURCE_DIR})
+target_include_directories(tendermint_common PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(tendermint_common
   noir::common
   noir::thread

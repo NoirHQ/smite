@@ -1,7 +1,7 @@
 add_library(noir_clist STATIC
   clist.cpp
 )
-target_include_directories(noir_clist PUBLIC ${NOIR_SOURCE_DIR} ${Boost_INCLUDE_DIR})
+target_include_directories(noir_clist PUBLIC ${PROJECT_SOURCE_DIR} ${Boost_INCLUDE_DIR})
 target_link_libraries(noir_clist
   fmt::fmt
   noir::common

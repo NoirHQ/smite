@@ -1,7 +1,7 @@
 add_library(noir_codec STATIC
   errors.cpp
 )
-target_include_directories(noir_codec PUBLIC ${NOIR_SOURCE_DIR})
+target_include_directories(noir_codec PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(noir_codec
   noir::common
   protobuf::libprotobuf

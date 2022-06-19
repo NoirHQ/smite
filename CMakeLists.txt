@@ -65,10 +65,10 @@ endif()
 
 conan_cmake_configure(REQUIRES ${CONAN_PACKAGES} GENERATORS cmake_find_package)
 
-set(NOIR_BUILD_TYPE ${CMAKE_BUILD_TYPE})
+set(PROJECT_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 set(CMAKE_BUILD_TYPE Release)
 conan_cmake_autodetect(CONAN_SETTINGS)
-set(CMAKE_BUILD_TYPE ${NOIR_BUILD_TYPE})
+set(CMAKE_BUILD_TYPE ${PROJECT_BUILD_TYPE})
 
 # HACK: remove c++ standard version from conan settings to use prebuilt binaries
 string(REPLACE ";compiler.cppstd=20" "" CONAN_SETTINGS "${CONAN_SETTINGS}")
