@@ -8,36 +8,20 @@
 
 namespace noir::log {
 
-using ::spdlog::logger;
+using Logger = spdlog::logger;
 
-inline auto default_logger() {
-  return spdlog::default_logger();
-}
+const auto default_logger = spdlog::default_logger;
+const auto default_logger_raw = spdlog::default_logger_raw;
+const auto set_level = spdlog::set_level;
 
 } // namespace noir::log
-
-#if defined(ilog)
-#undef ilog
-#endif
-
-#if defined(dlog)
-#undef dlog
-#endif
-
-#if defined(wlog)
-#undef wlog
-#endif
-
-#if defined(elog)
-#undef elog
-#endif
-
-#define ilog(FORMAT, ...) SPDLOG_INFO(FORMAT __VA_OPT__(, ) __VA_ARGS__)
-#define dlog(FORMAT, ...) SPDLOG_DEBUG(FORMAT __VA_OPT__(, ) __VA_ARGS__)
-#define wlog(FORMAT, ...) SPDLOG_WARN(FORMAT __VA_OPT__(, ) __VA_ARGS__)
-#define elog(FORMAT, ...) SPDLOG_ERROR(FORMAT __VA_OPT__(, ) __VA_ARGS__)
 
 #define noir_ilog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_INFO(LOGGER, FORMAT __VA_OPT__(, ) __VA_ARGS__)
 #define noir_dlog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_DEBUG(LOGGER, FORMAT __VA_OPT__(, ) __VA_ARGS__)
 #define noir_wlog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_WARN(LOGGER, FORMAT __VA_OPT__(, ) __VA_ARGS__)
 #define noir_elog(LOGGER, FORMAT, ...) SPDLOG_LOGGER_ERROR(LOGGER, FORMAT __VA_OPT__(, ) __VA_ARGS__)
+
+#define ilog(FORMAT, ...) noir_ilog(noir::log::default_logger_raw(), FORMAT __VA_OPT__(, ) __VA_ARGS__)
+#define dlog(FORMAT, ...) noir_dlog(noir::log::default_logger_raw(), FORMAT __VA_OPT__(, ) __VA_ARGS__)
+#define wlog(FORMAT, ...) noir_wlog(noir::log::default_logger_raw(), FORMAT __VA_OPT__(, ) __VA_ARGS__)
+#define elog(FORMAT, ...) noir_elog(noir::log::default_logger_raw(), FORMAT __VA_OPT__(, ) __VA_ARGS__)
