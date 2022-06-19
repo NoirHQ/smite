@@ -25,11 +25,13 @@ add_library(noir_consensus STATIC
 target_link_libraries(noir_consensus
   RocksDB::rocksdb # Must come before proto
   libpqxx::pqxx
+  noir::clist
   noir::common
   noir::crypto
   noir::proto_legacy
   noir::tx_pool
 #  tendermint::proto
+  tendermint::log
   sodium
 )
 set_target_properties(noir_consensus PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})

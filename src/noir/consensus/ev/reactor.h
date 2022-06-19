@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/core/channel.h>
 #include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/ev/evidence_pool.h>
@@ -13,11 +14,12 @@ namespace noir::consensus::ev {
 struct reactor {
 
   appbase::application& app;
-  std::shared_ptr<evidence_pool> pool{};
+  std::shared_ptr<evidence_pool> evpool{};
   std::unique_ptr<named_thread_pool> thread_pool{};
 
   std::mutex mtx;
-  std::map<std::string, std::shared_ptr<bool>> peer_routines;
+  std::map<std::string, Chan<std::monostate>> peer_routines;
+  eo::sync::WaitGroup peer_wg;
 
   // Receive an envelope from peers [via p2p]
   plugin_interface::incoming::channels::es_reactor_message_queue::channel_type::handle es_reactor_mq_subscription =
@@ -39,7 +41,7 @@ struct reactor {
   static std::shared_ptr<reactor> new_reactor(
     appbase::application& new_app, const std::shared_ptr<evidence_pool>& new_pool) {
     auto ret = std::make_shared<reactor>(new_app);
-    ret->pool = new_pool;
+    ret->evpool = new_pool;
     return ret;
   }
 
@@ -50,8 +52,13 @@ struct reactor {
 
   void on_stop() {
     ilog("stopping ev_reactor...");
-    for (auto& peer : peer_routines)
-      *peer.second = true;
+    {
+      std::unique_lock g{mtx};
+      for (auto& c : peer_routines) {
+        c.second.close();
+      }
+    }
+    peer_wg.wait();
     thread_pool->stop();
     ilog("stopped ev_reactor...");
   }
@@ -60,7 +67,7 @@ struct reactor {
 
   Result<void> process_peer_msg(p2p::envelope_ptr info);
 
-  void broadcast_evidence_loop(const std::string& peer_id, const std::shared_ptr<bool>& closer);
+  void broadcast_evidence_loop(const std::string& peer_id, Chan<std::monostate>& closer);
 };
 
 } // namespace noir::consensus::ev

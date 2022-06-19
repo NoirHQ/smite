@@ -29,7 +29,7 @@ struct duplicate_vote_set {
 
 struct evidence_pool {
   std::shared_ptr<db_session_type> evidence_store{};
-  std::unique_ptr<clist<std::shared_ptr<evidence>>> ev_list{};
+  std::unique_ptr<clist::CList<std::shared_ptr<evidence>>> ev_list{};
   std::atomic<uint32_t> evidence_size{};
 
   std::shared_ptr<noir::consensus::db_store> state_db{};
@@ -61,7 +61,7 @@ struct evidence_pool {
     auto [ev_list, _] = ok.value();
 
     ret->evidence_size.store(ev_list.size());
-    ret->ev_list = clist<std::shared_ptr<evidence>>::new_clist();
+    ret->ev_list = std::make_unique<clist::CList<std::shared_ptr<evidence>>>();
     for (auto& e : ev_list)
       ret->ev_list->push_back(e);
     return ret;
@@ -140,8 +140,12 @@ struct evidence_pool {
     return success();
   }
 
-  std::shared_ptr<c_element<std::shared_ptr<evidence>>> evidence_front() {
+  clist::CElementPtr<std::shared_ptr<evidence>> evidence_front() {
     return ev_list->front();
+  }
+
+  auto evidence_wait_chan() -> Chan<std::monostate>& {
+    return ev_list->wait_chan();
   }
 
   uint32_t get_size() {
@@ -192,7 +196,7 @@ struct evidence_pool {
   std::tuple<int64_t, tstamp, std::set<std::string>> batch_expired_pending_evidence(std::vector<Bytes>&);
 
   void remove_evidence_from_list(std::set<std::string>& block_evidence_map) {
-    for (auto e = ev_list->front(); e; e = e->get_next()) {
+    for (auto e = ev_list->front(); e; e = e->next()) {
       auto ev = e->value;
       if (block_evidence_map.find(ev_map_key(ev)) != block_evidence_map.end()) {
         ev_list->remove(e);
