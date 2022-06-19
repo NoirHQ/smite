@@ -7,6 +7,7 @@ target_link_libraries(noir_p2p
   RocksDB::rocksdb
   noir::codec
   noir::common
+  noir::consensus
   noir::crypto
   noir::proto_legacy
   sodium

@@ -3,7 +3,10 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/core/core.h>
+
 #include <noir/common/check.h>
+#include <noir/common/scope_exit.h>
 #include <noir/consensus/ev/reactor.h>
 
 namespace noir::consensus::ev {
@@ -16,18 +19,16 @@ void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
   // std::scoped_lock _(mtx); // TODO : really needed mutex?
   switch (info->status) {
   case p2p::peer_status::up: {
-    auto it = peer_routines.find(info->peer_id);
-    if (it == peer_routines.end()) {
-      auto closer = std::make_shared<bool>(false);
-      peer_routines.insert({info->peer_id, closer});
-      // broadcast_evidence_loop(info->peer_id, closer); // TODO : uncomment
+    if (!peer_routines.contains(info->peer_id)) {
+      auto it = peer_routines.insert(std::make_pair(info->peer_id, Chan<std::monostate>{thread_pool->get_executor()}));
+      peer_wg.add(1);
+      broadcast_evidence_loop(info->peer_id, it.first->second);
     }
     break;
   }
   case p2p::peer_status::down: {
     if (auto it = peer_routines.find(info->peer_id); it != peer_routines.end()) {
-      *it->second = true;
-      peer_routines.erase(it);
+      it->second.close();
     }
     break;
   }
@@ -51,7 +52,7 @@ Result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
       elog(fmt::format("failed to convert evidence: {}", ok.error().message()));
       continue;
     } else {
-      if (auto r = pool->add_evidence(ok.value()); !r) {
+      if (auto r = evpool->add_evidence(ok.value()); !r) {
         return r.error(); // TODO : check; requires removing peer
       }
     }
@@ -59,16 +60,42 @@ Result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
   return success();
 }
 
-void reactor::broadcast_evidence_loop(const std::string& peer_id, const std::shared_ptr<bool>& closer) {
-  thread_pool->get_executor().post([&]() {
-    std::shared_ptr<c_element<std::shared_ptr<evidence>>> next{};
+void reactor::broadcast_evidence_loop(const std::string& peer_id, Chan<std::monostate>& closer) {
+  boost::asio::co_spawn(thread_pool->get_executor(), [&]() -> boost::asio::awaitable<void> {
+    clist::CElementPtr<std::shared_ptr<evidence>> next{};
+
+    auto _ = make_scope_exit([&]() {
+      {
+        std::unique_lock g{mtx};
+        peer_routines.erase(peer_id);
+
+        peer_wg.done();
+
+        // TODO: need check
+        // if (auto e = recover(); e) {
+        // }
+      }
+    });
 
     for (;;) {
-      if (*closer)
-        return;
       if (!next) {
-        if (next = pool->ev_list->front_wait(); !next)
-          continue;
+        auto res = co_await (evpool->evidence_wait_chan().async_receive(eo::eoroutine)
+          || closer.async_receive(eo::eoroutine)
+          // TODO: implement tendermint::service
+          /* close */
+        );
+        switch (res.index()) {
+        case 0:
+          if (next = evpool->evidence_front(); !next) {
+            continue;
+          }
+        case 1:
+          co_return;
+        /*
+        case 2:
+          co_return;
+        */
+        }
       }
 
       auto ev = next->value;
@@ -86,9 +113,30 @@ void reactor::broadcast_evidence_loop(const std::string& peer_id, const std::sha
       xmt_mq_channel.publish(appbase::priority::medium, new_env);
       dlog(fmt::format("gossiped evidence to peer={}", peer_id));
 
-      next = next->next_wait_with_timeout(std::chrono::milliseconds{broadcast_evidence_interval_s * 1000});
+      auto timer = boost::asio::steady_timer(thread_pool->get_executor(), std::chrono::seconds(broadcast_evidence_interval_s));
+
+      auto res = co_await (timer.async_wait(eo::eoroutine)
+        || next->next_wait_chan().async_receive(eo::eoroutine)
+        || closer.async_receive(eo::eoroutine)
+        // TODO: implement tendermint::service
+        // || close_ch
+      );
+      switch (res.index()) {
+      case 0:
+        next = nullptr;
+        break;
+      case 1:
+        next = next->next();
+        break;
+      case 2:
+        co_return;
+      /*
+      case 3:
+        co_return;
+      */
+      }
     }
-  });
+  }, boost::asio::detached);
 }
 
 } // namespace noir::consensus::ev

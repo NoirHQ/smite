@@ -10,12 +10,12 @@
 // #include <noir/core/codec.h>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
-//#include <boost/asio/experimental/awaitable_operators.hpp>
+#include <boost/asio/experimental/awaitable_operators.hpp>
 #include <boost/asio/io_context.hpp>
 
 namespace noir {
 
 namespace asio = boost::asio;
-// using namespace asio::experimental::awaitable_operators;
+using namespace asio::experimental::awaitable_operators;
 
 } // namespace noir
