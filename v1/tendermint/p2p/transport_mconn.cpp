@@ -34,7 +34,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
     [&]() -> asio::awaitable<void> {
       BytesValue msg{};
       msg.set_value(std::string(secret_conn->loc_eph_pub.begin(), secret_conn->loc_eph_pub.end()));
-      auto buf = proto_readwrite::write_msg<BytesValue, unsigned char>(msg);
+      auto buf = ProtoReadWrite::write_msg<BytesValue, unsigned char>(msg);
       co_await conn->write(std::span<const unsigned char>(buf));
       co_await sent_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
     },
@@ -42,7 +42,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
   co_spawn(
     io_context,
     [&]() -> asio::awaitable<void> {
-      auto msg = co_await proto_readwrite::read_msg_async<BytesValue, std::shared_ptr<Conn<TcpConn>>>(conn);
+      auto msg = co_await ProtoReadWrite::read_msg_async<BytesValue, std::shared_ptr<Conn<TcpConn>>>(conn);
       Bytes32 rem_eph_pub(std::span(msg.value().data(), 32));
       secret_conn->shared_eph_pub_key(rem_eph_pub);
       co_await rcvd_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
@@ -59,7 +59,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
       msg.mutable_pub_key()->set_ed25519(std::string(secret_conn->loc_pub_key.begin(), secret_conn->loc_pub_key.end()));
       msg.set_sig(std::string(secret_conn->loc_signature.begin(), secret_conn->loc_signature.end()));
 
-      auto buf = proto_readwrite::write_msg<AuthSigMessage, unsigned char>(msg);
+      auto buf = ProtoReadWrite::write_msg<AuthSigMessage, unsigned char>(msg);
       co_await conn->write(std::span<const unsigned char>(buf));
       co_await sent_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
     },
@@ -67,7 +67,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
   co_spawn(
     io_context,
     [&]() -> asio::awaitable<void> {
-      auto msg = co_await proto_readwrite::read_msg_async<AuthSigMessage, std::shared_ptr<Conn<TcpConn>>>(conn);
+      auto msg = co_await ProtoReadWrite::read_msg_async<AuthSigMessage, std::shared_ptr<Conn<TcpConn>>>(conn);
       conn::AuthSigMessage sig_msg = {.key = Bytes{msg.pub_key().ed25519().begin(), msg.pub_key().ed25519().end()},
         .sig = Bytes{msg.sig().begin(), msg.sig().end()}};
       secret_conn->shared_auth_sig(sig_msg);
@@ -82,7 +82,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
     io_context,
     [&]() -> asio::awaitable<void> {
       auto loc_node = node_info.to_proto();
-      auto buf = proto_readwrite::write_msg<DefaultNodeInfo, unsigned char>(loc_node);
+      auto buf = ProtoReadWrite::write_msg<DefaultNodeInfo, unsigned char>(loc_node);
       co_await secret_conn->write(std::span<unsigned char>(buf));
       co_await sent_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
     },
@@ -95,7 +95,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
       std::vector<unsigned char> buf(10240);
       co_await secret_conn->read(std::span<unsigned char>(buf));
       codec::datastream<const unsigned char> ds(buf);
-      auto dni = proto_readwrite::read_msg<DefaultNodeInfo, codec::datastream<const unsigned char>>(ds);
+      auto dni = ProtoReadWrite::read_msg<DefaultNodeInfo, codec::datastream<const unsigned char>>(ds);
       peer_info = NodeInfo::from_proto(dni);
       co_await rcvd_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
     },

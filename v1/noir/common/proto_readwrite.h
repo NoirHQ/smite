@@ -9,7 +9,7 @@
 #include <google/protobuf/type.pb.h>
 
 namespace noir {
-class proto_readwrite {
+class ProtoReadWrite {
 public:
   template<typename ProtoType, typename R>
   static auto write_msg(google::protobuf::Message& msg) -> std::vector<R> {

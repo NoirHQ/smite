@@ -60,7 +60,7 @@ namespace detail {
     Packet packet{};
     PacketMsg* msg = packet.mutable_packet_msg();
     set_next_packet_msg(msg);
-    auto serialized = proto_readwrite::write_msg<Packet, ByteType>(packet);
+    auto serialized = ProtoReadWrite::write_msg<Packet, ByteType>(packet);
 
     auto res = co_await writer->write(serialized);
     if (res.has_value()) {
@@ -206,7 +206,7 @@ auto MConnection::send_routine(Chan<Done>& done) -> asio::awaitable<Result<void>
 auto MConnection::send_ping() -> asio::awaitable<Result<void>> {
   Packet packet{};
   packet.mutable_packet_ping();
-  auto serialized = proto_readwrite::write_msg<Packet, ByteType>(packet);
+  auto serialized = ProtoReadWrite::write_msg<Packet, ByteType>(packet);
   auto res = co_await buf_conn_writer->write(serialized);
   if (res.has_error()) {
     co_return res.error();
@@ -218,7 +218,7 @@ auto MConnection::send_ping() -> asio::awaitable<Result<void>> {
 auto MConnection::send_pong() -> asio::awaitable<Result<void>> {
   Packet packet{};
   packet.mutable_packet_pong();
-  auto serialized = proto_readwrite::write_msg<Packet, ByteType>(packet);
+  auto serialized = ProtoReadWrite::write_msg<Packet, ByteType>(packet);
   auto res = co_await buf_conn_writer->write(serialized);
   if (res.has_error()) {
     co_return res.error();
