@@ -43,7 +43,8 @@ public:
   }
 
   auto write(std::span<const unsigned char> buffer) -> boost::asio::awaitable<Result<std::size_t>> {
-    return write(boost::asio::const_buffer(buffer.data(), buffer.size()));
+    auto res = co_await write(boost::asio::const_buffer(buffer.data(), buffer.size()));
+    co_return res;
   }
 
   auto read(std::span<unsigned char> buffer) -> boost::asio::awaitable<Result<void>> {
