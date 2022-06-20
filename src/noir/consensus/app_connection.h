@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/application/app.h>
+#include <noir/application/noop_app.h>
 #include <noir/consensus/abci_types.h>
 #include <noir/consensus/common.h>
 
@@ -71,8 +71,17 @@ struct app_connection {
     std::scoped_lock g(mtx);
   }
 
-  app_connection() {
-    application = std::make_shared<application::app>();
+  app_connection(const std::string& proxy_app = "") {
+    if (proxy_app == "noop") {
+      application = std::make_shared<application::noop_app>();
+      return;
+    } else if (proxy_app.empty()) {
+      application = std::make_shared<application::base_application>();
+      return;
+    } else {
+      elog("unsupported proxy_app : ${app}", ("app", proxy_app));
+    }
+    check(false, "failed to load application");
   }
 };
 

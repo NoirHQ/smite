@@ -39,7 +39,6 @@ int main(int argc, char** argv) {
   commands::add_command(app.config(), &commands::consensus_test);
   commands::add_command(app.config(), &commands::debug);
   commands::add_command(app.config(), &commands::init);
-  commands::add_command(app.config(), &commands::node_test);
   commands::add_command(app.config(), &commands::start);
   commands::add_command(app.config(), &commands::unsafe_reset_all);
   commands::add_command(app.config(), &commands::version);

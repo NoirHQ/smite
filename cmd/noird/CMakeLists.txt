@@ -4,7 +4,6 @@ add_executable(noird
   noir/commands/consensus_test.cpp
   noir/commands/debug.cpp
   noir/commands/init.cpp
-  noir/commands/node_test.cpp
   noir/commands/start.cpp
   noir/commands/unsafe_reset_all.cpp
   noir/commands/version.cpp
