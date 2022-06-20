@@ -8,8 +8,8 @@
 #include <boost/core/noncopyable.hpp>
 #include <boost/system/error_code.hpp>
 #include <deque>
-#include <vector>
 #include <shared_mutex>
+#include <vector>
 
 namespace noir::p2p {
 

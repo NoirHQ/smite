@@ -9,7 +9,8 @@ namespace eo::time {
 
 template<class Rep, class Period>
 func<> sleep(const std::chrono::duration<Rep, Period>& sleep_duration) {
-  co_await boost::asio::steady_timer((co_await boost::asio::this_coro::executor), sleep_duration).async_wait(boost::asio::use_awaitable);
+  co_await boost::asio::steady_timer((co_await boost::asio::this_coro::executor), sleep_duration)
+    .async_wait(boost::asio::use_awaitable);
 }
 
 } // namespace eo::time
