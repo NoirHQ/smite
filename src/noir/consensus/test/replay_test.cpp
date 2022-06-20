@@ -25,7 +25,7 @@ auto prepare_consensus = [](auto num_validators) { // copy and modification of r
   validator_stub_list vss;
   auto temp_dir = std::make_shared<fc::temp_directory>();
   auto tmp_path = temp_dir->path().string();
-  auto db_dir = temp_dir->path() / "db";
+  auto db_dir = temp_dir->path() / std::string(default_data_dir);
   auto session = make_session(true, db_dir.string());
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
   auto proxyApp = std::make_shared<app_connection>();

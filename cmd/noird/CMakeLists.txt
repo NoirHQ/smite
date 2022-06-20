@@ -6,6 +6,7 @@ add_executable(noird
   noir/commands/init.cpp
   noir/commands/node_test.cpp
   noir/commands/start.cpp
+  noir/commands/unsafe_reset_all.cpp
   noir/commands/version.cpp
 )
 target_include_directories(noird PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
