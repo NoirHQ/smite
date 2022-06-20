@@ -25,6 +25,7 @@ CLI::App* debug(CLI::App&);
 CLI::App* init(CLI::App&);
 CLI::App* node_test(CLI::App&);
 CLI::App* start(CLI::App&);
+CLI::App* unsafe_reset_all(CLI::App&);
 CLI::App* version(CLI::App&);
 
 } // namespace noir::commands

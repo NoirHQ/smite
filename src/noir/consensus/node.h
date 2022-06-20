@@ -67,7 +67,7 @@ struct node {
     auto node_key_dir = std::filesystem::path{new_config->consensus.root_dir} / "config";
     auto node_key_ = node_key::load_or_gen_node_key(node_key_dir / new_config->base.node_key);
 
-    auto db_dir = std::filesystem::path{new_config->consensus.root_dir} / "db";
+    auto db_dir = std::filesystem::path{new_config->consensus.root_dir} / std::string(default_data_dir);
     auto session = make_session(false, db_dir);
 
     return make_node(app, new_config, priv_validators[0], node_key_, gen_doc, session);

@@ -11,6 +11,9 @@
 
 namespace noir::consensus {
 
+constexpr std::string_view default_config_dir = "config";
+constexpr std::string_view default_data_dir = "data";
+
 enum node_mode {
   Full = 1,
   Validator = 2,
@@ -84,7 +87,7 @@ struct consensus_config {
 
   static consensus_config get_default() {
     consensus_config cfg;
-    cfg.wal_path = "cs.wal";
+    cfg.wal_path = std::string(default_data_dir) + "/" + "cs.wal";
     cfg.timeout_propose = std::chrono::milliseconds{3000};
     cfg.timeout_propose_delta = std::chrono::milliseconds{500};
     cfg.timeout_prevote = std::chrono::milliseconds{1000};
@@ -150,8 +153,6 @@ struct priv_validator_config {
     };
   }
 
-  static constexpr std::string_view default_config_dir = "config";
-  static constexpr std::string_view default_data_dir = "data";
   static constexpr std::string_view default_priv_val_key_name = "priv_validator_key.json";
   static constexpr std::string_view default_priv_val_state_name = "priv_validator_state.json";
 };

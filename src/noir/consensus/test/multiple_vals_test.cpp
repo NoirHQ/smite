@@ -63,7 +63,7 @@ public:
     std::filesystem::remove_all(cfg->consensus.root_dir); // delete exist node directory
     std::filesystem::create_directories(cfg->consensus.root_dir);
     std::filesystem::create_directories(std::filesystem::path{cfg->consensus.root_dir} / "data");
-    auto db_dir = std::filesystem::path{cfg->consensus.root_dir} / "db";
+    auto db_dir = std::filesystem::path{cfg->consensus.root_dir} / std::string(default_data_dir);
     auto session = make_session(true, db_dir);
 
     node_ = node::make_node(*app_, cfg, priv_val, node_key::gen_node_key(), gen_doc, session);
