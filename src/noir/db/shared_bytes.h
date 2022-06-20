@@ -10,8 +10,8 @@
 #include <cstring>
 #include <memory>
 #include <numeric>
-#include <vector>
 #include <string_view>
+#include <vector>
 
 #include <boost/endian/detail/intrinsic.hpp>
 

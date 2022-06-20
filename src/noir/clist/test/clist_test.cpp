@@ -194,9 +194,8 @@ TEST_CASE("clist: WaitChan", "[noir][clist]") {
     auto seen = 0;
 
     for (auto loop = true; loop;) {
-      auto res = co_await (next->next_wait_chan().async_receive(eoroutine)
-        || done.async_receive(eoroutine)
-        || boost::asio::steady_timer{executor, std::chrono::seconds(10)}.async_wait(eoroutine));
+      auto res = co_await(next->next_wait_chan().async_receive(eoroutine) || done.async_receive(eoroutine) ||
+        boost::asio::steady_timer{executor, std::chrono::seconds(10)}.async_wait(eoroutine));
       switch (res.index()) {
       case 0:
         next = next->next();
@@ -212,14 +211,15 @@ TEST_CASE("clist: WaitChan", "[noir][clist]") {
       }
     }
 
-    REQUIRE_MESSAGE(pushed == seen, fmt::format("number of pushed items ({:d}) not equal to number of seen items ({:d})", pushed, seen));
+    REQUIRE_MESSAGE(pushed == seen,
+      fmt::format("number of pushed items ({:d}) not equal to number of seen items ({:d})", pushed, seen));
 
     auto prev = next;
     seen = 0;
 
     for (auto loop = true; loop;) {
-      auto res = co_await (prev->prev_wait_chan().async_receive(eoroutine)
-        || boost::asio::steady_timer{executor, std::chrono::seconds(3)}.async_wait(eoroutine));
+      auto res = co_await(prev->prev_wait_chan().async_receive(eoroutine) ||
+        boost::asio::steady_timer{executor, std::chrono::seconds(3)}.async_wait(eoroutine));
       switch (res.index()) {
       case 0:
         prev = prev->prev();
@@ -232,7 +232,8 @@ TEST_CASE("clist: WaitChan", "[noir][clist]") {
       }
     }
 
-    REQUIRE_MESSAGE(pushed == seen, fmt::format("number of pushed items ({:d}) not equal to number of seen items ({:d})", pushed, seen));
+    REQUIRE_MESSAGE(pushed == seen,
+      fmt::format("number of pushed items ({:d}) not equal to number of seen items ({:d})", pushed, seen));
   });
 
   executor.join();

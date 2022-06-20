@@ -8,8 +8,8 @@
 #include <noir/common/inttypes.h>
 #include <cppcodec/hex_default_lower.hpp>
 #include <span>
-#include <vector>
 #include <string_view>
+#include <vector>
 
 namespace noir {
 

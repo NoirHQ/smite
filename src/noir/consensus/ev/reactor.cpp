@@ -61,82 +61,85 @@ Result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
 }
 
 void reactor::broadcast_evidence_loop(const std::string& peer_id, Chan<std::monostate>& closer) {
-  boost::asio::co_spawn(thread_pool->get_executor(), [&]() -> boost::asio::awaitable<void> {
-    clist::CElementPtr<std::shared_ptr<evidence>> next{};
+  boost::asio::co_spawn(
+    thread_pool->get_executor(),
+    [&]() -> boost::asio::awaitable<void> {
+      clist::CElementPtr<std::shared_ptr<evidence>> next{};
 
-    auto _ = make_scope_exit([&]() {
-      {
-        std::unique_lock g{mtx};
-        peer_routines.erase(peer_id);
+      auto _ = make_scope_exit([&]() {
+        {
+          std::unique_lock g{mtx};
+          peer_routines.erase(peer_id);
 
-        peer_wg.done();
+          peer_wg.done();
 
-        // TODO: need check
-        // if (auto e = recover(); e) {
-        // }
-      }
-    });
+          // TODO: need check
+          // if (auto e = recover(); e) {
+          // }
+        }
+      });
 
-    for (;;) {
-      if (!next) {
-        auto res = co_await (evpool->evidence_wait_chan().async_receive(eo::eoroutine)
-          || closer.async_receive(eo::eoroutine)
+      for (;;) {
+        if (!next) {
+          auto res =
+            co_await(evpool->evidence_wait_chan().async_receive(eo::eoroutine) || closer.async_receive(eo::eoroutine)
+              // TODO: implement tendermint::service
+              /* close */
+            );
+          switch (res.index()) {
+          case 0:
+            if (next = evpool->evidence_front(); !next) {
+              continue;
+            }
+          case 1:
+            co_return;
+            /*
+            case 2:
+              co_return;
+            */
+          }
+        }
+
+        auto ev = next->value;
+        auto ev_proto = evidence::to_proto(*ev);
+        // check(ev_proto, fmt::format("failed to convert evidence: {}", ev_proto.error()));
+
+        auto new_env = std::make_shared<p2p::envelope>();
+        new_env->to = peer_id;
+        new_env->broadcast = false;
+        new_env->id = p2p::Evidence;
+        ::tendermint::types::EvidenceList msg;
+        *msg.add_evidence() = *ev_proto.value();
+        new_env->message.resize(ev_proto.value()->ByteSizeLong());
+        ev_proto.value()->SerializeToArray(new_env->message.data(), ev_proto.value()->ByteSizeLong());
+        xmt_mq_channel.publish(appbase::priority::medium, new_env);
+        dlog(fmt::format("gossiped evidence to peer={}", peer_id));
+
+        auto timer =
+          boost::asio::steady_timer(thread_pool->get_executor(), std::chrono::seconds(broadcast_evidence_interval_s));
+
+        auto res = co_await(timer.async_wait(eo::eoroutine) || next->next_wait_chan().async_receive(eo::eoroutine) ||
+          closer.async_receive(eo::eoroutine)
           // TODO: implement tendermint::service
-          /* close */
+          // || close_ch
         );
         switch (res.index()) {
         case 0:
-          if (next = evpool->evidence_front(); !next) {
-            continue;
-          }
+          next = nullptr;
+          break;
         case 1:
-          co_return;
-        /*
+          next = next->next();
+          break;
         case 2:
           co_return;
-        */
+          /*
+          case 3:
+            co_return;
+          */
         }
       }
-
-      auto ev = next->value;
-      auto ev_proto = evidence::to_proto(*ev);
-      // check(ev_proto, fmt::format("failed to convert evidence: {}", ev_proto.error()));
-
-      auto new_env = std::make_shared<p2p::envelope>();
-      new_env->to = peer_id;
-      new_env->broadcast = false;
-      new_env->id = p2p::Evidence;
-      ::tendermint::types::EvidenceList msg;
-      *msg.add_evidence() = *ev_proto.value();
-      new_env->message.resize(ev_proto.value()->ByteSizeLong());
-      ev_proto.value()->SerializeToArray(new_env->message.data(), ev_proto.value()->ByteSizeLong());
-      xmt_mq_channel.publish(appbase::priority::medium, new_env);
-      dlog(fmt::format("gossiped evidence to peer={}", peer_id));
-
-      auto timer = boost::asio::steady_timer(thread_pool->get_executor(), std::chrono::seconds(broadcast_evidence_interval_s));
-
-      auto res = co_await (timer.async_wait(eo::eoroutine)
-        || next->next_wait_chan().async_receive(eo::eoroutine)
-        || closer.async_receive(eo::eoroutine)
-        // TODO: implement tendermint::service
-        // || close_ch
-      );
-      switch (res.index()) {
-      case 0:
-        next = nullptr;
-        break;
-      case 1:
-        next = next->next();
-        break;
-      case 2:
-        co_return;
-      /*
-      case 3:
-        co_return;
-      */
-      }
-    }
-  }, boost::asio::detached);
+    },
+    boost::asio::detached);
 }
 
 } // namespace noir::consensus::ev

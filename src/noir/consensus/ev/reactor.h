@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/core/channel.h>
 #include <noir/common/plugin_interface.h>
 #include <noir/common/thread_pool.h>
 #include <noir/consensus/ev/evidence_pool.h>
+#include <noir/core/channel.h>
 
 namespace noir::consensus::ev {
 

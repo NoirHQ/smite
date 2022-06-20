@@ -9,10 +9,10 @@
 #include <queue>
 #include <set>
 #include <stack>
-#include <variant>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 
 #include <noir/common/bytes.h>
 #include <noir/db/shared_bytes.h>
