@@ -14,8 +14,10 @@ jobs:
     strategy:
       matrix:
         path:
-          - 'cmd'
-          - 'src'
+          - check: 'cmd'
+            exclude: ''
+          - check: 'src'
+            exclude: 'boost'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -23,5 +25,5 @@ jobs:
       - uses: jidicula/clang-format-action@v4.6.2
         with:
           clang-format-version: '14'
-          check-path: ${{ matrix.path }}
-
+          check-path: ${{ matrix.path['check'] }}
+          exclude-regex: ${{ matrix.path['exclude'] }}
