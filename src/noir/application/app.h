@@ -9,7 +9,7 @@
 namespace noir::application {
 
 class base_application {
-
+protected:
   // TODO : these variables are temporary. need to change to queue and need to be moved to another class.
   consensus::response_init_chain response_init_chain_;
   consensus::response_prepare_proposal response_prepare_proposal_;
@@ -33,22 +33,18 @@ public:
     return response_prepare_proposal_;
   }
   virtual consensus::response_begin_block& begin_block() {
-    ilog("!!! BeginBlock !!!");
     return response_begin_block_;
   }
   virtual consensus::req_res<consensus::response_deliver_tx>& deliver_tx_async() {
-    ilog("!!! DeliverTx !!!");
     return req_res_deliver_tx_;
   }
   virtual consensus::response_check_tx& check_tx_sync() {
-    response_check_tx_.nonce++; // temp
     return response_check_tx_;
   }
   virtual consensus::req_res<consensus::response_check_tx>& check_tx_async() {
     return req_res_check_tx_;
   }
   virtual consensus::response_end_block& end_block() {
-    ilog("!!! EndBlock !!!");
     return response_end_block_;
   }
   virtual consensus::response_commit& commit() {
@@ -60,7 +56,5 @@ public:
   virtual void load_snapshot_chunk() {}
   virtual void apply_snapshot_chunk() {}
 };
-
-class app : public base_application {};
 
 } // namespace noir::application

@@ -81,7 +81,7 @@ struct node {
     const std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>& session) {
 
     auto dbs = std::make_shared<noir::consensus::db_store>(session);
-    auto proxyApp = std::make_shared<app_connection>();
+    auto proxyApp = std::make_shared<app_connection>(new_config->base.proxy_app);
     auto bls = std::make_shared<noir::consensus::block_store>(session);
     auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
 

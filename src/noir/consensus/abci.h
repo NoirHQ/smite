@@ -20,6 +20,8 @@ public:
       "###############################################\n"
       "###        ABCI Configuration Options       ###\n"
       "###############################################");
+    abci_options->add_option("--proxy-app", "Proxy app: one of kvstore[not supported], or noop (default \"\")")
+      ->default_val("");
     abci_options->add_option("--do-not-start-node", "Do not start node (debug purposes)")->default_val(false);
     abci_options->add_option("--start-non-validator-node", "Start node in non-validator mode (debug purposes)")
       ->default_val(false);
@@ -28,11 +30,13 @@ public:
   void plugin_initialize(const CLI::App& app_config) {
     ilog("Initialize abci");
     auto abci_options = app_config.get_subcommand("abci");
+    proxy_app = abci_options->get_option("--proxy-app")->as<std::string>();
     do_not_start_node = abci_options->get_option("--do-not-start-node")->as<bool>();
     start_non_validator_node = abci_options->get_option("--start-non-validator-node")->as<bool>();
 
     auto config_ = std::make_shared<config>(config::get_default());
     config_->base.chain_id = "test_chain";
+    config_->base.proxy_app = proxy_app;
     config_->base.mode = Validator; // TODO: read from config or cli
     config_->base.root_dir = app.home_dir().string();
     config_->consensus.root_dir = config_->base.root_dir;
@@ -82,6 +86,7 @@ public:
   }
 
   std::unique_ptr<node> node_;
+  std::string proxy_app;
   bool do_not_start_node{false};
   bool start_non_validator_node{false};
 };
