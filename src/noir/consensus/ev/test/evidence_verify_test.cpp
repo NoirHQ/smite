@@ -3,7 +3,6 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#pragma once
 #include <catch2/catch_all.hpp>
 #include <noir/consensus/common_test.h>
 #include <noir/consensus/ev/evidence_pool.h>
