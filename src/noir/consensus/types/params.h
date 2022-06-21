@@ -26,7 +26,7 @@ struct evidence_params {
   int64_t max_bytes;
 
   static evidence_params get_default() {
-    return evidence_params{100000, std::chrono::hours(48).count(), 1048576};
+    return evidence_params{100000, 172800000000000, 1048576};
   }
 };
 
