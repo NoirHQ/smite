@@ -100,22 +100,39 @@ bool genesis_doc::validate_and_complete() {
   return true;
 }
 
+std::string gen_random(const int len) {
+  static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  std::string tmp_s;
+  tmp_s.reserve(len);
+  for (int i = 0; i < len; ++i) {
+    tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+  }
+  return tmp_s;
+}
+
 void genesis_doc::save(const std::string& file_path) {
   json::genesis_json_obj json_obj;
   json_obj.genesis_time = tstamp_to_format_str(genesis_time);
+
+  if (chain_id.empty()) {
+    chain_id = "test-chain-" + gen_random(7);
+  }
   json_obj.chain_id = chain_id;
+
   json_obj.initial_height = to_string(initial_height);
 
   for (const auto& validator : validators) {
     json::genesis_validator_json_obj val;
     val.address = to_string(validator.address);
-    val.pub_key.value = to_string(validator.pub_key.key);
+    val.pub_key.value = base64::encode(validator.pub_key.key.data(), validator.pub_key.key.size());
     val.power = validator.power;
     val.name = validator.name;
     json_obj.validators.push_back(val);
   }
 
-  json_obj.cs_params = cs_params.value();
+  if (!cs_params.has_value())
+    cs_params = consensus_params::get_default();
+  json_obj.consensus_params = cs_params.value();
 
   json_obj.app_hash = to_string(app_hash);
   json_obj.app_state = to_string(app_state);

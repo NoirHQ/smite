@@ -31,7 +31,7 @@ namespace json {
     std::string genesis_time;
     std::string chain_id;
     std::string initial_height;
-    consensus_params cs_params;
+    noir::consensus::consensus_params consensus_params;
     std::vector<genesis_validator_json_obj> validators;
     std::string app_hash;
     std::string app_state;
@@ -66,4 +66,4 @@ NOIR_REFLECT(noir::consensus::genesis_validator, address, pub_key, power, name);
 NOIR_REFLECT(noir::consensus::genesis_doc, chain_id, initial_height, /*cs_params, validators,*/ app_hash, app_state);
 NOIR_REFLECT(noir::consensus::json::key_json_obj, type, value);
 NOIR_REFLECT(noir::consensus::json::genesis_validator_json_obj, address, pub_key, power, name);
-NOIR_REFLECT(noir::consensus::json::genesis_json_obj, genesis_time, chain_id, initial_height, validators, app_hash, app_state);
+NOIR_REFLECT(noir::consensus::json::genesis_json_obj, genesis_time, chain_id, initial_height, consensus_params, validators, app_hash, app_state);

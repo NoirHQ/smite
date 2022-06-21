@@ -22,9 +22,8 @@ public:
       "###############################################");
     abci_options->add_option("--proxy-app", "Proxy app: one of kvstore[not supported], or noop (default \"\")")
       ->default_val("");
-    abci_options->add_option("--do-not-start-node", "Do not start node (debug purposes)")->default_val(false);
-    abci_options->add_option("--start-non-validator-node", "Start node in non-validator mode (debug purposes)")
-      ->default_val(false);
+    abci_options->add_option("--do-not-start-node", "Do not start node (debug purposes)");
+    abci_options->add_option("--start-non-validator-node", "Start node in non-validator mode (debug purposes)");
   }
 
   void plugin_initialize(const CLI::App& app_config) {

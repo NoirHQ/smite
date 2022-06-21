@@ -741,7 +741,8 @@ void p2p::plugin_startup() {
     my->update_chain_info();
 
     for (const auto& seed_node : my->supplied_peers) {
-      connect(seed_node);
+      if (!seed_node.empty())
+        connect(seed_node);
     }
 
   } catch (...) {
