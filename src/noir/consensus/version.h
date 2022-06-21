@@ -27,6 +27,13 @@ struct consensus_version {
     ret->set_app(c.app);
     return ret;
   }
+
+  static std::unique_ptr<consensus_version> from_proto(const ::tendermint::version::Consensus& pb) {
+    auto ret = std::make_unique<consensus_version>();
+    ret->block = pb.block();
+    ret->app = pb.app();
+    return ret;
+  }
 };
 
 struct version {
