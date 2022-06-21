@@ -30,13 +30,13 @@ public:
   template<typename U>
   Result(std::in_place_type_t<U> _): basic_result<T, E, NoValuePolicy>(_) {}
 
-  // private:
+private:
   Result(): basic_result<T, E, NoValuePolicy>(E()) {}
 
   // HACK: workaround for making boost::asio::co_spawn work with boost::asio::awaitable<Result<T, E>>
-  // template<typename U, typename Executor, typename F, typename Handler>
-  // friend boost::asio::awaitable<boost::asio::detail::awaitable_thread_entry_point, Executor>
-  // boost::asio::detail::co_spawn_entry_point(boost::asio::awaitable<U, Executor>*, Executor ex, F f, Handler handler);
+  template<typename U, typename Executor, typename F, typename Handler>
+  friend boost::asio::awaitable<boost::asio::detail::awaitable_thread_entry_point, Executor>
+  boost::asio::detail::co_spawn_entry_point(boost::asio::awaitable<U, Executor>*, Executor ex, F f, Handler handler);
 };
 
 } // namespace noir
