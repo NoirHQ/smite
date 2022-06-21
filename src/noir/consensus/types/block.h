@@ -94,7 +94,7 @@ struct commit_sig {
   static std::unique_ptr<::tendermint::types::CommitSig> to_proto(const commit_sig& c) {
     auto ret = std::make_unique<::tendermint::types::CommitSig>();
     ret->set_validator_address({c.validator_address.begin(), c.validator_address.end()});
-    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(c.timestamp); // TODO
+    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(c.timestamp);
     ret->set_signature({c.signature.begin(), c.signature.end()});
     return ret;
   }
@@ -370,10 +370,10 @@ struct block_header {
 
   static std::unique_ptr<::tendermint::types::Header> to_proto(const block_header& b) {
     auto ret = std::make_unique<::tendermint::types::Header>();
-    *ret->mutable_version(); // TODO
+    ret->set_allocated_version(consensus_version::to_proto(b.version).release());
     *ret->mutable_chain_id() = b.chain_id;
     ret->set_height(b.height);
-    *ret->mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(b.time); // TODO
+    *ret->mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(b.time);
     ret->set_allocated_last_block_id(p2p::block_id::to_proto(b.last_block_id).release());
     ret->set_validators_hash({b.validators_hash.begin(), b.validators_hash.end()});
     ret->set_next_validators_hash({b.next_validators_hash.begin(), b.next_validators_hash.end()});
@@ -392,8 +392,7 @@ struct block_header {
 
     auto bi = p2p::block_id::from_proto(pb.last_block_id()); // TODO: handle error case
 
-    auto version_pb = pb.version();
-    ret->version = {.block = version_pb.block(), .app = version_pb.app()};
+    ret->version = *consensus_version::from_proto(pb.version());
     ret->chain_id = pb.chain_id();
     ret->height = pb.height();
     ret->time = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.time());
