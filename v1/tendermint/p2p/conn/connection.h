@@ -48,8 +48,6 @@ private:
   const static std::size_t default_recv_message_capacity = 22020096; // 21MB
 };
 
-using ChannelDescriptorPtr = std::shared_ptr<ChannelDescriptor>;
-
 using BytesPtr = std::shared_ptr<noir::Bytes>;
 
 namespace detail {
@@ -60,7 +58,7 @@ namespace detail {
 
   class Channel {
   public:
-    Channel(asio::io_context& io_context, ChannelDescriptorPtr desc, std::size_t s)
+    Channel(asio::io_context& io_context, std::shared_ptr<conn::ChannelDescriptor> desc, std::size_t s)
       : io_context(io_context),
         desc(desc),
         send_queue(io_context, desc->send_queue_capacity),
@@ -75,7 +73,7 @@ namespace detail {
     void update_stats();
 
   public:
-    ChannelDescriptorPtr desc;
+    std::shared_ptr<conn::ChannelDescriptor> desc;
     std::atomic<int64_t> recently_sent{0};
 
   private:
@@ -121,7 +119,7 @@ class MConnection {
 public:
   static auto new_mconnection_with_config(asio::io_context& io_context,
     std::shared_ptr<SecretConnection> conn,
-    std::vector<ChannelDescriptorPtr>& ch_descs,
+    std::vector<std::shared_ptr<conn::ChannelDescriptor>>& ch_descs,
     std::function<boost::asio::awaitable<void>(ChannelId channel_id, std::shared_ptr<noir::Bytes> payload)>&&
       on_receive,
     std::function<boost::asio::awaitable<void>(noir::Error error)>&& on_error,
@@ -157,7 +155,7 @@ public:
   }
   MConnection(asio::io_context& io_context,
     std::shared_ptr<SecretConnection> conn,
-    std::vector<ChannelDescriptorPtr>& ch_descs,
+    std::vector<std::shared_ptr<conn::ChannelDescriptor>>& ch_descs,
     std::function<boost::asio::awaitable<void>(ChannelId channel_id, std::shared_ptr<noir::Bytes> payload)>&&
       on_receive,
     std::function<boost::asio::awaitable<void>(noir::Error error)>&& on_error,
