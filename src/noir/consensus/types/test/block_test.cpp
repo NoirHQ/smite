@@ -157,8 +157,7 @@ TEST_CASE("block: decode Bytes", "[noir][consensus]") {
   CHECK(commit_.my_block_id.hash == Bytes("fcf931aa3231272db13da3dc0243bd575ab812a9796bae10b04b2b9f8b09e40d"));
 
   auto encoded = block::to_proto(*decoded);
-  Bytes new_bz(encoded->ByteSizeLong());
-  encoded->SerializeToArray(new_bz.data(), encoded->ByteSizeLong());
+  auto new_bz = codec::protobuf::encode(*encoded);
   CHECK(new_bz == bz);
 
   Bytes original_bz(pb_block.ByteSizeLong());
