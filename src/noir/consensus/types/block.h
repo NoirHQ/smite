@@ -93,6 +93,7 @@ struct commit_sig {
 
   static std::unique_ptr<::tendermint::types::CommitSig> to_proto(const commit_sig& c) {
     auto ret = std::make_unique<::tendermint::types::CommitSig>();
+    ret->set_block_id_flag(static_cast<::tendermint::types::BlockIDFlag>(c.flag));
     ret->set_validator_address({c.validator_address.begin(), c.validator_address.end()});
     *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(c.timestamp);
     ret->set_signature({c.signature.begin(), c.signature.end()});
@@ -559,7 +560,7 @@ NOIR_REFLECT(noir::consensus::part, index, bytes_, proof_);
 // NOIR_REFLECT(noir::consensus::part_set, total, hash, parts, parts_bit_array, count, byte_size);
 NOIR_REFLECT(noir::consensus::block_data, txs, hash);
 NOIR_REFLECT(noir::consensus::block_header, version, chain_id, height, time, last_block_id, last_commit_hash, data_hash,
-  validators_hash, next_validators_hash, consensus_hash, app_hash, last_results_hash, proposer_address);
+  validators_hash, next_validators_hash, consensus_hash, app_hash, last_results_hash, evidence_hash, proposer_address);
 
 template<>
 struct noir::IsForeachable<noir::consensus::commit> : std::false_type {};

@@ -333,7 +333,7 @@ struct evidence_list {
   Bytes hash() {
     std::vector<Bytes> bytes_list;
     for (auto& e : list)
-      bytes_list.push_back(e->get_hash());
+      bytes_list.push_back(e->get_bytes()); // TODO : use hash when golang implementation uses hash in the future
     return consensus::merkle::hash_from_bytes_list(bytes_list);
   }
 
