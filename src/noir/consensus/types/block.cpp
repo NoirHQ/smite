@@ -156,8 +156,7 @@ Bytes block_header::get_hash() {
     return {};
 
   auto pb_v = consensus_version::to_proto(version);
-  Bytes bz_v(pb_v->ByteSizeLong());
-  pb_v->SerializeToArray(bz_v.data(), pb_v->ByteSizeLong());
+  auto bz_v = codec::protobuf::encode(*pb_v);
 
   auto pb_lbi = p2p::block_id::to_proto(last_block_id);
   Bytes bz_lbi(pb_lbi->ByteSizeLong());
