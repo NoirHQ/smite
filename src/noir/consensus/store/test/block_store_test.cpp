@@ -34,6 +34,7 @@ static inline void comp_hdr(noir::consensus::block_header& ret_hdr, noir::consen
   CHECK(ret_hdr.consensus_hash == exp_hdr.consensus_hash);
   CHECK(ret_hdr.app_hash == exp_hdr.app_hash);
   CHECK(ret_hdr.last_results_hash == exp_hdr.last_results_hash);
+  CHECK(ret_hdr.evidence_hash == exp_hdr.evidence_hash);
   CHECK(ret_hdr.proposer_address == exp_hdr.proposer_address);
   CHECK(ret_hdr.get_hash() == exp_hdr.get_hash());
 };

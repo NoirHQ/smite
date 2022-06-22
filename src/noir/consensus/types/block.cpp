@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/consensus/types/block.h>
+#include <noir/consensus/types/encoding_helper.h>
 #include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/vote.h>
 #include <noir/core/codec.h>
@@ -49,7 +50,9 @@ Bytes commit::get_hash() {
   if (hash.empty()) {
     merkle::bytes_list items;
     for (const auto& sig : signatures) {
-      auto bz = encode(sig);
+      auto pb = commit_sig::to_proto(sig);
+      Bytes bz(pb->ByteSizeLong());
+      pb->SerializeToArray(bz.data(), pb->ByteSizeLong());
       items.push_back(bz);
     }
     hash = merkle::hash_from_bytes_list(items);
@@ -143,30 +146,39 @@ Bytes block_data::get_hash() {
   if (hash.empty()) {
     merkle::bytes_list items;
     for (const auto& tx : txs)
-      items.push_back(tx);
+      items.push_back(crypto::Sha256()(tx));
     hash = merkle::hash_from_bytes_list(items);
   }
   return hash;
 }
 
 Bytes block_header::get_hash() {
-  // if (validators_hash.empty()) // TODO
-  //   return {};
+  if (validators_hash.empty())
+    return {};
+
+  auto pb_v = consensus_version::to_proto(version);
+  Bytes bz_v(pb_v->ByteSizeLong());
+  pb_v->SerializeToArray(bz_v.data(), pb_v->ByteSizeLong());
+
+  auto pb_lbi = p2p::block_id::to_proto(last_block_id);
+  Bytes bz_lbi(pb_lbi->ByteSizeLong());
+  pb_lbi->SerializeToArray(bz_lbi.data(), pb_lbi->ByteSizeLong());
+
   merkle::bytes_list items;
-  // items.push_back(encode(version)); // TODO
-  // items.push_back(encode(chain_id)); // TODO
-  items.push_back(encode(height));
-  items.push_back(encode(time));
-  // items.push_back(encode(last_block_id));
-  items.push_back(encode(last_commit_hash));
-  items.push_back(encode(data_hash));
-  items.push_back(encode(validators_hash));
-  items.push_back(encode(next_validators_hash));
-  items.push_back(encode(consensus_hash));
-  items.push_back(encode(app_hash));
-  items.push_back(encode(last_results_hash));
-  // items.push_back(encode(evidence_hash));
-  items.push_back(encode(proposer_address));
+  items.push_back(bz_v);
+  items.push_back(cdc_encode(chain_id));
+  items.push_back(cdc_encode(height));
+  items.push_back(cdc_encode_time(time));
+  items.push_back(bz_lbi);
+  items.push_back(cdc_encode(last_commit_hash));
+  items.push_back(cdc_encode(data_hash));
+  items.push_back(cdc_encode(validators_hash));
+  items.push_back(cdc_encode(next_validators_hash));
+  items.push_back(cdc_encode(consensus_hash));
+  items.push_back(cdc_encode(app_hash));
+  items.push_back(cdc_encode(last_results_hash));
+  items.push_back(cdc_encode(evidence_hash));
+  items.push_back(cdc_encode(proposer_address));
   return merkle::hash_from_bytes_list(items);
 }
 
