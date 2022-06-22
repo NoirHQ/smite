@@ -51,8 +51,7 @@ Bytes commit::get_hash() {
     merkle::bytes_list items;
     for (const auto& sig : signatures) {
       auto pb = commit_sig::to_proto(sig);
-      Bytes bz(pb->ByteSizeLong());
-      pb->SerializeToArray(bz.data(), pb->ByteSizeLong());
+      auto bz = codec::protobuf::encode(*pb);
       items.push_back(bz);
     }
     hash = merkle::hash_from_bytes_list(items);
