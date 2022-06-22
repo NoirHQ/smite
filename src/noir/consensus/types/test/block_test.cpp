@@ -194,7 +194,8 @@ TEST_CASE("block: verify header hash", "[noir][consensus]") {
   auto sample_t = date::make_zoned(date::current_zone(), date::sys_days{date::October / 13 / 2019} + 16h + 14min + 44s);
   tstamp ts = sample_t.get_sys_time().time_since_epoch().count() * 1'000'000;
 
-  auto proposer_address_hash = crypto::Sha256()(string_to_bytes("proposer_address"));
+  auto sha256 = crypto::Sha256();
+  auto proposer_address_hash = sha256(string_to_bytes("proposer_address"));
 
   block_header h{
     .version = {.block = 1, .app = 2},
@@ -202,14 +203,14 @@ TEST_CASE("block: verify header hash", "[noir][consensus]") {
     .height = 3,
     .time = ts,
     .last_block_id = make_block_id(Bytes(32), 6, Bytes(32)),
-    .last_commit_hash = crypto::Sha256()(string_to_bytes("last_commit_hash")),
-    .data_hash = crypto::Sha256()(string_to_bytes("data_hash")),
-    .validators_hash = crypto::Sha256()(string_to_bytes("validators_hash")),
-    .next_validators_hash = crypto::Sha256()(string_to_bytes("next_validators_hash")),
-    .consensus_hash = crypto::Sha256()(string_to_bytes("consensus_hash")),
-    .app_hash = crypto::Sha256()(string_to_bytes("app_hash")),
-    .last_results_hash = crypto::Sha256()(string_to_bytes("last_results_hash")),
-    .evidence_hash = crypto::Sha256()(string_to_bytes("evidence_hash")),
+    .last_commit_hash = sha256(string_to_bytes("last_commit_hash")),
+    .data_hash = sha256(string_to_bytes("data_hash")),
+    .validators_hash = sha256(string_to_bytes("validators_hash")),
+    .next_validators_hash = sha256(string_to_bytes("next_validators_hash")),
+    .consensus_hash = sha256(string_to_bytes("consensus_hash")),
+    .app_hash = sha256(string_to_bytes("app_hash")),
+    .last_results_hash = sha256(string_to_bytes("last_results_hash")),
+    .evidence_hash = sha256(string_to_bytes("evidence_hash")),
     .proposer_address = {proposer_address_hash.begin(), proposer_address_hash.begin() + 20},
   };
   CHECK(h.get_hash() == Bytes("f740121f553b5418c3efbd343c2dbfe9e007bb67b0d020a0741374bab65242a4"));
