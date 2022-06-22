@@ -28,26 +28,28 @@ CLI::App* init(CLI::App& root) {
 
     auto init_options = root.get_subcommand("init");
     mode = init_options->get_option("mode")->as<std::string>();
-    if (mode != "validator") {
-      throw CLI::ValidationError("mode: only validator is supported for now");
+    if (mode == "seed") {
+      throw CLI::ValidationError("mode: seed node is not supported for now");
     }
     key_type = init_options->get_option("--key")->as<std::string>();
     if (key_type != "ed25519") {
       throw CLI::ValidationError("key: only ed25519 is supported");
     }
 
-    // generate priv_validator_key.json
     std::vector<genesis_validator> validators;
-    std::vector<std::shared_ptr<priv_validator>> priv_validators;
-    auto priv_val = privval::file_pv::load_or_gen_file_pv(
-      home_dir / config_.priv_validator.key, home_dir / config_.priv_validator.state);
-    if (!priv_val) {
-      throw CLI::FileError(priv_val.error().message());
+    if (mode == "validator") {
+      // generate priv_validator_key.json
+      std::vector<std::shared_ptr<priv_validator>> priv_validators;
+      auto priv_val = privval::file_pv::load_or_gen_file_pv(
+        home_dir / config_.priv_validator.key, home_dir / config_.priv_validator.state);
+      if (!priv_val) {
+        throw CLI::FileError(priv_val.error().message());
+      }
+      auto vote_power = 10;
+      auto val = validator{priv_val.value()->get_address(), priv_val.value()->get_pub_key(), vote_power, 0};
+      validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
+      priv_validators.push_back(std::move(priv_val.value()));
     }
-    auto vote_power = 10;
-    auto val = validator{priv_val.value()->get_address(), priv_val.value()->get_pub_key(), vote_power, 0};
-    validators.push_back(genesis_validator{val.address, val.pub_key_, val.voting_power});
-    priv_validators.push_back(std::move(priv_val.value()));
 
     // generate genesis.json
     std::shared_ptr<genesis_doc> gen_doc{};

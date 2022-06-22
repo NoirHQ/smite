@@ -20,8 +20,11 @@ public:
       "###############################################\n"
       "###        ABCI Configuration Options       ###\n"
       "###############################################");
-    abci_options->add_option("--proxy-app", "Proxy app: one of kvstore[not supported], or noop (default \"\")")
+    abci_options->add_option("--proxy-app", "Proxy app: one of kvstore (not supported), or noop (default \"\")")
       ->default_val("");
+    abci_options->add_option("--mode", "Mode of Node: full | validator | seed (not supported)")
+      ->check(CLI::IsMember({"full", "validator", "seed"}))
+      ->default_val("validator");
     abci_options->add_option("--do-not-start-node", "Do not start node (debug purposes)");
     abci_options->add_option("--start-non-validator-node", "Start node in non-validator mode (debug purposes)");
   }
@@ -30,8 +33,8 @@ public:
     ilog("Initialize abci");
     auto abci_options = app_config.get_subcommand("abci");
     proxy_app = abci_options->get_option("--proxy-app")->as<std::string>();
+    std::string mode = abci_options->get_option("--mode")->as<std::string>();
     do_not_start_node = abci_options->get_option("--do-not-start-node")->as<bool>();
-    start_non_validator_node = abci_options->get_option("--start-non-validator-node")->as<bool>();
 
     auto config_ = std::make_shared<config>(config::get_default());
     config_->base.chain_id = "test_chain";
@@ -48,12 +51,15 @@ public:
         std::make_shared<consensus_reactor>(app, std::make_shared<consensus_state>(app, event_bus_), event_bus_, false);
       return;
     }
-    if (start_non_validator_node) {
-      // Start non-validator node; aka full node (but not seed node) TODO: do we need to support seed nodes?
-      app.set_home_dir("/tmp");
-      config_->consensus.root_dir = "/tmp";
-      config_->priv_validator.root_dir = "/tmp";
+    if (mode == "seed") {
+      elog("seed mode is not supported now");
+      return;
+    } else if (mode == "full") {
       config_->base.mode = Full;
+    } else if (mode == "validator") {
+    } else {
+      elog("unknown mode: ${mode}", ("mode", mode));
+      return;
     }
 
     node_ = node::new_default_node(app, config_);
@@ -87,7 +93,6 @@ public:
   std::unique_ptr<node> node_;
   std::string proxy_app;
   bool do_not_start_node{false};
-  bool start_non_validator_node{false};
 };
 
 } // namespace noir::consensus
