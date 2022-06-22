@@ -159,8 +159,7 @@ Bytes block_header::get_hash() {
   auto bz_v = codec::protobuf::encode(*pb_v);
 
   auto pb_lbi = p2p::block_id::to_proto(last_block_id);
-  Bytes bz_lbi(pb_lbi->ByteSizeLong());
-  pb_lbi->SerializeToArray(bz_lbi.data(), pb_lbi->ByteSizeLong());
+  auto bz_lbi = codec::protobuf::encode(*pb_lbi);
 
   merkle::bytes_list items;
   items.push_back(bz_v);
