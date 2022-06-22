@@ -26,7 +26,7 @@ public:
   static auto new_mconn_connection(boost::asio::io_context& io_context,
     std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>& conn,
     conn::MConnConfig& mconn_config,
-    std::vector<conn::ChannelDescriptorPtr>& channel_descs) -> std::shared_ptr<MConnConnection> {
+    std::vector<std::shared_ptr<conn::ChannelDescriptor>>& channel_descs) -> std::shared_ptr<MConnConnection> {
     return std::shared_ptr<MConnConnection>(new MConnConnection(io_context, conn, mconn_config, channel_descs));
   }
   auto handshake(noir::Chan<std::monostate>& done, NodeInfo& node_info, noir::Bytes& priv_key)
@@ -42,7 +42,7 @@ private:
   MConnConnection(boost::asio::io_context& io_context,
     std::shared_ptr<noir::net::Conn<noir::net::TcpConn>>& conn,
     conn::MConnConfig& mconn_config,
-    std::vector<conn::ChannelDescriptorPtr>& channel_descs)
+    std::vector<std::shared_ptr<conn::ChannelDescriptor>>& channel_descs)
     : io_context(io_context),
       conn(conn),
       mconn_config(mconn_config),
@@ -57,7 +57,7 @@ private:
   boost::asio::io_context& io_context;
   std::shared_ptr<noir::net::Conn<noir::net::TcpConn>> conn;
   conn::MConnConfig mconn_config;
-  std::vector<conn::ChannelDescriptorPtr> channel_descs;
+  std::vector<std::shared_ptr<conn::ChannelDescriptor>> channel_descs;
   noir::Chan<MConnMessage> receive_ch;
   noir::Chan<noir::Error> error_ch;
   noir::Chan<std::monostate> close_ch;
@@ -91,7 +91,7 @@ public:
     -> boost::asio::awaitable<noir::Result<std::shared_ptr<MConnConnection>>>;
   auto dial(const std::string& endpoint) -> boost::asio::awaitable<noir::Result<std::shared_ptr<MConnConnection>>>;
   auto close() -> noir::Result<void>;
-  void add_channel_descriptor(std::vector<conn::ChannelDescriptorPtr>& channel_descs);
+  void add_channel_descriptor(std::vector<std::shared_ptr<conn::ChannelDescriptor>>& channel_descs);
   static auto validate_endpoint(const std::string& endpoint) -> noir::Result<void>;
 
 private:
@@ -102,7 +102,7 @@ private:
   boost::asio::io_context& io_context;
   MConnTransportOptions options;
   conn::MConnConfig mconn_config;
-  std::vector<conn::ChannelDescriptorPtr> channel_descs;
+  std::vector<std::shared_ptr<conn::ChannelDescriptor>> channel_descs;
   noir::Chan<std::monostate> done_ch;
   std::shared_ptr<noir::net::TcpListener> listener;
 };

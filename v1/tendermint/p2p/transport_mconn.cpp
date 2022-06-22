@@ -293,7 +293,7 @@ auto MConnTransport::close() -> Result<void> {
   return success();
 }
 
-void MConnTransport::add_channel_descriptor(std::vector<conn::ChannelDescriptorPtr>& channel_desc) {
+void MConnTransport::add_channel_descriptor(std::vector<std::shared_ptr<conn::ChannelDescriptor>>& channel_desc) {
   channel_descs.insert(channel_descs.end(), channel_desc.begin(), channel_desc.end());
 }
 
