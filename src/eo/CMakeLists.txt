@@ -2,11 +2,10 @@ add_library(eo STATIC
   core.cpp
   math/rand.cpp
 )
-target_include_directories(eo PUBLIC ${PROJECT_SOURCE_DIR})
+target_include_directories(eo PUBLIC ${PROJECT_SOURCE_DIR} ${Boost_INCLUDE_DIR})
 target_link_libraries(eo
   fmt::fmt
   nonstd::scope-lite
-  noir::core
 )
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
