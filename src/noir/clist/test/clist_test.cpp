@@ -146,7 +146,7 @@ TEST_CASE("clist", "[noir][clist]") {
       auto seen = 0;
 
       for (auto loop = true; loop;) {
-        auto res = co_await(*next->next_wait_chan() || *done || time::sleep(std::chrono::seconds(10)));
+        auto res = co_await (*next->next_wait_chan() || *done || time::sleep(std::chrono::seconds(10)));
         switch (res.index()) {
         case 0:
           next = next->next();
@@ -169,7 +169,7 @@ TEST_CASE("clist", "[noir][clist]") {
       seen = 0;
 
       for (auto loop = true; loop;) {
-        auto res = co_await(*prev->prev_wait_chan() || time::sleep(std::chrono::seconds(3)));
+        auto res = co_await (*prev->prev_wait_chan() || time::sleep(std::chrono::seconds(3)));
         switch (res.index()) {
         case 0:
           prev = prev->prev();
