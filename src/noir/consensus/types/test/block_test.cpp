@@ -160,8 +160,7 @@ TEST_CASE("block: decode Bytes", "[noir][consensus]") {
   auto new_bz = codec::protobuf::encode(*encoded);
   CHECK(new_bz == bz);
 
-  Bytes original_bz(pb_block.ByteSizeLong());
-  pb_block.SerializeToArray(original_bz.data(), pb_block.ByteSizeLong());
+  auto original_bz = codec::protobuf::encode(pb_block);
   CHECK(original_bz == bz);
 }
 
