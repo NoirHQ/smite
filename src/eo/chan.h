@@ -15,13 +15,29 @@ auto operator<<(chan<T>& channel, U&& message) {
 }
 
 template<typename T>
-auto operator*(chan<T>& channel) {
-  return channel.async_receive(boost::asio::use_awaitable);
+func<T> operator*(chan<T>& channel) {
+  auto res = co_await channel.async_receive(eoroutine);
+  co_return res ? res.value() : T{};
 }
 
 template<typename T = std::monostate>
 auto make_chan(size_t s = 0) -> chan<T> {
-  return chan<T>{executor, s};
+  return chan<T>{runtime::executor, s};
 }
+
+template<typename T = std::monostate>
+auto make_shared_chan(size_t s = 0) -> std::shared_ptr<chan<T>> {
+  return std::make_shared<chan<T>>(runtime::executor, s);
+}
+
+struct default_chan_type: public chan<std::monostate> {
+  default_chan_type(): chan(runtime::executor, 0) { close(); }
+
+  auto operator*() {
+    return async_receive(boost::asio::experimental::as_result(boost::asio::use_awaitable));
+  }
+};
+
+extern default_chan_type default_chan;
 
 } // namespace eo
