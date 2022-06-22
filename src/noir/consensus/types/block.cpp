@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/codec/protobuf.h>
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/encoding_helper.h>
 #include <noir/consensus/types/evidence.h>
