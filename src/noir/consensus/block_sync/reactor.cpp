@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/codec/protobuf.h>
 #include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/reactor.h>
 #include <noir/consensus/types/validation.h>
@@ -57,9 +58,7 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
   } break;
   case tendermint::blocksync::Message::kBlockResponse: {
     const auto& m = pb_msg.block_response();
-    auto temp_block = block::from_proto(m.block());
-    Bytes bz = encode<block>(*temp_block); // TODO : requires clean up
-    bs_msg = block_response{.block_ = bz};
+    bs_msg = block_response{.block_ = codec::protobuf::encode(m.block())};
   } break;
   case tendermint::blocksync::Message::kStatusRequest: {
     // const auto& m = pb_msg.status_request();
