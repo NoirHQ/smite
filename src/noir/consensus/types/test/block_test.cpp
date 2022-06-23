@@ -127,16 +127,16 @@ TEST_CASE("block: decode Bytes", "[noir][consensus]") {
   //       CommitSig{F210E14CE4B8 by E4081D4A0EDB on 2 @ 2022-06-21T03:32:39.686595Z}
   //   }#719623891E9BE9264D843E8D09ED0E7C1ADCAB9536151B549B798E2C261FF5B5
   // }#
-  ::tendermint::types::Block pb_block;
-  pb_block.ParseFromArray(bz.data(), bz.size());
+  auto pb_block = codec::protobuf::decode<::tendermint::types::Block>(bz);
   auto decoded = block::from_proto(pb_block);
 
   auto& header = decoded->header;
   CHECK(header.get_hash().empty()); // due to empty validators
   CHECK((header.version.block == 11 && header.version.app == 0));
   CHECK(header.height == 6057778313365808229);
-  auto sample_t = date::make_zoned(date::current_zone(), date::sys_days{date::January / 1 / 1});
-  tstamp ts = sample_t.get_sys_time().time_since_epoch().count() * 1'000'000;
+  tstamp ts =
+    std::chrono::duration_cast<std::chrono::microseconds>(date::sys_days{date::January / 1 / 1}.time_since_epoch())
+      .count();
   CHECK(header.time == ts);
   CHECK(header.last_commit_hash == Bytes("719623891e9be9264d843e8d09ed0e7c1adcab9536151b549b798e2c261ff5b5"));
   CHECK(header.data_hash == Bytes("9d1843c1a24a654a39ff3448714bc9fe69da0170fa390b1ac67047377ba72f0e"));
@@ -183,8 +183,9 @@ TEST_CASE("block: cdc_encode", "[noir][consensus]") {
   }
   SECTION("time") {
     // UTC to local time
-    auto sample_t = date::make_zoned(date::current_zone(), date::sys_days{date::January / 1 / 2019});
-    tstamp ts = sample_t.get_sys_time().time_since_epoch().count() * 1'000'000;
+    tstamp ts =
+      std::chrono::duration_cast<std::chrono::microseconds>(date::sys_days{date::January / 1 / 2019}.time_since_epoch())
+        .count();
     auto bz = cdc_encode_time(ts);
     CHECK(bz == Bytes("0880dbaae105"));
   }
@@ -192,8 +193,10 @@ TEST_CASE("block: cdc_encode", "[noir][consensus]") {
 
 TEST_CASE("block: verify header hash", "[noir][consensus]") {
   using namespace std::chrono_literals;
-  auto sample_t = date::make_zoned(date::current_zone(), date::sys_days{date::October / 13 / 2019} + 16h + 14min + 44s);
-  tstamp ts = sample_t.get_sys_time().time_since_epoch().count() * 1'000'000;
+  // auto sample_t = date::make_zoned(date::current_zone(),
+  //   date::sys_days{date::October / 13 / 2019} + 16h + 14min + 44s);
+  auto sample_t = date::sys_days{date::October / 13 / 2019} + 16h + 14min + 44s;
+  tstamp ts = std::chrono::duration_cast<std::chrono::microseconds>(sample_t.time_since_epoch()).count();
 
   auto sha256 = crypto::Sha256();
   auto proposer_address_hash = sha256(string_to_bytes("proposer_address"));
