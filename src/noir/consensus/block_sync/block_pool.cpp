@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/codec/protobuf.h>
 #include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/block_pool.h>
 #include <noir/core/codec.h>
@@ -206,8 +207,7 @@ void block_pool::transmit_new_envelope(const std::string& to, const p2p::bs_reac
       },
       [&pb_msg](const consensus::block_response& msg) {
         auto res = pb_msg.mutable_block_response();
-        auto block_ = decode<block>(msg.block_); // TODO : requires clean up
-        res->set_allocated_block(block::to_proto(block_).release());
+        *res->mutable_block() = codec::protobuf::decode<::tendermint::types::Block>(msg.block_);
       },
       [&pb_msg](const consensus::status_request& msg) { auto req = pb_msg.mutable_status_request(); },
       [&pb_msg](const consensus::status_response& msg) {
