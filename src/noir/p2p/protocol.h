@@ -110,7 +110,7 @@ struct block_id {
   static std::shared_ptr<block_id> from_proto(const ::tendermint::types::BlockID& pb) {
     auto ret = std::make_shared<block_id>();
     ret->hash = {pb.hash().begin(), pb.hash().end()};
-    ret->parts = *part_set_header::from_proto(const_cast<::tendermint::types::PartSetHeader&>(pb.part_set_header()));
+    ret->parts = *part_set_header::from_proto(pb.part_set_header());
     return ret;
   }
 };

@@ -24,12 +24,13 @@ Bytes string_to_bytes(std::string_view s) {
 }
 
 TEST_CASE("block: make part_set", "[noir][consensus]") {
-  block org{block_header{}, block_data{.hash = {0, 1, 2, 3, 4, 5}}, {}, nullptr};
+  block org{block_header{}, block_data{.txs = {Bytes{"abcd"}, Bytes{"1234"}}}, {}, nullptr};
   uint32_t part_size{block_part_size_bytes};
-  // uint32_t part_size{3};
   auto ps = org.make_part_set(part_size);
   auto restored = block::new_block_from_part_set(ps);
-  CHECK(org.data.hash == restored->data.hash);
+  CHECK(restored->data.get_hash() == org.data.get_hash());
+  CHECK(restored->data.txs[0] == Bytes{"abcd"});
+  CHECK(restored->data.txs[1] == Bytes{"1234"});
 }
 
 TEST_CASE("block: encode using datastream", "[noir][consensus]") {

@@ -6,7 +6,6 @@
 #include <noir/codec/protobuf.h>
 #include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/block_pool.h>
-#include <noir/core/codec.h>
 #include <tendermint/blocksync/types.pb.h>
 
 namespace noir::consensus::block_sync {
@@ -188,13 +187,6 @@ void block_pool::transmit_new_envelope(const std::string& to, const p2p::bs_reac
   new_env->broadcast = false; // always false for block_sync
   new_env->id = p2p::BlockSync;
 
-#if false
-  // Use datastream
-  const uint32_t payload_size = encode_size(bs_msg);
-  new_env->message.resize(payload_size);
-  datastream<unsigned char> ds(new_env->message.data(), payload_size);
-  ds << bs_msg;
-#else
   // Use protobuf
   ::tendermint::blocksync::Message pb_msg;
   std::visit(
@@ -223,7 +215,6 @@ void block_pool::transmit_new_envelope(const std::string& to, const p2p::bs_reac
     bs_msg);
   new_env->message.resize(pb_msg.ByteSizeLong());
   pb_msg.SerializeToArray(new_env->message.data(), pb_msg.ByteSizeLong());
-#endif
 
   xmt_mq_channel.publish(priority, new_env);
 }
