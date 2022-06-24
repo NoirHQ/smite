@@ -63,10 +63,10 @@ Result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
 void reactor::broadcast_evidence_loop(const std::string& peer_id, Chan<std::monostate>& closer) {
   boost::asio::co_spawn(
     thread_pool->get_executor(),
-    [&]() -> boost::asio::awaitable<void> {
+    [&, peer_id]() -> boost::asio::awaitable<void> {
       clist::CElementPtr<std::shared_ptr<evidence>> next{};
 
-      auto _ = make_scope_exit([&]() {
+      auto _ = make_scope_exit([&, peer_id]() {
         {
           std::unique_lock g{mtx};
           peer_routines.erase(peer_id);
@@ -82,7 +82,7 @@ void reactor::broadcast_evidence_loop(const std::string& peer_id, Chan<std::mono
       for (;;) {
         if (!next) {
           auto res =
-            co_await (evpool->evidence_wait_chan().async_receive(eo::eoroutine) || closer.async_receive(eo::eoroutine)
+            co_await(evpool->evidence_wait_chan().async_receive(eo::eoroutine) || closer.async_receive(eo::eoroutine)
               // TODO: implement tendermint::service
               /* close */
             );
@@ -118,7 +118,7 @@ void reactor::broadcast_evidence_loop(const std::string& peer_id, Chan<std::mono
         auto timer =
           boost::asio::steady_timer(thread_pool->get_executor(), std::chrono::seconds(broadcast_evidence_interval_s));
 
-        auto res = co_await (timer.async_wait(eo::eoroutine) || next->next_wait_chan().async_receive(eo::eoroutine) ||
+        auto res = co_await(timer.async_wait(eo::eoroutine) || next->next_wait_chan().async_receive(eo::eoroutine) ||
           closer.async_receive(eo::eoroutine)
           // TODO: implement tendermint::service
           // || close_ch
