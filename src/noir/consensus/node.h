@@ -110,7 +110,7 @@ struct node {
     bool new_state_sync_on = false; ///< noir will not implement state_sync
 
     // Setup block_sync
-    bool block_sync = true; // TODO: read from config or config file?
+    bool block_sync = new_config->base.fast_sync_mode;
 
     log_node_startup_info(state_, pub_key_, new_config->base.mode);
 
