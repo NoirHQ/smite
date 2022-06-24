@@ -75,8 +75,7 @@ struct consensus_reactor {
 
   void on_start() {
     ilog(fmt::format("starting cs_reactor... wait_sync={}", wait_sync));
-    if (!wait_sync)
-      cs_state->on_start();
+    cs_state->on_start();
   }
 
   void on_stop() {
