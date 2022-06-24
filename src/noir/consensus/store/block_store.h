@@ -117,7 +117,11 @@ public:
       }
       data.raw().insert(data.end(), part_.bytes_.begin(), part_.bytes_.end());
     }
-    bl = decode<block>(data);
+    // bl = decode<block>(data);
+    // Note : data is always serialized using protobuf via block::make_part_set
+    ::tendermint::types::Block pb;
+    pb.ParseFromArray(data.data(), data.size());
+    bl = *block::from_proto(pb);
     return true;
   }
 

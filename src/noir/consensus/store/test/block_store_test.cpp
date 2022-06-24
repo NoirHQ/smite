@@ -52,8 +52,8 @@ TEST_CASE("block_store: save/load_block", "[noir][consensus]") {
   auto genesis_state = make_genesis_state();
 
   // check there are no blocks at various heights
-  noir::consensus::block bl_{};
   for (int i = -10; i < 1000; ++i) {
+    noir::consensus::block bl_{};
     CHECK(bls.load_block(i, bl_) == false);
   }
 

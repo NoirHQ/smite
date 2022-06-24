@@ -437,8 +437,8 @@ struct block {
 
   std::mutex mtx;
 
-  block() {}
-  ~block() {}
+  block() = default;
+  ~block() = default;
   block(block_header&& header_, block_data&& data_, evidence_data&& evidence_, std::unique_ptr<commit>&& last_commit_)
     : header(std::move(header_)),
       data(std::move(data_)),
@@ -537,9 +537,52 @@ struct block {
   static std::shared_ptr<block> from_proto(const ::tendermint::types::Block& pb);
 
   template<typename T>
-  friend T& operator<<(T& ds, const block& v);
+  inline friend T& operator<<(T& ds, const block& v) {
+    // ds << v.header;
+    // ds << v.data;
+    // ds << bool(!!v.evidence.evs);
+    // if (!!v.evidence.evs)
+    //   ds << *v.evidence.evs;
+    // ds << v.evidence.hash;
+    // ds << v.evidence.byte_size;
+    // ds << bool(!!v.last_commit);
+    // if (!!v.last_commit)
+    //   ds << *v.last_commit;
+    // Use protobuf to serialize for now
+    auto pb = block::to_proto(v);
+    Bytes bz(pb->ByteSizeLong());
+    pb->SerializeToArray(bz.data(), pb->ByteSizeLong());
+    ds << bz.size();
+    ds << bz;
+    return ds;
+  }
   template<typename T>
-  friend T& operator>>(T& ds, block& v);
+  inline friend T& operator>>(T& ds, block& v) {
+    // ds >> v.header;
+    // ds >> v.data;
+    // bool b;
+    // ds >> b;
+    // if (b) {
+    //   v.evidence.evs = std::make_shared<evidence_list>();
+    //   ds >> *v.evidence.evs;
+    // }
+    // ds >> v.evidence.hash;
+    // ds >> v.evidence.byte_size;
+    // ds >> b;
+    // if (b) {
+    //   v.last_commit = std::make_unique<commit>();
+    //   ds >> *v.last_commit;
+    // }
+    // Use protobuf to serialize for now
+    std::size_t len;
+    ds >> len;
+    Bytes bz(len);
+    ds >> bz;
+    ::tendermint::types::Block pb;
+    pb.ParseFromArray(bz.data(), bz.size());
+    v = *block::from_proto(pb);
+    return ds;
+  }
 };
 
 /// \brief  CommitToVoteSet constructs a VoteSet from the Commit and validator set. Panics if signatures from the commit

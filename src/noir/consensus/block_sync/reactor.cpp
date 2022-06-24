@@ -34,13 +34,8 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
   auto from = info->from;
   auto to = info->broadcast ? "all" : info->to;
 
-  p2p::bs_reactor_message bs_msg;
-#if false
-  // Use datastream
-  datastream<unsigned char> ds(info->message.data(), info->message.size());
-  ds >> bs_msg;
-#else
   // Use protobuf
+  p2p::bs_reactor_message bs_msg;
   ::tendermint::blocksync::Message pb_msg;
   pb_msg.ParseFromArray(info->message.data(), info->message.size());
   if (!pb_msg.IsInitialized()) {
@@ -72,7 +67,6 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
     elog("block_sync receive failed: unable to determine message type type=${type}", ("type", pb_msg.sum_case()));
     return;
   }
-#endif
 
   dlog(fmt::format("[bs_reactor] recv msg. from={}, to={}, type={}", from, to, bs_msg.index()));
 
@@ -83,9 +77,8 @@ void reactor::process_peer_msg(p2p::envelope_ptr info) {
         consensus::block_request& msg) { respond_to_peer(std::make_shared<consensus::block_request>(msg), from); },
       [this, &from](consensus::block_response& msg) {
         try {
-          auto block_ = std::make_shared<consensus::block>();
-          *block_ = decode<block>(msg.block_);
-          pool->add_block(from, block_, msg.block_.size());
+          auto pb_block = codec::protobuf::decode<::tendermint::types::Block>(msg.block_);
+          pool->add_block(from, block::from_proto(pb_block), msg.block_.size());
         } catch (std::exception&) {
           wlog(fmt::format("unable to parse received block_response: size={}", msg.block_.size()));
         }
@@ -209,7 +202,7 @@ void reactor::respond_to_peer(std::shared_ptr<consensus::block_request> msg, con
   block block_;
   if (store->load_block(msg->height, block_)) {
     auto response = block_response{};
-    response.block_ = encode(block_); // block is serialized when put into a response
+    response.block_ = codec::protobuf::encode(*block::to_proto(block_)); // serialized when put into a response
     pool->transmit_new_envelope(peer_id, response);
     return;
   }

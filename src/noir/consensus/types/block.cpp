@@ -40,7 +40,6 @@ std::shared_ptr<vote_set> commit_to_vote_set(
     }
 
     auto vote_ = commit_.get_vote(static_cast<int32_t>(index));
-    vote_->block_id_ = commit_.my_block_id; // TODO : is this right?
     auto [_, err] = vote_set_->add_vote(vote_);
     check(!err, fmt::format("Failed to reconstruct LastCommit {}", err.message()));
   }
@@ -211,18 +210,16 @@ Result<std::shared_ptr<evidence_data>> evidence_data::from_proto(const ::tenderm
 std::shared_ptr<block> block::new_block_from_part_set(const std::shared_ptr<part_set>& ps) {
   if (!ps->is_complete())
     return {};
-
-  Bytes data;
-  data.raw().reserve(ps->byte_size);
+  Bytes bz;
+  bz.raw().reserve(ps->byte_size);
   for (const auto& p : ps->parts)
-    std::copy(p->bytes_.begin(), p->bytes_.end(), std::back_inserter(data.raw()));
-  auto block_ = decode<block>(data);
-  return std::make_shared<block>(block_);
+    std::copy(p->bytes_.begin(), p->bytes_.end(), std::back_inserter(bz.raw()));
+  return block::from_proto(codec::protobuf::decode<::tendermint::types::Block>(bz));
 }
 
 std::shared_ptr<part_set> block::make_part_set(uint32_t part_size) {
   std::scoped_lock g(mtx);
-  auto bz = encode(*this);
+  auto bz = codec::protobuf::encode(*block::to_proto(*this));
   return part_set::new_part_set_from_data(bz, part_size);
 }
 
@@ -246,41 +243,6 @@ std::shared_ptr<block> block::from_proto(const ::tendermint::types::Block& pb) {
   ret->evidence = *evidence_data::from_proto(pb.evidence()).value(); // TODO : handle error
   ret->validate_basic(); // TODO
   return ret;
-}
-
-template<typename T>
-T& operator<<(T& ds, const block& v) {
-  ds << v.header;
-  ds << v.data;
-  ds << bool(!!v.evidence.evs);
-  if (!!v.evidence.evs)
-    ds << *v.evidence.evs;
-  ds << v.evidence.hash;
-  ds << v.evidence.byte_size;
-  ds << bool(!!v.last_commit);
-  if (!!v.last_commit)
-    ds << *v.last_commit;
-  return ds;
-}
-
-template<typename T>
-T& operator>>(T& ds, block& v) {
-  ds >> v.header;
-  ds >> v.data;
-  bool b;
-  ds >> b;
-  if (b) {
-    v.evidence.evs = std::make_shared<evidence_list>();
-    ds >> *v.evidence.evs;
-  }
-  ds >> v.evidence.hash;
-  ds >> v.evidence.byte_size;
-  ds >> b;
-  if (b) {
-    v.last_commit = std::make_unique<commit>();
-    ds >> *v.last_commit;
-  }
-  return ds;
 }
 
 } // namespace noir::consensus
