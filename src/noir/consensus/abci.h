@@ -32,7 +32,7 @@ public:
       "######################################################");
     bs_options->add_option("--enable", "If node is behind many blocks, catch up quickly by downloading blocks")
       ->check(CLI::IsMember({"true", "false"}))
-      ->default_val("true");
+      ->default_val("false");
     bs_options
       ->add_option("--version",
         "block_sync version to use:\n"
@@ -77,15 +77,6 @@ public:
     // Setup callbacks // TODO: is this right place to setup callback?
     node_->bs_reactor->set_callback_switch_to_cs_sync(std::bind(
       &consensus_reactor::switch_to_consensus, node_->cs_reactor, std::placeholders::_1, std::placeholders::_2));
-
-    ///< TEMPORARY
-    // Do not start block_sync reactor when we are single node validator (test env)
-    if (config_->base.mode == Validator) {
-      // TODO: remove later; temporary workaround to prevent validator from starting bs_reactor
-      node_->bs_reactor->block_sync = false;
-      node_->cs_reactor->wait_sync = false;
-    }
-    ///< TEMPORARY ENDS
   }
 
   void plugin_startup() {
