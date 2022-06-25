@@ -13,7 +13,11 @@ namespace noir {
 using tstamp = std::chrono::system_clock::duration::rep;
 
 tstamp get_time();
-Result<std::time_t> parse_genesis_time(const char* time_str);
-std::string tstamp_to_format_str(const tstamp time_stamp);
+
+std::string tstamp_to_localtime_str(tstamp);
+std::string tstamp_to_str(tstamp);
+std::string tstamp_to_genesis_str(tstamp);
+
+Result<tstamp> genesis_time_to_tstamp(const std::string_view&);
 
 } // namespace noir

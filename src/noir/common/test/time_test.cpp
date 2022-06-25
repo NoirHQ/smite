@@ -5,27 +5,26 @@
 //
 #include <catch2/catch_all.hpp>
 #include <noir/common/time.h>
-#include <vector>
+#include <date/date.h>
 
 using namespace noir;
 
-TEST_CASE("time", "[noir][common]") {
-  auto current = std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::system_clock::now());
-  auto current_tt = std::chrono::system_clock::to_time_t(current);
-  auto tm = gmtime(&current_tt);
-  auto local_tt = std::mktime(tm);
-  char utc[40];
-  char local[40];
-  strftime(utc, 40, "%Y-%m-%dT%H:%M:%SZ", tm);
-  strftime(local, 40, "%Y-%m-%dT%H:%M:%S", tm);
+TEST_CASE("time: conversion", "[noir][common]") {
+  auto now = get_time();
+  auto genesis_str = tstamp_to_genesis_str(now); // may lose microsecond precision
+  CHECK(genesis_time_to_tstamp(genesis_str));
+  CHECK(genesis_time_to_tstamp(genesis_str).value() / 1'000 == now / 1'000);
 
-  std::vector<const char*> time_str({utc, local, "112:42"});
-  std::vector<const char*> expected_str({std::to_string(current_tt).c_str(), std::to_string(local_tt).c_str(), ""});
+  auto rfc_format_str = genesis_str.substr(0, genesis_str.length() - 1) + "+00:00";
+  CHECK(genesis_time_to_tstamp(genesis_str).value() == genesis_time_to_tstamp(rfc_format_str).value());
 
-  for (auto i = 0; i < time_str.size(); i++) {
-    auto res = parse_genesis_time(time_str[i]);
-    if (res) {
-      CHECK(std::to_string(res.value()).compare(expected_str[i]) == 0);
-    }
-  }
+  rfc_format_str = genesis_str.substr(0, genesis_str.length() - 1) + "+0000";
+  CHECK(genesis_time_to_tstamp(genesis_str).value() == genesis_time_to_tstamp(rfc_format_str).value());
+
+  auto floor_to_second = genesis_str.substr(0, 19);
+  CHECK(genesis_time_to_tstamp(floor_to_second)); // read as local time
+  CHECK(genesis_time_to_tstamp(floor_to_second + "Z"));
+  CHECK(genesis_time_to_tstamp(floor_to_second + "+0000"));
+  CHECK(genesis_time_to_tstamp(floor_to_second + "+00:00"));
+  CHECK(genesis_time_to_tstamp(floor_to_second + "Z").value() == now / 1'000'000 * 1'000'000);
 }
