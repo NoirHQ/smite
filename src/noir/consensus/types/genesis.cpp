@@ -23,13 +23,11 @@ Result<std::shared_ptr<genesis_doc>> genesis_doc::genesis_doc_from_file(const st
     fc::from_variant(obj, *gen_doc);
     std::string dt;
     fc::from_variant(obj["genesis_time"], dt);
-    auto tt = parse_genesis_time(dt.c_str());
-    if (tt) {
-      std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t(tt.value());
-      gen_doc->genesis_time = std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count();
-      ilog(fmt::format("genesis time : {}", gen_doc->genesis_time));
-    } else {
+    if (auto ok = genesis_time_to_tstamp(dt); !ok) {
       return Error::format("error reading genesis from {}: unable to parse genesis_time", gen_doc_file);
+    } else {
+      gen_doc->genesis_time = ok.value();
+      ilog(fmt::format("genesis_time: {}", tstamp_to_str(gen_doc->genesis_time)));
     }
     std::vector<json::genesis_validator_json_obj> vals;
     fc::from_variant(obj["validators"], vals);
@@ -112,7 +110,7 @@ std::string gen_random(const int len) {
 
 void genesis_doc::save(const std::string& file_path) {
   json::genesis_json_obj json_obj;
-  json_obj.genesis_time = tstamp_to_format_str(genesis_time);
+  json_obj.genesis_time = tstamp_to_genesis_str(genesis_time);
 
   if (chain_id.empty()) {
     chain_id = "test-chain-" + gen_random(7);
