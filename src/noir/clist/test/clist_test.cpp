@@ -71,15 +71,15 @@ TEST_CASE("clist", "[noir][clist]") {
         auto restart_counter = 0;
         auto counter = 0;
 
-        auto loop = true;
-        while (loop) {
-          auto res = co_await (*stop || *default_chan);
-          switch (res.index()) {
+        for (auto loop = true; loop;) {
+          auto select = Select{*stop, CaseDefault()};
+          switch (select.index()) {
           case 0:
+            co_await select.process<0>();
             fmt::println("stopped");
             loop = false;
             continue;
-          case 1:
+          default:
             break;
           }
           if (!el) {
@@ -123,7 +123,7 @@ TEST_CASE("clist", "[noir][clist]") {
       auto& ch = l.wait_chan();
 
       go([&]() { l.push_back(1); });
-      co_await *ch;
+      co_await **ch;
 
       auto el = l.front();
       auto v = l.remove(el);
@@ -145,18 +145,22 @@ TEST_CASE("clist", "[noir][clist]") {
       auto next = el;
       auto seen = 0;
 
+      auto timer = time::Timer(std::chrono::seconds(10));
       for (auto loop = true; loop;) {
-        auto res = co_await (*next->next_wait_chan() || *done || time::sleep(std::chrono::seconds(10)));
-        switch (res.index()) {
+        auto select = Select{*next->next_wait_chan(), *done, *timer.ch};
+        switch (co_await select.index()) {
         case 0:
+          co_await select.process<0>();
           next = next->next();
           seen++;
           REQUIRE_MESSAGE(next, "next should not be null when waiting on next_wait_chan");
           break;
         case 1:
+          co_await select.process<1>();
           loop = false;
           break;
         case 2:
+          co_await select.process<2>();
           REQUIRE_MESSAGE(false, "max execution time");
           break;
         }
@@ -168,15 +172,18 @@ TEST_CASE("clist", "[noir][clist]") {
       auto prev = next;
       seen = 0;
 
+      timer.reset(std::chrono::seconds(3));
       for (auto loop = true; loop;) {
-        auto res = co_await (*prev->prev_wait_chan() || time::sleep(std::chrono::seconds(3)));
-        switch (res.index()) {
+        auto select = Select{*prev->prev_wait_chan(), *timer.ch};
+        switch (co_await select.index()) {
         case 0:
+          co_await select.process<0>();
           prev = prev->prev();
           seen++;
           REQUIRE_MESSAGE(prev, "expected prev_wait_chan to block forever on null when reached first elem");
           break;
         case 1:
+          co_await select.process<1>();
           loop = false;
           break;
         }
@@ -203,46 +210,50 @@ TEST_CASE("clist", "[noir][clist]") {
       auto l = clist::CList<int>();
       auto el1 = l.push_back(1);
       {
-        auto res = co_await (*el1->next_wait_chan() || *default_chan);
-        switch (res.index()) {
+        auto select = Select{*el1->next_wait_chan(), CaseDefault()};
+        switch (select.index()) {
         case 0:
+          co_await select.process<0>();
           REQUIRE_MESSAGE(false, "next_wait_chan should not have been closed");
           break;
-        case 1:
+        default:
           break;
         }
       }
 
       auto el2 = l.push_back(2);
       {
-        auto res1 = co_await (*el1->next_wait_chan() || *default_chan);
-        switch (res1.index()) {
+        auto select = Select{*el1->next_wait_chan(), CaseDefault()};
+        switch (select.index()) {
         case 0:
+          co_await select.process<0>();
           CHECK(el1->next());
           break;
-        case 1:
+        default:
           REQUIRE_MESSAGE(false, "next_wait_chan should have been closed");
           break;
         }
 
-        auto res2 = co_await (*el2->next_wait_chan() || *default_chan);
-        switch (res2.index()) {
+        auto select2 = Select{*el2->next_wait_chan(), CaseDefault()};
+        switch (select2.index()) {
         case 0:
+          co_await select.process<0>();
           REQUIRE_MESSAGE(false, "next_wait_chan should not have been closed");
           break;
-        case 1:
+        default:
           break;
         }
       }
 
       {
         l.remove(el2);
-        auto res = co_await (*el2->next_wait_chan() || *default_chan);
-        switch (res.index()) {
+        auto select = Select{*el2->next_wait_chan(), CaseDefault()};
+        switch (select.index()) {
         case 0:
+          co_await select.process<0>();
           CHECK(!el2->next());
           break;
-        case 1:
+        default:
           REQUIRE_MESSAGE(false, "next_wait_chan should have been closed");
           break;
         }
