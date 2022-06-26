@@ -181,18 +181,15 @@ bool check_only_differ_by_timestamp(const noir::p2p::proposal_message& obj,
 }
 
 template<typename T>
-bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step) {
+Result<void> sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step) {
   auto& key = pv.key;
   auto& lss = pv.last_sign_state;
   auto height = obj.height;
   auto round = obj.round;
 
   auto same_hrs = lss.check_hrs(height, round, step);
-  if (!same_hrs) {
-    elog(same_hrs.error().message());
-    return false;
-  }
-  tstamp timestamp;
+  if (!same_hrs)
+    return same_hrs.error();
 
   // We might crash before writing to the wal,
   // causing us to try to re-sign for the same HRS.
@@ -200,6 +197,7 @@ bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step)
   // If they only differ by timestamp, use last timestamp and signature
   // Otherwise, return error
   if (same_hrs.value()) {
+    tstamp timestamp;
     auto decode_sig = base64::decode(lss.signature);
     if (sign_bytes == lss.signbytes) {
       obj.signature = {decode_sig.begin(), decode_sig.end()};
@@ -207,10 +205,9 @@ bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step)
       obj.timestamp = timestamp;
       obj.signature = {decode_sig.begin(), decode_sig.end()};
     } else {
-      check(false, "conflicting data");
-      // return false; // TODO: return errors
+      return Error::format("conflicting data");
     }
-    return true;
+    return success();
   }
 
   // It passed the checks. Sign the vote
@@ -218,15 +215,15 @@ bool sign_internal(T& obj, const Bytes& sign_bytes, file_pv& pv, sign_step step)
   pv.save_signed(height, round, step, sign_bytes, sig);
   auto decode_sig = base64::decode(lss.signature);
   obj.signature = {decode_sig.begin(), decode_sig.end()};
-  return true;
+  return success();
 }
 
-bool file_pv::sign_vote_internal(const std::string& chain_id, noir::consensus::vote& vote) {
+Result<void> file_pv::sign_vote_internal(const std::string& chain_id, noir::consensus::vote& vote) {
   return sign_internal<noir::consensus::vote>(
     vote, vote::vote_sign_bytes(chain_id, *vote::to_proto(vote)), *this, vote_to_step(vote));
 }
 
-bool file_pv::sign_proposal_internal(const std::string& chain_id, noir::p2p::proposal_message& msg) {
+Result<void> file_pv::sign_proposal_internal(const std::string& chain_id, noir::p2p::proposal_message& msg) {
   return sign_internal<noir::p2p::proposal_message>(
     msg, proposal::proposal_sign_bytes(chain_id, *proposal::to_proto({msg})), *this, sign_step::propose);
 }

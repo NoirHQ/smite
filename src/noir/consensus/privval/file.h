@@ -174,8 +174,8 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \param[in] vote_
   /// \return
   std::optional<std::string> sign_vote(const std::string& chain_id, noir::consensus::vote& vote) override {
-    if (!sign_vote_internal(chain_id, vote)) {
-      return "error signing vote";
+    if (auto ok = sign_vote_internal(chain_id, vote); !ok) {
+      return "error signing vote" + ok.error().message();
     }
     return {};
   }
@@ -185,8 +185,8 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \return
   std::optional<std::string> sign_proposal(
     const std::string& chain_id, noir::p2p::proposal_message& proposal) override {
-    if (!sign_proposal_internal(chain_id, proposal)) {
-      return "error signing proposal";
+    if (auto ok = sign_proposal_internal(chain_id, proposal); !ok) {
+      return "error signing proposal" + ok.error().message();
     }
     return {};
   }
@@ -227,14 +227,14 @@ private:
   /// vote hit the WAL).
   /// \param[in] vote
   /// \return true on success, false otherwise
-  bool sign_vote_internal(const std::string& chain_id, noir::consensus::vote& vote);
+  Result<void> sign_vote_internal(const std::string& chain_id, noir::consensus::vote& vote);
 
   /// \brief signProposal checks if the proposal is good to sign and sets the proposal signature.
   /// It may need to set the timestamp as well if the proposal is otherwise the same as
   /// a previously signed proposal ie. we crashed after signing but before the proposal hit the WAL).
   /// \param[in] proposal
   /// \return true on success, false otherwise
-  bool sign_proposal_internal(const std::string& chain_id, noir::p2p::proposal_message& proposal);
+  Result<void> sign_proposal_internal(const std::string& chain_id, noir::p2p::proposal_message& proposal);
 };
 
 /// \}

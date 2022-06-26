@@ -82,7 +82,7 @@ void reactor::broadcast_evidence_loop(const std::string& peer_id, Chan<std::mono
       for (;;) {
         if (!next) {
           auto res =
-            co_await(evpool->evidence_wait_chan().async_receive(eo::eoroutine) || closer.async_receive(eo::eoroutine)
+            co_await (evpool->evidence_wait_chan().async_receive(eo::eoroutine) || closer.async_receive(eo::eoroutine)
               // TODO: implement tendermint::service
               /* close */
             );
@@ -118,7 +118,7 @@ void reactor::broadcast_evidence_loop(const std::string& peer_id, Chan<std::mono
         auto timer =
           boost::asio::steady_timer(thread_pool->get_executor(), std::chrono::seconds(broadcast_evidence_interval_s));
 
-        auto res = co_await(timer.async_wait(eo::eoroutine) || next->next_wait_chan().async_receive(eo::eoroutine) ||
+        auto res = co_await (timer.async_wait(eo::eoroutine) || next->next_wait_chan().async_receive(eo::eoroutine) ||
           closer.async_receive(eo::eoroutine)
           // TODO: implement tendermint::service
           // || close_ch
