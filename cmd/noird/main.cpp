@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
   app.config().failure_message(CLI::FailureMessage::help);
   app.config().name("noird");
   app.config().description("NOIR Protocol App");
+  app.config().set_help_all_flag("--help-all")->group("");
   std::filesystem::path home_dir;
   if (auto arg = std::getenv("HOME")) {
     home_dir = arg;
