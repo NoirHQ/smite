@@ -166,6 +166,9 @@ void reactor::try_sync_ticker() {
 void reactor::switch_to_consensus_ticker() {
   thread_pool->get_executor().post([this]() {
     while (true) {
+      if (!pool->is_running)
+        return;
+
       auto [height, num_pending, len_requesters] = pool->get_status();
       auto last_advance = pool->last_advance;
       dlog(fmt::format("consensus_ticker: num_pending={} total={} height={}", num_pending, len_requesters, height));
