@@ -12,11 +12,6 @@ add_definitions(-DWEBSOCKETPP_STRICT_MASKING -DBOOST_ASIO_HAS_STD_CHRONO)
 add_library(websocketpp INTERFACE)
 target_include_directories(websocketpp INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/websocketpp)
 
-# expected in conan doesn't support expected<void> yet
-set(EXPECTED_BUILD_TESTS OFF) # Don't add the duplicated cmake target "Catch2" by expected
-set(EXPECTED_BUILD_PACKAGE_DEB OFF)
-add_subdirectory(expected)
-
 # TODO: remove fc dependency completely in the future
 set(SKIP_FC_TESTS ON)
 add_subdirectory(fc)

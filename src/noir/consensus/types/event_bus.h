@@ -5,7 +5,6 @@
 //
 #pragma once
 
-#include <noir/common/expected.h>
 #include <noir/consensus/types/events.h>
 #include <appbase/application.hpp>
 #include <appbase/channel.hpp>

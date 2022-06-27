@@ -425,9 +425,9 @@ struct node {
       data);
   }
 
-  static result<node<T>> decode(std::span<uint8_t> val) {
+  static Result<node<T>> decode(std::span<uint8_t> val) {
     if (val.empty()) {
-      return make_unexpected("missing tag due to empty input");
+      return Error("missing tag due to empty input");
     }
     auto tag = val[0];
     auto n_tag = node_tag(tag);
@@ -439,7 +439,7 @@ struct node {
     case node_tag::leaf:
       return node<T>{codec::bcs::decode<leaf_node<T>>({val.data() + 1, val.size() - 1})};
     default:
-      return make_unexpected(fmt::format("lead tag byte is unknown: {}", tag));
+      return Error::format("lead tag byte is unknown: {}", tag);
     }
   }
 
@@ -509,19 +509,19 @@ template<typename T>
 struct tree_reader {
   using value_type = T;
 
-  auto get_node(const jmt::node_key& node_key) -> result<jmt::node<T>> {
+  auto get_node(const jmt::node_key& node_key) -> Result<jmt::node<T>> {
     auto node = get_node_option(node_key);
     if (node && *node)
       return **node;
-    return make_unexpected(fmt::format("missing node at key: {}", node_key.to_string()));
+    return Error::format("missing node at key: {}", node_key.to_string());
   }
-  virtual auto get_node_option(const jmt::node_key& node_key) -> result<std::optional<node<T>>> = 0;
-  virtual auto get_rightmost_leaf() -> result<std::optional<std::pair<jmt::node_key, leaf_node<T>>>> = 0;
+  virtual auto get_node_option(const jmt::node_key& node_key) -> Result<std::optional<node<T>>> = 0;
+  virtual auto get_rightmost_leaf() -> Result<std::optional<std::pair<jmt::node_key, leaf_node<T>>>> = 0;
 };
 
 template<typename T>
 struct tree_writer {
-  virtual auto write_node_batch(const jmt::node_batch<T>& node_batch) -> result<void> = 0;
+  virtual auto write_node_batch(const jmt::node_batch<T>& node_batch) -> Result<void> = 0;
 };
 
 } // namespace noir::jmt

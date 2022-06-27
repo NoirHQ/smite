@@ -99,10 +99,10 @@ TEST_CASE("jmt: insert_at_leaf_with_internal_created", "[noir][jmt]") {
   children.insert({0, child{leaf1.hash(), 1, leaf{}}});
   children.insert({15, child{leaf2.hash(), 1, leaf{}}});
   auto internal = node<value_blob>::internal(children);
-  CHECK(db.get_node(node_key{0}) == leaf1);
-  CHECK(db.get_node(internal_node_key.gen_child_node_key(1, 0)) == leaf1);
-  CHECK(db.get_node(internal_node_key.gen_child_node_key(1, 15)) == leaf2);
-  CHECK(db.get_node(internal_node_key) == internal);
+  CHECK(*db.get_node(node_key{0}) == leaf1);
+  CHECK(*db.get_node(internal_node_key.gen_child_node_key(1, 0)) == leaf1);
+  CHECK(*db.get_node(internal_node_key.gen_child_node_key(1, 15)) == leaf2);
+  CHECK(*db.get_node(internal_node_key) == internal);
 }
 
 TEST_CASE("jmt: insert_at_leaf_with_multiple_internals_created", "[noir][jmt]") {
@@ -144,11 +144,11 @@ TEST_CASE("jmt: insert_at_leaf_with_multiple_internals_created", "[noir][jmt]") 
     return children;
   }());
 
-  CHECK(db.get_node(node_key{}) == leaf1);
-  CHECK(db.get_node(internal_node_key.gen_child_node_key(1, 0)) == leaf1);
-  CHECK(db.get_node(internal_node_key.gen_child_node_key(1, 1)) == leaf2);
-  CHECK(db.get_node(internal_node_key) == internal);
-  CHECK(db.get_node(node_key{1}) == root_internal);
+  CHECK(*db.get_node(node_key{}) == leaf1);
+  CHECK(*db.get_node(internal_node_key.gen_child_node_key(1, 0)) == leaf1);
+  CHECK(*db.get_node(internal_node_key.gen_child_node_key(1, 1)) == leaf2);
+  CHECK(*db.get_node(internal_node_key) == internal);
+  CHECK(*db.get_node(node_key{1}) == root_internal);
 
   auto value2_update = value_blob{5, 6};
   auto [_root2_hash, batch2] = *tree.batch_put_value_sets({{{key2, value2_update}}}, {}, 2);
@@ -475,11 +475,11 @@ TEST_CASE("jmt: insert_at_leaf_with_multiple_internals_created - non batch versi
     return children;
   }());
 
-  CHECK(db.get_node(node_key{}) == leaf1);
-  CHECK(db.get_node(internal_node_key.gen_child_node_key(1, 0)) == leaf1);
-  CHECK(db.get_node(internal_node_key.gen_child_node_key(1, 1)) == leaf2);
-  CHECK(db.get_node(internal_node_key) == internal);
-  CHECK(db.get_node(node_key{1}) == root_internal);
+  CHECK(*db.get_node(node_key{}) == leaf1);
+  CHECK(*db.get_node(internal_node_key.gen_child_node_key(1, 0)) == leaf1);
+  CHECK(*db.get_node(internal_node_key.gen_child_node_key(1, 1)) == leaf2);
+  CHECK(*db.get_node(internal_node_key) == internal);
+  CHECK(*db.get_node(node_key{1}) == root_internal);
 
   auto value2_update = value_blob{5, 6};
   auto [_root2_hash, batch2] = *tree.put_value_sets({{{key2, value2_update}}}, 2);

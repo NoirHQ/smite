@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/common/expected.h>
 #include <noir/rpc/websocket/websocket.h>
 #include <appbase/application.hpp>
 #include <fc/exception/exception.hpp>

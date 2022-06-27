@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/common/bytes.h>
+#include <noir/core/core.h>
 #include <noir/crypto/hash/sha3.h>
 #include <noir/jmt/types/common.h>
 #include <optional>
@@ -57,7 +58,7 @@ template<typename T>
 struct sparse_merkle_proof {
   auto verify(const Bytes32& expected_root_hash,
     const Bytes32& element_key,
-    std::optional<std::remove_reference_t<T>> element_value) -> result<void> {
+    std::optional<std::remove_reference_t<T>> element_value) -> Result<void> {
     noir_ensure(siblings.size() <= 256, "sparse merkle tree proof has more than 256 ({}) siblings", siblings.size());
     if (element_value) {
       auto& value = *element_value;
@@ -100,7 +101,7 @@ struct sparse_merkle_proof {
     }();
     noir_ensure(actual_root_hash == expected_root_hash, "root hashes do not match. actual root hash: {}, expected: {}",
       actual_root_hash.to_string(), expected_root_hash.to_string());
-    return {};
+    return success();
   }
 
   std::optional<sparse_merkle_leaf_node> leaf;

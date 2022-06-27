@@ -56,7 +56,7 @@ TEST_CASE("node: encode_decode", "[noir][jmt]") {
   };
   for (const auto& n : nodes) {
     auto v = n.encode();
-    CHECK(n == node<Bytes>::decode(v));
+    CHECK(n == *node<Bytes>::decode(v));
   }
   {
     auto empty_bytes = std::vector<uint8_t>();
