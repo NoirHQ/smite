@@ -38,7 +38,7 @@ struct tree_cache {
     }
   }
 
-  result<node<T>> get_node(const jmt::node_key& node_key) {
+  Result<node<T>> get_node(const jmt::node_key& node_key) {
     auto it = node_cache.find(node_key);
     if (it != node_cache.end()) {
       return it->second;
@@ -51,15 +51,15 @@ struct tree_cache {
     return reader.get_node(node_key);
   }
 
-  result<void> put_node(const jmt::node_key& node_key, const node<T>& new_node) {
+  Result<void> put_node(const jmt::node_key& node_key, const node<T>& new_node) {
     if (!node_cache.contains(node_key)) {
       if (new_node.is_leaf())
         num_new_leaves += 1;
       node_cache.insert({node_key, new_node});
     } else {
-      return make_unexpected(fmt::format("node with key `{}` already exists in node_batch", node_key.to_string()));
+      return Error::format("node with key `{}` already exists in node_batch", node_key.to_string());
     }
-    return {};
+    return success();
   }
 
   void delete_node(const node_key& old_node_key, bool is_leaf) {

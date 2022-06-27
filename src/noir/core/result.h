@@ -30,6 +30,25 @@ public:
   template<typename U>
   Result(std::in_place_type_t<U> _): basic_result<T, E, NoValuePolicy>(_) {}
 
+  constexpr auto& operator*() & {
+    return this->assume_value();
+  }
+  constexpr const auto& operator*() const& {
+    return this->assume_value();
+  }
+  constexpr auto&& operator*() && {
+    return this->assume_value();
+  }
+  constexpr const auto&& operator*() const&& {
+    return this->assume_value();
+  }
+  constexpr auto* operator->() {
+    return &this->assume_value();
+  }
+  constexpr const auto* operator->() const {
+    return &this->assume_value();
+  }
+
 private:
   Result(): basic_result<T, E, NoValuePolicy>(E()) {}
 

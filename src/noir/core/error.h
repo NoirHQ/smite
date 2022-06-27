@@ -120,6 +120,10 @@ public:
       (category() == err.category() && value() == err.value() && message_ < err.message_);
   }
 
+  bool operator==(std::string_view s) const& noexcept {
+    return message() == s;
+  }
+
 private:
   int value_ = 0;
   const std::error_category* category_ = &user_category();

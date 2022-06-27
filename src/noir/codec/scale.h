@@ -7,7 +7,6 @@
 #include <noir/codec/datastream.h>
 #include <noir/common/check.h>
 #include <noir/common/concepts.h>
-#include <noir/common/expected.h>
 #include <noir/common/for_each.h>
 #include <noir/common/pow.h>
 #include <noir/common/types.h>
@@ -173,7 +172,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, std::optional<T>& v) {
 
 // Results
 template<typename Stream, typename T, typename E>
-datastream<Stream>& operator<<(datastream<Stream>& ds, const noir::expected<T, E>& v) {
+datastream<Stream>& operator<<(datastream<Stream>& ds, const Result<T, E>& v) {
   char is_unexpected = !v;
   ds << is_unexpected;
   if (v) {
@@ -185,7 +184,7 @@ datastream<Stream>& operator<<(datastream<Stream>& ds, const noir::expected<T, E
 }
 
 template<typename Stream, typename T, typename E>
-datastream<Stream>& operator>>(datastream<Stream>& ds, noir::expected<T, E>& v) {
+datastream<Stream>& operator>>(datastream<Stream>& ds, Result<T, E>& v) {
   char is_unexpected = 0;
   ds >> is_unexpected;
   if (!is_unexpected) {
@@ -195,7 +194,7 @@ datastream<Stream>& operator>>(datastream<Stream>& ds, noir::expected<T, E>& v) 
   } else {
     E err;
     ds >> err;
-    v = noir::make_unexpected(err);
+    v = err;
   }
   return ds;
 }

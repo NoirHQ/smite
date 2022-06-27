@@ -13,15 +13,15 @@ namespace noir::jmt {
 
 template<typename T>
 struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
-  auto get_node_option(const jmt::node_key& node_key) -> result<std::optional<node<T>>> override {
+  auto get_node_option(const jmt::node_key& node_key) -> Result<std::optional<node<T>>> override {
     std::shared_lock _{data.lock};
     if (data._0.contains(node_key)) {
       return data._0.at(node_key);
     }
-    return {};
+    return success();
   }
 
-  auto get_rightmost_leaf() -> result<std::optional<std::pair<jmt::node_key, leaf_node<T>>>> override {
+  auto get_rightmost_leaf() -> Result<std::optional<std::pair<jmt::node_key, leaf_node<T>>>> override {
     std::shared_lock _{data.lock};
     auto node_key_and_node = std::optional<std::pair<node_key, leaf_node<T>>>{};
     for (const auto& i : data._0) {
@@ -35,40 +35,40 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
     return node_key_and_node;
   }
 
-  auto write_node_batch(const jmt::node_batch<T>& node_batch) -> result<void> override {
+  auto write_node_batch(const jmt::node_batch<T>& node_batch) -> Result<void> override {
     std::unique_lock _{data.lock};
     for (const auto& [node_key, node] : node_batch) {
       check(allow_overwrite || !data._0.contains(node_key));
       data._0.insert_or_assign(node_key, node);
     }
-    return {};
+    return success();
   }
 
-  auto put_node(const jmt::node_key& node_key, const jmt::node<T>& node) -> result<void> {
+  auto put_node(const jmt::node_key& node_key, const jmt::node<T>& node) -> Result<void> {
     std::unique_lock _{data.lock};
     noir_ensure(!data._0.contains(node_key), "key {} exists", node_key.to_string());
     data._0.insert({node_key, node});
-    return {};
+    return success();
   }
 
-  auto put_stale_node_index(const stale_node_index& index) -> result<void> {
+  auto put_stale_node_index(const stale_node_index& index) -> Result<void> {
     std::unique_lock _{data.lock};
     check(!data._1.contains(index), "duplicated retire log");
     data._1.insert(index);
-    return {};
+    return success();
   }
 
-  auto write_tree_update_batch(const tree_update_batch<T>& batch) -> result<void> {
+  auto write_tree_update_batch(const tree_update_batch<T>& batch) -> Result<void> {
     for (const auto& [k, v] : batch.node_batch) {
       noir_ok(put_node(k, v));
     }
     for (const auto& i : batch.stale_node_index_batch) {
       noir_ok(put_stale_node_index(i));
     }
-    return {};
+    return success();
   }
 
-  auto purge_stale_nodes(version least_readable_version) -> result<void> {
+  auto purge_stale_nodes(version least_readable_version) -> Result<void> {
     std::unique_lock _{data.lock};
     std::vector<stale_node_index> to_prune;
     for (auto it = data._1.begin(); it != data._1.end(); ++it) {
@@ -83,7 +83,7 @@ struct mock_tree_store : public tree_reader<T>, public tree_writer<T> {
       noir_ensure(removed, "stale node index refers to non-existent node");
       data._1.erase(log);
     }
-    return {};
+    return success();
   }
 
   auto num_nodes() {
