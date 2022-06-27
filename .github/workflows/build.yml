@@ -23,6 +23,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      # restore cache (conan)
+      - uses: actions/cache@v2
+        with:
+          path: /home/runner/.conan
+          key: ${{ runner.os }}-conan-${{ hashFiles('packages.txt') }}
       # restore cache (appbase)
       - id: appbase-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/appbase/{ print $1 }')"
@@ -57,6 +62,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      # restore cache (conan)
+      - uses: actions/cache@v2
+        with:
+          path: /home/runner/.conan
+          key: ${{ runner.os }}-conan-${{ hashFiles('packages_macos.txt') }}
       # restore cache (appbase)
       - id: appbase-cache
         run: echo "::set-output name=version::$(git submodule status | awk '/appbase/{ print $1 }')"
