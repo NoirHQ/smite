@@ -1,30 +1,32 @@
 list(APPEND PROTO_SOURCES
   gogoproto/gogo.proto
-  tendermint/statesync/types.proto
+  tendermint/abci/types.proto
+  tendermint/blocksync/types.proto
   tendermint/consensus/types.proto
   tendermint/consensus/wal.proto
-  tendermint/crypto/proof.proto
   tendermint/crypto/keys.proto
-  tendermint/abci/types.proto
-  tendermint/types/evidence.proto
-  tendermint/types/events.proto
-  tendermint/types/canonical.proto
-  tendermint/types/types.proto
-  tendermint/types/validator.proto
-  tendermint/types/block.proto
-  tendermint/types/params.proto
-  tendermint/privval/types.proto
-  tendermint/state/types.proto
+  tendermint/crypto/proof.proto
   tendermint/libs/bits/types.proto
-  tendermint/blockchain/types.proto
-  tendermint/version/types.proto
-  tendermint/p2p/types.proto
+  tendermint/mempool/types.proto
   tendermint/p2p/conn.proto
   tendermint/p2p/pex.proto
-  tendermint/mempool/types.proto
+  tendermint/p2p/types.proto
+  tendermint/privval/service.proto
+  tendermint/privval/types.proto
   tendermint/rpc/grpc/types.proto
-  tendermint/store/types.proto
-)
+  tendermint/state/types.proto
+  tendermint/statesync/types.proto
+  tendermint/types/block.proto
+  tendermint/types/canonical.proto
+  tendermint/types/events.proto
+  tendermint/types/evidence.proto
+  tendermint/types/params.proto
+  tendermint/types/types.proto
+  tendermint/types/validator.proto
+  tendermint/version/types.proto
+  )
+
+find_package(Protobuf REQUIRED)
 
 set(PROTO_PATH ${PROJECT_SOURCE_DIR}/proto)
 foreach(PROTO ${PROTO_SOURCES})
@@ -38,8 +40,8 @@ foreach(PROTO ${PROTO_SOURCES})
   endif()
 endforeach()
 
-add_library(tendermint_proto STATIC ${PROTO_GENERATED})
-target_include_directories(tendermint_proto PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(tendermint_proto protobuf::libprotobuf)
+add_library(noir_proto STATIC ${PROTO_GENERATED})
+target_include_directories(noir_proto PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(noir_proto protobuf::libprotobuf)
 
-add_library(tendermint::proto ALIAS tendermint_proto)
+add_library(noir::proto ALIAS noir_proto)
