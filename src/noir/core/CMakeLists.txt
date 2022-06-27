@@ -1,7 +1,7 @@
 add_library(noir_core STATIC
   basic_errors.cpp
 )
-target_include_directories(noir_core PUBLIC ${PROJECT_SOURCE_DIR} ${Boost_INCLUDE_DIR})
+target_include_directories(noir_core PUBLIC ${PROJECT_SOURCE_DIR}/src ${Boost_INCLUDE_DIR})
 target_link_libraries(noir_core
   fmt::fmt
 )

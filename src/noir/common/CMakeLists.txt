@@ -5,7 +5,7 @@ add_library(noir_common STATIC
   thread_pool.cpp
   time.cpp
 )
-target_include_directories(noir_common PUBLIC ${PROJECT_SOURCE_DIR})
+target_include_directories(noir_common PUBLIC ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(noir_common
   noir::core
   appbase

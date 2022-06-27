@@ -1,5 +1,5 @@
 add_library(noir_log INTERFACE)
-target_include_directories(noir_log INTERFACE ${PROJECT_SOURCE_DIR})
+target_include_directories(noir_log INTERFACE ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(noir_log INTERFACE
   spdlog::spdlog
 )
