@@ -28,9 +28,8 @@ target_link_libraries(noir_consensus
   noir::clist
   noir::common
   noir::crypto
-  noir::proto_legacy
+  noir::proto
   noir::tx_pool
-#  tendermint::proto
   tendermint::log
   sodium
 )

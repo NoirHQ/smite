@@ -9,7 +9,7 @@ target_link_libraries(noir_p2p
   noir::common
   noir::consensus
   noir::crypto
-  noir::proto_legacy
+  noir::proto
   sodium
 )
 set_target_properties(noir_p2p PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})

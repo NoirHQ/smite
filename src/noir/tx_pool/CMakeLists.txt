@@ -6,7 +6,7 @@ target_link_libraries(noir_tx_pool
   noir::codec
   noir::core
   noir::crypto
-  noir::proto_legacy
+  noir::proto
 )
 set_target_properties(noir_tx_pool PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
