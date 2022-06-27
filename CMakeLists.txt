@@ -42,25 +42,10 @@ endif()
 
 include(${CMAKE_CURRENT_BINARY_DIR}/conan.cmake)
 
-set(CONAN_PACKAGES
-  catch2/3.0.1
-  cppcodec/0.2
-  fmt/8.1.1
-  libb2/20190723
-  libpqxx/7.7.3
-  rocksdb/6.20.3
-  scope-lite/0.2.0
-  spdlog/1.10.0
-  xxhash/0.8.1
-  date/3.0.1
-)
-
-if(UNIX AND NOT APPLE)
-  set(CONAN_PACKAGES
-    ${CONAN_PACKAGES}
-    boost/1.78.0
-    openssl/3.0.2
-  )
+if(APPLE)
+  file(READ packages_macos.txt CONAN_PACKAGES)
+elseif(UNIX)
+  file(READ packages.txt CONAN_PACKAGES)
 endif()
 
 conan_cmake_configure(REQUIRES ${CONAN_PACKAGES} GENERATORS cmake_find_package)

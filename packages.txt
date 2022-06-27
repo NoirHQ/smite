@@ -1,0 +1,12 @@
+boost/1.78.0
+catch2/3.0.1
+cppcodec/0.2
+date/3.0.1
+fmt/8.1.1
+libb2/20190723
+libpqxx/7.7.3
+openssl/3.0.2
+rocksdb/6.20.3
+scope-lite/0.2.0
+spdlog/1.10.0
+xxhash/0.8.1
