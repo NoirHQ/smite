@@ -163,6 +163,7 @@ auto Router::get_or_make_queue(const NodeId& peer_id, ChannelIdSet& channels) ->
     return peer_queues[peer_id];
   }
 
+  // TODO: priority queue
   auto peer_queue = FifoQueue::new_fifo_queue(io_context, queue_buffer_default);
   peer_queues[peer_id] = peer_queue;
   peer_channels[peer_id] = channels;
@@ -321,6 +322,13 @@ auto Router::filter_peers_ip(noir::Chan<std::monostate>& done, const std::string
     return success();
   }
   return options.filter_peer_by_ip(done, endpoint);
+}
+
+auto Router::filter_peers_id(noir::Chan<std::monostate>& done, const NodeId& id) -> noir::Result<void> {
+  if (!options.filter_peer_by_id) {
+    return success();
+  }
+  return options.filter_peer_by_id(done, id);
 }
 
 auto Router::handshake_peer(Chan<std::monostate>& done,
@@ -507,6 +515,7 @@ auto Router::open_channel(Chan<std::monostate>& done, std::shared_ptr<conn::Chan
     return Error::format("channel {} already exists", ch_desc->id);
   }
   ch_descs.push_back(ch_desc);
+  // TODO: priority queue
   auto queue = FifoQueue::new_fifo_queue(io_context, ch_desc->recv_buffer_capacity);
   auto out_ch = std::make_shared<Chan<EnvelopePtr>>(io_context, ch_desc->recv_buffer_capacity);
   auto err_ch = std::make_shared<Chan<PeerErrorPtr>>(io_context, ch_desc->recv_buffer_capacity);

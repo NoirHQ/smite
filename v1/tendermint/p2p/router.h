@@ -28,8 +28,7 @@ public:
 
 public:
   std::function<noir::Result<void>(noir::Chan<std::monostate>& done, const std::string& address)> filter_peer_by_ip;
-  std::function<noir::Result<void>(noir::Chan<std::monostate>& done, const std::string& address)> filter_peer_by_id;
-  std::function<void(noir::Chan<std::monostate>& done)> dial_sleep;
+  std::function<noir::Result<void>(noir::Chan<std::monostate>& done, const NodeId& id)> filter_peer_by_id;
   std::function<int32_t(void)> num_current_dials;
   // resolve_timeout is the timeout for resolving NodeAddress URLs. 0 means no timeout.
   std::chrono::milliseconds resolve_timeout;
@@ -95,7 +94,6 @@ private:
   auto num_concurrent_dials() const -> int32_t;
   auto filter_peers_ip(noir::Chan<std::monostate>& done, const std::string& endpoint) -> noir::Result<void>;
   auto filter_peers_id(noir::Chan<std::monostate>& done, const NodeId& node_id) -> noir::Result<void>;
-  void dial_sleep(noir::Chan<std::monostate>& done);
   auto open_connection(noir::Chan<std::monostate>& done, std::shared_ptr<MConnConnection> conn)
     -> boost::asio::awaitable<void>;
   auto connect_peer(noir::Chan<std::monostate>& done, const std::shared_ptr<NodeAddress>& address)
