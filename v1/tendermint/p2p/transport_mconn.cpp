@@ -125,7 +125,7 @@ auto MConnConnection::handshake_inner(NodeInfo& node_info, Bytes& priv_key)
 }
 
 auto MConnConnection::handshake(Chan<std::monostate>& done, NodeInfo& node_info, Bytes& priv_key)
-  -> asio::awaitable<Result<std::tuple<NodeInfo, Bytes>>> {
+  -> asio::awaitable<std::tuple<NodeInfo, std::shared_ptr<Bytes>, Result<void>>> {
   Chan<Result<void>> res_ch{io_context, 1};
 
   std::shared_ptr<conn::MConnection> mconn_ptr;
@@ -150,16 +150,16 @@ auto MConnConnection::handshake(Chan<std::monostate>& done, NodeInfo& node_info,
   auto res = co_await (done.async_receive(as_result(asio::use_awaitable)) || res_ch.async_receive(asio::use_awaitable));
   if (res.index() == 0) {
     close();
-    co_return std::get<0>(res).error();
+    co_return std::make_tuple(NodeInfo{}, nullptr, std::get<0>(res).error());
   } else if (res.index() == 1) {
     auto inner_res = std::get<1>(res);
     if (!inner_res.has_error()) {
-      co_return std::make_tuple(peer_info, peer_key);
+      co_return std::make_tuple(peer_info, std::make_shared<Bytes>(peer_key), success());
     } else {
-      co_return inner_res.error();
+      co_return std::make_tuple(NodeInfo{}, nullptr, inner_res.error());
     }
   } else {
-    co_return err_unreachable;
+    co_return std::make_tuple(NodeInfo{}, nullptr, err_unreachable);
   }
 }
 
@@ -187,19 +187,19 @@ auto MConnConnection::send_message(Chan<std::monostate>& done, ChannelId ch_id, 
 }
 
 auto MConnConnection::receive_message(Chan<std::monostate>& done)
-  -> asio::awaitable<Result<std::tuple<ChannelId, std::shared_ptr<Bytes>>>> {
+  -> asio::awaitable<std::tuple<ChannelId, std::shared_ptr<noir::Bytes>, Result<void>>> {
   auto res = co_await (error_ch.async_receive(use_awaitable) || close_ch.async_receive(use_awaitable) ||
     done.async_receive(use_awaitable) || receive_ch.async_receive(use_awaitable));
 
   if (res.index() == 0) {
-    co_return std::get<0>(res);
+    co_return std::make_tuple(0, nullptr, std::get<0>(res));
   } else if (res.index() == 1 || res.index() == 2) {
-    co_return err_eof;
+    co_return std::make_tuple(0, nullptr, err_eof);
   } else if (res.index() == 3) {
     auto msg = std::get<3>(res);
-    co_return std::make_tuple(msg.channel_id, msg.payload);
+    co_return std::make_tuple(msg.channel_id, msg.payload, success());
   } else {
-    co_return err_unreachable;
+    co_return std::make_tuple(0, nullptr, err_unreachable);
   }
 }
 
@@ -293,7 +293,7 @@ auto MConnTransport::close() -> Result<void> {
   return success();
 }
 
-void MConnTransport::add_channel_descriptor(std::vector<std::shared_ptr<conn::ChannelDescriptor>>& channel_desc) {
+void MConnTransport::add_channel_descriptor(std::vector<std::shared_ptr<conn::ChannelDescriptor>>&& channel_desc) {
   channel_descs.insert(channel_descs.end(), channel_desc.begin(), channel_desc.end());
 }
 

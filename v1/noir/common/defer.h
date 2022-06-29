@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <tendermint/p2p/conn/connection.h>
+#include <memory>
 
-namespace tendermint::p2p {
+namespace noir {
 
-using ChannelId = conn::ChannelId;
+using defer = std::shared_ptr<void>;
 
-} // namespace tendermint::p2p
+} // namespace noir
