@@ -62,6 +62,28 @@ public:
       .other = NodeInfoOther{.tx_index = pb.other().tx_index(), .rpc_address = pb.other().rpc_address()}};
   }
 
+  void add_channels(const std::uint16_t& channel) {
+    for (auto& ch : channels) {
+      if (ch == static_cast<noir::ByteType>(channel)) {
+        return;
+      }
+    }
+    channels.push_back(channel);
+  }
+
+  auto validate() -> noir::Result<void> {
+    // TODO
+    return success();
+  }
+
+  // compatible_with checks if two NodeInfo are compatible with each other.
+  // CONTRACT: two nodes are compatible if the Block version and network match
+  // and they have at least one channel in common.
+  auto compatible_with(const NodeInfo& other) -> noir::Result<void> {
+    // TODO
+    return success();
+  }
+
 public:
   ProtocolVersion protocol_version;
   NodeId node_id;

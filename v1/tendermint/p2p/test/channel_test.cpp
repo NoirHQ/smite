@@ -25,7 +25,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
     co_spawn(
       io_context,
@@ -39,7 +39,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
     co_spawn(
       io_context,
       [&]() -> asio::awaitable<void> {
-        auto receive_res = co_await ch.out_ch.async_receive(asio::use_awaitable);
+        auto receive_res = co_await ch.out_ch->async_receive(asio::use_awaitable);
         CHECK(receive_res->from == "alice");
         CHECK(receive_res->to == "bob");
       },
@@ -56,7 +56,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
     co_spawn(
       io_context,
@@ -70,7 +70,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
     co_spawn(
       io_context,
       [&]() -> asio::awaitable<void> {
-        auto receive_res = co_await ch.err_ch.async_receive(asio::use_awaitable);
+        auto receive_res = co_await ch.err_ch->async_receive(asio::use_awaitable);
         CHECK(receive_res->node_id == "alice");
         CHECK(receive_res->err.message() == "bob");
       },
@@ -87,7 +87,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
     co_spawn(
       io_context,
@@ -110,7 +110,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
@@ -130,15 +130,12 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
-    co_spawn(
-      io_context,
-      [&]() -> asio::awaitable<void> {
-        co_await ch.in_ch.async_send(system::error_code{},
-          std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
-          asio::use_awaitable);
-      },
+    co_spawn(io_context,
+      ch.in_ch->async_send(boost::system::error_code{},
+        std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
+        asio::use_awaitable),
       asio::detached);
 
     auto iter = ch.receive(done);
@@ -167,7 +164,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
     done.close();
 
     auto iter = ch.receive(done);
@@ -193,7 +190,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context},
       Chan<EnvelopePtr>{io_context},
       Chan<PeerErrorPtr>{io_context});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
@@ -220,12 +217,12 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
     co_spawn(
       io_context,
       [&]() -> asio::awaitable<void> {
-        co_await ch.in_ch.async_send(system::error_code{},
+        co_await ch.in_ch->async_send(boost::system::error_code{},
           std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
           asio::use_awaitable);
       },
@@ -260,12 +257,12 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
     co_spawn(
       io_context,
       [&]() -> asio::awaitable<void> {
-        co_await ch.in_ch.async_send(system::error_code{},
+        co_await ch.in_ch->async_send(boost::system::error_code{},
           std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
           asio::use_awaitable);
       },
@@ -300,7 +297,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
       Chan<EnvelopePtr>{io_context, 1},
       Chan<EnvelopePtr>{io_context, 1},
       Chan<PeerErrorPtr>{io_context, 1});
-    Chan<Done> done{io_context};
+    Chan<std::monostate> done{io_context};
 
     auto iter = ch.receive(done);
     CHECK((iter ? true : false));
@@ -309,7 +306,7 @@ TEST_CASE("Channel", "[tendermint][p2p]") {
     co_spawn(
       io_context,
       [&]() -> asio::awaitable<void> {
-        co_await ch.in_ch.async_send(system::error_code{},
+        co_await ch.in_ch->async_send(boost::system::error_code{},
           std::make_shared<Envelope>(Envelope{.from = "alice", .to = "bob", .channel_id = 1}),
           asio::use_awaitable);
       },

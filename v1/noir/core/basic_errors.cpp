@@ -5,5 +5,7 @@ namespace noir {
 const Error err_not_implemented = user_error_registry().register_error("not implemented");
 const Error err_unreachable = user_error_registry().register_error("MUST not reach here");
 const Error err_eof = user_error_registry().register_error("EOF");
+const Error err_canceled = user_error_registry().register_error("context canceled");
+const Error err_deadline_exceeded = user_error_registry().register_error("context deadline exceeded");
 
 } // namespace noir

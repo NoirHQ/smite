@@ -22,13 +22,15 @@ class ChannelDescriptor {
 public:
   ChannelDescriptor(ChannelId id,
     int32_t priority,
-    std::string&& name,
+    const std::string& name,
+    std::shared_ptr<google::protobuf::Message>& message_type,
     std::size_t send_queue_capacity = default_send_queue_capacity,
     std::size_t recv_message_capacity = default_recv_message_capacity,
     std::size_t recv_buffer_capacity = default_recv_buffer_capacity)
     : id(id),
       priority(priority),
-      name(std::move(name)),
+      name(name),
+      message_type(message_type),
       send_queue_capacity(send_queue_capacity),
       recv_message_capacity(recv_message_capacity),
       recv_buffer_capacity(recv_buffer_capacity) {}
@@ -39,7 +41,7 @@ public:
   std::string name;
   std::size_t send_queue_capacity;
   std::size_t recv_message_capacity;
-  // Message message_type;
+  std::shared_ptr<google::protobuf::Message> message_type;
   std::size_t recv_buffer_capacity;
 
 private:
