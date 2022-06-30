@@ -209,6 +209,7 @@ TEST_CASE("clist", "[noir][clist]") {
     CHECK(!el2->removed());
   }
 
+  // clang-format off
   SECTION("next_wait_chan") {
     go([]() -> func<> {
       auto l = clist::CList<int>();
@@ -269,4 +270,5 @@ TEST_CASE("clist", "[noir][clist]") {
     });
     runtime::executor.join();
   }
+// clang-format on
 }
