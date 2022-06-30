@@ -1,7 +1,6 @@
 add_library(noir_mempool STATIC
   cache.cpp
   ids.cpp
-  priority_queue.cpp
   tx.cpp
 )
 add_library(noir::mempool ALIAS noir_mempool)
