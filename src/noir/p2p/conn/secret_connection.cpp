@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/common/check.h>
 #include <noir/p2p/conn/merlin.h>
 #include <noir/p2p/conn/secret_connection.h>
 
@@ -72,20 +73,21 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(Bytes32& receiv
   merlin_transcript_commit_bytes(&mctx, reinterpret_cast<const uint8_t*>("EPHEMERAL_LOWER_PUBLIC_KEY"),
     strlen("EPHEMERAL_LOWER_PUBLIC_KEY"), reinterpret_cast<const uint8_t*>(lo_eph_pub.data()), lo_eph_pub.size());
   merlin_transcript_commit_bytes(&mctx, reinterpret_cast<const uint8_t*>("EPHEMERAL_UPPER_PUBLIC_KEY"),
-    strlen("EPHEMERAL_UPPER_PUBLIC_KEY"), reinterpret_cast<const uint8_t*>(lo_eph_pub.data()), hi_eph_pub.size());
+    strlen("EPHEMERAL_UPPER_PUBLIC_KEY"), reinterpret_cast<const uint8_t*>(hi_eph_pub.data()), hi_eph_pub.size());
   merlin_transcript_commit_bytes(&mctx, reinterpret_cast<const uint8_t*>("DH_SECRET"), strlen("DH_SECRET"),
     reinterpret_cast<const uint8_t*>(dh_secret.data()), dh_secret.size());
   merlin_transcript_challenge_bytes(&mctx, reinterpret_cast<const uint8_t*>("SECRET_CONNECTION_MAC"),
     strlen("SECRET_CONNECTION_MAC"), reinterpret_cast<uint8_t*>(chal_secret.data()), chal_secret.size());
 
   // Sign challenge Bytes for authentication
-  uint8_t sm[32 + crypto_sign_BYTES];
-  unsigned long long smlen;
-  if (crypto_sign(sm, &smlen, reinterpret_cast<const unsigned char*>(chal_secret.data()), chal_secret.size(),
-        reinterpret_cast<const unsigned char*>(loc_priv_key.data())) != 0)
-    return "unable to sign challenge";
-  loc_signature = Bytes(sm, sm + smlen);
-  return {};
+  Bytes sig(64);
+  if (crypto_sign_detached(reinterpret_cast<unsigned char*>(sig.data()), nullptr,
+        reinterpret_cast<const unsigned char*>(chal_secret.data()), chal_secret.size(),
+        reinterpret_cast<const unsigned char*>(loc_priv_key.data())) == 0) {
+    loc_signature = sig;
+    return {};
+  }
+  return "unable to sign challenge";
 }
 
 std::optional<std::string> secret_connection::shared_auth_sig(auth_sig_message& received_msg) {
@@ -93,13 +95,13 @@ std::optional<std::string> secret_connection::shared_auth_sig(auth_sig_message& 
   rem_pub_key = received_msg.key;
 
   // Verify signature
-  uint8_t m[32 + crypto_sign_BYTES + 1];
-  unsigned long long mlen;
-  if (crypto_sign_open(m, &mlen, reinterpret_cast<const unsigned char*>(received_msg.sig.data()),
-        received_msg.sig.size(), reinterpret_cast<const unsigned char*>(rem_pub_key.data())) != 0)
-    return "unable to verify challenge";
-  is_authorized = true;
-  return {};
+  if (crypto_sign_verify_detached(reinterpret_cast<const unsigned char*>(received_msg.sig.data()),
+        reinterpret_cast<const unsigned char*>(chal_secret.data()), chal_secret.size(),
+        reinterpret_cast<const unsigned char*>(rem_pub_key.data())) == 0) {
+    is_authorized = true;
+    return {};
+  }
+  return "unable to verify challenge";
 }
 
 Bytes secret_connection::derive_secrets(Bytes32& dh_secret) {
@@ -121,6 +123,64 @@ Bytes secret_connection::derive_secrets(Bytes32& dh_secret) {
   if (kdf_res)
     return {};
   return {key, key + sizeof(key) / sizeof(key[0])};
+}
+
+Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> secret_connection::write(const Bytes& data) {
+  std::scoped_lock g(send_mtx);
+  int n{};
+  std::vector<std::shared_ptr<Bytes>> ret;
+  auto data_pos = data.begin();
+  while (data_pos != data.end()) {
+    auto sealed_frame = std::make_shared<Bytes>(aead_size_overhead + total_frame_size);
+    Bytes frame(total_frame_size);
+    Bytes chunk;
+    auto data_size = std::distance(data_pos, data.end());
+    if (data_max_size < data_size) {
+      auto split_pos = data_pos + data_max_size;
+      chunk.raw().resize(data_max_size);
+      std::copy(data_pos, split_pos, chunk.data());
+      data_pos = split_pos; // TODO : check
+    } else {
+      chunk.raw().resize(data_size);
+      std::copy(data_pos, data.end(), chunk.data());
+      data_pos = data.end();
+    }
+    auto chunk_length = chunk.size();
+    const uint32_t payload_size = chunk_length;
+    const char* const header = reinterpret_cast<const char* const>(&payload_size);
+    std::copy(header, header + 3, frame.data());
+    std::copy(chunk.begin(), chunk.end(), frame.data() + 4);
+
+    // Encrypt frame
+    unsigned long long ciphertext_len{};
+    crypto_aead_chacha20poly1305_ietf_encrypt(sealed_frame->data(), &ciphertext_len,
+      reinterpret_cast<const unsigned char*>(frame.data()), frame.size(), nullptr, 0, nullptr, send_nonce.get(),
+      reinterpret_cast<const unsigned char*>(send_secret.data()));
+    send_nonce.increment();
+
+    n += chunk_length;
+    ret.push_back(sealed_frame);
+  }
+  return {n, ret};
+}
+
+Result<std::pair<int, Bytes>> secret_connection::read(const Bytes& data) {
+  std::scoped_lock g(recv_mtx);
+  check(data.size() == 1044, "invalid sealed_frame size");
+
+  Bytes frame(total_frame_size);
+  unsigned long long decrypted_len{}, ciphertext_len{data.size()};
+  auto r = crypto_aead_chacha20poly1305_ietf_decrypt(frame.data(), &decrypted_len, nullptr, data.data(), ciphertext_len,
+    nullptr, 0, recv_nonce.get(), reinterpret_cast<const unsigned char*>(recv_secret.data()));
+  recv_nonce.increment();
+
+  uint32_t chunk_length;
+  std::memcpy(&chunk_length, frame.data(), 4);
+  if (chunk_length > data_max_size)
+    return Error::format("chunk_length is greater than data_max_size");
+  Bytes chunk(chunk_length);
+  std::copy(frame.begin() + data_len_size, frame.begin() + data_len_size + chunk_length, chunk.data());
+  return {chunk_length, chunk};
 }
 
 } // namespace noir::p2p

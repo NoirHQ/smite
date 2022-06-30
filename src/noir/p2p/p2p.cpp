@@ -3,23 +3,31 @@
 // Copyright (c) 2017-2021 block.one and its contributors.  All rights reserved.
 // SPDX-License-Identifier: MIT
 //
+#include <noir/codec/protobuf.h>
 #include <noir/common/log.h>
 #include <noir/common/thread_pool.h>
+#include <noir/common/types/varint.h>
 #include <noir/consensus/abci.h>
 #include <noir/consensus/tx.h>
+#include <noir/consensus/types/encoding_helper.h>
 #include <noir/p2p/buffer_factory.h>
+#include <noir/p2p/conn/secret_connection.h>
+#include <noir/p2p/message_buffer.h>
 #include <noir/p2p/p2p.h>
 #include <noir/p2p/queued_buffer.h>
 #include <noir/p2p/types.h>
+#include <tendermint/crypto/keys.pb.h>
+#include <tendermint/p2p/conn.pb.h>
 
 #include <appbase/application.hpp>
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <fc/crypto/rand.hpp>
 #include <fc/exception/exception.hpp>
 #include <fc/network/ip.hpp>
-#include <fc/network/message_buffer.hpp>
+
+#include <cppcodec/base64_default_rfc4648.hpp>
+#include <google/protobuf/wrappers.pb.h>
 
 #include <atomic>
 #include <shared_mutex>
@@ -87,12 +95,11 @@ public:
   boost::asio::io_context::strand strand;
   std::shared_ptr<tcp::socket> socket; // only accessed through strand after construction
 
-  fc::message_buffer<1024 * 1024> pending_message_buffer;
+  message_buffer<1024 * 1024> pending_message_buffer;
   std::atomic<std::size_t> outstanding_read_bytes{0}; // accessed only from strand threads
 
   queued_buffer buffer_queue;
 
-  std::atomic<uint32_t> trx_in_progress_size{0};
   const uint32_t connection_id;
   int16_t sent_handshake_count = 0;
   std::atomic<bool> connecting{true};
@@ -106,7 +113,6 @@ public:
   std::atomic<go_away_reason> no_retry{no_reason};
 
   mutable std::mutex conn_mtx; //< mtx for last_req .. local_endpoint_port
-  //  std::optional<request_message> last_req;
   handshake_message last_handshake_recv;
   handshake_message last_handshake_sent;
   block_id_type fork_head;
@@ -130,15 +136,12 @@ public:
   tstamp dst{0}; //!< destination timestamp
   tstamp xmt{0}; //!< transmit timestamp
   /** @} */
-  // timestamp for the lastest message
   tstamp latest_msg_time{0};
   tstamp hb_timeout;
 
   bool connected();
   bool current();
 
-  /// @param reconnect true if we should try and reconnect immediately after close
-  /// @param shutdown true only if plugin is shutting down
   void close(bool reconnect = true, bool shutdown = false);
 
 private:
@@ -149,45 +152,20 @@ public:
 
   bool resolve_and_connect();
   void connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::resolver::results_type endpoints);
-  void start_read_message();
 
-  /** \brief Process the next message from the pending message buffer
-   *
-   * Process the next message from the pending_message_buffer.
-   * message_length is the already determined length of the data
-   * part of the message that will handle the message.
-   * Returns true is successful. Returns false if an error was
-   * encountered unpacking or processing the message.
-   */
   bool process_next_message(uint32_t message_length);
 
   void send_handshake(bool force = false);
 
-  /** \name Peer Timestamps
-   *  Time message handling
-   */
-  /**  \brief Check heartbeat time and send Time_message
-   */
   void check_heartbeat(tstamp current_time);
-  /**  \brief Populate and queue time_message
-   */
   void send_time();
-  /** \brief Populate and queue time_message immediately using incoming time_message
-   */
   void send_time(const time_message& msg);
 
   const std::string peer_name();
 
-  void blk_send_branch(const block_id_type& msg_head_id);
-  void blk_send_branch_impl(uint32_t msg_head_num, uint32_t lib_num, uint32_t head_num);
-  void blk_send(const block_id_type& blkid);
-  void stop_send();
-
   void enqueue(const net_message& msg);
-  //  void enqueue_block(const signed_block_ptr &sb, bool to_sync_queue = false);
   void enqueue_buffer(
     const std::shared_ptr<std::vector<char>>& send_buffer, go_away_reason close_after_send, bool to_sync_queue = false);
-  //  void cancel_sync(go_away_reason);
   void flush_queues();
 
   void cancel_wait();
@@ -204,32 +182,17 @@ public:
   static bool is_valid(const handshake_message& msg);
 
   void handle_message(const handshake_message& msg);
-  //  void handle_message(const chain_size_message &msg);
   void handle_message(const go_away_message& msg);
-  /** \name Peer Timestamps
-   *  Time message handling
-   *  @{
-   */
-  /** \brief Process time_message
-   *
-   * Calculate offset, delay and dispersion.  Note carefully the
-   * implied processing.  The first-order difference is done
-   * directly in 64-bit arithmetic, then the result is converted
-   * to floating double.  All further processing is in
-   * floating-double arithmetic with rounding done by the hardware.
-   * This is necessary in order to avoid overflow and preserve precision.
-   */
   void handle_message(const time_message& msg);
-  /** @} */
-  //  void handle_message(const notice_message &msg);
-  //  void handle_message(const request_message &msg);
-  //  void handle_message(const sync_request_message &msg);
-  //  void handle_message(const signed_block &msg) = delete; // signed_block_ptr overload used instead
-  //  void handle_message(const block_id_type &id, signed_block_ptr msg);
-  //  void handle_message(const packed_transaction &msg) = delete; // packed_transaction_ptr overload used instead
-  //  void handle_message(packed_transaction_ptr msg);
 
-  //  void process_signed_block(const block_id_type &id, signed_block_ptr msg);
+  std::shared_ptr<secret_connection> secret_conn{};
+  bool handshake_succeeded{false};
+  void start_handshake();
+  void read_a_message(std::function<void(Bytes)>);
+  void read_a_secret_message();
+  void shared_eph_pub_key(Bytes);
+  void shared_auth_sig(Bytes);
+  Result<int> write_msg(const Bytes&, bool use_secret_conn = true);
 };
 
 using connection_ptr = std::shared_ptr<connection>;
@@ -273,7 +236,6 @@ public:
   /// Peer clock may be no more than 1 second skewed from our clock, including network latency.
   const std::chrono::system_clock::duration peer_authentication_interval{std::chrono::seconds{1}};
 
-  //  chain_id_type chain_id;
   Bytes20 node_id;
   std::string user_agent_name;
 
@@ -434,16 +396,7 @@ void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, boo
   }
 }
 
-void p2p_impl::update_chain_info() {
-  //  controller& cc = chain_plug->chain();
-  //  std::scoped_lock g( chain_info_mtx );
-  //  chain_head_blk_num = cc.head_block_num();
-  //  chain_head_blk_id = cc.head_block_id();
-  //  chain_fork_head_blk_num = cc.fork_db_pending_head_block_num();
-  //  chain_fork_head_blk_id = cc.fork_db_pending_head_block_id();
-  //  dlog("updating chain info lib ${lib}, head ${head}, fork ${fork}",
-  //           ("lib", chain_lib_num)("head", chain_head_blk_num)("fork", chain_fork_head_blk_num) );
-}
+void p2p_impl::update_chain_info() {}
 
 std::tuple<uint32_t, uint32_t, block_id_type, block_id_type> p2p_impl::get_chain_info() const {
   std::scoped_lock g(chain_info_mtx);
@@ -664,8 +617,6 @@ void p2p::plugin_startup() {
 
     my->thread_pool.emplace("p2p", my->thread_pool_size);
 
-    //    my->dispatcher.reset( new dispatch_manager( my_impl->thread_pool->get_executor() ) );
-
     if (!my->p2p_accept_transactions && my->p2p_address.size()) {
       ilog("\n"
            "***********************************\n"
@@ -714,27 +665,12 @@ void p2p::plugin_startup() {
       ilog("starting listener, max clients is ${mc}", ("mc", my->max_client_count));
       my->start_listen_loop();
     }
-    {
-      //      chain::controller &cc = my->chain_plug->chain();
-      //      cc.accepted_block.connect([my = my](const block_state_ptr &s) {
-      //        my->on_accepted_block(s);
-      //      });
-      //      cc.pre_accepted_block.connect([my = my](const signed_block_ptr &s) {
-      //        my->on_pre_accepted_block(s);
-      //      });
-      //      cc.irreversible_block.connect([my = my](const block_state_ptr &s) {
-      //        my->on_irreversible_block(s);
-      //      });
-    }
 
     {
       std::scoped_lock g(my->keepalive_timer_mtx);
       my->keepalive_timer.reset(new boost::asio::steady_timer(my->thread_pool->get_executor()));
     }
     my->ticker();
-
-    //    my->incoming_transaction_ack_subscription = app().get_channel<compat::channels::transaction_ack>().subscribe(
-    //        std::bind(&p2p_impl::transaction_ack, my.get(), std::placeholders::_1));
 
     my->start_monitors();
 
@@ -970,7 +906,6 @@ bool connection::connected() {
 }
 
 void connection::set_connection_type(const std::string& peer_add) {
-  // host:port:[<trx>|<blk>]
   std::string::size_type colon = peer_add.find(':');
   std::string::size_type colon2 = peer_add.find(':', colon + 1);
   std::string::size_type end = colon2 == std::string::npos
@@ -1014,7 +949,7 @@ void connection::connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::re
         const boost::system::error_code& err, const tcp::endpoint& endpoint) {
         if (!err && socket->is_open() && socket == c->socket) {
           if (c->start_session()) {
-            c->send_handshake();
+            // c->send_handshake(); // TODO : remove old handshake implementation
           }
         } else {
           elog("connection failed to ${peer}: ${error}", ("peer", c->peer_name())("error", err.message()));
@@ -1024,8 +959,6 @@ void connection::connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::re
 }
 
 bool connection::start_session() {
-  //  verify_strand_in_this_thread( strand, __func__, __LINE__ );
-
   update_endpoints();
   boost::asio::ip::tcp::no_delay nodelay(true);
   boost::system::error_code ec;
@@ -1037,7 +970,8 @@ bool connection::start_session() {
   } else {
     dlog("connected to ${peer}", ("peer", peer_name()));
     socket_open = true;
-    start_read_message();
+    // start_read_message();
+    start_handshake();
     return true;
   }
 }
@@ -1076,19 +1010,14 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
   self->flush_queues();
   self->connecting = false;
   self->syncing = false;
-  //  self->block_status_monitor_.reset();
   ++self->consecutive_immediate_connection_close;
   bool has_last_req = false;
   {
     std::scoped_lock g_conn(self->conn_mtx);
-    //    has_last_req = self->last_req.has_value();
     self->last_handshake_recv = handshake_message();
     self->last_handshake_sent = handshake_message();
     self->last_close = fc::time_point::now();
     self->conn_node_id = Bytes20();
-  }
-  if (has_last_req && !shutdown) {
-    //    my_impl->dispatcher->retry_fetch( self->shared_from_this() );
   }
   self->sent_handshake_count = 0;
   ilog("closing '${a}', ${p}", ("a", self->peer_address())("p", self->peer_name()));
@@ -1129,16 +1058,13 @@ void connection::update_endpoints() {
 bool connection::populate_handshake(handshake_message& hello, bool force) {
   namespace sc = std::chrono;
   bool send = force;
-  //  hello.network_version = net_version_base + net_version;
   const auto prev_head_id = hello.head_id;
   uint32_t head;
   std::tie(std::ignore, head, std::ignore, hello.head_id) = my_impl->get_chain_info();
   // only send handshake if state has changed since last handshake
   send |= head != hello.head_num;
   send |= prev_head_id != hello.head_id;
-  //  if (!send) return false;
   hello.head_num = head;
-  //  hello.chain_id = my_impl->chain_id;
   hello.node_id = my_impl->node_id;
   hello.time = sc::duration_cast<sc::nanoseconds>(sc::system_clock::now().time_since_epoch()).count();
   hello.p2p_address = my_impl->p2p_address;
@@ -1147,152 +1073,42 @@ bool connection::populate_handshake(handshake_message& hello, bool force) {
   if (is_blocks_only_connection())
     hello.p2p_address += ":blk";
   hello.p2p_address += " - " + hello.node_id.to_string().substr(0, 7);
-  //#if defined( __APPLE__ )
-  //  hello.os = "osx";
-  //#elif defined( __linux__ )
-  //  hello.os = "linux";
-  //#elif defined( _WIN32 )
-  //      hello.os = "win32";
-  //#else
-  //      hello.os = "other";
-  //#endif
-  //  hello.agent = my_impl->user_agent_name;
-
   return true;
 }
 
-void connection::start_read_message() {
-  try {
-    std::size_t minimum_read =
-      std::atomic_exchange<decltype(outstanding_read_bytes.load())>(&outstanding_read_bytes, 0);
-    minimum_read = minimum_read != 0 ? minimum_read : message_header_size;
-
-    auto completion_handler = [minimum_read](
-                                boost::system::error_code ec, std::size_t bytes_transferred) -> std::size_t {
-      if (ec || bytes_transferred >= minimum_read) {
-        return 0;
-      } else {
-        return minimum_read - bytes_transferred;
-      }
-    };
-
-    uint32_t write_queue_size = buffer_queue.write_queue_size();
-    if (write_queue_size > def_max_write_queue_size) {
-      elog("write queue full ${s} bytes, giving up on connection, closing connection to: ${p}",
-        ("s", write_queue_size)("p", peer_name()));
-      close(false);
-      return;
-    }
-
-    boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read(),
-      completion_handler,
-      boost::asio::bind_executor(strand,
-        [conn = shared_from_this(), socket = socket](boost::system::error_code ec, std::size_t bytes_transferred) {
-          // may have closed connection and cleared pending_message_buffer
-          if (!conn->socket_is_open() || socket != conn->socket)
-            return;
-
-          bool close_connection = false;
-          try {
-            if (!ec) {
-              if (bytes_transferred > conn->pending_message_buffer.bytes_to_write()) {
-                elog("async_read_some callback: bytes_transfered = ${bt}, buffer.bytes_to_write = ${btw}",
-                  ("bt", bytes_transferred)("btw", conn->pending_message_buffer.bytes_to_write()));
-              }
-              //                                                               EOS_ASSERT(bytes_transferred <=
-              //                                                               conn->pending_message_buffer.bytes_to_write(),
-              //                                                               plugin_exception, "");
-              conn->pending_message_buffer.advance_write_ptr(bytes_transferred);
-              while (conn->pending_message_buffer.bytes_to_read() > 0) {
-                uint32_t bytes_in_buffer = conn->pending_message_buffer.bytes_to_read();
-
-                if (bytes_in_buffer < message_header_size) {
-                  conn->outstanding_read_bytes = message_header_size - bytes_in_buffer;
-                  break;
-                } else {
-                  uint32_t message_length;
-                  auto index = conn->pending_message_buffer.read_index();
-                  conn->pending_message_buffer.peek(&message_length, sizeof(message_length), index);
-                  if (message_length > def_send_buffer_size * 2 || message_length == 0) {
-                    elog("incoming message length unexpected (${i})", ("i", message_length));
-                    close_connection = true;
-                    break;
-                  }
-
-                  auto total_message_bytes = message_length + message_header_size;
-
-                  if (bytes_in_buffer >= total_message_bytes) {
-                    conn->pending_message_buffer.advance_read_ptr(message_header_size);
-                    conn->consecutive_immediate_connection_close = 0;
-                    if (!conn->process_next_message(message_length)) {
-                      return;
-                    }
-                  } else {
-                    auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
-                    auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
-                    if (outstanding_message_bytes > available_buffer_bytes) {
-                      conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
-                    }
-
-                    conn->outstanding_read_bytes = outstanding_message_bytes;
-                    break;
-                  }
-                }
-              }
-              if (!close_connection)
-                conn->start_read_message();
-            } else {
-              if (ec.value() != boost::asio::error::eof) {
-                elog("Error reading message: ${m}", ("m", ec.message()));
-              } else {
-                ilog("Peer closed connection");
-              }
-              close_connection = true;
-            }
-          } catch (const std::bad_alloc&) {
-            throw;
-          } catch (const boost::interprocess::bad_alloc&) {
-            throw;
-          } catch (const fc::exception& ex) {
-            elog("Exception in handling read data ${s}", ("s", ex.to_string()));
-            close_connection = true;
-          } catch (const std::exception& ex) {
-            elog("Exception in handling read data: ${s}", ("s", ex.what()));
-            close_connection = true;
-          } catch (...) {
-            elog("Undefined exception handling read data");
-            close_connection = true;
-          }
-
-          if (close_connection) {
-            elog("Closing connection to: ${p}", ("p", conn->peer_name()));
-            conn->close();
-            ///< notify consensus of peer down
-            my_impl->update_peer_status_channel.publish(appbase::priority::medium,
-              std::make_shared<plugin_interface::peer_status_info>(
-                plugin_interface::peer_status_info{to_hex(conn->conn_node_id), peer_status::down}));
-          }
-        }));
-  } catch (...) {
-    elog("Undefined exception in start_read_message, closing connection to: ${p}", ("p", peer_name()));
-    close();
-  }
-}
-
 bool connection::process_next_message(uint32_t message_length) {
-  try {
-    latest_msg_time = get_time();
-    datastream<unsigned char> ds(reinterpret_cast<unsigned char*>(pending_message_buffer.read_ptr()), message_length);
-    net_message msg;
-    ds >> msg;
-    msg_handler m(shared_from_this());
-    std::visit(m, msg);
-    pending_message_buffer.advance_read_ptr(message_length); // required to manually advance
-  } catch (const fc::exception& e) {
-    elog("Exception in handling message from ${p}: ${s}", ("p", peer_name())("s", e.to_detail_string()));
-    close();
-    return false;
+  Bytes new_message(message_length);
+  std::copy(pending_message_buffer.read_ptr(), pending_message_buffer.read_ptr() + message_length, new_message.data());
+  pending_message_buffer.advance_read_ptr(message_length);
+
+  auto ok = secret_conn->read(new_message);
+  if (!ok) {
+    elog("unable to read from secret_conn");
+    return false; // will disconnect
   }
+
+  Bytes& bz = ok.value().second;
+  std::make_unsigned_t<uint64_t> val = 0;
+  auto max_len = (sizeof(uint64_t) * 8 + 6) / 7;
+  auto i = 0;
+  varuint64 msg_len = 0;
+  for (; i < max_len - 1; ++i) {
+    uint8_t c = bz.at(i);
+    val |= uint64_t(c & 0x7f) << (i * 7);
+    if (!(c & 0x80)) {
+      msg_len = val;
+      i++;
+      break;
+    }
+  }
+
+  ::tendermint::p2p::AuthSigMessage v;
+  v.ParseFromArray(bz.data() + i, msg_len);
+
+  auth_sig_message x;
+  x.key = v.pub_key().ed25519();
+  x.sig = v.sig();
+
   return true;
 }
 
@@ -1306,7 +1122,6 @@ void connection::flush_queues() {
 }
 
 void connection::enqueue(const net_message& m) {
-  //  verify_strand_in_this_thread( strand, __func__, __LINE__ );
   go_away_reason close_after_send = no_reason;
   if (std::holds_alternative<go_away_message>(m)) {
     close_after_send = std::get<go_away_message>(m).reason;
@@ -1411,7 +1226,7 @@ void connection::check_heartbeat(tstamp current_time) {
     }
     return;
   }
-  send_time();
+  // send_time(); // TODO : remove heartbeat and use PING PONG instead
 }
 
 void connection::send_time() {
@@ -1561,6 +1376,238 @@ void connection::handle_message(const time_message& msg) {
     g_conn.unlock();
     send_handshake();
   }
+}
+
+void connection::start_handshake() {
+  /// requires node_info and priv_key of local node
+  /// start timeout for handshake, which defaults to 20s (configurable)
+  // loc_priv_key is read from config/node_key.json
+  // auto node_key_str =
+  //   base64::decode("qk7PS9vdekaGFXWR99mvmCN83DPnSjaRmouPiVjzYIwBe1TnvQp+TayvbQBwokzsP96APoYLOeH3bMWEE+8YPg==");
+  // Following is COPIED from tendermint generated node_key.json
+  // Generated key must conform to Ed25519 Validation Rules by ZIP-215
+  auto node_key_str =
+    base64::decode("xdxvup1J2+IzkzvspqSUy7rd+OBx5a4I+KAajJlHA5v5GK6EzZ2Su2LcVL3J8wlMzu3a87/3NyeEY3XauD8pYg==");
+  Bytes loc_priv_key(node_key_str.begin(), node_key_str.end());
+
+  secret_conn = secret_connection::make_secret_connection(loc_priv_key);
+
+  // Exchange loc_eph_pub
+  Bytes bz(secret_conn->loc_eph_pub.size());
+  std::copy(secret_conn->loc_eph_pub.begin(), secret_conn->loc_eph_pub.end(), bz.data());
+  auto my_msg = consensus::cdc_encode(bz);
+  write_msg(my_msg, false); // send; use non-secret connection
+  read_a_message([conn = shared_from_this()](Bytes msg) -> void { return conn->shared_eph_pub_key(msg); }); // receive
+}
+
+void connection::read_a_message(std::function<void(Bytes)> cb) {
+  try {
+    std::size_t minimum_read = 1;
+    auto completion_handler = [minimum_read](
+                                boost::system::error_code ec, std::size_t bytes_transferred) -> std::size_t {
+      if (ec || bytes_transferred >= minimum_read)
+        return 0;
+      return minimum_read - bytes_transferred;
+    };
+    boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read(),
+      completion_handler,
+      boost::asio::bind_executor(strand,
+        [conn = shared_from_this(), socket = socket, cb](boost::system::error_code ec, std::size_t bytes_transferred) {
+          if (!conn->socket_is_open() || socket != conn->socket)
+            return;
+          if (!ec) {
+            conn->pending_message_buffer.advance_write_ptr(bytes_transferred);
+            while (conn->pending_message_buffer.bytes_to_read() > 0) {
+              uint32_t bytes_in_buffer = conn->pending_message_buffer.bytes_to_read();
+
+              try {
+                varuint64 message_length = 0;
+                mb_peek_datastream ds(conn->pending_message_buffer);
+                auto message_header_size = read_uleb128(ds, message_length);
+                auto total_message_bytes = message_length + message_header_size;
+                if (bytes_in_buffer >= total_message_bytes) {
+                  conn->pending_message_buffer.advance_read_ptr(message_header_size);
+                  conn->consecutive_immediate_connection_close = 0;
+                  Bytes new_message(message_length);
+                  std::copy(conn->pending_message_buffer.read_ptr(),
+                    conn->pending_message_buffer.read_ptr() + message_length, new_message.data());
+                  conn->pending_message_buffer.advance_read_ptr(message_length);
+                  cb(new_message);
+                  return;
+
+                } else {
+                  auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
+                  auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
+                  if (outstanding_message_bytes > available_buffer_bytes)
+                    conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
+                  conn->outstanding_read_bytes = outstanding_message_bytes;
+                  break;
+                }
+              } catch (std::out_of_range& e) {
+                conn->outstanding_read_bytes = 1;
+              }
+            }
+            conn->read_a_message([conn, cb](Bytes msg) -> void { return cb(msg); });
+          }
+        }));
+  } catch (...) {
+    close();
+  }
+}
+
+void connection::read_a_secret_message() {
+  try {
+    std::size_t minimum_read = 1044;
+    auto completion_handler = [minimum_read](
+                                boost::system::error_code ec, std::size_t bytes_transferred) -> std::size_t {
+      if (ec || bytes_transferred >= minimum_read)
+        return 0;
+      else
+        return minimum_read - bytes_transferred;
+    };
+
+    uint32_t write_queue_size = buffer_queue.write_queue_size();
+    if (write_queue_size > def_max_write_queue_size) {
+      elog("write queue full ${s} bytes, giving up on connection, closing connection to: ${p}",
+        ("s", write_queue_size)("p", peer_name()));
+      close(false);
+      return;
+    }
+
+    boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read(),
+      completion_handler,
+      boost::asio::bind_executor(strand,
+        [conn = shared_from_this(), socket = socket](boost::system::error_code ec, std::size_t bytes_transferred) {
+          // may have closed connection and cleared pending_message_buffer
+          if (!conn->socket_is_open() || socket != conn->socket)
+            return;
+
+          bool close_connection{false};
+          try {
+            if (!ec) {
+              if (bytes_transferred > conn->pending_message_buffer.bytes_to_write()) {
+                elog("async_read_some callback: bytes_transfered = ${bt}, buffer.bytes_to_write = ${btw}",
+                  ("bt", bytes_transferred)("btw", conn->pending_message_buffer.bytes_to_write()));
+              }
+              conn->pending_message_buffer.advance_write_ptr(bytes_transferred);
+              while (conn->pending_message_buffer.bytes_to_read() > 0) {
+                uint32_t bytes_in_buffer = conn->pending_message_buffer.bytes_to_read();
+                try {
+                  uint32_t message_length = 1044;
+                  if (bytes_in_buffer >= message_length) {
+                    if (!conn->process_next_message(message_length))
+                      return;
+
+                  } else {
+                    auto outstanding_message_bytes = message_length - bytes_in_buffer;
+                    auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
+                    if (outstanding_message_bytes > available_buffer_bytes)
+                      conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
+                    conn->outstanding_read_bytes = outstanding_message_bytes;
+                    break;
+                  }
+                } catch (std::out_of_range& e) {
+                  conn->outstanding_read_bytes = 1;
+                }
+              }
+              conn->read_a_secret_message();
+            } else {
+              if (ec.value() != boost::asio::error::eof)
+                elog("Error reading message: ${m}", ("m", ec.message()));
+              else
+                ilog("Peer closed connection");
+              close_connection = true;
+            }
+          } catch (const std::bad_alloc&) {
+            throw;
+          } catch (const boost::interprocess::bad_alloc&) {
+            throw;
+          } catch (const fc::exception& ex) {
+            elog("Exception in handling read data ${s}", ("s", ex.to_string()));
+            close_connection = true;
+          } catch (const std::exception& ex) {
+            elog("Exception in handling read data: ${s}", ("s", ex.what()));
+            close_connection = true;
+          } catch (...) {
+            elog("Undefined exception handling read data");
+            close_connection = true;
+          }
+
+          if (close_connection) {
+            elog("Closing connection to: ${p}", ("p", conn->peer_name()));
+            conn->close();
+            ///< notify consensus of peer down
+            my_impl->update_peer_status_channel.publish(appbase::priority::medium,
+              std::make_shared<plugin_interface::peer_status_info>(
+                plugin_interface::peer_status_info{to_hex(conn->conn_node_id), peer_status::down}));
+          }
+        }));
+  } catch (...) {
+    elog("Undefined exception in start_read_message, closing connection to: ${p}", ("p", peer_name()));
+    close();
+  }
+}
+
+void connection::shared_eph_pub_key(Bytes new_message) {
+  ilog(fmt::format("shared_eph_pub_key = {}", to_hex(new_message)));
+  google::protobuf::BytesValue v;
+  v.ParseFromArray(new_message.data(), new_message.size());
+  Bytes32 received_eph_pub{v.value().begin(), v.value().end()};
+
+  secret_conn->shared_eph_pub_key(received_eph_pub);
+
+  // Exchange auth_sig_message : (1) loc_pub_key (2) loc_signature
+  ::tendermint::crypto::PublicKey pb_key;
+  *pb_key.mutable_ed25519() = {secret_conn->loc_pub_key.begin(), secret_conn->loc_pub_key.end()};
+  ::tendermint::p2p::AuthSigMessage pb_auth;
+  *pb_auth.mutable_pub_key() = pb_key;
+  *pb_auth.mutable_sig() = {secret_conn->loc_signature.begin(), secret_conn->loc_signature.end()};
+  auto bz = noir::codec::protobuf::encode(pb_auth);
+  write_msg(bz); // send
+  ilog(fmt::format("shared_eph_pub_key : sending {}", to_hex(bz)));
+  read_a_secret_message();
+}
+
+void connection::shared_auth_sig(Bytes new_message) {
+  ::tendermint::p2p::AuthSigMessage v;
+  v.ParseFromArray(new_message.data(), new_message.size());
+
+  auth_sig_message x;
+
+  // secret_conn->shared_auth_sig()
+
+  // ready to use secret connection
+}
+
+Result<int> connection::write_msg(const Bytes& bz, bool use_secret_conn) {
+  go_away_reason close_after_send = no_reason;
+
+  varint64 payload_size = bz.size();
+  std::array<unsigned char, 10> t_buffer;
+  datastream<unsigned char> t_ds(t_buffer);
+  auto header_size = write_uleb128(t_ds, payload_size);
+  const size_t buffer_size = header_size + payload_size;
+  auto send_buffer = std::make_shared<std::vector<char>>(buffer_size);
+
+  datastream<unsigned char> ds(reinterpret_cast<unsigned char*>(send_buffer->data()), buffer_size);
+  write_uleb128(ds, payload_size);
+  ds.write(bz.data(), payload_size);
+
+  if (use_secret_conn) {
+    // must use encrypted channel
+    auto ok = secret_conn->write(Bytes{send_buffer->begin(), send_buffer->end()});
+    if (!ok)
+      return Error::format("failed to convert message to encrypted ones");
+    for (auto& msg : ok.value().second) {
+      auto temp_buff = std::make_shared<std::vector<char>>(msg->size());
+      std::copy(msg->begin(), msg->end(), temp_buff->begin());
+      enqueue_buffer(temp_buff, close_after_send);
+    }
+    return ok.value().first;
+  }
+
+  enqueue_buffer(send_buffer, close_after_send);
+  return send_buffer->size();
 }
 
 } // namespace noir::p2p

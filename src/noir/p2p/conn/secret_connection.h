@@ -4,10 +4,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/core/result.h>
 #include <noir/p2p/types.h>
+#include <mutex>
 #include <optional>
 
 namespace noir::p2p {
+
+constexpr auto data_len_size = 4;
+constexpr auto data_max_size = 1024;
+constexpr auto total_frame_size = data_max_size + data_len_size;
+constexpr auto aead_size_overhead = 16;
+constexpr auto aead_key_size = 32;
+constexpr auto aead_nonce_size = 12;
 
 template<size_t NumBytes>
 struct nonce {
@@ -27,8 +36,8 @@ struct nonce {
       overflow = true;
   }
 
-  Bytes get() {
-    return bz.to_bytes();
+  const unsigned char* get() {
+    return reinterpret_cast<const unsigned char*>(bz.data());
   }
 
   constexpr size_t size() {
@@ -63,6 +72,9 @@ struct secret_connection {
   nonce96 recv_nonce;
   nonce96 send_nonce;
 
+  std::mutex recv_mtx;
+  std::mutex send_mtx;
+
   bool is_authorized{};
 
   static std::shared_ptr<secret_connection> make_secret_connection(Bytes& loc_priv_key);
@@ -72,6 +84,9 @@ struct secret_connection {
   std::optional<std::string> shared_auth_sig(auth_sig_message& received_msg);
 
   Bytes derive_secrets(Bytes32& dh_secret);
+
+  Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> write(const Bytes& data);
+  Result<std::pair<int, Bytes>> read(const Bytes& data);
 };
 
 } // namespace noir::p2p
