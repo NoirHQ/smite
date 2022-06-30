@@ -164,7 +164,7 @@ Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> secret_connection::w
   return {n, ret};
 }
 
-Result<std::pair<int, Bytes>> secret_connection::read(const Bytes& data) {
+Result<std::pair<int, Bytes>> secret_connection::read(const Bytes& data, bool is_peek) {
   std::scoped_lock g(recv_mtx);
   check(data.size() == 1044, "invalid sealed_frame size");
 
@@ -172,7 +172,8 @@ Result<std::pair<int, Bytes>> secret_connection::read(const Bytes& data) {
   unsigned long long decrypted_len{}, ciphertext_len{data.size()};
   auto r = crypto_aead_chacha20poly1305_ietf_decrypt(frame.data(), &decrypted_len, nullptr, data.data(), ciphertext_len,
     nullptr, 0, recv_nonce.get(), reinterpret_cast<const unsigned char*>(recv_secret.data()));
-  recv_nonce.increment();
+  if (!is_peek)
+    recv_nonce.increment();
 
   uint32_t chunk_length;
   std::memcpy(&chunk_length, frame.data(), 4);
