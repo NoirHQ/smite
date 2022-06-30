@@ -195,7 +195,6 @@ TEST_CASE("secret_connection: libsodium - chacha20", "[noir][p2p]") {
   uint8_t nonce[crypto_stream_chacha20_IETF_NONCEBYTES];
   randombytes_buf(nonce, sizeof nonce);
   std::string msg = "hello";
-  unsigned long long ciphertext_len;
   unsigned char ciphertext[1024];
   unsigned char decrypted[1024];
   crypto_stream_chacha20_ietf_xor(ciphertext, reinterpret_cast<const unsigned char*>(msg.data()), msg.size(), nonce,
@@ -203,6 +202,50 @@ TEST_CASE("secret_connection: libsodium - chacha20", "[noir][p2p]") {
   crypto_stream_chacha20_ietf_xor(decrypted, reinterpret_cast<const unsigned char*>(ciphertext), msg.size(), nonce,
     reinterpret_cast<const unsigned char*>(key.data()));
   CHECK(std::string(decrypted, decrypted + 5) == msg);
+}
+
+TEST_CASE("secret_connection: libsodium - chacha20 with authentication", "[noir][p2p]") {
+  Bytes32 key{"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03"};
+  p2p::nonce96 nonce;
+  constexpr auto message_size{1028};
+  Bytes msg(message_size);
+  Bytes ciphertext(message_size + 16);
+  unsigned long long ciphertext_len;
+  unsigned char decrypted[message_size];
+  unsigned long long decrypted_len;
+
+  auto r1 = crypto_aead_chacha20poly1305_ietf_encrypt(ciphertext.data(), &ciphertext_len,
+    reinterpret_cast<const unsigned char*>(msg.data()), msg.size(), nullptr, 0, nullptr, nonce.get(),
+    reinterpret_cast<const unsigned char*>(key.data()));
+  CHECK(r1 >= 0);
+  CHECK(ciphertext_len == 1044);
+  CHECK(ciphertext ==
+    Bytes(
+      "cd823f72ba10dc00b9f85218e0fa9837419d4b1f31870390c5f9ebdd18830eff0708bff49edb2ce94bcf4a4d1091cd8d4ad63d060b75a62f"
+      "088434479ba2314520556e39de38b8b7d2961bba497b8b7e578fcad41e2257ead76a50e3745dd62669e4cadb6ed4821f77a3603da98f4160"
+      "eda6d479c6e430a09fa96bafc189d17c4ad8d402f0caea282ae12404b8a0eacb2f13dd116e7ed08d902e217e704f1719e63e8466b18edafc"
+      "3f87486c71ae61e6a97a883f9be9d9f20571b8756d1bfe27998ca589d14cb29bb52f27eba708c30183ac1ce9bcc7b2a16e1cfcd5d43487c9"
+      "c71f9934909e73beece76a87a099b820a73ccb6e6da73883dd954ccce456b696ec1ce75a0bd8742824ac71efd0f000c1986ffd744facc536"
+      "4962338cd6599bd110fc1812fe04f85a9fd7bd09067e291a2231b30fde2c1fed7ff765a92f25aaa16ab6e3bff0ea2864713a5d497d9ee556"
+      "a873de5318268de7ecdc60a07383ea0f2a1423c449d18db4216e9921efbdf2f12eed701e2acb5cd48f83f87f4e3b463a04f175b4bc35b6c0"
+      "f6a27df26ced0ec6ed426d99bb9ac446dddd46bd2caf818fc7ec7c8f8efd3919a604e6c54845a681fe1ae277d491a81bfc2857cc34b9b27a"
+      "ea482d63e78ae24fd5b42e074c462706de6f03d1b6e410e246a3998ae74820252360f17d09f31ca3b3fc49f52f2a2794cee8551047ebf852"
+      "7302e051f74636b8f96d6d541c9ca0bd0a68faa62e008f0c90d7dbf7eeef40b2786fb43426eb89aa46d7af9c5a928a6f4b8213a9466c4f52"
+      "97a08f942ffe84e73e012e02f5585f974e705430589084d4d96ce572230405f1a47f1cd0d451a73286681414d516c448781b71c8b259f8e1"
+      "e24c294a7309d9a07c99ce091b47640e4a5b3092239566cf846e9d4897dc97273e992feb23f66405c0cac11bf5f1aa957caddc458249d4d6"
+      "2f0995adcda69af09a7a9e5b298ae92bd450e5ff1ea95ffacba9dca274c296c2285037db8806b6e256935b79d10ffa50b9e58a0356733e4d"
+      "27939c77e0de8cbbdaa62e67007fcfddf36a6e11666361080f384ab76692232ca26bdc3e5c287098597d1b4c56d7f656047f46dc38970368"
+      "f4a4b0567ee4583d2999ce342d75e35e8d8425094c702eb87a7b034f05feaca35fa137616c2886f3aa005fca3c15af737d0b3db4a77c889d"
+      "dba3631bc6a7921cf4b11ada3df8cc6fd2cd270f110bfd9e57d79d4eccce40d3a64677728b9d47a95f75680d2d3f63c13aa0ebe26d19d2ee"
+      "2068b9d99695608ca052ca73eccea0eefa7e77091a8c7b9f17cfab58306aa7c335d30da832278d60a16ae6735c3251c5d9186155c73a42de"
+      "016b10214732a62b40abace24f7069ebed846e00a380fc880a270c0e8d1c4f360abc756aff821873d5c820879cbee8ad56f9c5f5dca7750a"
+      "4a4769b0e1df4eb851374b515235b95bdf94ff2d08c76122778ac7ee917be6f6bf3d996e")); // matches golang implementation
+
+  auto r2 = crypto_aead_chacha20poly1305_ietf_decrypt(decrypted, &decrypted_len, nullptr, ciphertext.data(),
+    ciphertext_len, nullptr, 0, nonce.get(), reinterpret_cast<const unsigned char*>(key.data()));
+  CHECK(r2 >= 0);
+
+  CHECK(std::string(decrypted, decrypted + message_size) == std::string(msg.begin(), msg.end()));
 }
 
 TEST_CASE("secret_connection: merlin transcript", "[noir][p2p]") {
@@ -217,4 +260,90 @@ TEST_CASE("secret_connection: merlin transcript", "[noir][p2p]") {
   merlin_transcript_challenge_bytes(&mctx, reinterpret_cast<const uint8_t*>(challenge), strlen(challenge),
     reinterpret_cast<uint8_t*>(challenge_buf.data()), challenge_buf.size());
   CHECK(to_hex(challenge_buf) == "c8cc8d7b4b3320f6a7a813c480d8f1ebd9cfb6873417eb69a44b4ed91b27af10");
+}
+
+TEST_CASE("secret_connection: write and read", "[noir][p2p]") {
+  auto priv_key_str =
+    base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
+  Bytes loc_priv_key(priv_key_str.begin(), priv_key_str.end());
+  auto c = p2p::secret_connection::make_secret_connection(loc_priv_key);
+  c->send_secret = Bytes32{"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03"};
+  c->recv_secret = Bytes32{"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03"};
+
+  SECTION("simple") {
+    Bytes bz("abcd");
+    auto w_ok = c->write(bz);
+    auto w_buff = *w_ok.value().second[0];
+    // std::cout << to_hex(w_buff) << std::endl;
+
+    auto r_ok = c->read(w_buff);
+    auto r_buff = r_ok.value().second;
+    // std::cout << to_hex(r_buff) << std::endl;
+    CHECK(r_buff == bz);
+  }
+
+  SECTION("big") {
+    uint8_t buff[1000];
+    randombytes_buf(buff, sizeof(buff));
+    Bytes bz(1000);
+    std::memcpy(bz.data(), buff, sizeof(buff));
+    auto w_ok = c->write(bz);
+    auto w_buff = *w_ok.value().second[0];
+
+    auto r_ok = c->read(w_buff);
+    auto r_buff = r_ok.value().second;
+    CHECK(r_buff == bz);
+  }
+
+  SECTION("bigger") {
+    size_t data_len = 3000;
+    uint8_t buff[data_len];
+    randombytes_buf(buff, sizeof(buff));
+    Bytes bz(data_len);
+    std::memcpy(bz.data(), buff, sizeof(buff));
+    auto w_ok = c->write(bz);
+    auto w_buffs = w_ok.value().second;
+    Bytes restored(data_len);
+    int i{};
+    for (auto& b : w_buffs) {
+      auto r_ok = c->read(*b);
+      auto r_buff = r_ok.value().second;
+      std::copy(r_buff.begin(), r_buff.end(), restored.begin() + i);
+      i += r_ok->first;
+      // std::cout << i << " " << r_ok->first <<std::endl;
+    }
+    CHECK(restored == bz);
+  }
+}
+
+Result<Bytes> sign_ed25519(const Bytes& msg, const Bytes& key) {
+  Bytes sig(64);
+  if (crypto_sign_detached(reinterpret_cast<unsigned char*>(sig.data()), nullptr,
+        reinterpret_cast<const unsigned char*>(msg.data()), msg.size(),
+        reinterpret_cast<const unsigned char*>(key.data())) == 0)
+    return sig;
+  return Error::format("unable to sign");
+}
+
+bool verify_ed25519(const Bytes& sig, const Bytes& msg, const Bytes& key) {
+  if (crypto_sign_verify_detached(reinterpret_cast<const unsigned char*>(sig.data()),
+        reinterpret_cast<const unsigned char*>(msg.data()), msg.size(),
+        reinterpret_cast<const unsigned char*>(key.data())) == 0)
+    return true;
+  return false;
+}
+
+TEST_CASE("secret_connection: libsodium - ed25519", "[noir][p2p]") {
+  auto priv_key_str =
+    base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
+  Bytes loc_priv_key(priv_key_str.begin(), priv_key_str.end());
+  auto c = p2p::secret_connection::make_secret_connection(loc_priv_key);
+
+  Bytes org("abcd");
+
+  auto r_sign = sign_ed25519(org, c->loc_priv_key);
+  CHECK(r_sign);
+  auto sig = r_sign.value();
+  auto r = verify_ed25519(sig, org, c->loc_pub_key);
+  CHECK(r);
 }

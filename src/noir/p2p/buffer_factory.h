@@ -13,7 +13,6 @@ using send_buffer_type = std::shared_ptr<std::vector<char>>;
 
 struct buffer_factory {
 
-  /// caches result for subsequent calls, only provide same net_message instance for each invocation
   const send_buffer_type& get_send_buffer(const net_message& m) {
     if (!send_buffer) {
       send_buffer = create_send_buffer(m);
