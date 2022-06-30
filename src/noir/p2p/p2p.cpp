@@ -153,8 +153,6 @@ public:
   bool resolve_and_connect();
   void connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::resolver::results_type endpoints);
 
-  bool process_next_message(uint32_t message_length);
-
   void send_handshake(bool force = false);
 
   void check_heartbeat(tstamp current_time);
@@ -169,10 +167,6 @@ public:
   void flush_queues();
 
   void cancel_wait();
-  void sync_wait();
-  void fetch_wait();
-  void sync_timeout(boost::system::error_code ec);
-  void fetch_timeout(boost::system::error_code ec);
 
   void queue_write(const std::shared_ptr<std::vector<char>>& buff,
     std::function<void(boost::system::error_code, std::size_t)> callback,
@@ -186,13 +180,13 @@ public:
   void handle_message(const time_message& msg);
 
   std::shared_ptr<secret_connection> secret_conn{};
-  bool handshake_succeeded{false};
+  Result<Bytes> get_pending_frame(int idx = 0, bool is_peek = false);
   void start_handshake();
   void read_a_message(std::function<void(Bytes)>);
   void read_a_secret_message();
   void shared_eph_pub_key(Bytes);
-  void shared_auth_sig(Bytes);
   Result<int> write_msg(const Bytes&, bool use_secret_conn = true);
+  bool process_next_message(uint32_t total_message_bytes);
 };
 
 using connection_ptr = std::shared_ptr<connection>;
@@ -948,9 +942,7 @@ void connection::connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::re
       [resolver, c = shared_from_this(), socket = socket](
         const boost::system::error_code& err, const tcp::endpoint& endpoint) {
         if (!err && socket->is_open() && socket == c->socket) {
-          if (c->start_session()) {
-            // c->send_handshake(); // TODO : remove old handshake implementation
-          }
+          c->start_session();
         } else {
           elog("connection failed to ${peer}: ${error}", ("peer", c->peer_name())("error", err.message()));
           c->close(false);
@@ -970,7 +962,6 @@ bool connection::start_session() {
   } else {
     dlog("connected to ${peer}", ("peer", peer_name()));
     socket_open = true;
-    // start_read_message();
     start_handshake();
     return true;
   }
@@ -1073,42 +1064,6 @@ bool connection::populate_handshake(handshake_message& hello, bool force) {
   if (is_blocks_only_connection())
     hello.p2p_address += ":blk";
   hello.p2p_address += " - " + hello.node_id.to_string().substr(0, 7);
-  return true;
-}
-
-bool connection::process_next_message(uint32_t message_length) {
-  Bytes new_message(message_length);
-  std::copy(pending_message_buffer.read_ptr(), pending_message_buffer.read_ptr() + message_length, new_message.data());
-  pending_message_buffer.advance_read_ptr(message_length);
-
-  auto ok = secret_conn->read(new_message);
-  if (!ok) {
-    elog("unable to read from secret_conn");
-    return false; // will disconnect
-  }
-
-  Bytes& bz = ok.value().second;
-  std::make_unsigned_t<uint64_t> val = 0;
-  auto max_len = (sizeof(uint64_t) * 8 + 6) / 7;
-  auto i = 0;
-  varuint64 msg_len = 0;
-  for (; i < max_len - 1; ++i) {
-    uint8_t c = bz.at(i);
-    val |= uint64_t(c & 0x7f) << (i * 7);
-    if (!(c & 0x80)) {
-      msg_len = val;
-      i++;
-      break;
-    }
-  }
-
-  ::tendermint::p2p::AuthSigMessage v;
-  v.ParseFromArray(bz.data() + i, msg_len);
-
-  auth_sig_message x;
-  x.key = v.pub_key().ed25519();
-  x.sig = v.sig();
-
   return true;
 }
 
@@ -1378,6 +1333,34 @@ void connection::handle_message(const time_message& msg) {
   }
 }
 
+Result<Bytes> connection::get_pending_frame(int idx, bool is_peek) {
+  constexpr auto sealed_frame_size = aead_size_overhead + total_frame_size;
+  Bytes sealed_frame(sealed_frame_size);
+  std::copy(pending_message_buffer.read_ptr() + (sealed_frame_size * idx),
+    pending_message_buffer.read_ptr() + (sealed_frame_size * (idx + 1)), sealed_frame.begin());
+  auto ok = secret_conn->read(sealed_frame, is_peek);
+  if (!ok)
+    return Error::format("unable to decrypt message");
+  return ok.value().second;
+}
+
+std::pair<varuint64, int> parse_uvarint(const Bytes& bz) {
+  std::make_unsigned_t<uint64_t> val = 0;
+  auto max_len = (sizeof(uint64_t) * 8 + 6) / 7;
+  int i = 0;
+  varuint64 msg_len = 0;
+  for (; i < max_len - 1; ++i) {
+    uint8_t c = bz.at(i);
+    val |= uint64_t(c & 0x7f) << (i * 7);
+    if (!(c & 0x80)) {
+      msg_len = val;
+      i++;
+      break;
+    }
+  }
+  return {msg_len, i};
+}
+
 void connection::start_handshake() {
   /// requires node_info and priv_key of local node
   /// start timeout for handshake, which defaults to 20s (configurable)
@@ -1423,10 +1406,10 @@ void connection::read_a_message(std::function<void(Bytes)> cb) {
               try {
                 varuint64 message_length = 0;
                 mb_peek_datastream ds(conn->pending_message_buffer);
-                auto message_header_size = read_uleb128(ds, message_length);
-                auto total_message_bytes = message_length + message_header_size;
+                auto message_header_bytes = read_uleb128(ds, message_length);
+                auto total_message_bytes = message_length + message_header_bytes;
                 if (bytes_in_buffer >= total_message_bytes) {
-                  conn->pending_message_buffer.advance_read_ptr(message_header_size);
+                  conn->pending_message_buffer.advance_read_ptr(message_header_bytes);
                   conn->consecutive_immediate_connection_close = 0;
                   Bytes new_message(message_length);
                   std::copy(conn->pending_message_buffer.read_ptr(),
@@ -1457,7 +1440,7 @@ void connection::read_a_message(std::function<void(Bytes)> cb) {
 
 void connection::read_a_secret_message() {
   try {
-    std::size_t minimum_read = 1044;
+    std::size_t minimum_read = aead_size_overhead + total_frame_size;
     auto completion_handler = [minimum_read](
                                 boost::system::error_code ec, std::size_t bytes_transferred) -> std::size_t {
       if (ec || bytes_transferred >= minimum_read)
@@ -1477,7 +1460,8 @@ void connection::read_a_secret_message() {
     boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read(),
       completion_handler,
       boost::asio::bind_executor(strand,
-        [conn = shared_from_this(), socket = socket](boost::system::error_code ec, std::size_t bytes_transferred) {
+        [conn = shared_from_this(), socket = socket, this](
+          boost::system::error_code ec, std::size_t bytes_transferred) {
           // may have closed connection and cleared pending_message_buffer
           if (!conn->socket_is_open() || socket != conn->socket)
             return;
@@ -1493,13 +1477,25 @@ void connection::read_a_secret_message() {
               while (conn->pending_message_buffer.bytes_to_read() > 0) {
                 uint32_t bytes_in_buffer = conn->pending_message_buffer.bytes_to_read();
                 try {
-                  uint32_t message_length = 1044;
-                  if (bytes_in_buffer >= message_length) {
-                    if (!conn->process_next_message(message_length))
+                  auto r_frame = conn->get_pending_frame(0, true);
+                  if (!r_frame) {
+                    wlog("unable to get pending_frame");
+                    break;
+                  }
+                  auto [message_length, message_header_bytes] = parse_uvarint(r_frame.value());
+                  int64_t required_bytes = data_max_size - message_header_bytes - message_length;
+                  auto frame_count{1};
+                  if (required_bytes < 0) {
+                    frame_count += (-required_bytes / data_max_size) + 1;
+                  }
+                  auto total_message_bytes = (aead_size_overhead + total_frame_size) * frame_count;
+
+                  if (bytes_in_buffer >= total_message_bytes) {
+                    if (!conn->process_next_message(total_message_bytes))
                       return;
 
                   } else {
-                    auto outstanding_message_bytes = message_length - bytes_in_buffer;
+                    auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
                     auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
                     if (outstanding_message_bytes > available_buffer_bytes)
                       conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
@@ -1522,9 +1518,6 @@ void connection::read_a_secret_message() {
             throw;
           } catch (const boost::interprocess::bad_alloc&) {
             throw;
-          } catch (const fc::exception& ex) {
-            elog("Exception in handling read data ${s}", ("s", ex.to_string()));
-            close_connection = true;
           } catch (const std::exception& ex) {
             elog("Exception in handling read data: ${s}", ("s", ex.what()));
             close_connection = true;
@@ -1532,7 +1525,6 @@ void connection::read_a_secret_message() {
             elog("Undefined exception handling read data");
             close_connection = true;
           }
-
           if (close_connection) {
             elog("Closing connection to: ${p}", ("p", conn->peer_name()));
             conn->close();
@@ -1564,26 +1556,13 @@ void connection::shared_eph_pub_key(Bytes new_message) {
   *pb_auth.mutable_sig() = {secret_conn->loc_signature.begin(), secret_conn->loc_signature.end()};
   auto bz = noir::codec::protobuf::encode(pb_auth);
   write_msg(bz); // send
-  ilog(fmt::format("shared_eph_pub_key : sending {}", to_hex(bz)));
   read_a_secret_message();
-}
-
-void connection::shared_auth_sig(Bytes new_message) {
-  ::tendermint::p2p::AuthSigMessage v;
-  v.ParseFromArray(new_message.data(), new_message.size());
-
-  auth_sig_message x;
-
-  // secret_conn->shared_auth_sig()
-
-  // ready to use secret connection
 }
 
 Result<int> connection::write_msg(const Bytes& bz, bool use_secret_conn) {
   go_away_reason close_after_send = no_reason;
-
   varint64 payload_size = bz.size();
-  std::array<unsigned char, 10> t_buffer;
+  std::array<unsigned char, 10> t_buffer{};
   datastream<unsigned char> t_ds(t_buffer);
   auto header_size = write_uleb128(t_ds, payload_size);
   const size_t buffer_size = header_size + payload_size;
@@ -1608,6 +1587,44 @@ Result<int> connection::write_msg(const Bytes& bz, bool use_secret_conn) {
 
   enqueue_buffer(send_buffer, close_after_send);
   return send_buffer->size();
+}
+
+bool connection::process_next_message(uint32_t total_message_bytes) {
+  auto r_frame = get_pending_frame();
+  if (!r_frame) {
+    elog("unable to read first pending frame");
+    return false;
+  }
+  auto [message_length, message_header_bytes] = parse_uvarint(r_frame.value());
+  Bytes bz(message_length);
+  auto message_read{0};
+  std::copy(r_frame.value().begin() + message_header_bytes, r_frame.value().end(), bz.begin() + message_read);
+  message_read += r_frame.value().size();
+
+  int idx{1};
+  while (message_read != message_length + message_header_bytes) {
+    if (auto ok = get_pending_frame(idx); !ok) {
+      elog("unable to read pending frame: ${idx}", ("idx", idx));
+      return false;
+    } else {
+      std::copy(ok.value().begin(), ok.value().end(), bz.begin() + message_read);
+      message_read += ok.value().size();
+      idx++;
+    }
+  }
+  wlog(fmt::format("NEW MESSAGE: size={}", message_length));
+
+  if (!secret_conn->is_authorized) {
+    ::tendermint::p2p::AuthSigMessage v;
+    v.ParseFromArray(bz.data(), message_length);
+    auth_sig_message m;
+    m.key = v.pub_key().ed25519();
+    m.sig = v.sig();
+    secret_conn->shared_auth_sig(m);
+  }
+
+  pending_message_buffer.advance_read_ptr(total_message_bytes);
+  return true;
 }
 
 } // namespace noir::p2p
