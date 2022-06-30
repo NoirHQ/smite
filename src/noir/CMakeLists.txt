@@ -1,5 +1,6 @@
 add_subdirectory(clist)
 add_subdirectory(codec)
+add_subdirectory(config)
 add_subdirectory(common)
 add_subdirectory(consensus)
 add_subdirectory(core)
