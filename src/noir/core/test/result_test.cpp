@@ -25,6 +25,25 @@ TEST_CASE("Result", "[noir][core]") {
     CHECK(res.error().message() == "error");
   }
 
+  SECTION("custom error propagation") {
+    struct CustomError {
+      int code;
+
+      operator Error() {
+        return Error::format("custom error with code: {}", code);
+      }
+    };
+
+    auto foo = [](int i) -> Result<void, CustomError> { return CustomError{ .code = i, }; };
+    auto bar = [&](int i) -> Result<void> {
+      return foo(i).error();
+    };
+
+    auto res = bar(1);
+    CHECK(!res);
+    CHECK(res.error().message() == "custom error with code: 1");
+  }
+
   SECTION("co_spawn") {
     boost::asio::io_context io_context{};
     auto foo = []() -> boost::asio::awaitable<Result<void>> {
