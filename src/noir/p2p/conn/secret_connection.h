@@ -17,6 +17,7 @@ constexpr auto total_frame_size = data_max_size + data_len_size;
 constexpr auto aead_size_overhead = 16;
 constexpr auto aead_key_size = 32;
 constexpr auto aead_nonce_size = 12;
+constexpr auto sealed_frame_size = total_frame_size + aead_size_overhead;
 
 template<size_t NumBytes>
 struct nonce {
