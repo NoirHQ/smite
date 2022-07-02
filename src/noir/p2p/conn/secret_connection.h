@@ -26,10 +26,10 @@ struct nonce {
   /// Not thread safe
   void increment() {
     unsigned int carry = 1;
-    for (int64_t i = bz.size() - 1; carry > 0; --i) {
-      unsigned int current = *reinterpret_cast<unsigned char*>(&bz[i]);
+    for (int64_t i = 0; carry > 0; ++i) {
+      unsigned int current = *reinterpret_cast<unsigned char*>(&bz[i + 4]);
       current += carry;
-      *reinterpret_cast<unsigned char*>(&bz[i]) = current & 0xff;
+      *reinterpret_cast<unsigned char*>(&bz[i + 4]) = current & 0xff;
       carry = current >> 8;
     }
     if (carry > 0)
@@ -86,7 +86,7 @@ struct secret_connection {
   Bytes derive_secrets(Bytes32& dh_secret);
 
   Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> write(const Bytes& data);
-  Result<std::pair<int, Bytes>> read(const Bytes& data, bool is_peek = false);
+  Result<std::pair<int, std::shared_ptr<Bytes>>> read(const Bytes& data, bool is_peek = false);
 };
 
 } // namespace noir::p2p

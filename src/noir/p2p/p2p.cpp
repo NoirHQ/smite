@@ -10,6 +10,7 @@
 #include <noir/consensus/abci.h>
 #include <noir/consensus/tx.h>
 #include <noir/consensus/types/encoding_helper.h>
+#include <noir/consensus/types/node_info.h>
 #include <noir/p2p/buffer_factory.h>
 #include <noir/p2p/conn/secret_connection.h>
 #include <noir/p2p/message_buffer.h>
@@ -180,13 +181,17 @@ public:
   void handle_message(const time_message& msg);
 
   std::shared_ptr<secret_connection> secret_conn{};
-  Result<Bytes> get_pending_frame(int idx = 0, bool is_peek = false);
+  std::function<Result<void>(std::shared_ptr<Bytes>)> cb_current_task;
+  Result<std::shared_ptr<Bytes>> get_pending_frame(int idx = 0, bool is_peek = false);
   void start_handshake();
-  void read_a_message(std::function<void(Bytes)>);
+  void read_a_message(std::function<void(std::shared_ptr<Bytes>)>);
   void read_a_secret_message();
-  void shared_eph_pub_key(Bytes);
+  void shared_eph_pub_key(std::shared_ptr<Bytes>);
   Result<int> write_msg(const Bytes&, bool use_secret_conn = true);
   bool process_next_message(uint32_t total_message_bytes);
+  Result<void> task_authenticate(std::shared_ptr<Bytes>);
+  Result<void> task_node_info(std::shared_ptr<Bytes>);
+  Result<void> task_discard(std::shared_ptr<Bytes>);
 };
 
 using connection_ptr = std::shared_ptr<connection>;
@@ -230,6 +235,7 @@ public:
   /// Peer clock may be no more than 1 second skewed from our clock, including network latency.
   const std::chrono::system_clock::duration peer_authentication_interval{std::chrono::seconds{1}};
 
+  consensus::node_info my_node_info;
   Bytes20 node_id;
   std::string user_agent_name;
 
@@ -603,6 +609,19 @@ void p2p::plugin_startup() {
       my->abci_plug = plug;
       auto node_id = from_hex(my->abci_plug->node_->node_key_->node_id);
       std::copy(node_id.begin(), node_id.end(), my->node_id.begin());
+
+      // setup node_info // TODO : read from config file
+      my->my_node_info.protocol_version.p2p = 8;
+      my->my_node_info.protocol_version.block = 11;
+      my->my_node_info.protocol_version.app = 0;
+      my->my_node_info.node_id.id = my->abci_plug->node_->node_key_->node_id;
+      my->my_node_info.listen_addr = "tcp://0.0.0.0:26656";
+      my->my_node_info.network = "test-chain-Uz9YMU"; // Note : important to use the same network or connection will end
+      my->my_node_info.version = "0.35.6";
+      my->my_node_info.channels = Bytes("402021222330386061626300");
+      my->my_node_info.moniker = "roiui-BMP";
+      my->my_node_info.other.tx_index = "on";
+      my->my_node_info.other.rpc_address = "tcp://0.0.0.0:26657";
     } else {
       ilog("abci_plugin is not running; will be simply testing p2p activities");
       crypto::rand_bytes({my->node_id.data(), my->node_id.size()});
@@ -1333,24 +1352,24 @@ void connection::handle_message(const time_message& msg) {
   }
 }
 
-Result<Bytes> connection::get_pending_frame(int idx, bool is_peek) {
+Result<std::shared_ptr<Bytes>> connection::get_pending_frame(int idx, bool is_peek) {
   constexpr auto sealed_frame_size = aead_size_overhead + total_frame_size;
   Bytes sealed_frame(sealed_frame_size);
   std::copy(pending_message_buffer.read_ptr() + (sealed_frame_size * idx),
     pending_message_buffer.read_ptr() + (sealed_frame_size * (idx + 1)), sealed_frame.begin());
   auto ok = secret_conn->read(sealed_frame, is_peek);
   if (!ok)
-    return Error::format("unable to decrypt message");
+    return Error::format("getting pending frame failed: idx={} msg={}", idx, ok.error().message());
   return ok.value().second;
 }
 
-std::pair<varuint64, int> parse_uvarint(const Bytes& bz) {
+std::pair<varuint64, int> parse_uvarint(const std::shared_ptr<Bytes>& bz) {
   std::make_unsigned_t<uint64_t> val = 0;
   auto max_len = (sizeof(uint64_t) * 8 + 6) / 7;
   int i = 0;
   varuint64 msg_len = 0;
   for (; i < max_len - 1; ++i) {
-    uint8_t c = bz.at(i);
+    uint8_t c = bz->at(i);
     val |= uint64_t(c & 0x7f) << (i * 7);
     if (!(c & 0x80)) {
       msg_len = val;
@@ -1380,10 +1399,13 @@ void connection::start_handshake() {
   std::copy(secret_conn->loc_eph_pub.begin(), secret_conn->loc_eph_pub.end(), bz.data());
   auto my_msg = consensus::cdc_encode(bz);
   write_msg(my_msg, false); // send; use non-secret connection
-  read_a_message([conn = shared_from_this()](Bytes msg) -> void { return conn->shared_eph_pub_key(msg); }); // receive
+  read_a_message([conn = shared_from_this()](
+                   std::shared_ptr<Bytes> msg) -> void { return conn->shared_eph_pub_key(msg); }); // receive
+  cb_current_task = [conn = shared_from_this()](
+                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_authenticate(msg); };
 }
 
-void connection::read_a_message(std::function<void(Bytes)> cb) {
+void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) {
   try {
     std::size_t minimum_read = 1;
     auto completion_handler = [minimum_read](
@@ -1411,11 +1433,12 @@ void connection::read_a_message(std::function<void(Bytes)> cb) {
                 if (bytes_in_buffer >= total_message_bytes) {
                   conn->pending_message_buffer.advance_read_ptr(message_header_bytes);
                   conn->consecutive_immediate_connection_close = 0;
-                  Bytes new_message(message_length);
+                  auto new_message = std::make_shared<Bytes>(message_length);
                   std::copy(conn->pending_message_buffer.read_ptr(),
-                    conn->pending_message_buffer.read_ptr() + message_length, new_message.data());
+                    conn->pending_message_buffer.read_ptr() + message_length, new_message->data());
                   conn->pending_message_buffer.advance_read_ptr(message_length);
-                  cb(new_message);
+                  // cb(new_message);
+                  conn->strand.post([cb, new_message]() { cb(new_message); });
                   return;
 
                 } else {
@@ -1430,7 +1453,7 @@ void connection::read_a_message(std::function<void(Bytes)> cb) {
                 conn->outstanding_read_bytes = 1;
               }
             }
-            conn->read_a_message([conn, cb](Bytes msg) -> void { return cb(msg); });
+            conn->read_a_message([conn, cb](std::shared_ptr<Bytes> msg) -> void { return cb(msg); });
           }
         }));
   } catch (...) {
@@ -1460,8 +1483,7 @@ void connection::read_a_secret_message() {
     boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read(),
       completion_handler,
       boost::asio::bind_executor(strand,
-        [conn = shared_from_this(), socket = socket, this](
-          boost::system::error_code ec, std::size_t bytes_transferred) {
+        [conn = shared_from_this(), socket = socket](boost::system::error_code ec, std::size_t bytes_transferred) {
           // may have closed connection and cleared pending_message_buffer
           if (!conn->socket_is_open() || socket != conn->socket)
             return;
@@ -1470,43 +1492,40 @@ void connection::read_a_secret_message() {
           try {
             if (!ec) {
               if (bytes_transferred > conn->pending_message_buffer.bytes_to_write()) {
-                elog("async_read_some callback: bytes_transfered = ${bt}, buffer.bytes_to_write = ${btw}",
+                elog("async_read_some callback: bytes_transferred = ${bt}, buffer.bytes_to_write = ${btw}",
                   ("bt", bytes_transferred)("btw", conn->pending_message_buffer.bytes_to_write()));
               }
               conn->pending_message_buffer.advance_write_ptr(bytes_transferred);
-              while (conn->pending_message_buffer.bytes_to_read() > 0) {
+              if (conn->pending_message_buffer.bytes_to_read() > 0) {
                 uint32_t bytes_in_buffer = conn->pending_message_buffer.bytes_to_read();
-                try {
-                  auto r_frame = conn->get_pending_frame(0, true);
-                  if (!r_frame) {
-                    wlog("unable to get pending_frame");
-                    break;
-                  }
-                  auto [message_length, message_header_bytes] = parse_uvarint(r_frame.value());
-                  int64_t required_bytes = data_max_size - message_header_bytes - message_length;
-                  auto frame_count{1};
-                  if (required_bytes < 0) {
-                    frame_count += (-required_bytes / data_max_size) + 1;
-                  }
-                  auto total_message_bytes = (aead_size_overhead + total_frame_size) * frame_count;
+                std::shared_ptr<Bytes> frame{};
+                if (auto ok = conn->get_pending_frame(0, true); !ok) {
+                  wlog("read_a_secret_message: ${msg}", ("msg", ok.error().message()));
+                  throw;
+                } else {
+                  frame = ok.value();
+                }
+                auto [message_length, message_header_bytes] = parse_uvarint(frame);
+                int64_t required_bytes = data_max_size - message_header_bytes - message_length;
+                auto frame_count{1};
+                if (required_bytes < 0) {
+                  frame_count += (-required_bytes / data_max_size) + 1;
+                }
+                auto total_message_bytes = (aead_size_overhead + total_frame_size) * frame_count;
 
-                  if (bytes_in_buffer >= total_message_bytes) {
-                    if (!conn->process_next_message(total_message_bytes))
-                      return;
-
-                  } else {
-                    auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
-                    auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
-                    if (outstanding_message_bytes > available_buffer_bytes)
-                      conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
-                    conn->outstanding_read_bytes = outstanding_message_bytes;
-                    break;
-                  }
-                } catch (std::out_of_range& e) {
-                  conn->outstanding_read_bytes = 1;
+                if (bytes_in_buffer >= total_message_bytes) {
+                  if (!conn->process_next_message(total_message_bytes))
+                    throw;
+                } else {
+                  auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
+                  auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
+                  if (outstanding_message_bytes > available_buffer_bytes)
+                    conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
+                  conn->outstanding_read_bytes = outstanding_message_bytes;
                 }
               }
               conn->read_a_secret_message();
+
             } else {
               if (ec.value() != boost::asio::error::eof)
                 elog("Error reading message: ${m}", ("m", ec.message()));
@@ -1540,10 +1559,10 @@ void connection::read_a_secret_message() {
   }
 }
 
-void connection::shared_eph_pub_key(Bytes new_message) {
-  ilog(fmt::format("shared_eph_pub_key = {}", to_hex(new_message)));
+void connection::shared_eph_pub_key(std::shared_ptr<Bytes> new_message) {
+  ilog(fmt::format("shared_eph_pub_key = {}", to_hex(*new_message)));
   google::protobuf::BytesValue v;
-  v.ParseFromArray(new_message.data(), new_message.size());
+  v.ParseFromArray(new_message->data(), new_message->size());
   Bytes32 received_eph_pub{v.value().begin(), v.value().end()};
 
   secret_conn->shared_eph_pub_key(received_eph_pub);
@@ -1590,41 +1609,90 @@ Result<int> connection::write_msg(const Bytes& bz, bool use_secret_conn) {
 }
 
 bool connection::process_next_message(uint32_t total_message_bytes) {
-  auto r_frame = get_pending_frame();
-  if (!r_frame) {
+  std::shared_ptr<Bytes> frame{};
+  if (auto ok = get_pending_frame(); !ok) {
     elog("unable to read first pending frame");
     return false;
+  } else {
+    frame = ok.value();
   }
-  auto [message_length, message_header_bytes] = parse_uvarint(r_frame.value());
-  Bytes bz(message_length);
+  auto [message_length, message_header_bytes] = parse_uvarint(frame);
+  auto bz = std::make_shared<Bytes>(message_length);
   auto message_read{0};
-  std::copy(r_frame.value().begin() + message_header_bytes, r_frame.value().end(), bz.begin() + message_read);
-  message_read += r_frame.value().size();
+  std::copy(frame->begin() + message_header_bytes, frame->end(), bz->begin() + message_read);
+  message_read += frame->size();
 
-  int idx{1};
-  while (message_read != message_length + message_header_bytes) {
-    if (auto ok = get_pending_frame(idx); !ok) {
-      elog("unable to read pending frame: ${idx}", ("idx", idx));
-      return false;
-    } else {
-      std::copy(ok.value().begin(), ok.value().end(), bz.begin() + message_read);
-      message_read += ok.value().size();
-      idx++;
-    }
-  }
+  // Bytes bz_debug(10);
+  // std::copy(frame->begin(), frame->begin() + bz_debug.size(), bz_debug.begin());
+  // wlog(fmt::format("frame : size={} {}", frame->size(), to_hex(bz_debug)));
+
+  // int idx{1};
+  // while (message_read != message_length + message_header_bytes) {
+  //   if (auto ok = get_pending_frame(idx); !ok) {
+  //     elog("unable to read pending frame: ${idx}", ("idx", idx));
+  //     return false;
+  //   } else {
+  //     std::copy(ok.value().begin(), ok.value().end(), bz.begin() + message_read);
+  //     message_read += ok.value().size();
+  //     idx++;
+  //   }
+  // }
   wlog(fmt::format("NEW MESSAGE: size={}", message_length));
+  pending_message_buffer.advance_read_ptr(total_message_bytes);
+  if (auto ok = cb_current_task(bz); !ok) {
+    elog(ok.error().message());
+    return false;
+  }
+  return true;
+}
 
-  if (!secret_conn->is_authorized) {
-    ::tendermint::p2p::AuthSigMessage v;
-    v.ParseFromArray(bz.data(), message_length);
-    auth_sig_message m;
-    m.key = v.pub_key().ed25519();
-    m.sig = v.sig();
-    secret_conn->shared_auth_sig(m);
+Result<void> connection::task_authenticate(std::shared_ptr<Bytes> bz) {
+  ::tendermint::p2p::AuthSigMessage pb;
+  pb.ParseFromArray(bz->data(), bz->size());
+  auth_sig_message m;
+  m.key = pb.pub_key().ed25519();
+  m.sig = pb.sig();
+  secret_conn->shared_auth_sig(m);
+  wlog(fmt::format("secret_conn: is_authorized={}", secret_conn->is_authorized));
+  if (!secret_conn->is_authorized)
+    return Error::format("failed to establish a secret_connection");
+
+  // Exchange node_info
+  auto pb_my_node_info = consensus::node_info::to_proto(my_impl->my_node_info);
+  auto bz_my_node_info = noir::codec::protobuf::encode(*pb_my_node_info);
+  write_msg(bz_my_node_info); // send
+  cb_current_task = [conn = shared_from_this()](
+                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_node_info(msg); };
+  return success();
+}
+
+Result<void> connection::task_node_info(std::shared_ptr<Bytes> bz) {
+  ::tendermint::p2p::NodeInfo pb;
+  pb.ParseFromArray(bz->data(), bz->size());
+  auto peer_info = consensus::node_info::from_proto(pb);
+  ilog(fmt::format("node_info: peer={}", peer_info->node_id));
+
+  cb_current_task = [conn = shared_from_this()](
+                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_discard(msg); };
+  return success();
+}
+
+Result<void> connection::task_discard(std::shared_ptr<Bytes> bz) {
+  ilog(fmt::format("discard a message: size={}", bz->size()));
+
+  auto pb_packet = noir::codec::protobuf::decode<::tendermint::p2p::Packet>(*bz);
+  if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketPing) {
+    ilog("PING");
+  } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketPong) {
+    ilog("PONG");
+  } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketMsg) {
+    auto msg = pb_packet.packet_msg();
+    ilog(fmt::format("MSG : channel_id={} eof={} data={}", msg.channel_id(), msg.eof(), to_hex(msg.data())));
+  } else {
+    ilog("UNKNOWN");
   }
 
-  pending_message_buffer.advance_read_ptr(total_message_bytes);
-  return true;
+  return success();
 }
 
 } // namespace noir::p2p
