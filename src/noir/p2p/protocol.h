@@ -17,27 +17,6 @@
 
 namespace noir::p2p {
 
-struct handshake_message {
-  uint16_t network_version = 0; ///< incremental value above a computed base
-  //  chain_id_type chain_id; ///< used to identify chain bytes32 node_id; ///< used to identify peers and prevent
-  //  self-connect
-  Bytes20 node_id; ///< used to identify peers and prevent self-connect
-  tstamp time{0};
-  std::string p2p_address;
-  uint32_t head_num = 0;
-  block_id_type head_id;
-  //  string os;
-  //  string agent;
-  int16_t generation = 0;
-};
-
-struct time_message {
-  tstamp org{0}; //!< origin timestamp
-  tstamp rec{0}; //!< receive timestamp
-  tstamp xmt{0}; //!< transmit timestamp
-  mutable tstamp dst{0}; //!< destination timestamp
-};
-
 enum signed_msg_type {
   Unknown = 0,
   Prevote = 1,
@@ -224,15 +203,8 @@ constexpr auto reason_str(go_away_reason rsn) {
   }
 }
 
-struct go_away_message {
-  go_away_message(go_away_reason r = no_reason): reason(r), node_id() {}
-
-  go_away_reason reason{no_reason};
-  Bytes20 node_id; ///< for duplicate notification
-};
-
 /// \brief network messages that will be exchanged between peers
-using net_message = std::variant<handshake_message, go_away_message, time_message, envelope>;
+using net_message = std::variant<envelope>;
 
 /// \brief messages that will be delivered to consensus reactor
 using cs_reactor_message = std::variant<new_round_step_message,
@@ -265,9 +237,6 @@ using internal_msg_info_ptr = std::shared_ptr<internal_msg_info>;
 NOIR_REFLECT(std::chrono::system_clock::duration, );
 NOIR_REFLECT(noir::p2p::block_id, hash, parts);
 NOIR_REFLECT(noir::p2p::part_set_header, total, hash);
-NOIR_REFLECT(noir::p2p::handshake_message, network_version, node_id, time, p2p_address, head_num, head_id, generation);
-NOIR_REFLECT(noir::p2p::go_away_message, reason, node_id);
-NOIR_REFLECT(noir::p2p::time_message, org, rec, xmt, dst);
 NOIR_REFLECT(noir::p2p::new_round_step_message, height, round, step, seconds_since_start_time, last_commit_round);
 NOIR_REFLECT(noir::p2p::new_valid_block_message, height, round, block_part_set_header, block_parts, is_commit);
 NOIR_REFLECT(noir::p2p::proposal_message, type, height, round, pol_round, block_id_, timestamp, signature);

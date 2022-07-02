@@ -61,18 +61,8 @@ public:
     return peer_addr;
   } // thread safe, const
 
-  void set_connection_type(const std::string& peer_addr);
-
-  bool is_transactions_only_connection() const {
-    return connection_type == transactions_only;
-  }
-
-  bool is_blocks_only_connection() const {
-    return connection_type == blocks_only;
-  }
-
-  void set_heartbeat_timeout(std::chrono::milliseconds msec) {
-    std::chrono::system_clock::duration dur = msec;
+  void set_heartbeat_timeout(std::chrono::seconds sec) {
+    std::chrono::system_clock::duration dur = sec;
     hb_timeout = dur.count();
   }
 
@@ -84,13 +74,6 @@ private:
   std::atomic<bool> socket_open{false};
 
   const std::string peer_addr;
-  enum connection_types : char {
-    both,
-    transactions_only,
-    blocks_only
-  };
-
-  std::atomic<connection_types> connection_type{both};
 
 public:
   boost::asio::io_context::strand strand;
@@ -101,8 +84,6 @@ public:
 
   queued_buffer buffer_queue;
 
-  const uint32_t connection_id;
-  int16_t sent_handshake_count = 0;
   std::atomic<bool> connecting{true};
   std::atomic<bool> syncing{false};
 
@@ -114,10 +95,6 @@ public:
   std::atomic<go_away_reason> no_retry{no_reason};
 
   mutable std::mutex conn_mtx; //< mtx for last_req .. local_endpoint_port
-  handshake_message last_handshake_recv;
-  handshake_message last_handshake_sent;
-  block_id_type fork_head;
-  uint32_t fork_head_num{0};
   fc::time_point last_close;
   Bytes20 conn_node_id;
   std::string remote_endpoint_ip;
@@ -127,16 +104,6 @@ public:
 
   connection_status get_status() const;
 
-  /** \name Peer Timestamps
-   *  Time message handling
-   *  @{
-   */
-  // Members set from network data
-  tstamp org{0}; //!< originate timestamp
-  tstamp rec{0}; //!< receive timestamp
-  tstamp dst{0}; //!< destination timestamp
-  tstamp xmt{0}; //!< transmit timestamp
-  /** @} */
   tstamp latest_msg_time{0};
   tstamp hb_timeout;
 
@@ -149,16 +116,10 @@ private:
   static void _close(connection* self, bool reconnect, bool shutdown); // for easy capture
 
 public:
-  bool populate_handshake(handshake_message& hello, bool force);
-
   bool resolve_and_connect();
   void connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::resolver::results_type endpoints);
 
-  void send_handshake(bool force = false);
-
   void check_heartbeat(tstamp current_time);
-  void send_time();
-  void send_time(const time_message& msg);
 
   const std::string peer_name();
 
@@ -173,12 +134,6 @@ public:
     std::function<void(boost::system::error_code, std::size_t)> callback,
     bool to_sync_queue = false);
   void do_queue_write();
-
-  static bool is_valid(const handshake_message& msg);
-
-  void handle_message(const handshake_message& msg);
-  void handle_message(const go_away_message& msg);
-  void handle_message(const time_message& msg);
 
   std::shared_ptr<secret_connection> secret_conn{};
   std::function<Result<void>(std::shared_ptr<Bytes>)> cb_current_task;
@@ -213,7 +168,6 @@ public:
   appbase::application& app;
 
   std::unique_ptr<tcp::acceptor> acceptor;
-  std::atomic<uint32_t> current_connection_id{0};
 
   /**
    * Thread safe, only updated in plugin initialize
@@ -227,21 +181,16 @@ public:
   boost::asio::steady_timer::duration connector_period{0};
   boost::asio::steady_timer::duration txn_exp_period{0};
   boost::asio::steady_timer::duration resp_expected_period{0};
-  std::chrono::milliseconds keepalive_interval{std::chrono::milliseconds{32 * 1000}};
-  std::chrono::milliseconds heartbeat_timeout{keepalive_interval * 2};
+  std::chrono::seconds keepalive_interval{std::chrono::seconds{60}};
+  std::chrono::seconds heartbeat_timeout{std::chrono::seconds{90}};
 
   int max_cleanup_time_ms = 0;
   uint32_t max_client_count = 0;
   uint32_t max_nodes_per_host = 1;
   bool p2p_accept_transactions = true;
-  bool p2p_reject_incomplete_blocks = true;
-
-  /// Peer clock may be no more than 1 second skewed from our clock, including network latency.
-  const std::chrono::system_clock::duration peer_authentication_interval{std::chrono::seconds{1}};
 
   consensus::node_info my_node_info;
   Bytes20 node_id;
-  std::string user_agent_name;
 
   // External plugins
   consensus::abci* abci_plug{nullptr};
@@ -289,16 +238,8 @@ public:
   uint16_t thread_pool_size = 2;
   std::optional<named_thread_pool> thread_pool;
 
-private:
-  mutable std::mutex chain_info_mtx; // protects chain_*
-  uint32_t chain_head_blk_num{0};
-  uint32_t chain_fork_head_blk_num{0};
-  block_id_type chain_head_blk_id;
-  block_id_type chain_fork_head_blk_id;
-
 public:
   void update_chain_info();
-  std::tuple<uint32_t, uint32_t, block_id_type, block_id_type> get_chain_info() const;
   void start_listen_loop();
   void start_conn_timer(boost::asio::steady_timer::duration du, std::weak_ptr<connection> from_connection);
   void start_monitors();
@@ -401,11 +342,6 @@ void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, boo
 }
 
 void p2p_impl::update_chain_info() {}
-
-std::tuple<uint32_t, uint32_t, block_id_type, block_id_type> p2p_impl::get_chain_info() const {
-  std::scoped_lock g(chain_info_mtx);
-  return std::make_tuple(chain_head_blk_num, chain_fork_head_blk_num, chain_head_blk_id, chain_fork_head_blk_id);
-}
 
 connection_ptr p2p_impl::find_connection(const std::string& host) const {
   for (const auto& c : connections)
@@ -594,9 +530,8 @@ void p2p::plugin_initialize(const CLI::App& config) {
     my->max_client_count = 5; // maximum number of clients from which connections are accepted, use 0 for no limit
     my->max_nodes_per_host = 1;
     my->p2p_accept_transactions = true;
-    my->p2p_reject_incomplete_blocks = true;
-    my->keepalive_interval = std::chrono::milliseconds(30000);
-    my->heartbeat_timeout = std::chrono::milliseconds(30000 * 2);
+    my->keepalive_interval = std::chrono::seconds(60);
+    my->heartbeat_timeout = std::chrono::seconds(90);
 
     // my->p2p_server_address = "0.0.0.0:9876"; // An externally accessible host:port for identifying this node.
     // Defaults to p2p-listen-endpoint
@@ -773,21 +708,6 @@ struct msg_handler {
   //   // Skip the rest
   // }
 
-  void operator()(const handshake_message& msg) const {
-    dlog("handle handshake_message");
-    c->handle_message(msg);
-  }
-
-  void operator()(const go_away_message& msg) const {
-    dlog("handle go_away_message");
-    c->handle_message(msg);
-  }
-
-  void operator()(const time_message& msg) const {
-    dlog("handle time_message");
-    c->handle_message(msg);
-  }
-
   void operator()(envelope& msg) {
     msg.from = to_hex(c->conn_node_id); // manually set from, overriding original
     dlog(fmt::format(" <<< envelope : from='{}' size={}", msg.from, msg.message.size()));
@@ -832,10 +752,7 @@ connection::connection(std::string endpoint)
   : peer_addr(endpoint),
     strand(my_impl->thread_pool->get_executor()),
     socket(new tcp::socket(my_impl->thread_pool->get_executor())),
-    connection_id(++my_impl->current_connection_id),
-    response_expected_timer(my_impl->thread_pool->get_executor()),
-    last_handshake_recv(),
-    last_handshake_sent() {
+    response_expected_timer(my_impl->thread_pool->get_executor()) {
   ilog("creating connection to ${n}", ("n", endpoint));
 }
 
@@ -843,10 +760,7 @@ connection::connection()
   : peer_addr(),
     strand(my_impl->thread_pool->get_executor()),
     socket(new tcp::socket(my_impl->thread_pool->get_executor())),
-    connection_id(++my_impl->current_connection_id),
-    response_expected_timer(my_impl->thread_pool->get_executor()),
-    last_handshake_recv(),
-    last_handshake_sent() {
+    response_expected_timer(my_impl->thread_pool->get_executor()) {
   dlog("new connection object created");
 }
 
@@ -885,7 +799,6 @@ bool connection::resolve_and_connect() {
     std::string port =
       c->peer_address().substr(colon + 1, colon2 == std::string::npos ? std::string::npos : colon2 - (colon + 1));
     idump((host)(port));
-    c->set_connection_type(c->peer_address());
 
     auto resolver = std::make_shared<tcp::resolver>(my_impl->thread_pool->get_executor());
     connection_wptr weak_conn = c;
@@ -914,39 +827,11 @@ connection_status connection::get_status() const {
   stat.connecting = connecting;
   stat.syncing = syncing;
   std::scoped_lock g(conn_mtx);
-  stat.last_handshake = last_handshake_recv;
   return stat;
 }
 
 bool connection::connected() {
   return socket_is_open() && !connecting;
-}
-
-void connection::set_connection_type(const std::string& peer_add) {
-  std::string::size_type colon = peer_add.find(':');
-  std::string::size_type colon2 = peer_add.find(':', colon + 1);
-  std::string::size_type end = colon2 == std::string::npos
-    ? std::string::npos
-    : peer_add.find_first_of(" :+=.,<>!$%^&(*)|-#@\t",
-        colon2 + 1); // future proof by including most symbols without using regex
-  std::string host = peer_add.substr(0, colon);
-  std::string port = peer_add.substr(colon + 1, colon2 == std::string::npos ? std::string::npos : colon2 - (colon + 1));
-  std::string type = colon2 == std::string::npos ? ""
-    : end == std::string::npos                   ? peer_add.substr(colon2 + 1)
-                                                 : peer_add.substr(colon2 + 1, end - (colon2 + 1));
-
-  if (type.empty()) {
-    dlog("Setting connection type for: ${peer} to both transactions and blocks", ("peer", peer_add));
-    connection_type = both;
-  } else if (type == "trx") {
-    dlog("Setting connection type for: ${peer} to transactions only", ("peer", peer_add));
-    connection_type = transactions_only;
-  } else if (type == "blk") {
-    dlog("Setting connection type for: ${peer} to blocks only", ("peer", peer_add));
-    connection_type = blocks_only;
-  } else {
-    wlog("Unknown connection type: ${t}", ("t", type));
-  }
 }
 
 void connection::connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::resolver::results_type endpoints) {
@@ -990,24 +875,6 @@ bool connection::start_session() {
   }
 }
 
-void connection::send_handshake(bool force) {
-  strand.post([force, c = shared_from_this()]() {
-    std::unique_lock<std::mutex> g_conn(c->conn_mtx);
-    if (c->populate_handshake(c->last_handshake_sent, force)) {
-      static_assert(std::is_same_v<decltype(c->sent_handshake_count), int16_t>, "INT16_MAX based on int16_t");
-      if (c->sent_handshake_count == INT16_MAX)
-        c->sent_handshake_count = 1; // do not wrap
-      c->last_handshake_sent.generation = ++c->sent_handshake_count;
-      auto last_handshake_sent = c->last_handshake_sent;
-      g_conn.unlock();
-      ilog("Sending handshake generation ${g} to ${ep}, head ${head}, id ${id}",
-        ("g", last_handshake_sent.generation)("ep", c->peer_name())("head", last_handshake_sent.head_num)(
-          "id", last_handshake_sent.head_id.to_string().substr(8, 16)));
-      c->enqueue(last_handshake_sent);
-    }
-  });
-}
-
 void connection::close(bool reconnect, bool shutdown) {
   strand.post(
     [self = shared_from_this(), reconnect, shutdown]() { connection::_close(self.get(), reconnect, shutdown); });
@@ -1028,12 +895,9 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
   bool has_last_req = false;
   {
     std::scoped_lock g_conn(self->conn_mtx);
-    self->last_handshake_recv = handshake_message();
-    self->last_handshake_sent = handshake_message();
     self->last_close = fc::time_point::now();
     self->conn_node_id = Bytes20();
   }
-  self->sent_handshake_count = 0;
   ilog("closing '${a}', ${p}", ("a", self->peer_address())("p", self->peer_name()));
   dlog("canceling wait on ${p}", ("p", self->peer_name())); // peer_name(), do not hold conn_mtx
   self->cancel_wait();
@@ -1045,9 +909,6 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
 
 const std::string connection::peer_name() {
   std::scoped_lock g_conn(conn_mtx);
-  if (!last_handshake_recv.p2p_address.empty()) {
-    return last_handshake_recv.p2p_address;
-  }
   if (!peer_address().empty()) {
     return peer_address();
   }
@@ -1069,27 +930,6 @@ void connection::update_endpoints() {
   local_endpoint_port = ec2 ? unknown : std::to_string(lep.port());
 }
 
-bool connection::populate_handshake(handshake_message& hello, bool force) {
-  namespace sc = std::chrono;
-  bool send = force;
-  const auto prev_head_id = hello.head_id;
-  uint32_t head;
-  std::tie(std::ignore, head, std::ignore, hello.head_id) = my_impl->get_chain_info();
-  // only send handshake if state has changed since last handshake
-  send |= head != hello.head_num;
-  send |= prev_head_id != hello.head_id;
-  hello.head_num = head;
-  hello.node_id = my_impl->node_id;
-  hello.time = sc::duration_cast<sc::nanoseconds>(sc::system_clock::now().time_since_epoch()).count();
-  hello.p2p_address = my_impl->p2p_address;
-  if (is_transactions_only_connection())
-    hello.p2p_address += ":trx";
-  if (is_blocks_only_connection())
-    hello.p2p_address += ":blk";
-  hello.p2p_address += " - " + hello.node_id.to_string().substr(0, 7);
-  return true;
-}
-
 void connection::cancel_wait() {
   std::scoped_lock g(response_expected_timer_mtx);
   response_expected_timer.cancel();
@@ -1101,9 +941,6 @@ void connection::flush_queues() {
 
 void connection::enqueue(const net_message& m) {
   go_away_reason close_after_send = no_reason;
-  if (std::holds_alternative<go_away_message>(m)) {
-    close_after_send = std::get<go_away_message>(m).reason;
-  }
 
   buffer_factory buff_factory;
   auto send_buffer = buff_factory.get_send_buffer(m);
@@ -1198,162 +1035,13 @@ void connection::check_heartbeat(tstamp current_time) {
     } else {
       {
         std::scoped_lock g_conn(conn_mtx);
-        wlog("heartbeat timed out from ${p} ", ("p", last_handshake_recv.p2p_address));
+        wlog("heartbeat timed out from peer ");
       }
       close(false); // don't reconnect
     }
     return;
   }
-  // send_time(); // TODO : remove heartbeat and use PING PONG instead
-}
-
-void connection::send_time() {
-  time_message xpkt;
-  xpkt.org = rec;
-  xpkt.rec = dst;
-  xpkt.xmt = get_time();
-  org = xpkt.xmt;
-  enqueue(xpkt);
-}
-
-void connection::send_time(const time_message& msg) {
-  time_message xpkt;
-  xpkt.org = msg.xmt;
-  xpkt.rec = msg.dst;
-  xpkt.xmt = get_time();
-  enqueue(xpkt);
-}
-
-bool connection::is_valid(const handshake_message& msg) {
-  bool valid = true;
-  if (msg.p2p_address.empty()) {
-    wlog("Handshake message validation: p2p_address is null string");
-    valid = false;
-  }
-  return valid;
-}
-
-void connection::handle_message(const handshake_message& msg) {
-  dlog("received handshake_message");
-  if (!is_valid(msg)) {
-    elog("bad handshake message");
-    enqueue(go_away_message(fatal_other));
-    return;
-  }
-  dlog("received handshake gen ${g} from ${ep}, head ${head}",
-    ("g", msg.generation)("ep", peer_name())("head", msg.head_num));
-
-  connecting = false;
-  if (msg.generation == 1) {
-    if (msg.node_id == my_impl->node_id) {
-      elog("Self connection detected node_id ${id}. Closing connection", ("id", msg.node_id.to_string()));
-      enqueue(go_away_message(self));
-      return;
-    }
-
-    if (peer_address().empty()) {
-      set_connection_type(msg.p2p_address);
-    }
-
-    std::unique_lock<std::mutex> g_conn(conn_mtx);
-    if (peer_address().empty() || last_handshake_recv.node_id == Bytes32()) {
-      g_conn.unlock();
-      dlog("checking for duplicate");
-      std::shared_lock<std::shared_mutex> g_cnts(my_impl->connections_mtx);
-      for (const auto& check : my_impl->connections) {
-        if (check.get() == this)
-          continue;
-        if (check->connected() && check->peer_name() == msg.p2p_address) {
-          if (my_impl->p2p_address < msg.p2p_address) {
-            // only the connection from lower p2p_address to higher p2p_address will be considered as a duplicate,
-            // so there is no chance for both connections to be closed
-            continue;
-          }
-
-          g_cnts.unlock();
-          dlog("sending go_away duplicate to ${ep}", ("ep", msg.p2p_address));
-          go_away_message gam(duplicate);
-          g_conn.lock();
-          gam.node_id = conn_node_id;
-          g_conn.unlock();
-          enqueue(gam);
-          no_retry = duplicate;
-          return;
-        }
-      }
-    } else {
-      dlog("skipping duplicate check, addr == ${pa}, id = ${ni}",
-        ("pa", peer_address())("ni", last_handshake_recv.node_id.to_string()));
-      g_conn.unlock();
-    }
-
-    g_conn.lock();
-    if (conn_node_id != msg.node_id) {
-      conn_node_id = msg.node_id;
-    }
-    g_conn.unlock();
-
-    if (sent_handshake_count == 0) {
-      send_handshake();
-    }
-  }
-
-  std::unique_lock<std::mutex> g_conn(conn_mtx);
-  last_handshake_recv = msg;
-  g_conn.unlock();
-
-  ///< notify consensus of peer up
-  my_impl->update_peer_status_channel.publish(appbase::priority::medium,
-    std::make_shared<plugin_interface::peer_status_info>(
-      plugin_interface::peer_status_info{to_hex(conn_node_id), peer_status::up}));
-}
-
-void connection::handle_message(const go_away_message& msg) {
-  wlog("received go_away_message, reason = ${r}", ("r", reason_str(msg.reason)));
-  no_retry = msg.reason;
-  if (msg.reason == duplicate) {
-    std::scoped_lock g_conn(conn_mtx);
-    conn_node_id = msg.node_id;
-  }
-  flush_queues();
-  close(false);
-}
-
-void connection::handle_message(const time_message& msg) {
-  dlog("received time_message");
-
-  /* We've already lost however many microseconds it took to dispatch
-   * the message, but it can't be helped.
-   */
-  msg.dst = get_time();
-
-  // If the transmit timestamp is zero, the peer is horribly broken.
-  if (msg.xmt == 0)
-    return; /* invalid timestamp */
-
-  if (msg.xmt == xmt)
-    return; /* duplicate packet */
-
-  xmt = msg.xmt;
-  rec = msg.rec;
-  dst = msg.dst;
-
-  if (msg.org == 0) {
-    send_time(msg);
-    return; // We don't have enough data to perform the calculation yet.
-  }
-
-  double offset = (double(rec - org) + double(msg.xmt - dst)) / 2;
-  double NsecPerUsec{1000};
-
-  org = 0;
-  rec = 0;
-
-  std::unique_lock<std::mutex> g_conn(conn_mtx);
-  if (last_handshake_recv.generation == 0) {
-    g_conn.unlock();
-    send_handshake();
-  }
+  send_message(::tendermint::p2p::PacketPing{});
 }
 
 Result<std::shared_ptr<Bytes>> connection::get_pending_frame(int idx, bool is_peek) {
@@ -1622,6 +1310,7 @@ Result<int> connection::write_msg(const Bytes& bz, bool use_secret_conn) {
 }
 
 bool connection::process_next_message(uint32_t total_message_bytes) {
+  latest_msg_time = get_time();
   std::shared_ptr<Bytes> frame{};
   if (auto ok = get_pending_frame(); !ok) {
     elog("unable to read first pending frame");
@@ -1696,7 +1385,6 @@ Result<void> connection::task_discard(std::shared_ptr<Bytes> bz) {
     ilog(" << PONG");
   } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketPong) {
     ilog(" >> PONG");
-    // TODO : reset timer
   } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketMsg) {
     auto msg = pb_packet.packet_msg();
     ilog(fmt::format(" >> MSG : channel_id={} eof={} data={}", msg.channel_id(), msg.eof(), to_hex(msg.data())));
