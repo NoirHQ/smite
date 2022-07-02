@@ -131,7 +131,7 @@ Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> secret_connection::w
   std::vector<std::shared_ptr<Bytes>> ret;
   auto data_pos = data.begin();
   while (data_pos != data.end()) {
-    auto sealed_frame = std::make_shared<Bytes>(aead_size_overhead + total_frame_size);
+    auto sealed_frame = std::make_shared<Bytes>(sealed_frame_size);
     Bytes frame(total_frame_size);
     Bytes chunk;
     auto data_size = std::distance(data_pos, data.end());

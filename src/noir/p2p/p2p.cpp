@@ -1353,7 +1353,6 @@ void connection::handle_message(const time_message& msg) {
 }
 
 Result<std::shared_ptr<Bytes>> connection::get_pending_frame(int idx, bool is_peek) {
-  constexpr auto sealed_frame_size = aead_size_overhead + total_frame_size;
   Bytes sealed_frame(sealed_frame_size);
   std::copy(pending_message_buffer.read_ptr() + (sealed_frame_size * idx),
     pending_message_buffer.read_ptr() + (sealed_frame_size * (idx + 1)), sealed_frame.begin());
@@ -1407,7 +1406,9 @@ void connection::start_handshake() {
 
 void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) {
   try {
-    std::size_t minimum_read = 1;
+    std::size_t minimum_read =
+      std::atomic_exchange<decltype(outstanding_read_bytes.load())>(&outstanding_read_bytes, 0);
+    minimum_read = minimum_read != 0 ? minimum_read : 1;
     auto completion_handler = [minimum_read](
                                 boost::system::error_code ec, std::size_t bytes_transferred) -> std::size_t {
       if (ec || bytes_transferred >= minimum_read)
@@ -1424,7 +1425,6 @@ void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) 
             conn->pending_message_buffer.advance_write_ptr(bytes_transferred);
             while (conn->pending_message_buffer.bytes_to_read() > 0) {
               uint32_t bytes_in_buffer = conn->pending_message_buffer.bytes_to_read();
-
               try {
                 varuint64 message_length = 0;
                 mb_peek_datastream ds(conn->pending_message_buffer);
@@ -1437,10 +1437,8 @@ void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) 
                   std::copy(conn->pending_message_buffer.read_ptr(),
                     conn->pending_message_buffer.read_ptr() + message_length, new_message->data());
                   conn->pending_message_buffer.advance_read_ptr(message_length);
-                  // cb(new_message);
-                  conn->strand.post([cb, new_message]() { cb(new_message); });
+                  cb(new_message);
                   return;
-
                 } else {
                   auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
                   auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
@@ -1463,7 +1461,10 @@ void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) 
 
 void connection::read_a_secret_message() {
   try {
-    std::size_t minimum_read = aead_size_overhead + total_frame_size;
+    std::size_t minimum_read =
+      std::atomic_exchange<decltype(outstanding_read_bytes.load())>(&outstanding_read_bytes, 0);
+    minimum_read = minimum_read != 0 ? minimum_read : sealed_frame_size;
+
     auto completion_handler = [minimum_read](
                                 boost::system::error_code ec, std::size_t bytes_transferred) -> std::size_t {
       if (ec || bytes_transferred >= minimum_read)
@@ -1496,32 +1497,40 @@ void connection::read_a_secret_message() {
                   ("bt", bytes_transferred)("btw", conn->pending_message_buffer.bytes_to_write()));
               }
               conn->pending_message_buffer.advance_write_ptr(bytes_transferred);
-              if (conn->pending_message_buffer.bytes_to_read() > 0) {
+              while (conn->pending_message_buffer.bytes_to_read() > 0) {
                 uint32_t bytes_in_buffer = conn->pending_message_buffer.bytes_to_read();
-                std::shared_ptr<Bytes> frame{};
-                if (auto ok = conn->get_pending_frame(0, true); !ok) {
-                  wlog("read_a_secret_message: ${msg}", ("msg", ok.error().message()));
-                  throw;
-                } else {
-                  frame = ok.value();
-                }
-                auto [message_length, message_header_bytes] = parse_uvarint(frame);
-                int64_t required_bytes = data_max_size - message_header_bytes - message_length;
-                auto frame_count{1};
-                if (required_bytes < 0) {
-                  frame_count += (-required_bytes / data_max_size) + 1;
-                }
-                auto total_message_bytes = (aead_size_overhead + total_frame_size) * frame_count;
 
-                if (bytes_in_buffer >= total_message_bytes) {
-                  if (!conn->process_next_message(total_message_bytes))
-                    throw;
+                if (bytes_in_buffer < sealed_frame_size) {
+                  conn->outstanding_read_bytes = sealed_frame_size - bytes_in_buffer;
+                  break;
                 } else {
-                  auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
-                  auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
-                  if (outstanding_message_bytes > available_buffer_bytes)
-                    conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
-                  conn->outstanding_read_bytes = outstanding_message_bytes;
+
+                  std::shared_ptr<Bytes> frame{};
+                  if (auto ok = conn->get_pending_frame(0, true); !ok) {
+                    wlog("read_a_secret_message: ${msg}", ("msg", ok.error().message()));
+                    throw;
+                  } else {
+                    frame = ok.value();
+                  }
+                  auto [message_length, message_header_bytes] = parse_uvarint(frame);
+                  int64_t required_bytes = data_max_size - message_header_bytes - message_length;
+                  auto frame_count{1};
+                  if (required_bytes < 0) {
+                    frame_count += (-required_bytes / data_max_size) + 1;
+                  }
+                  auto total_message_bytes = sealed_frame_size * frame_count;
+
+                  if (bytes_in_buffer >= total_message_bytes) {
+                    if (!conn->process_next_message(total_message_bytes))
+                      throw;
+                  } else {
+                    auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
+                    auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
+                    if (outstanding_message_bytes > available_buffer_bytes)
+                      conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
+                    conn->outstanding_read_bytes = outstanding_message_bytes;
+                    break;
+                  }
                 }
               }
               conn->read_a_secret_message();
@@ -1619,12 +1628,8 @@ bool connection::process_next_message(uint32_t total_message_bytes) {
   auto [message_length, message_header_bytes] = parse_uvarint(frame);
   auto bz = std::make_shared<Bytes>(message_length);
   auto message_read{0};
-  std::copy(frame->begin() + message_header_bytes, frame->end(), bz->begin() + message_read);
+  std::memcpy(bz->data(), frame->data() + message_header_bytes, message_length);
   message_read += frame->size();
-
-  // Bytes bz_debug(10);
-  // std::copy(frame->begin(), frame->begin() + bz_debug.size(), bz_debug.begin());
-  // wlog(fmt::format("frame : size={} {}", frame->size(), to_hex(bz_debug)));
 
   // int idx{1};
   // while (message_read != message_length + message_header_bytes) {
@@ -1637,7 +1642,7 @@ bool connection::process_next_message(uint32_t total_message_bytes) {
   //     idx++;
   //   }
   // }
-  wlog(fmt::format("NEW MESSAGE: size={}", message_length));
+  // wlog(fmt::format("NEW MESSAGE: size={}", message_length));
   pending_message_buffer.advance_read_ptr(total_message_bytes);
   if (auto ok = cb_current_task(bz); !ok) {
     elog(ok.error().message());
