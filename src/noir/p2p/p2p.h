@@ -13,7 +13,6 @@ struct connection_status {
   std::string peer;
   bool connecting = false;
   bool syncing = false;
-  handshake_message last_handshake;
 };
 
 class p2p : public appbase::plugin<p2p> {
