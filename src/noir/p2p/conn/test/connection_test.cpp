@@ -347,3 +347,15 @@ TEST_CASE("secret_connection: libsodium - ed25519", "[noir][p2p]") {
   auto r = verify_ed25519(sig, org, c->loc_pub_key);
   CHECK(r);
 }
+
+TEST_CASE("secret_connection: nonce", "[noir][p2p]") {
+  p2p::nonce96 n{};
+  CHECK(n.bz == Bytes("000000000000000000000000"));
+  n.increment();
+  CHECK(n.bz == Bytes("000000000100000000000000"));
+  for (auto i = 0; i < 254; i++)
+    n.increment();
+  CHECK(n.bz == Bytes("00000000ff00000000000000"));
+  n.increment();
+  CHECK(n.bz == Bytes("000000000001000000000000"));
+}

@@ -164,7 +164,7 @@ Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> secret_connection::w
   return {n, ret};
 }
 
-Result<std::pair<int, Bytes>> secret_connection::read(const Bytes& data, bool is_peek) {
+Result<std::pair<int, std::shared_ptr<Bytes>>> secret_connection::read(const Bytes& data, bool is_peek) {
   std::scoped_lock g(recv_mtx);
   check(data.size() == 1044, "invalid sealed_frame size");
 
@@ -172,6 +172,8 @@ Result<std::pair<int, Bytes>> secret_connection::read(const Bytes& data, bool is
   unsigned long long decrypted_len{}, ciphertext_len{data.size()};
   auto r = crypto_aead_chacha20poly1305_ietf_decrypt(frame.data(), &decrypted_len, nullptr, data.data(), ciphertext_len,
     nullptr, 0, recv_nonce.get(), reinterpret_cast<const unsigned char*>(recv_secret.data()));
+  if (r < 0)
+    return Error::format("decryption failed: size={}", data.size());
   if (!is_peek)
     recv_nonce.increment();
 
@@ -179,8 +181,8 @@ Result<std::pair<int, Bytes>> secret_connection::read(const Bytes& data, bool is
   std::memcpy(&chunk_length, frame.data(), 4);
   if (chunk_length > data_max_size)
     return Error::format("chunk_length is greater than data_max_size");
-  Bytes chunk(chunk_length);
-  std::copy(frame.begin() + data_len_size, frame.begin() + data_len_size + chunk_length, chunk.data());
+  auto chunk = std::make_shared<Bytes>(chunk_length);
+  std::copy(frame.begin() + data_len_size, frame.begin() + data_len_size + chunk_length, chunk->data());
   return {chunk_length, chunk};
 }
 
