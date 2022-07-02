@@ -192,6 +192,10 @@ public:
   Result<void> task_authenticate(std::shared_ptr<Bytes>);
   Result<void> task_node_info(std::shared_ptr<Bytes>);
   Result<void> task_discard(std::shared_ptr<Bytes>);
+  void send_message(const ::tendermint::p2p::PacketPing&);
+  void send_message(const ::tendermint::p2p::PacketPong&);
+  void send_message(const ::tendermint::p2p::PacketMsg&);
+  void send_message(const ::tendermint::p2p::Packet&);
 };
 
 using connection_ptr = std::shared_ptr<connection>;
@@ -1687,17 +1691,43 @@ Result<void> connection::task_discard(std::shared_ptr<Bytes> bz) {
 
   auto pb_packet = noir::codec::protobuf::decode<::tendermint::p2p::Packet>(*bz);
   if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketPing) {
-    ilog("PING");
+    ilog(" >> PING");
+    send_message(::tendermint::p2p::PacketPong{});
+    ilog(" << PONG");
   } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketPong) {
-    ilog("PONG");
+    ilog(" >> PONG");
+    // TODO : reset timer
   } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketMsg) {
     auto msg = pb_packet.packet_msg();
-    ilog(fmt::format("MSG : channel_id={} eof={} data={}", msg.channel_id(), msg.eof(), to_hex(msg.data())));
+    ilog(fmt::format(" >> MSG : channel_id={} eof={} data={}", msg.channel_id(), msg.eof(), to_hex(msg.data())));
   } else {
     ilog("UNKNOWN");
   }
 
   return success();
+}
+
+void connection::send_message(const ::tendermint::p2p::PacketPing& pp) {
+  ::tendermint::p2p::Packet packet;
+  auto ping = packet.mutable_packet_ping();
+  *ping = pp;
+  send_message(packet);
+}
+void connection::send_message(const ::tendermint::p2p::PacketPong& pp) {
+  ::tendermint::p2p::Packet packet;
+  auto pong = packet.mutable_packet_pong();
+  *pong = pp;
+  send_message(packet);
+}
+void connection::send_message(const ::tendermint::p2p::PacketMsg& pm) {
+  ::tendermint::p2p::Packet packet;
+  auto msg = packet.mutable_packet_msg();
+  *msg = pm;
+  send_message(packet);
+}
+void connection::send_message(const ::tendermint::p2p::Packet& packet) {
+  auto bz = codec::protobuf::encode(packet);
+  write_msg(bz);
 }
 
 } // namespace noir::p2p
