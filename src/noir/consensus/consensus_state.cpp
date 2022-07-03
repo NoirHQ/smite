@@ -84,6 +84,10 @@ std::shared_ptr<consensus_state> consensus_state::new_state(appbase::application
   if (state_.last_block_height > 0) {
     consensus_state_->reconstruct_last_commit(state_);
   }
+  {
+    // TODO : implement ReplayBlocks() and move following
+    state_.last_result_hash = merkle::get_empty_hash();
+  }
 
   consensus_state_->update_to_state(state_);
 
