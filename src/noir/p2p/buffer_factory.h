@@ -13,7 +13,7 @@ using send_buffer_type = std::shared_ptr<std::vector<char>>;
 
 struct buffer_factory {
 
-  const send_buffer_type& get_send_buffer(const net_message& m) {
+  const send_buffer_type& get_send_buffer(const envelope& m) {
     if (!send_buffer) {
       send_buffer = create_send_buffer(m);
     }
@@ -24,7 +24,7 @@ protected:
   send_buffer_type send_buffer;
 
 protected:
-  static send_buffer_type create_send_buffer(const net_message& m) {
+  static send_buffer_type create_send_buffer(const envelope& m) {
     const uint32_t payload_size = encode_size(m);
     const char* const header = reinterpret_cast<const char* const>(&payload_size);
     constexpr size_t header_size = sizeof(payload_size);

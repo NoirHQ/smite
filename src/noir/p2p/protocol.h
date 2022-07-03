@@ -203,9 +203,6 @@ constexpr auto reason_str(go_away_reason rsn) {
   }
 }
 
-/// \brief network messages that will be exchanged between peers
-using net_message = std::variant<envelope>;
-
 /// \brief messages that will be delivered to consensus reactor
 using cs_reactor_message = std::variant<new_round_step_message,
   new_valid_block_message,
