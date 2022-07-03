@@ -96,7 +96,7 @@ public:
 
   mutable std::mutex conn_mtx; //< mtx for last_req .. local_endpoint_port
   fc::time_point last_close;
-  Bytes20 conn_node_id;
+  Bytes conn_node_id;
   std::string remote_endpoint_ip;
   std::string remote_endpoint_port;
   std::string local_endpoint_ip;
@@ -896,7 +896,7 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
   {
     std::scoped_lock g_conn(self->conn_mtx);
     self->last_close = fc::time_point::now();
-    self->conn_node_id = Bytes20();
+    self->conn_node_id = Bytes();
   }
   ilog("closing '${a}', ${p}", ("a", self->peer_address())("p", self->peer_name()));
   dlog("canceling wait on ${p}", ("p", self->peer_name())); // peer_name(), do not hold conn_mtx
@@ -1369,6 +1369,12 @@ Result<void> connection::task_node_info(std::shared_ptr<Bytes> bz) {
   pb.ParseFromArray(bz->data(), bz->size());
   auto peer_info = consensus::node_info::from_proto(pb);
   ilog(fmt::format("node_info: peer={}", peer_info->node_id));
+  conn_node_id = from_hex(peer_info->node_id.id);
+
+  ///< notify consensus of peer up
+  my_impl->update_peer_status_channel.publish(appbase::priority::medium,
+    std::make_shared<plugin_interface::peer_status_info>(
+      plugin_interface::peer_status_info{to_hex(conn_node_id), peer_status::up}));
 
   cb_current_task = [conn = shared_from_this()](
                       std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_discard(msg); };
@@ -1386,8 +1392,33 @@ Result<void> connection::task_discard(std::shared_ptr<Bytes> bz) {
   } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketPong) {
     ilog(" >> PONG");
   } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketMsg) {
-    auto msg = pb_packet.packet_msg();
+    const auto& msg = pb_packet.packet_msg();
     ilog(fmt::format(" >> MSG : channel_id={} eof={} data={}", msg.channel_id(), msg.eof(), to_hex(msg.data())));
+    auto new_envelope = std::make_shared<envelope>();
+    new_envelope->from = to_hex(conn_node_id);
+    new_envelope->id = static_cast<channel_id>(msg.channel_id());
+    new_envelope->message = from_hex(to_hex(msg.data()));
+
+    switch (new_envelope->id) {
+    case State:
+    case Data:
+    case Vote:
+    case VoteSetBits:
+      // case Consensus:
+      my_impl->cs_reactor_mq_channel.publish( ///< notify consensus reactor to take additional actions
+        appbase::priority::medium, new_envelope);
+      break;
+    case BlockSync:
+      my_impl->bs_reactor_mq_channel.publish( ///< notify block_sync reactor to take additional actions
+        appbase::priority::medium, new_envelope);
+      break;
+    case PeerError:
+      elog(fmt::format("received peer_error from={} error={}", new_envelope->from, to_hex(msg.data())));
+      my_impl->disconnect(new_envelope->from);
+      break;
+    default:
+      elog(fmt::format("unsupported channel_id={}", static_cast<int>(new_envelope->id)));
+    }
   } else {
     ilog("UNKNOWN");
   }
