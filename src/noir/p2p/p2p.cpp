@@ -123,7 +123,7 @@ public:
 
   const std::string peer_name();
 
-  void enqueue(const net_message& msg);
+  void enqueue(const envelope& msg);
   void enqueue_buffer(
     const std::shared_ptr<std::vector<char>>& send_buffer, go_away_reason close_after_send, bool to_sync_queue = false);
   void flush_queues();
@@ -939,12 +939,12 @@ void connection::flush_queues() {
   buffer_queue.clear_write_queue();
 }
 
-void connection::enqueue(const net_message& m) {
-  go_away_reason close_after_send = no_reason;
-
-  buffer_factory buff_factory;
-  auto send_buffer = buff_factory.get_send_buffer(m);
-  enqueue_buffer(send_buffer, close_after_send);
+void connection::enqueue(const envelope& m) {
+  ::tendermint::p2p::PacketMsg msg;
+  msg.set_channel_id(m.id);
+  msg.set_data({m.message.begin(), m.message.end()});
+  msg.set_eof(true);
+  send_message(msg);
 }
 
 void connection::enqueue_buffer(
