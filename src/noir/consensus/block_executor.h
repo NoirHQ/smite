@@ -390,7 +390,7 @@ struct block_executor {
     ret.last_height_validators_changed = last_height_vals_changed;
     ret.consensus_params_ = next_params;
     ret.last_height_consensus_params_changed = last_height_params_changed;
-    // ret.last_result_hash = store::abci_responses_result_hash(abci_responses_); // todo
+    ret.last_result_hash = merkle::get_empty_hash(); // TODO : use abci_response_result_hash
     ret.app_hash.clear();
     return ret;
   }

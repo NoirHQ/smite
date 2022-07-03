@@ -4,7 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/codec/protobuf.h>
+#include <noir/crypto/hash.h>
 #include <noir/p2p/types.h>
+#include <tendermint/types/params.pb.h>
+
 #include <optional>
 
 namespace noir::consensus {
@@ -72,8 +76,11 @@ struct consensus_params {
   }
 
   Bytes hash_consensus_params() {
-    // todo
-    return Bytes{};
+    ::tendermint::types::HashedParams pb;
+    pb.set_block_max_bytes(block.max_bytes);
+    pb.set_block_max_gas(block.max_gas);
+    auto bz = codec::protobuf::encode(pb);
+    return crypto::Sha256()(bz);
   }
 };
 
