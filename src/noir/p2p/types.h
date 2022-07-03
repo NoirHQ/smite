@@ -98,13 +98,19 @@ enum channel_id {
   BlockSync = 0x40,
   Transaction,
   Evidence = 0x38,
+  ChMempool = 0x30,
+  ChSnapshot = 0x60,
+  ChStateSync = 0x61,
+  ChStateSyncLightBlock = 0x62,
+  ChStateSyncParams = 0x63,
+  ChNil = 0x0,
   PeerError
 };
 
 struct envelope {
   std::string from;
   std::string to;
-  bool broadcast;
+  bool broadcast{};
   Bytes message; ///< one of reactor_messages or peer_error, serialized
   channel_id id;
 };
