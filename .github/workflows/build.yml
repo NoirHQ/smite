@@ -44,7 +44,7 @@ jobs:
           key: ${{ runner.os }}-softfloat-${{ steps.softfloat-cache.outputs.version }}
       # build
       - run: cmake -E make_directory build
-      - run: BOOST_ROOT=/opt/boost cmake .. -DUSE_CACHED_LIBS=ON -DBUILD_SHARED_LIBS=OFF && make -j2
+      - run: BOOST_ROOT=/opt/boost cmake .. -DUSE_CACHED_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DCHECK_CONNECTION=OFF && make -j2
         working-directory: ./build
       # test
       # - run: make test
