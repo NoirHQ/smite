@@ -3,10 +3,12 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/codec/basic_datastream.h>
+#include <noir/codec/protobuf.h>
+#include <noir/common/varint.h>
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/types/canonical.h>
 #include <noir/consensus/types/vote.h>
-#include <noir/core/codec.h>
 
 namespace noir::consensus {
 
@@ -22,8 +24,14 @@ ErrVoteConflictingVotesWithData::ErrVoteConflictingVotesWithData(
 
 Bytes vote::vote_sign_bytes(const std::string& chain_id, const ::tendermint::types::Vote& v) {
   auto pb = canonical::canonicalize_vote_pb(chain_id, v);
-  Bytes sign_bytes(pb.ByteSizeLong());
-  pb.SerializeToArray(sign_bytes.data(), pb.ByteSizeLong());
+  auto bz = codec::protobuf::encode(pb);
+
+  Bytes buf_size(10);
+  codec::BasicDatastream<unsigned char> ds(buf_size);
+  auto n = write_uleb128(ds, Varuint64(bz.size()));
+  Bytes sign_bytes(n.value() + bz.size());
+  std::copy(buf_size.begin(), buf_size.end(), sign_bytes.begin());
+  std::copy(bz.begin(), bz.end(), sign_bytes.begin() + n.value());
   return sign_bytes;
 }
 
