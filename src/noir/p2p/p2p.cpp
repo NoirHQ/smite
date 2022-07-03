@@ -11,7 +11,6 @@
 #include <noir/consensus/tx.h>
 #include <noir/consensus/types/encoding_helper.h>
 #include <noir/consensus/types/node_info.h>
-#include <noir/p2p/buffer_factory.h>
 #include <noir/p2p/conn/secret_connection.h>
 #include <noir/p2p/message_buffer.h>
 #include <noir/p2p/p2p.h>
