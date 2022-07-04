@@ -114,7 +114,7 @@ TEST_CASE("clist", "[noir][clist]") {
     }
     REQUIRE_MESSAGE(l.len() == 0, "Failed to remove all elements from CList");
 
-    runtime::executor.join();
+    runtime::execution_context.join();
   }
 
   SECTION("wait_chan") {
@@ -145,9 +145,9 @@ TEST_CASE("clist", "[noir][clist]") {
       auto next = el;
       auto seen = 0;
 
-      auto timer = time::Timer(std::chrono::seconds(10));
+      auto timer = time::new_timer(std::chrono::seconds(10));
       {
-        auto select = Select{*next->next_wait_chan(), *done, *timer.ch};
+        auto select = Select{*next->next_wait_chan(), *done, *timer->c};
         for (auto loop = true; loop;) {
           switch (co_await select.index()) {
           case 0:
@@ -174,9 +174,9 @@ TEST_CASE("clist", "[noir][clist]") {
       auto prev = next;
       seen = 0;
 
-      timer.reset(std::chrono::seconds(3));
+      timer->reset(std::chrono::seconds(3));
       {
-        auto select = Select{*prev->prev_wait_chan(), *timer.ch};
+        auto select = Select{*prev->prev_wait_chan(), *timer->c};
         for (auto loop = true; loop;) {
           switch (co_await select.index()) {
           case 0:
@@ -197,7 +197,7 @@ TEST_CASE("clist", "[noir][clist]") {
         fmt::format("number of pushed items ({:d}) not equal to number of seen items ({:d})", pushed, seen));
     });
 
-    runtime::executor.join();
+    runtime::execution_context.join();
   }
 
   SECTION("removed") {
@@ -268,7 +268,7 @@ TEST_CASE("clist", "[noir][clist]") {
         }
       }
     });
-    runtime::executor.join();
+    runtime::execution_context.join();
   }
 // clang-format on
 }
