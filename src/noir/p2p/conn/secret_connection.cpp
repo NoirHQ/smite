@@ -125,7 +125,7 @@ Bytes secret_connection::derive_secrets(Bytes32& dh_secret) {
   return {key, key + sizeof(key) / sizeof(key[0])};
 }
 
-Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> secret_connection::write(const Bytes& data) {
+Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> secret_connection::write(std::span<unsigned char> data) {
   std::scoped_lock g(send_mtx);
   int n{};
   std::vector<std::shared_ptr<Bytes>> ret;
@@ -164,7 +164,7 @@ Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> secret_connection::w
   return {n, ret};
 }
 
-Result<std::pair<int, std::shared_ptr<Bytes>>> secret_connection::read(const Bytes& data, bool is_peek) {
+Result<std::shared_ptr<Bytes>> secret_connection::read(std::span<unsigned char> data, bool is_peek) {
   std::scoped_lock g(recv_mtx);
   check(data.size() == 1044, "invalid sealed_frame size");
 
@@ -183,7 +183,7 @@ Result<std::pair<int, std::shared_ptr<Bytes>>> secret_connection::read(const Byt
     return Error::format("chunk_length is greater than data_max_size");
   auto chunk = std::make_shared<Bytes>(chunk_length);
   std::memcpy(chunk->data(), frame.data() + data_len_size, chunk_length);
-  return {chunk_length, chunk};
+  return chunk;
 }
 
 } // namespace noir::p2p

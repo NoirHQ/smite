@@ -47,7 +47,7 @@ public:
   }
 
   // @param callback must not callback into queued_buffer
-  bool add_write_queue(const std::shared_ptr<std::vector<char>>& buff,
+  bool add_write_queue(const std::shared_ptr<std::vector<unsigned char>>& buff,
     std::function<void(boost::system::error_code, std::size_t)> callback,
     bool to_sync_queue) {
     std::scoped_lock g(_mtx);
@@ -95,7 +95,7 @@ private:
 
 private:
   struct queued_write {
-    std::shared_ptr<std::vector<char>> buff;
+    std::shared_ptr<std::vector<unsigned char>> buff;
     std::function<void(boost::system::error_code, std::size_t)> callback;
   };
 
