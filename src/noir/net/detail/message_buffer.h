@@ -4,15 +4,17 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/common/check.h>
+#include <noir/core/core.h>
+
 #include <noir/log/log.h>
-#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/buffer.hpp>
 #include <boost/pool/singleton_pool.hpp>
 #include <fmt/core.h>
 #include <array>
 #include <deque>
+#include <utility>
 
-namespace tendermint::net::details {
+namespace noir::net::detail {
 inline void throw_datastream_range_error(const char* method, size_t len, int64_t over) {
   throw std::out_of_range(fmt::format("{} datastream of length {} over by {}", method, len, over));
 }
@@ -202,9 +204,11 @@ public:
    *  The beginning of the vector will be the write pointer, which
    *  should be advanced the number of bytes read after the read returns.
    */
-  std::vector<boost::asio::mutable_buffer> get_buffer_sequence_for_boost_async_read() {
+  Result<std::vector<boost::asio::mutable_buffer>> get_buffer_sequence_for_boost_async_read() {
     std::vector<boost::asio::mutable_buffer> seq;
-    check(write_ind.first < buffers.size());
+    if (write_ind.first >= buffers.size()) {
+      return Error();
+    }
     seq.push_back(boost::asio::buffer(&buffers[write_ind.first]->at(write_ind.second), buffer_len - write_ind.second));
     for (std::size_t i = write_ind.first + 1; i < buffers.size(); i++) {
       seq.push_back(boost::asio::buffer(&buffers[i]->at(0), buffer_len));
@@ -216,9 +220,9 @@ public:
    *  Reads size bytes from the buffer chain starting at the read pointer.
    *  The read pointer is advanced size bytes.
    */
-  bool read(void* s, uint32_t size) {
+  Result<void> read(void* s, uint32_t size) {
     if (bytes_to_read() < size) {
-      throw std::out_of_range(fmt::format("tried to peek {} but only {} left", size, bytes_to_read()));
+      return Error::format("tried to peek {} but only {} left", size, bytes_to_read());
     }
     if (read_ind.second + size <= buffer_len) {
       memcpy(s, read_ptr(), size);
@@ -229,16 +233,16 @@ public:
       advance_read_ptr(num_in_buffer);
       read((char*)s + num_in_buffer, size - num_in_buffer);
     }
-    return true;
+    return success();
   }
 
   /*
    *  Reads size bytes from the buffer chain starting at the supplied index.
    *  The supplied index is advanced, but the read pointer is unaffected.
    */
-  bool peek(void* s, uint32_t size, index_t& index) const {
+  Result<void> peek(void* s, uint32_t size, index_t& index) const {
     if (bytes_to_read_from_index(index) < size) {
-      throw std::out_of_range(fmt::format("tried to peek {} but only {} left", size, bytes_to_read_from_index(index)));
+      return Error::format("tried to peek {} but only {} left", size, bytes_to_read_from_index(index));
     }
     if (index.second + size <= buffer_len) {
       memcpy(s, get_ptr(index), size);
@@ -249,7 +253,7 @@ public:
       advance_index(index, num_in_buffer);
       peek((char*)s + num_in_buffer, size - num_in_buffer, index);
     }
-    return true;
+    return success();
   }
 
   /*
@@ -382,4 +386,4 @@ inline mb_peek_datastream<buffer_len> message_buffer<buffer_len>::create_peek_da
   return mb_peek_datastream<buffer_len>(*this);
 }
 
-} // namespace tendermint::net::details
+} // namespace noir::net::detail
