@@ -79,6 +79,7 @@ public:
   std::shared_ptr<tcp::socket> socket; // only accessed through strand after construction
 
   message_buffer<1024 * 1024> pending_message_buffer;
+  message_buffer<1024 * 1024> decrypted_message_buffer;
   std::atomic<std::size_t> outstanding_read_bytes{0}; // accessed only from strand threads
 
   queued_buffer buffer_queue;
@@ -136,16 +137,15 @@ public:
 
   std::shared_ptr<secret_connection> secret_conn{};
   std::function<Result<void>(std::shared_ptr<Bytes>)> cb_current_task;
-  Result<std::shared_ptr<Bytes>> get_pending_frame(int idx = 0, bool is_peek = false);
   void start_handshake();
   void read_a_message(std::function<void(std::shared_ptr<Bytes>)>);
   void read_a_secret_message();
   void shared_eph_pub_key(std::shared_ptr<Bytes>);
   Result<int> write_msg(const Bytes&, bool use_secret_conn = true);
-  bool process_next_message(uint32_t total_message_bytes);
+  bool process_next_message();
   Result<void> task_authenticate(std::shared_ptr<Bytes>);
   Result<void> task_node_info(std::shared_ptr<Bytes>);
-  Result<void> task_discard(std::shared_ptr<Bytes>);
+  Result<void> task_process_message(std::shared_ptr<Bytes>);
   void send_message(const ::tendermint::p2p::PacketPing&);
   void send_message(const ::tendermint::p2p::PacketPong&);
   void send_message(const ::tendermint::p2p::PacketMsg&);
@@ -843,6 +843,7 @@ void connection::connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::re
   }
   connecting = true;
   pending_message_buffer.reset();
+  decrypted_message_buffer.reset();
   buffer_queue.clear_out_queue();
   boost::asio::async_connect(*socket, endpoints,
     boost::asio::bind_executor(strand,
@@ -1043,33 +1044,6 @@ void connection::check_heartbeat(tstamp current_time) {
   send_message(::tendermint::p2p::PacketPing{});
 }
 
-Result<std::shared_ptr<Bytes>> connection::get_pending_frame(int idx, bool is_peek) {
-  Bytes sealed_frame(sealed_frame_size);
-  std::copy(pending_message_buffer.read_ptr() + (sealed_frame_size * idx),
-    pending_message_buffer.read_ptr() + (sealed_frame_size * (idx + 1)), sealed_frame.begin());
-  auto ok = secret_conn->read(sealed_frame, is_peek);
-  if (!ok)
-    return Error::format("getting pending frame failed: idx={} msg={}", idx, ok.error().message());
-  return ok.value().second;
-}
-
-std::pair<varuint64, int> parse_uvarint(const std::shared_ptr<Bytes>& bz) {
-  std::make_unsigned_t<uint64_t> val = 0;
-  auto max_len = (sizeof(uint64_t) * 8 + 6) / 7;
-  int i = 0;
-  varuint64 msg_len = 0;
-  for (; i < max_len - 1; ++i) {
-    uint8_t c = bz->at(i);
-    val |= uint64_t(c & 0x7f) << (i * 7);
-    if (!(c & 0x80)) {
-      msg_len = val;
-      i++;
-      break;
-    }
-  }
-  return {msg_len, i};
-}
-
 void connection::start_handshake() {
   /// requires node_info and priv_key of local node
   /// start timeout for handshake, which defaults to 20s (configurable)
@@ -1086,7 +1060,7 @@ void connection::start_handshake() {
 
   // Exchange loc_eph_pub
   Bytes bz(secret_conn->loc_eph_pub.size());
-  std::copy(secret_conn->loc_eph_pub.begin(), secret_conn->loc_eph_pub.end(), bz.data());
+  std::memcpy(bz.data(), secret_conn->loc_eph_pub.data(), bz.size());
   auto my_msg = consensus::cdc_encode(bz);
   write_msg(my_msg, false); // send; use non-secret connection
   read_a_message([conn = shared_from_this()](
@@ -1125,8 +1099,7 @@ void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) 
                   conn->pending_message_buffer.advance_read_ptr(message_header_bytes);
                   conn->consecutive_immediate_connection_close = 0;
                   auto new_message = std::make_shared<Bytes>(message_length);
-                  std::copy(conn->pending_message_buffer.read_ptr(),
-                    conn->pending_message_buffer.read_ptr() + message_length, new_message->data());
+                  std::memcpy(new_message->data(), conn->pending_message_buffer.read_ptr(), message_length);
                   conn->pending_message_buffer.advance_read_ptr(message_length);
                   cb(new_message);
                   return;
@@ -1179,7 +1152,6 @@ void connection::read_a_secret_message() {
           // may have closed connection and cleared pending_message_buffer
           if (!conn->socket_is_open() || socket != conn->socket)
             return;
-
           bool close_connection{false};
           try {
             if (!ec) {
@@ -1195,33 +1167,21 @@ void connection::read_a_secret_message() {
                   conn->outstanding_read_bytes = sealed_frame_size - bytes_in_buffer;
                   break;
                 } else {
-
-                  std::shared_ptr<Bytes> frame{};
-                  if (auto ok = conn->get_pending_frame(0, true); !ok) {
-                    wlog("read_a_secret_message: ${msg}", ("msg", ok.error().message()));
+                  Bytes sealed_frame(sealed_frame_size);
+                  std::memcpy(sealed_frame.data(), conn->pending_message_buffer.read_ptr(), sealed_frame_size);
+                  if (auto ok = conn->secret_conn->read(sealed_frame); (!ok)) {
+                    elog("getting pending frame failed");
                     throw;
                   } else {
-                    frame = ok.value();
+                    auto frame = ok.value().second;
+                    std::copy(frame->begin(), frame->end(), conn->decrypted_message_buffer.write_ptr());
+                    conn->decrypted_message_buffer.advance_write_ptr(frame->size());
                   }
-                  auto [message_length, message_header_bytes] = parse_uvarint(frame);
-                  int64_t required_bytes = data_max_size - message_header_bytes - message_length;
-                  auto frame_count{1};
-                  if (required_bytes < 0) {
-                    frame_count += (-required_bytes / data_max_size) + 1;
-                  }
-                  auto total_message_bytes = sealed_frame_size * frame_count;
+                  conn->pending_message_buffer.advance_read_ptr(sealed_frame_size);
+                  conn->latest_msg_time = get_time();
 
-                  if (bytes_in_buffer >= total_message_bytes) {
-                    if (!conn->process_next_message(total_message_bytes))
-                      throw;
-                  } else {
-                    auto outstanding_message_bytes = total_message_bytes - bytes_in_buffer;
-                    auto available_buffer_bytes = conn->pending_message_buffer.bytes_to_write();
-                    if (outstanding_message_bytes > available_buffer_bytes)
-                      conn->pending_message_buffer.add_space(outstanding_message_bytes - available_buffer_bytes);
-                    conn->outstanding_read_bytes = outstanding_message_bytes;
-                    break;
-                  }
+                  if (!conn->process_next_message())
+                    throw;
                 }
               }
               conn->read_a_secret_message();
@@ -1298,7 +1258,7 @@ Result<int> connection::write_msg(const Bytes& bz, bool use_secret_conn) {
       return Error::format("failed to convert message to encrypted ones");
     for (auto& msg : ok.value().second) {
       auto temp_buff = std::make_shared<std::vector<char>>(msg->size());
-      std::copy(msg->begin(), msg->end(), temp_buff->begin());
+      std::memcpy(temp_buff->data(), msg->data(), msg->size());
       enqueue_buffer(temp_buff, close_after_send);
     }
     return ok.value().first;
@@ -1308,39 +1268,23 @@ Result<int> connection::write_msg(const Bytes& bz, bool use_secret_conn) {
   return send_buffer->size();
 }
 
-bool connection::process_next_message(uint32_t total_message_bytes) {
-  latest_msg_time = get_time();
-  std::shared_ptr<Bytes> frame{};
-  if (auto ok = get_pending_frame(); !ok) {
-    elog("unable to read first pending frame");
-    return false;
-  } else {
-    frame = ok.value();
-  }
-  auto [message_length, message_header_bytes] = parse_uvarint(frame);
+bool connection::process_next_message() {
+  auto bytes_available = decrypted_message_buffer.bytes_to_read();
+  if (bytes_available < 10)
+    return true;
+  varuint64 message_length = 0;
+  mb_peek_datastream ds(decrypted_message_buffer);
+  auto message_header_bytes = read_uleb128(ds, message_length);
+  if (bytes_available < message_header_bytes + message_length)
+    return true;
   auto bz = std::make_shared<Bytes>(message_length);
-  auto message_read{0};
-  std::memcpy(bz->data(), frame->data() + message_header_bytes, message_length);
-  message_read += frame->size();
-
-  // int idx{1};
-  // while (message_read != message_length + message_header_bytes) {
-  //   if (auto ok = get_pending_frame(idx); !ok) {
-  //     elog("unable to read pending frame: ${idx}", ("idx", idx));
-  //     return false;
-  //   } else {
-  //     std::copy(ok.value().begin(), ok.value().end(), bz.begin() + message_read);
-  //     message_read += ok.value().size();
-  //     idx++;
-  //   }
-  // }
-  // wlog(fmt::format("NEW MESSAGE: size={}", message_length));
-  pending_message_buffer.advance_read_ptr(total_message_bytes);
+  std::memcpy(bz->data(), decrypted_message_buffer.read_ptr() + message_header_bytes, message_length);
+  decrypted_message_buffer.advance_read_ptr(message_header_bytes + message_length);
   if (auto ok = cb_current_task(bz); !ok) {
     elog(ok.error().message());
     return false;
   }
-  return true;
+  return process_next_message();
 }
 
 Result<void> connection::task_authenticate(std::shared_ptr<Bytes> bz) {
@@ -1350,7 +1294,7 @@ Result<void> connection::task_authenticate(std::shared_ptr<Bytes> bz) {
   m.key = pb.pub_key().ed25519();
   m.sig = pb.sig();
   secret_conn->shared_auth_sig(m);
-  wlog(fmt::format("secret_conn: is_authorized={}", secret_conn->is_authorized));
+  dlog(fmt::format("secret_conn: is_authorized={}", secret_conn->is_authorized));
   if (!secret_conn->is_authorized)
     return Error::format("failed to establish a secret_connection");
 
@@ -1376,23 +1320,22 @@ Result<void> connection::task_node_info(std::shared_ptr<Bytes> bz) {
       plugin_interface::peer_status_info{to_hex(conn_node_id), peer_status::up}));
 
   cb_current_task = [conn = shared_from_this()](
-                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_discard(msg); };
+                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_process_message(msg); };
   return success();
 }
 
-Result<void> connection::task_discard(std::shared_ptr<Bytes> bz) {
-  ilog(fmt::format("discard a message: size={}", bz->size()));
-
+Result<void> connection::task_process_message(std::shared_ptr<Bytes> bz) {
+  dlog(fmt::format("process a message: size={}", bz->size()));
   auto pb_packet = noir::codec::protobuf::decode<::tendermint::p2p::Packet>(*bz);
   if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketPing) {
-    ilog(" >> PING");
+    dlog(" >> PING");
     send_message(::tendermint::p2p::PacketPong{});
-    ilog(" << PONG");
+    dlog(" << PONG");
   } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketPong) {
-    ilog(" >> PONG");
+    dlog(" >> PONG");
   } else if (pb_packet.sum_case() == tendermint::p2p::Packet::kPacketMsg) {
     const auto& msg = pb_packet.packet_msg();
-    ilog(fmt::format(" >> MSG : channel_id={} eof={} data={}", msg.channel_id(), msg.eof(), to_hex(msg.data())));
+    dlog(fmt::format(" >> MSG : channel_id={} eof={} data={}", msg.channel_id(), msg.eof(), to_hex(msg.data())));
     auto new_envelope = std::make_shared<envelope>();
     new_envelope->from = to_hex(conn_node_id);
     new_envelope->id = static_cast<channel_id>(msg.channel_id());

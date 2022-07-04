@@ -148,8 +148,8 @@ Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> secret_connection::w
     auto chunk_length = chunk.size();
     const uint32_t payload_size = chunk_length;
     const char* const header = reinterpret_cast<const char* const>(&payload_size);
-    std::copy(header, header + 3, frame.data());
-    std::copy(chunk.begin(), chunk.end(), frame.data() + 4);
+    std::memcpy(frame.data(), header, 4);
+    std::memcpy(frame.data() + 4, chunk.data(), chunk.size());
 
     // Encrypt frame
     unsigned long long ciphertext_len{};
@@ -178,11 +178,11 @@ Result<std::pair<int, std::shared_ptr<Bytes>>> secret_connection::read(const Byt
     recv_nonce.increment();
 
   uint32_t chunk_length;
-  std::memcpy(&chunk_length, frame.data(), 4);
+  std::memcpy(&chunk_length, frame.data(), data_len_size);
   if (chunk_length > data_max_size)
     return Error::format("chunk_length is greater than data_max_size");
   auto chunk = std::make_shared<Bytes>(chunk_length);
-  std::copy(frame.begin() + data_len_size, frame.begin() + data_len_size + chunk_length, chunk->data());
+  std::memcpy(chunk->data(), frame.data() + data_len_size, chunk_length);
   return {chunk_length, chunk};
 }
 
