@@ -28,7 +28,7 @@ auto RouterOptions::validate() -> Result<void> {
     return Error::format("queue type {} is not supported", queue_type);
   }
 
-  if (incoming_connection_window == std::chrono::milliseconds{0}) {
+  if (incoming_connection_window.count() == 0) {
     incoming_connection_window = std::chrono::milliseconds{100};
   }
   if (max_incoming_connection_attempts == 0) {
@@ -38,8 +38,6 @@ auto RouterOptions::validate() -> Result<void> {
 }
 
 auto Router::start(Chan<std::monostate>& done) -> asio::awaitable<Result<void>> {
-  // TODO: setupQueueFactory
-
   auto res = co_await transport->listen(endpoint);
   if (res.has_error()) {
     co_return res.error();
@@ -83,7 +81,7 @@ auto Router::dial_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
   }
 
   for (;;) {
-    auto dial_res = peer_manager->dial_next(done);
+    auto dial_res = co_await peer_manager->dial_next(done);
     if (dial_res.has_error() && dial_res.error() == err_canceled) {
       break;
     }
@@ -116,7 +114,7 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
     }
     // TODO: logger
     // r.logger.Debug("failed to dial peer", "peer", address, "err", err)
-    auto failed_res = peer_manager->dial_failed(done, address);
+    auto failed_res = co_await peer_manager->dial_failed(done, address);
     if (failed_res.has_error()) {
       // TODO: logger
       // r.logger.Error("failed to report dial failure", "peer", address, "err", err)
@@ -133,7 +131,7 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
     } else {
       // TODO
       // r.logger.Error("failed to handshake with peer", "peer", address, "err", err)
-      auto failed_res = peer_manager->dial_failed(done, address);
+      auto failed_res = co_await peer_manager->dial_failed(done, address);
       if (failed_res.has_error()) {
         // TODO: logger
         // r.logger.Error("failed to report dial failure", "peer", address, "err", err)
@@ -143,7 +141,8 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
     }
   }
 
-  auto run_res = run_with_peer_mutex([&]() -> Result<void> { return peer_manager->dialed(address); });
+  auto run_res = co_await run_with_peer_mutex(
+    [&]() -> asio::awaitable<Result<void>> { co_return co_await peer_manager->dialed(address); });
   if (run_res.has_error()) {
     // TODO
     // r.logger.Error("failed to dial peer", "op", "outgoing/dialing", "peer", address.NodeID, "err", err)
@@ -201,8 +200,8 @@ auto Router::dial_peer(Chan<std::monostate>& done, const std::shared_ptr<NodeAdd
       // r.logger.Debug("dialed peer", "peer", address.NodeID, "endpoint", endpoint)
       co_return dial_res.value();
     }
-    co_return Error("all endpoints failed");
   }
+  co_return Error("all endpoints failed");
 }
 
 auto Router::num_concurrent_dials() const -> int32_t {
@@ -306,8 +305,9 @@ auto Router::open_connection(noir::Chan<std::monostate>& done, std::shared_ptr<M
     co_return;
   }
 
-  auto run_res =
-    run_with_peer_mutex([&, node_id = peer_info.node_id]() -> Result<void> { return peer_manager->accepted(node_id); });
+  auto run_res = co_await run_with_peer_mutex([&, node_id = peer_info.node_id]() -> asio::awaitable<Result<void>> {
+    co_return co_await peer_manager->accepted(node_id);
+  });
   if (run_res.has_error()) {
     // TODO: logger
     // r.logger.Error("failed to accept connection", "op", "incoming/accepted", "peer", peerInfo.NodeID, "err", err)
@@ -364,9 +364,10 @@ auto Router::handshake_peer(Chan<std::monostate>& done,
   co_return std::make_tuple(peer_info, success());
 }
 
-auto Router::run_with_peer_mutex(std::function<noir::Result<void>(void)>&& fn) -> noir::Result<void> {
+auto Router::run_with_peer_mutex(std::function<asio::awaitable<Result<void>>(void)>&& fn)
+  -> asio::awaitable<noir::Result<void>> {
   std::unique_lock lock(peer_mtx);
-  return fn();
+  co_return co_await fn();
 }
 
 // routePeer routes inbound and outbound messages between a peer and the reactor channels.
@@ -375,7 +376,7 @@ auto Router::run_with_peer_mutex(std::function<noir::Result<void>(void)>&& fn) -
 auto Router::route_peer(
   Chan<std::monostate>& done, const NodeId& peer_id, std::shared_ptr<MConnConnection>& conn, ChannelIdSet&& channels)
   -> asio::awaitable<void> {
-  peer_manager->ready(done, peer_id, channels);
+  co_await peer_manager->ready(done, peer_id, channels);
 
   auto send_queue = get_or_make_queue(peer_id, channels);
 
@@ -470,7 +471,7 @@ auto Router::receive_peer(Chan<std::monostate>& done, const NodeId& peer_id, std
 }
 
 // send_peer sends queued messages to a peer.
-auto send_peer(Chan<std::monostate>& done,
+auto Router::send_peer(Chan<std::monostate>& done,
   const NodeId& peer_id,
   std::shared_ptr<MConnConnection>& conn,
   std::shared_ptr<FifoQueue>& peer_queue) -> asio::awaitable<Result<void>> {
@@ -633,10 +634,10 @@ auto Router::route_channel(Chan<std::monostate>& done,
 
       if (peer_error->fatal || max_peer_capacity) {
         // if the error is fatal or all peer slots are in use, we can error (disconnect) from the peer.
-        peer_manager->errored(peer_error->node_id, peer_error->err);
+        co_await peer_manager->errored(peer_error->node_id, peer_error->err);
       } else {
         // this just decrements the peer score.
-        peer_manager->process_peer_event(done, PeerUpdate{.node_id = peer_error->node_id, .status = peer_status_bad});
+        peer_manager->process_peer_event(done, std::make_shared<PeerUpdate>(peer_error->node_id, peer_status_bad));
       }
     } else if (res.index() == 2) {
       co_return std::get<2>(res).error();

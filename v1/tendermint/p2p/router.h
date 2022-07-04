@@ -9,7 +9,7 @@
 #include <tendermint/p2p/address.h>
 #include <tendermint/p2p/channel.h>
 #include <tendermint/p2p/conn/connection.h>
-#include <tendermint/p2p/peer_manager.h>
+#include <tendermint/p2p/peermanager.h>
 #include <tendermint/p2p/queue.h>
 #include <tendermint/p2p/transport_mconn.h>
 #include <tendermint/p2p/types.h>
@@ -114,7 +114,8 @@ private:
     const NodeId& peer_id,
     std::shared_ptr<MConnConnection>& conn,
     std::shared_ptr<FifoQueue>& peer_queue) -> boost::asio::awaitable<noir::Result<void>>;
-  auto run_with_peer_mutex(std::function<noir::Result<void>(void)>&& fn) -> noir::Result<void>;
+  auto run_with_peer_mutex(std::function<boost::asio::awaitable<noir::Result<void>>(void)>&& fn)
+    -> boost::asio::awaitable<noir::Result<void>>;
 
 private:
   boost::asio::io_context& io_context;
