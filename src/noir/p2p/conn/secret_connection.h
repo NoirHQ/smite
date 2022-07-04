@@ -86,8 +86,8 @@ struct secret_connection {
 
   Bytes derive_secrets(Bytes32& dh_secret);
 
-  Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> write(const Bytes& data);
-  Result<std::pair<int, std::shared_ptr<Bytes>>> read(const Bytes& data, bool is_peek = false);
+  Result<std::pair<int, std::vector<std::shared_ptr<Bytes>>>> write(std::span<unsigned char> data);
+  Result<std::shared_ptr<Bytes>> read(std::span<unsigned char> data, bool is_peek = false);
 };
 
 } // namespace noir::p2p

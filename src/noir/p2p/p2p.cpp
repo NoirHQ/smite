@@ -124,13 +124,14 @@ public:
   const std::string peer_name();
 
   void enqueue(const envelope& msg);
-  void enqueue_buffer(
-    const std::shared_ptr<std::vector<char>>& send_buffer, go_away_reason close_after_send, bool to_sync_queue = false);
+  void enqueue_buffer(const std::shared_ptr<std::vector<unsigned char>>& send_buffer,
+    go_away_reason close_after_send,
+    bool to_sync_queue = false);
   void flush_queues();
 
   void cancel_wait();
 
-  void queue_write(const std::shared_ptr<std::vector<char>>& buff,
+  void queue_write(const std::shared_ptr<std::vector<unsigned char>>& buff,
     std::function<void(boost::system::error_code, std::size_t)> callback,
     bool to_sync_queue = false);
   void do_queue_write();
@@ -948,7 +949,7 @@ void connection::enqueue(const envelope& m) {
 }
 
 void connection::enqueue_buffer(
-  const std::shared_ptr<std::vector<char>>& send_buffer, go_away_reason close_after_send, bool to_sync_queue) {
+  const std::shared_ptr<std::vector<unsigned char>>& send_buffer, go_away_reason close_after_send, bool to_sync_queue) {
   connection_ptr self = shared_from_this();
   queue_write(
     send_buffer,
@@ -965,7 +966,7 @@ void connection::enqueue_buffer(
     to_sync_queue);
 }
 
-void connection::queue_write(const std::shared_ptr<vector<char>>& buff,
+void connection::queue_write(const std::shared_ptr<vector<unsigned char>>& buff,
   std::function<void(boost::system::error_code, std::size_t)> callback,
   bool to_sync_queue) {
   if (!buffer_queue.add_write_queue(buff, callback, to_sync_queue)) {
@@ -1167,13 +1168,13 @@ void connection::read_a_secret_message() {
                   conn->outstanding_read_bytes = sealed_frame_size - bytes_in_buffer;
                   break;
                 } else {
-                  Bytes sealed_frame(sealed_frame_size);
-                  std::memcpy(sealed_frame.data(), conn->pending_message_buffer.read_ptr(), sealed_frame_size);
-                  if (auto ok = conn->secret_conn->read(sealed_frame); (!ok)) {
+                  if (auto ok = conn->secret_conn->read(std::span<unsigned char>(
+                        reinterpret_cast<unsigned char*>(conn->pending_message_buffer.read_ptr()), sealed_frame_size));
+                      (!ok)) {
                     elog("getting pending frame failed");
                     throw;
                   } else {
-                    auto frame = ok.value().second;
+                    auto frame = ok.value();
                     std::copy(frame->begin(), frame->end(), conn->decrypted_message_buffer.write_ptr());
                     conn->decrypted_message_buffer.advance_write_ptr(frame->size());
                   }
@@ -1245,19 +1246,19 @@ Result<int> connection::write_msg(const Bytes& bz, bool use_secret_conn) {
   datastream<unsigned char> t_ds(t_buffer);
   auto header_size = write_uleb128(t_ds, payload_size);
   const size_t buffer_size = header_size + payload_size;
-  auto send_buffer = std::make_shared<std::vector<char>>(buffer_size);
+  auto send_buffer = std::make_shared<std::vector<unsigned char>>(buffer_size);
 
-  datastream<unsigned char> ds(reinterpret_cast<unsigned char*>(send_buffer->data()), buffer_size);
+  datastream<unsigned char> ds(send_buffer->data(), buffer_size);
   write_uleb128(ds, payload_size);
   ds.write(bz.data(), payload_size);
 
   if (use_secret_conn) {
     // must use encrypted channel
-    auto ok = secret_conn->write(Bytes{send_buffer->begin(), send_buffer->end()});
+    auto ok = secret_conn->write(std::span<unsigned char>(send_buffer->data(), send_buffer->size()));
     if (!ok)
       return Error::format("failed to convert message to encrypted ones");
     for (auto& msg : ok.value().second) {
-      auto temp_buff = std::make_shared<std::vector<char>>(msg->size());
+      auto temp_buff = std::make_shared<std::vector<unsigned char>>(msg->size());
       std::memcpy(temp_buff->data(), msg->data(), msg->size());
       enqueue_buffer(temp_buff, close_after_send);
     }
