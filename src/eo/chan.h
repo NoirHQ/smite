@@ -15,7 +15,11 @@ struct ReceiveOp;
 
 template<typename T = std::monostate>
 struct chan : public boost::asio::experimental::concurrent_channel<void(boost::system::error_code, T)> {
-  using boost::asio::experimental::concurrent_channel<void(boost::system::error_code, T)>::concurrent_channel;
+private:
+  using super = boost::asio::experimental::concurrent_channel<void(boost::system::error_code, T)>;
+
+public:
+  using super::super;
 
   template<typename U>
   auto operator<<(U&& message) -> SendOp<T> {
@@ -25,16 +29,23 @@ struct chan : public boost::asio::experimental::concurrent_channel<void(boost::s
   auto operator*() -> ReceiveOp<T> {
     return {*this};
   }
+
+  void close() {
+    if (!super::is_open()) {
+      throw std::runtime_error("panic: close of closed channel");
+    }
+    super::close();
+  }
 };
 
 template<typename T = std::monostate>
 auto make_chan(size_t s = 0) -> chan<T> {
-  return chan<T>{runtime::executor, s};
+  return chan<T>{runtime::execution_context, s};
 }
 
 template<typename T = std::monostate>
 auto make_shared_chan(size_t s = 0) -> std::shared_ptr<chan<T>> {
-  return std::make_shared<chan<T>>(runtime::executor, s);
+  return std::make_shared<chan<T>>(runtime::execution_context, s);
 }
 
 template<typename T>
@@ -46,15 +57,24 @@ struct SendOp {
   // FIXME: there is no way to check whether a message can be sent via channel
   // try_send() in ready stage, but turn off sent flag during process().
   auto ready() -> bool {
+    if (!sent && !ch.is_open()) {
+      return true;
+    }
     return sent ? sent : (sent = ch.try_send(boost::system::error_code{}, value));
   }
 
   auto wait() -> boost::asio::awaitable<bool> {
+    if (!ch.is_open()) {
+      throw std::runtime_error("panic: send on closed channel");
+    }
     auto res = co_await ch.async_send(boost::system::error_code{}, value, eoroutine);
     co_return (sent = !std::get<0>(res).value());
   }
 
   auto process() -> boost::asio::awaitable<bool> {
+    if (!sent && !ch.is_open()) {
+      throw std::runtime_error("panic: send on closed channel");
+    }
     co_return std::exchange(sent, false);
   }
 
@@ -69,11 +89,11 @@ struct ReceiveOp {
   std::optional<T> processed;
 
   auto ready() -> bool {
-    return ch.ready();
+    return ch.ready() || !ch.is_open();
   }
 
   auto wait() -> boost::asio::awaitable<bool> {
-    if (processed) {
+    if (processed || !ch.is_open()) {
       co_return true;
     }
     // XXX: caching received value not to lose by coroutine cancellation
