@@ -6,6 +6,7 @@ add_library(tendermint_p2p STATIC
   conn/secret_connection.cpp
   transport_mconn.cpp
   router.cpp
+  peermanager.cpp
 )
 target_include_directories(tendermint_p2p PUBLIC ${NOIR_SOURCE_DIR} ${Boost_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR})
 target_link_libraries(tendermint_p2p
