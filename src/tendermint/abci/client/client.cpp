@@ -5,39 +5,44 @@
 //
 #include <tendermint/abci/client/client.h>
 
-namespace tendermint::abci {
+namespace noir::abci {
 
 void ReqRes::set_callback(std::function<void(Response*)> cb) {
-  std::unique_lock _(mtx);
-  if (done) {
+  std::unique_lock _{mtx};
+
+  if (callback_invoked) {
     _.unlock();
     cb(response.get());
     return;
   }
+
   this->cb = cb;
-  _.unlock();
 }
 
-void ReqRes::invoke_callback() const {
-  std::scoped_lock _(mtx);
+void ReqRes::invoke_callback() {
+  std::unique_lock _{mtx};
+
   if (cb) {
     cb(response.get());
   }
+  callback_invoked = true;
 }
 
-std::function<void(Response*)> ReqRes::get_callback() const {
-  std::scoped_lock _(mtx);
+auto ReqRes::get_callback() -> std::function<void(Response*)>& {
+  std::unique_lock _{mtx};
   return cb;
 }
 
-void ReqRes::set_done() {
-  std::scoped_lock _(mtx);
-  done = true;
+void ReqRes::add(int delta) {
+  wg.add(delta);
 }
 
-void ReqRes::wait() const {
-  while (!done) {
-  }
+void ReqRes::done() {
+  wg.done();
 }
 
-} // namespace tendermint::abci
+void ReqRes::wait() {
+  wg.wait();
+}
+
+} // namespace noir::abci

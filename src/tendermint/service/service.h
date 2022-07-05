@@ -5,65 +5,76 @@
 //
 #pragma once
 #include <noir/log/log.h>
-#include <tendermint/common/common.h>
+#include <eo/core.h>
 #include <atomic>
 
-namespace tendermint::service {
+namespace noir::service {
 
-const error err_already_started = "already started";
-const error err_already_stopped = "already stopped";
-const error err_not_started = "not started";
+extern const Error err_already_started;
+extern const Error err_already_stopped;
+extern const Error err_not_started;
+
+template<typename T>
+concept Service = requires (T v) {
+  { v.start() } -> std::same_as<Result<void>>;
+  { v.on_start() } -> std::same_as<Result<void>>;
+  { v.stop() } -> std::same_as<Result<void>>;
+  v.on_stop();
+  { v.reset() } -> std::same_as<Result<void>>;
+  { v.on_reset() } -> std::same_as<Result<void>>;
+  { v.is_running() } -> std::same_as<bool>;
+  { v.quit() } -> std::same_as<eo::chan<>>;
+  { v.to_string() } -> std::same_as<const std::string&>;
+  v.set_logger(std::make_shared<log::Logger>());
+  v.wait();
+};
 
 // XXX: optimize atomic operations in memory order - relaxed?
 template<typename Derived>
-class Service {
+class BaseService {
 public:
-  // result<void> on_start() noexcept;
-  // void on_stop() noexcept;
-  // result<void> on_reset() noexcept;
-
-  result<void> start() noexcept {
+  Result<void> start() {
     bool started_expected = false;
     if (started.compare_exchange_strong(started_expected, true)) {
       if (stopped.load()) {
         noir_elog(logger.get(), "Not starting {} service -- already stopped", name);
         started.store(false);
-        return make_unexpected(err_already_stopped);
+        return err_already_stopped;
       }
       noir_ilog(logger.get(), "Starting {} service", name);
       auto res = static_cast<Derived*>(this)->on_start();
       if (!res) {
         started.store(false);
-        return make_unexpected(res.error());
+        return res.error();
       }
-      return {};
+      return success();
     }
     noir_ilog(logger.get(), "Not starting {} service -- already started", name);
-    return make_unexpected(err_already_started);
+    return err_already_started;
   }
 
-  result<void> stop() noexcept {
+  Result<void> stop() {
     bool stopped_expected = false;
     if (stopped.compare_exchange_strong(stopped_expected, true)) {
       if (!started.load()) {
         noir_elog(logger.get(), "Not stopping {} service -- has not been started yet", name);
         stopped.store(false);
-        return make_unexpected(err_not_started);
+        return err_not_started;
       }
       noir_ilog(logger.get(), "Stopping {} service", name);
       static_cast<Derived*>(this)->on_stop();
       // quit
-      return {};
+      return success();
     }
     noir_ilog(logger.get(), "Stopping {} service (already stopped)", name);
-    return make_unexpected(err_already_stopped);
+    return err_already_stopped;
   }
 
-  result<void> reset() noexcept {
+  Result<void> reset() {
     bool stopped_expected = true;
     if (!stopped.compare_exchange_strong(stopped_expected, false)) {
       noir_ilog(logger.get(), "Can't reset {} service, Not stopped", name);
-      return make_unexpected(fmt::format("can't reset running {}", name));
+      return Error::format("can't reset running {}", name);
     }
 
     bool started_expected = true;
@@ -79,16 +90,20 @@ public:
     return name;
   }
 
-  void set_logger(std::shared_ptr<log::logger> l) {
+  void set_logger(std::shared_ptr<log::Logger> l) {
     this->logger = l;
   }
 
   // wait
-  // quit
+
+  auto quit() -> eo::chan<>& {
+    return quit_;
+  }
 
 protected:
   std::string name;
-  std::shared_ptr<log::logger> logger = log::default_logger();
+  std::shared_ptr<log::Logger> logger = log::default_logger();
+  eo::chan<> quit_ = eo::make_chan();
 
 private:
   std::atomic_bool started;
@@ -96,4 +111,4 @@ private:
   // quit
 };
 
-} // namespace tendermint::service
+} // namespace noir::service
