@@ -1,5 +1,5 @@
-#include <tendermint/abci/client/socket_client.h>
 #include <noir/net/tcp_conn.h>
+#include <tendermint/abci/client/socket_client.h>
 
 using namespace noir;
 

@@ -26,8 +26,8 @@ protected:
   Conn(Executor&& ex, std::string_view address = {}): address(address), strand(ex) {}
 
   template<typename Executor>
-  requires (ExecutionContext<std::decay_t<Executor>>)
-  Conn(Executor&& ex, std::string_view address = {}): address(address), strand(ex.get_executor()) {}
+  requires(ExecutionContext<std::decay_t<Executor>>) Conn(Executor&& ex, std::string_view address = {})
+    : address(address), strand(ex.get_executor()) {}
 
   std::string address;
 
@@ -44,7 +44,8 @@ public:
   }
 
   template<ByteSequence T>
-  auto write(T&& buffer) -> boost::asio::awaitable<Result<void>> requires (!std::is_same_v<T, boost::asio::const_buffer>) {
+  auto write(T&& buffer) -> boost::asio::awaitable<Result<void>>
+  requires(!std::is_same_v<T, boost::asio::const_buffer>) {
     auto buf = boost::asio::const_buffer(buffer.data(), buffer.size());
     auto res = co_await write(buf);
     co_return res;
@@ -86,8 +87,8 @@ public:
       co_return bufs.error();
     }
 
-    auto bytes_transferred = co_await boost::asio::async_read(*static_cast<Derived*>(this)->socket,
-      bufs.value(), completion_condition, as_result(boost::asio::use_awaitable));
+    auto bytes_transferred = co_await boost::asio::async_read(
+      *static_cast<Derived*>(this)->socket, bufs.value(), completion_condition, as_result(boost::asio::use_awaitable));
     if (!bytes_transferred)
       co_return bytes_transferred.error();
 

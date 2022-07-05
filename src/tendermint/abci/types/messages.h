@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/core/core.h>
 #include <noir/codec/protobuf.h>
 #include <noir/common/varint.h>
+#include <noir/core/core.h>
 #include <tendermint/abci/types.pb.h>
 #include <eo/core.h>
 
@@ -59,4 +59,4 @@ func<Result<int>> read_message(Reader&& r, T&& msg) {
   co_return *n + l.value;
 }
 
-} // namespace tendermint::abci
+} // namespace noir::abci

@@ -57,7 +57,9 @@ public:
           if (must_connect) {
             co_return ok.error();
           }
-          noir_elog(service_type::logger.get(), fmt::format("abci::SocketClient failed to connect to {}.  Retrying after {}s...", addr, dial_retry_interval_seconds)/* , "err", ok.error() */);
+          noir_elog(service_type::logger.get(),
+            fmt::format("abci::SocketClient failed to connect to {}.  Retrying after {}s...", addr,
+              dial_retry_interval_seconds) /* , "err", ok.error() */);
           co_await time::sleep(std::chrono::seconds(dial_retry_interval_seconds));
           continue;
         }
@@ -176,9 +178,9 @@ public:
       case 0:
         co_await select.process<0>();
         co_return error();
-      /*
-      case 1:
-      */
+        /*
+        case 1:
+        */
       }
       co_return success();
     });
@@ -369,7 +371,8 @@ private:
 
     auto reqres = req_sent.front();
     if (!res_matches_req(reqres->request.get(), res.get())) {
-      return Error::format("unexpected {} when response to {} expected", res->value_case(), reqres->request->value_case() + 1);
+      return Error::format(
+        "unexpected {} when response to {} expected", res->value_case(), reqres->request->value_case() + 1);
     }
 
     reqres->response = std::move(res);
