@@ -15,8 +15,7 @@ private:
   using super = Conn<TcpConn>;
 
   template<typename Executor>
-  TcpConn(Executor&& ex, std::string_view address)
-    : super(ex, address), socket(new boost::asio::ip::tcp::socket(ex)) {}
+  TcpConn(Executor&& ex, std::string_view address): super(ex, address), socket(new boost::asio::ip::tcp::socket(ex)) {}
 
   TcpConn(boost::asio::ip::tcp::socket&& socket)
     : super(socket.get_executor()), socket(std::make_shared<boost::asio::ip::tcp::socket>(std::move(socket))) {
@@ -78,7 +77,6 @@ auto new_tcp_conn(T& ex, std::string_view address) {
   } else {
     return TcpConn::create(ex, address);
   }
-
 }
 
 auto new_tcp_conn(std::string_view address) {

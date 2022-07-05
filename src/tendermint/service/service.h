@@ -15,7 +15,7 @@ extern const Error err_already_stopped;
 extern const Error err_not_started;
 
 template<typename T>
-concept Service = requires (T v) {
+concept Service = requires(T v) {
   { v.start() } -> std::same_as<Result<void>>;
   { v.on_start() } -> std::same_as<Result<void>>;
   { v.stop() } -> std::same_as<Result<void>>;
