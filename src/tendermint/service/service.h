@@ -7,6 +7,7 @@
 #include <noir/log/log.h>
 #include <eo/core.h>
 #include <atomic>
+#include <concepts>
 
 namespace noir::service {
 
