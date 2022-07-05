@@ -80,6 +80,8 @@ struct state {
 
     state_.consensus_params_ = gen_doc.cs_params.value();
     state_.last_height_consensus_params_changed = gen_doc.initial_height;
+
+    state_.last_result_hash = merkle::get_empty_hash();
     return state_;
   }
 
