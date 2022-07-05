@@ -79,7 +79,7 @@ public:
   std::shared_ptr<tcp::socket> socket; // only accessed through strand after construction
 
   message_buffer<1024 * 1024> pending_message_buffer;
-  message_buffer<1024 * 1024> decrypted_message_buffer;
+  message_buffer<8192> decrypted_message_buffer;
   std::atomic<std::size_t> outstanding_read_bytes{0}; // accessed only from strand threads
 
   queued_buffer buffer_queue;
@@ -536,6 +536,18 @@ void p2p::plugin_initialize(const CLI::App& config) {
     // my->p2p_server_address = "0.0.0.0:9876"; // An externally accessible host:port for identifying this node.
     // Defaults to p2p-listen-endpoint
     my->thread_pool_size = 2; // number of threads to use
+
+    // setup node_info
+    auto abci_options = config.get_subcommand("abci");
+    my->my_node_info.protocol_version.p2p = 8;
+    my->my_node_info.protocol_version.block = 11;
+    my->my_node_info.protocol_version.app = 0;
+    my->my_node_info.listen_addr = "tcp://" + my->p2p_address;
+    my->my_node_info.version = "0.35.6";
+    my->my_node_info.channels = Bytes("402021222330386061626300");
+    my->my_node_info.moniker = abci_options->get_option("--moniker")->as<std::string>();
+    my->my_node_info.other.tx_index = "on";
+    my->my_node_info.other.rpc_address = "tcp://0.0.0.0:26657"; // FIXME : properly use other node_info
   }
   FC_LOG_AND_RETHROW()
 }
@@ -549,18 +561,9 @@ void p2p::plugin_startup() {
       auto node_id = from_hex(my->abci_plug->node_->node_key_->node_id);
       std::copy(node_id.begin(), node_id.end(), my->node_id.begin());
 
-      // setup node_info // TODO : read from config file
-      my->my_node_info.protocol_version.p2p = 8;
-      my->my_node_info.protocol_version.block = 11;
-      my->my_node_info.protocol_version.app = 0;
+      // finish setting up my node_info
+      my->my_node_info.network = my->abci_plug->node_->genesis_doc_->chain_id;
       my->my_node_info.node_id.id = my->abci_plug->node_->node_key_->node_id;
-      my->my_node_info.listen_addr = "tcp://0.0.0.0:26656";
-      my->my_node_info.network = "test-chain-Uz9YMU"; // Note : important to use the same network or connection will end
-      my->my_node_info.version = "0.35.6";
-      my->my_node_info.channels = Bytes("402021222330386061626300");
-      my->my_node_info.moniker = "roiui-BMP";
-      my->my_node_info.other.tx_index = "on";
-      my->my_node_info.other.rpc_address = "tcp://0.0.0.0:26657";
     } else {
       ilog("abci_plugin is not running; will be simply testing p2p activities");
       crypto::rand_bytes({my->node_id.data(), my->node_id.size()});
