@@ -25,6 +25,7 @@ public:
     abci_options->add_option("--mode", "Mode of Node: full | validator | seed (not supported)")
       ->check(CLI::IsMember({"full", "validator", "seed"}))
       ->default_val("validator");
+    abci_options->add_option("--moniker", "A custom human readable name for this node")->default_val("");
 
     auto bs_options = app_config.add_section("blocksync",
       "######################################################\n"
