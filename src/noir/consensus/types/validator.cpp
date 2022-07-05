@@ -3,6 +3,7 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/codec/protobuf.h>
 #include <noir/consensus/merkle/tree.h>
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/validation.h>
@@ -11,10 +12,18 @@
 
 namespace noir::consensus {
 
+Bytes validator::get_bytes() {
+  ::tendermint::types::SimpleValidator pb_v;
+  auto pk = pb_v.mutable_pub_key();
+  pk->set_ed25519({pub_key_.key.begin(), pub_key_.key.end()});
+  pb_v.set_voting_power(voting_power);
+  return codec::protobuf::encode(pb_v);
+}
+
 Bytes validator_set::get_hash() {
   merkle::bytes_list items;
-  for (const auto& val : validators) {
-    auto bz = encode(val);
+  for (auto& val : validators) {
+    auto bz = val.get_bytes();
     items.push_back(bz);
   }
   return merkle::hash_from_bytes_list(items);
