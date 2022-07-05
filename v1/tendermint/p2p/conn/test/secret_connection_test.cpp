@@ -8,8 +8,10 @@
 // Copyright (c) 2022 Haderech Pte. Ltd.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include <noir/common/base64.h>
+#include <noir/common/binary.h>
+#include <noir/net/tcp_conn.h>
 #include <catch2/catch_all.hpp>
-#include <tendermint/p2p/conn/base64.h>
 #include <tendermint/p2p/conn/merlin.h>
 #include <tendermint/p2p/conn/secret_connection.h>
 
@@ -26,7 +28,9 @@ TEST_CASE("SecretConnection: derive_secrets", "[tendermint][p2p][conn]") {
   auto priv_key_str =
     base64_decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
   Bytes loc_priv_key(priv_key_str.begin(), priv_key_str.end());
-  auto c = p2p::conn::SecretConnection::make_secret_connection(loc_priv_key);
+  boost::asio::io_context io_context{};
+  std::shared_ptr<net::Conn<net::TcpConn>> conn = noir::net::TcpConn::create("127.0.0.1:26658", io_context);
+  auto secret_conn = p2p::conn::SecretConnection::make_secret_connection(loc_priv_key, conn);
 
   auto tests = std::to_array<std::tuple<std::string, std::string, std::string, std::string>>({
     {"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03",
@@ -44,7 +48,7 @@ TEST_CASE("SecretConnection: derive_secrets", "[tendermint][p2p][conn]") {
   });
   std::for_each(tests.begin(), tests.end(), [&](auto& t) {
     Bytes32 dh_secret{std::get<0>(t)};
-    auto key = c->derive_secrets(dh_secret);
+    auto key = secret_conn->derive_secrets(dh_secret);
     CHECK(to_hex(std::span((const ByteType*)key.data(), 32)) == std::get<1>(t));
     CHECK(to_hex(std::span((const ByteType*)key.data() + 32, 32)) == std::get<2>(t));
     CHECK(to_hex(std::span((const ByteType*)key.data() + 64, 32)) == std::get<3>(t));
@@ -55,11 +59,14 @@ TEST_CASE("SecretConnection: verify key exchanges", "[tendermint][p2p][conn]") {
   auto priv_key_str_peer1 =
     base64_decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
   Bytes loc_priv_key_peer1(priv_key_str_peer1.begin(), priv_key_str_peer1.end());
-  auto c_peer1 = p2p::conn::SecretConnection::make_secret_connection(loc_priv_key_peer1);
+
+  boost::asio::io_context io_context{};
+  std::shared_ptr<net::Conn<net::TcpConn>> conn = noir::net::TcpConn::create("127.0.0.1:26658", io_context);
+  auto c_peer1 = p2p::conn::SecretConnection::make_secret_connection(loc_priv_key_peer1, conn);
   auto priv_key_str_peer2 =
     base64_decode("x1eX2WKe+mhZwO7PLVgLdMZ4Ucr4NfdBxMtD/59mOfmk8GO0T1p8YNpObegcTLZmqnK6ffVtjvWjDSSVgVwGAw==");
   Bytes loc_priv_key_peer2(priv_key_str_peer2.begin(), priv_key_str_peer2.end());
-  auto c_peer2 = p2p::conn::SecretConnection::make_secret_connection(loc_priv_key_peer2);
+  auto c_peer2 = p2p::conn::SecretConnection::make_secret_connection(loc_priv_key_peer2, conn);
 
   Bytes32 eph_pub_key_peer1 = c_peer1->loc_eph_pub;
   Bytes32 eph_pub_key_peer2 = c_peer2->loc_eph_pub;
@@ -235,4 +242,50 @@ TEST_CASE("SecretConnection: merlin transcript", "[tendermint][p2p][conn]") {
     reinterpret_cast<uint8_t*>(challenge_buf.data()),
     challenge_buf.size());
   CHECK(to_hex(challenge_buf) == "c8cc8d7b4b3320f6a7a813c480d8f1ebd9cfb6873417eb69a44b4ed91b27af10");
+}
+
+TEST_CASE("SecretConnection: libsodium - chacha20-poly1305", "[tendermint][p2p][conn]") {
+  const std::size_t data_len_size = 4;
+  const std::size_t data_max_size = 1024;
+  const std::size_t total_frame_size = data_len_size + data_max_size;
+  const std::size_t aead_size_overhead = 16;
+
+  Bytes32 key{"9fe4a5a73df12dbd8659b1d9280873fe993caefec6b0ebc2686dd65027148e03"};
+  std::string msg = "hello";
+
+  std::vector<unsigned char> msg_bytes(total_frame_size);
+  std::vector<unsigned char> encrypted(total_frame_size + aead_size_overhead);
+  unsigned long long int encrypted_size;
+
+  noir::LittleEndian::put_uint32(msg_bytes, msg.size());
+  std::copy(msg.begin(), msg.end(), msg_bytes.begin() + data_len_size);
+  tendermint::p2p::conn::Nonce96 nonce;
+  auto nonce_bytes = nonce.get();
+
+  crypto_aead_chacha20poly1305_ietf_encrypt(encrypted.data(),
+    &encrypted_size,
+    msg_bytes.data(),
+    msg_bytes.size(),
+    nullptr,
+    0,
+    nullptr,
+    reinterpret_cast<const unsigned char*>(nonce_bytes.data()),
+    reinterpret_cast<const unsigned char*>(key.data()));
+
+  std::vector<unsigned char> decrypted(total_frame_size);
+  unsigned long long decrypted_size;
+
+  crypto_aead_chacha20poly1305_ietf_decrypt(decrypted.data(),
+    &decrypted_size,
+    NULL,
+    reinterpret_cast<const unsigned char*>(encrypted.data()),
+    encrypted.size(),
+    nullptr,
+    0,
+    reinterpret_cast<const unsigned char*>(nonce_bytes.data()),
+    reinterpret_cast<const unsigned char*>(key.data()));
+
+  std::string decrypted_msg(decrypted.begin() + data_len_size, decrypted.begin() + data_len_size + msg.size());
+
+  CHECK(decrypted_msg == msg);
 }
