@@ -86,7 +86,7 @@ private:
     ChannelId ch_id,
     std::shared_ptr<noir::Chan<EnvelopePtr>> out_ch,
     std::shared_ptr<noir::Chan<PeerErrorPtr>> err_ch,
-    std::shared_ptr<google::protobuf::Message> wrapper) -> boost::asio::awaitable<noir::Result<void>>;
+    std::shared_ptr<google::protobuf::Message> wrapper) -> boost::asio::awaitable<void>;
   auto dial_peers(noir::Chan<std::monostate>& done) -> boost::asio::awaitable<void>;
   auto evict_peers(noir::Chan<std::monostate>& done) -> boost::asio::awaitable<void>;
   auto accept_peers(noir::Chan<std::monostate>& done, std::shared_ptr<MConnTransport>& transport)
@@ -101,9 +101,8 @@ private:
   auto get_or_make_queue(const NodeId& peer_id, ChannelIdSet& channels) -> std::shared_ptr<FifoQueue>;
   auto dial_peer(noir::Chan<std::monostate>& done, const std::shared_ptr<NodeAddress>& address)
     -> boost::asio::awaitable<noir::Result<std::shared_ptr<MConnConnection>>>;
-  auto handshake_peer(noir::Chan<std::monostate>& done,
-    std::shared_ptr<MConnConnection>& conn,
-    const NodeId& expected_id) -> boost::asio::awaitable<std::tuple<NodeInfo, noir::Result<void>>>;
+  auto handshake_peer(noir::Chan<std::monostate>& done, std::shared_ptr<MConnConnection>& conn, const NodeId& expect_id)
+    -> boost::asio::awaitable<noir::Result<NodeInfo>>;
   auto route_peer(noir::Chan<std::monostate>& done,
     const NodeId& peer_id,
     std::shared_ptr<MConnConnection>& conn,
