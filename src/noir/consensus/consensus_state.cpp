@@ -329,7 +329,7 @@ void consensus_state::update_to_state(state& state_) {
   }
 
   // Reset fields based on state.
-  rs.validators = state_.validators;
+  auto validators = state_.validators;
 
   if (state_.last_block_height == 0) {
     // very first commit should be empty
@@ -362,6 +362,7 @@ void consensus_state::update_to_state(state& state_) {
   else
     rs.start_time = cs_config.commit(rs.commit_time);
 
+  rs.validators = validators;
   rs.proposal = {};
   rs.proposal_block = {};
   rs.proposal_block_parts = {};
@@ -372,7 +373,7 @@ void consensus_state::update_to_state(state& state_) {
   rs.valid_round = -1;
   rs.valid_block = {};
   rs.valid_block_parts = {};
-  rs.votes = height_vote_set::new_height_vote_set(state_.chain_id, height, state_.validators);
+  rs.votes = height_vote_set::new_height_vote_set(state_.chain_id, height, validators);
   rs.commit_round = -1;
   rs.last_validators = state_.last_validators;
   rs.triggered_timeout_precommit = false;

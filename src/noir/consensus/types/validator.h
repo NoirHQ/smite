@@ -346,8 +346,11 @@ public:
     rescale_priorities(priority_window_size_factor * get_total_voting_power());
     shift_by_avg_proposer_priority();
 
-    sort(
-      validators.begin(), validators.end(), [](validator a, validator b) { return a.voting_power < b.voting_power; });
+    sort(validators.begin(), validators.end(), [](validator a, validator b) {
+      if (a.voting_power == b.voting_power)
+        return a.address < b.address;
+      return a.voting_power > b.voting_power;
+    });
   }
 
   /** \brief computes the proposer priority for the validators not present in the set based on
