@@ -59,9 +59,9 @@ enum block_id_flag {
 
 struct commit_sig {
   block_id_flag flag;
-  Bytes validator_address;
-  tstamp timestamp;
-  Bytes signature;
+  Bytes validator_address{};
+  tstamp timestamp{0};
+  Bytes signature{};
 
   static commit_sig new_commit_sig_absent() {
     return commit_sig{FlagAbsent};
@@ -95,7 +95,11 @@ struct commit_sig {
     auto ret = std::make_unique<::tendermint::types::CommitSig>();
     ret->set_block_id_flag(static_cast<::tendermint::types::BlockIDFlag>(c.flag));
     ret->set_validator_address({c.validator_address.begin(), c.validator_address.end()});
-    *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(c.timestamp);
+    if (c.timestamp == 0)
+      *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::SecondsToTimestamp(
+        ::google::protobuf::util::TimeUtil::kTimestampMinSeconds); // "0001-01-01T00:00:00Z"
+    else
+      *ret->mutable_timestamp() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(c.timestamp);
     ret->set_signature({c.signature.begin(), c.signature.end()});
     return ret;
   }
@@ -104,7 +108,8 @@ struct commit_sig {
     auto ret = std::make_shared<commit_sig>();
     ret->flag = (block_id_flag)pb.block_id_flag();
     ret->validator_address = {pb.validator_address().begin(), pb.validator_address().end()};
-    ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(pb.timestamp());
+    ret->timestamp = ::google::protobuf::util::TimeUtil::TimestampToMicroseconds(
+      pb.timestamp()); // TODO : probably need to handle 0 as in to_proto() above
     ret->signature = {pb.signature().begin(), pb.signature().end()};
     return ret;
   }
