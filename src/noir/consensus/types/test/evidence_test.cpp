@@ -99,7 +99,7 @@ TEST_CASE("evidence: verify generated hash", "[noir][consensus]") {
   dup->vote_b = v;
   evidence_list ev_list{{dup}};
   // std::cout << to_hex(ev_list.hash()) << std::endl;
-  CHECK(ev_list.hash() == from_hex("6155eea1423002c4a4cc3f4a2f7c2884213b64ace46d474ee68ee051ae57f828"));
+  CHECK(ev_list.hash() == from_hex("a0c76fed0143a4d3e6ee00022f475ca0ba7bc46ba27817ef65f90e1b6acaa69d"));
 }
 
 TEST_CASE("evidence: serialization using protobuf", "[noir][consensus]") {

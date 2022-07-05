@@ -277,9 +277,9 @@ TEST_CASE("secret_connection: write and read", "[noir][p2p]") {
     // std::cout << to_hex(w_buff) << std::endl;
 
     auto r_ok = c->read(w_buff);
-    auto r_buff = r_ok.value().second;
+    auto r_buff = r_ok.value();
     // std::cout << to_hex(r_buff) << std::endl;
-    CHECK(r_buff == bz);
+    CHECK(*r_buff == bz);
   }
 
   SECTION("big") {
@@ -291,8 +291,8 @@ TEST_CASE("secret_connection: write and read", "[noir][p2p]") {
     auto w_buff = *w_ok.value().second[0];
 
     auto r_ok = c->read(w_buff);
-    auto r_buff = r_ok.value().second;
-    CHECK(r_buff == bz);
+    auto r_buff = r_ok.value();
+    CHECK(*r_buff == bz);
   }
 
   SECTION("bigger") {
@@ -307,9 +307,9 @@ TEST_CASE("secret_connection: write and read", "[noir][p2p]") {
     int i{};
     for (auto& b : w_buffs) {
       auto r_ok = c->read(*b);
-      auto r_buff = r_ok.value().second;
-      std::copy(r_buff.begin(), r_buff.end(), restored.begin() + i);
-      i += r_ok->first;
+      auto r_buff = r_ok.value();
+      std::copy(r_buff->begin(), r_buff->end(), restored.begin() + i);
+      i += r_buff->size();
       // std::cout << i << " " << r_ok->first <<std::endl;
     }
     CHECK(restored == bz);
