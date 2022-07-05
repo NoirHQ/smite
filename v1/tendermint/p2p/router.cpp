@@ -39,7 +39,7 @@ auto RouterOptions::validate() -> Result<void> {
 
 auto Router::start(Chan<std::monostate>& done) -> asio::awaitable<Result<void>> {
   auto res = co_await transport->listen(endpoint);
-  if (res.has_error()) {
+  if (!res) {
     co_return res.error();
   }
 
@@ -60,6 +60,7 @@ auto Router::dial_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
   for (auto i = 0; i < num_concurrent_dials(); i++) {
     wg.add();
 
+    // TODO: get executor and run
     co_spawn(
       io_context,
       [&]() -> boost::asio::awaitable<void> {
@@ -82,7 +83,7 @@ auto Router::dial_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
 
   for (;;) {
     auto dial_res = co_await peer_manager->dial_next(done);
-    if (dial_res.has_error() && dial_res.error() == err_canceled) {
+    if (!dial_res && dial_res.error() == err_canceled) {
       break;
     }
     auto address = dial_res.value();
@@ -108,14 +109,14 @@ auto Router::dial_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
 auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<NodeAddress>& address)
   -> asio::awaitable<void> {
   auto dial_res = co_await dial_peer(done, address);
-  if (dial_res.has_error()) {
+  if (!dial_res) {
     if (dial_res.error() == err_canceled) {
       co_return;
     }
     // TODO: logger
     // r.logger.Debug("failed to dial peer", "peer", address, "err", err)
-    auto failed_res = co_await peer_manager->dial_failed(done, address);
-    if (failed_res.has_error()) {
+    auto dial_failed_res = co_await peer_manager->dial_failed(done, address);
+    if (!dial_failed_res) {
       // TODO: logger
       // r.logger.Error("failed to report dial failure", "peer", address, "err", err)
     }
@@ -123,16 +124,16 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
   }
 
   auto conn = dial_res.value();
-  auto [peer_info, handshake_res] = co_await handshake_peer(done, conn, address->node_id);
-  if (handshake_res.has_error()) {
+  auto handshake_res = co_await handshake_peer(done, conn, address->node_id);
+  if (!handshake_res) {
     if (handshake_res.error() == err_canceled) {
       conn->close();
       co_return;
     } else {
-      // TODO
+      // TODO: logger
       // r.logger.Error("failed to handshake with peer", "peer", address, "err", err)
-      auto failed_res = co_await peer_manager->dial_failed(done, address);
-      if (failed_res.has_error()) {
+      auto dial_failed_res = co_await peer_manager->dial_failed(done, address);
+      if (!dial_failed_res) {
         // TODO: logger
         // r.logger.Error("failed to report dial failure", "peer", address, "err", err)
       }
@@ -141,10 +142,11 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
     }
   }
 
+  auto peer_info = handshake_res.value();
   auto run_res = co_await run_with_peer_mutex(
     [&]() -> asio::awaitable<Result<void>> { co_return co_await peer_manager->dialed(address); });
-  if (run_res.has_error()) {
-    // TODO
+  if (!run_res) {
+    // TODO: logger
     // r.logger.Error("failed to dial peer", "op", "outgoing/dialing", "peer", address.NodeID, "err", err)
     co_await peer_manager->dial_waker.wake();
     conn->close();
@@ -155,8 +157,7 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
 }
 
 auto Router::get_or_make_queue(const NodeId& peer_id, ChannelIdSet& channels) -> std::shared_ptr<FifoQueue> {
-  std::unique_lock lock(peer_mtx);
-  defer _(nullptr, [&](...) { lock.release(); });
+  std::scoped_lock _(peer_mtx);
 
   if (peer_queues.contains(peer_id)) {
     return peer_queues[peer_id];
@@ -178,21 +179,21 @@ auto Router::dial_peer(Chan<std::monostate>& done, const std::shared_ptr<NodeAdd
   // TODO
   // r.logger.Debug("resolving peer address", "peer", address)
   auto resolve_res = address->resolve(done);
-  if (resolve_res.has_error()) {
+  if (!resolve_res) {
     co_return Error::format("failed to resolve address {}: {}", address->to_string(), resolve_res.error());
   }
   auto endpoints = resolve_res.value();
-  if (endpoints.size() == 0) {
+  if (endpoints.empty()) {
     co_return Error::format("address {} did not resolve to any endpoints", address->to_string());
   }
 
-  for (auto& endpoint : endpoints) {
+  for (auto& ep : endpoints) {
     if (options.dial_timeout.count() > 0) {
       // TODO: dial timeout
     }
 
-    auto dial_res = co_await transport->dial(endpoint);
-    if (dial_res.has_error()) {
+    auto dial_res = co_await transport->dial(ep);
+    if (!dial_res) {
       // TODO: logger
       // r.logger.Debug("failed to dial endpoint", "peer", address.NodeID, "endpoint", endpoint, "err", err)
     } else {
@@ -214,7 +215,7 @@ auto Router::num_concurrent_dials() const -> int32_t {
 auto Router::evict_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
   auto evict_res = co_await peer_manager->evict_next(done);
 
-  if (evict_res.has_error()) {
+  if (!evict_res) {
     if (evict_res.error() != err_canceled) {
       // TODO: logger
       // r.logger.Error("failed to find next peer to evict", "err", err)
@@ -238,14 +239,14 @@ auto Router::evict_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
 
 // accept_peers accepts inbound connections from peers on the given transport,
 // and spawns coroutines that route messages to/from them.
-auto Router::accept_peers(noir::Chan<std::monostate>& done, std::shared_ptr<MConnTransport>& transport)
+auto Router::accept_peers(Chan<std::monostate>& done, std::shared_ptr<MConnTransport>& transport)
   -> boost::asio::awaitable<void> {
   // TODO: logger
   // r.logger.Debug("starting accept routine", "transport", transport)
   for (;;) {
-    auto res = co_await transport->accept(done);
-    if (res.has_error()) {
-      auto err = res.error();
+    auto accept_res = co_await transport->accept(done);
+    if (!accept_res) {
+      auto err = accept_res.error();
       if (err == err_canceled || err == err_deadline_exceeded) {
         // TODO: logger
         // r.logger.Debug("stopping accept routine", "transport", transport, "err", "context canceled")
@@ -261,34 +262,39 @@ auto Router::accept_peers(noir::Chan<std::monostate>& done, std::shared_ptr<MCon
       }
     }
 
-    auto conn = res.value();
+    auto conn = accept_res.value();
     co_spawn(io_context, open_connection(done, conn), asio::detached);
   }
 }
 
-auto Router::open_connection(noir::Chan<std::monostate>& done, std::shared_ptr<MConnConnection> conn)
+auto Router::open_connection(Chan<std::monostate>& done, std::shared_ptr<MConnConnection> conn)
   -> asio::awaitable<void> {
   auto re = conn->remote_endpoint();
 
   auto filter_by_ip_res = filter_peers_ip(done, re);
-  if (filter_by_ip_res.has_error()) {
+  if (!filter_by_ip_res) {
     // TODO: logger
     // 	r.logger.Debug("peer filtered by IP", "ip", incomingIP.String(), "err", err)
     co_return;
   }
-  // FIXME: The peer manager may reject the peer during Accepted() after we've handshaked with the peer (to find out
-  // which peer it is). However, because the handshake has no ack, the remote peer will think the handshake was
-  // successful and start sending us messages.
+  // FIXME: The peer manager may reject the peer during Accepted()
+  // after we've handshaked with the peer (to find out which peer it
+  // is). However, because the handshake has no ack, the remote peer
+  // will think the handshake was successful and start sending us
+  // messages.
   //
-  // This can cause problems in tests, where a disconnection can cause the local node to immediately redial, while the
-  // remote node may not have completed the disconnection yet and therefore reject the reconnection attempt (since it
-  // thinks we're still connected from before).
+  // This can cause problems in tests, where a disconnection can cause
+  // the local node to immediately redial, while the remote node may
+  // not have completed the disconnection yet and therefore reject the
+  // reconnection attempt (since it thinks we're still connected from
+  // before).
   //
-  // The Router should do the handshake and have a final ack/fail message to make sure both ends have accepted the
-  // connection, such that it can be coordinated with the peer manager.
-  auto [peer_info, handshake_res] = co_await handshake_peer(done, conn, "");
+  // The Router should do the handshake and have a final ack/fail
+  // message to make sure both ends have accepted the connection, such
+  // that it can be coordinated with the peer manager.
+  auto handshake_res = co_await handshake_peer(done, conn, "");
 
-  if (handshake_res.has_error()) {
+  if (!handshake_res) {
     auto handshake_err = handshake_res.error();
     if (handshake_err == err_canceled) {
       co_return;
@@ -298,8 +304,10 @@ auto Router::open_connection(noir::Chan<std::monostate>& done, std::shared_ptr<M
       co_return;
     }
   }
+
+  auto peer_info = handshake_res.value();
   auto filter_by_id_res = filter_peers_id(done, peer_info.node_id);
-  if (filter_by_id_res.has_error()) {
+  if (!filter_by_id_res) {
     // TODO: logger
     // r.logger.Debug("peer filtered by node ID", "node", peerInfo.NodeID, "err", err)
     co_return;
@@ -308,7 +316,7 @@ auto Router::open_connection(noir::Chan<std::monostate>& done, std::shared_ptr<M
   auto run_res = co_await run_with_peer_mutex([&, node_id = peer_info.node_id]() -> asio::awaitable<Result<void>> {
     co_return co_await peer_manager->accepted(node_id);
   });
-  if (run_res.has_error()) {
+  if (!run_res) {
     // TODO: logger
     // r.logger.Error("failed to accept connection", "op", "incoming/accepted", "peer", peerInfo.NodeID, "err", err)
     co_return;
@@ -317,56 +325,56 @@ auto Router::open_connection(noir::Chan<std::monostate>& done, std::shared_ptr<M
   co_await route_peer(done, peer_info.node_id, conn, to_channel_ids(peer_info.channels));
 }
 
-auto Router::filter_peers_ip(noir::Chan<std::monostate>& done, const std::string& endpoint) -> noir::Result<void> {
+auto Router::filter_peers_ip(Chan<std::monostate>& done, const std::string& endpoint) -> Result<void> {
   if (!options.filter_peer_by_ip) {
     return success();
   }
   return options.filter_peer_by_ip(done, endpoint);
 }
 
-auto Router::filter_peers_id(noir::Chan<std::monostate>& done, const NodeId& id) -> noir::Result<void> {
+auto Router::filter_peers_id(Chan<std::monostate>& done, const NodeId& id) -> Result<void> {
   if (!options.filter_peer_by_id) {
     return success();
   }
   return options.filter_peer_by_id(done, id);
 }
 
-auto Router::handshake_peer(Chan<std::monostate>& done,
-  std::shared_ptr<MConnConnection>& conn,
-  const NodeId& expected_id) -> asio::awaitable<std::tuple<NodeInfo, Result<void>>> {
+auto Router::handshake_peer(Chan<std::monostate>& done, std::shared_ptr<MConnConnection>& conn, const NodeId& expect_id)
+  -> asio::awaitable<Result<NodeInfo>> {
   auto [peer_info, peer_key, handshake_res] = co_await conn->handshake(done, node_info, priv_key);
 
-  if (handshake_res.has_error()) {
-    co_return std::make_tuple(peer_info, handshake_res.error());
+  if (!handshake_res) {
+    co_return handshake_res.error();
   }
-  auto valid_res = peer_info.validate();
-  if (valid_res.has_error()) {
-    co_return std::make_tuple(peer_info, Error::format("invalid handshake NodeInfo: {}", valid_res.error()));
+  auto validate_res = peer_info.validate();
+  if (!validate_res) {
+    co_return Error::format("invalid handshake NodeInfo: {}", validate_res.error());
   }
 
   if (node_id_from_pubkey(*peer_key) == peer_info.node_id) {
-    co_return std::make_tuple(peer_info,
-      Error::format("peer's public key did not match its node ID {} (expected {})",
-        peer_info.node_id,
-        node_id_from_pubkey(*peer_key)));
+    co_return Error::format("peer's public key did not match its node ID {} (expected {})",
+      peer_info.node_id,
+      node_id_from_pubkey(*peer_key));
+  }
+  if (!expect_id.empty() && expect_id != peer_info.node_id) {
+    co_return Error::format("expected to connect with peer {}, got {}", expect_id, peer_info.node_id);
   }
 
   auto comp_res = node_info.compatible_with(peer_info);
-  if (comp_res.has_error()) {
+  if (!comp_res) {
     auto inactivate_res = peer_manager->inactivate(peer_info.node_id);
-    if (inactivate_res.has_error()) {
-      co_return std::make_tuple(peer_info,
-        Error::format("problem inactivating peer {}: {}", peer_info.node_id, inactivate_res.error()));
+    if (!inactivate_res) {
+      co_return Error::format("problem inactivating peer {}: {}", peer_info.node_id, inactivate_res.error());
     }
     // TODO: ErrRejected
-    co_return std::make_tuple(peer_info, Error("rejected"));
+    co_return Error("rejected");
   }
-  co_return std::make_tuple(peer_info, success());
+  co_return peer_info;
 }
 
 auto Router::run_with_peer_mutex(std::function<asio::awaitable<Result<void>>(void)>&& fn)
-  -> asio::awaitable<noir::Result<void>> {
-  std::unique_lock lock(peer_mtx);
+  -> asio::awaitable<Result<void>> {
+  std::scoped_lock _(peer_mtx);
   co_return co_await fn();
 }
 
@@ -379,6 +387,14 @@ auto Router::route_peer(
   co_await peer_manager->ready(done, peer_id, channels);
 
   auto send_queue = get_or_make_queue(peer_id, channels);
+  defer _(nullptr, [&](...) {
+    std::unique_lock lock(peer_mtx);
+    peer_queues.erase(peer_id);
+    peer_channels.erase(peer_id);
+    lock.release();
+
+    send_queue->close();
+  });
 
   // TODO: logger
   // r.logger.Info("peer connected", "peer", peerID, "endpoint", conn)
@@ -406,23 +422,25 @@ auto Router::route_peer(
   send_queue->close();
 
   res = co_await res_ch->async_receive(asio::use_awaitable);
-  if (!res.has_error() || res.error() == err_eof) {
+  if (res || res.error() == err_eof) {
     // TODO: logger
     // r.logger.Info("peer disconnected", "peer", peerID, "endpoint", conn)
   } else {
     // TODO: logger
     // r.logger.Error("peer failure", "peer", peerID, "endpoint", conn, "err", err)
   }
+  co_await peer_manager->disconnected(done, peer_id);
 }
 
 // receive_peer receives inbound messages from a peer, deserializes them and passes them on to the appropriate channel.
 auto Router::receive_peer(Chan<std::monostate>& done, const NodeId& peer_id, std::shared_ptr<MConnConnection> conn)
   -> asio::awaitable<Result<void>> {
   for (;;) {
-    auto [ch_id, bz, receive_res] = co_await conn->receive_message(done);
-    if (receive_res.has_error()) {
+    auto receive_res = co_await conn->receive_message(done);
+    if (!receive_res) {
       co_return receive_res.error();
     }
+    auto [ch_id, bz] = receive_res.value();
     std::shared_lock lock(channel_mtx);
     auto contained = channel_queues.contains(ch_id);
     auto queue = channel_queues[ch_id];
@@ -434,8 +452,8 @@ auto Router::receive_peer(Chan<std::monostate>& done, const NodeId& peer_id, std
       // r.logger.Debug("dropping message for unknown channel", "peer", peerID, "channel", chID)
       continue;
     }
-    auto message = message_type->New();
-    auto parsed = message->ParseFromArray(bz->data(), bz->size());
+    auto msg = message_type->New();
+    auto parsed = msg->ParseFromArray(bz->data(), bz->size());
     if (!parsed) {
       // TODO: logger
       // r.logger.Error("message decoding failed, dropping message", "peer", peerID, "err", err)
@@ -451,10 +469,12 @@ auto Router::receive_peer(Chan<std::monostate>& done, const NodeId& peer_id, std
     //   }
     // }
 
-    auto queue_res = co_await (
-      queue->queue_ch->async_send(boost::system::error_code{}, std::make_shared<Envelope>(), asio::use_awaitable) ||
-      queue->close_ch.async_receive(as_result(asio::use_awaitable)) ||
-      done.async_receive(as_result(asio::use_awaitable)));
+    auto queue_res =
+      co_await (queue->queue_ch->async_send(boost::system::error_code{},
+                  std::make_shared<Envelope>(peer_id, std::shared_ptr<google::protobuf::Message>(msg), ch_id),
+                  asio::use_awaitable) ||
+        queue->close_ch.async_receive(as_result(asio::use_awaitable)) ||
+        done.async_receive(as_result(asio::use_awaitable)));
 
     if (queue_res.index() == 0) {
       // TODO: logger
@@ -493,7 +513,7 @@ auto Router::send_peer(Chan<std::monostate>& done,
       envelope->message->SerializeToArray(bz->data(), bz->size());
 
       auto send_res = co_await conn->send_message(done, envelope->channel_id, bz);
-      if (send_res.has_error()) {
+      if (!send_res) {
         co_return send_res.error();
       }
       // TODO: logger
@@ -524,8 +544,8 @@ auto Router::open_channel(Chan<std::monostate>& done, std::shared_ptr<conn::Chan
   auto channel = Channel::new_channel(io_context, ch_desc->id, queue->queue_ch, out_ch, err_ch);
   channel->name = ch_desc->name;
 
-  channel_queues.insert({ch_desc->id, queue});
-  channel_messages.insert({ch_desc->id, ch_desc->message_type});
+  channel_queues[ch_desc->id] = queue;
+  channel_messages[ch_desc->id] = ch_desc->message_type;
 
   node_info.add_channels(ch_desc->id);
   transport->add_channel_descriptor(std::vector<std::shared_ptr<conn::ChannelDescriptor>>{ch_desc});
@@ -533,8 +553,14 @@ auto Router::open_channel(Chan<std::monostate>& done, std::shared_ptr<conn::Chan
   co_spawn(
     io_context,
     [&]() -> asio::awaitable<void> {
+      defer _(nullptr, [&](...) {
+        std::unique_lock lock(channel_mtx);
+        channel_queues.erase(ch_desc->id);
+        channel_messages.erase(ch_desc->id);
+        lock.release();
+        queue->close();
+      });
       co_await route_channel(done, ch_desc->id, out_ch, err_ch, ch_desc->message_type);
-      queue->close();
     },
     asio::detached);
 
@@ -549,7 +575,7 @@ auto Router::route_channel(Chan<std::monostate>& done,
   ChannelId ch_id,
   std::shared_ptr<Chan<EnvelopePtr>> out_ch,
   std::shared_ptr<Chan<PeerErrorPtr>> err_ch,
-  std::shared_ptr<google::protobuf::Message> wrapper) -> asio::awaitable<noir::Result<void>> {
+  std::shared_ptr<google::protobuf::Message> wrapper) -> asio::awaitable<void> {
   for (;;) {
     auto res = co_await (out_ch->async_receive(asio::use_awaitable) || err_ch->async_receive(asio::use_awaitable) ||
       done.async_receive(as_result(asio::use_awaitable)));
@@ -567,17 +593,20 @@ auto Router::route_channel(Chan<std::monostate>& done,
       //   }
       //   envelope.Message = msg
       // }
+      if (envelope->message->GetTypeName() != wrapper->GetTypeName()) {
+        // r.logger.Error("failed to wrap message", "channel", chID, "err", err)
+        continue;
+      }
 
-      std::vector<std::shared_ptr<FifoQueue>> queues;
+      std::vector<std::shared_ptr<FifoQueue>> queues{};
       if (envelope->broadcast) {
         std::shared_lock lock(peer_mtx);
 
-        for (auto& nq : peer_queues) {
-          auto node_id = nq.first;
+        for (auto& [node_id, q] : peer_queues) {
           auto peer_chs = peer_channels[node_id];
 
           if (peer_chs.contains(ch_id)) {
-            queues.push_back(nq.second);
+            queues.push_back(q);
           }
         }
         lock.release();
@@ -617,9 +646,8 @@ auto Router::route_channel(Chan<std::monostate>& done,
         } else if (queue_res.index() == 1) {
           // TODO: logger
           // r.logger.Debug("dropping message for unconnected peer", "peer", envelope.To, "channel", chID)
-          co_return std::get<1>(queue_res).error();
         } else if (queue_res.index() == 2) {
-          co_return std::get<2>(queue_res).error();
+          co_return;
         }
       }
     } else if (res.index() == 1) {
@@ -640,9 +668,9 @@ auto Router::route_channel(Chan<std::monostate>& done,
         peer_manager->process_peer_event(done, std::make_shared<PeerUpdate>(peer_error->node_id, peer_status_bad));
       }
     } else if (res.index() == 2) {
-      co_return std::get<2>(res).error();
+      co_return;
     } else {
-      co_return err_unreachable;
+      co_return;
     }
   }
 }

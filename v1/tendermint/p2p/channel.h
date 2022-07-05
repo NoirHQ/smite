@@ -14,7 +14,12 @@ namespace tendermint::p2p {
 
 using namespace noir;
 
-struct Envelope {
+class Envelope {
+public:
+  Envelope(const NodeId& peer_id, const std::shared_ptr<google::protobuf::Message>& msg, const ChannelId& ch_id)
+    : from(peer_id), message(msg), channel_id(ch_id) {}
+
+public:
   std::string from;
   std::string to;
   bool broadcast;

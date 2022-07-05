@@ -187,19 +187,19 @@ auto MConnConnection::send_message(Chan<std::monostate>& done, ChannelId ch_id, 
 }
 
 auto MConnConnection::receive_message(Chan<std::monostate>& done)
-  -> asio::awaitable<std::tuple<ChannelId, std::shared_ptr<noir::Bytes>, Result<void>>> {
+  -> asio::awaitable<Result<std::tuple<ChannelId, std::shared_ptr<noir::Bytes>>>> {
   auto res = co_await (error_ch.async_receive(use_awaitable) || close_ch.async_receive(use_awaitable) ||
     done.async_receive(use_awaitable) || receive_ch.async_receive(use_awaitable));
 
   if (res.index() == 0) {
-    co_return std::make_tuple(0, nullptr, std::get<0>(res));
+    co_return std::get<0>(res);
   } else if (res.index() == 1 || res.index() == 2) {
-    co_return std::make_tuple(0, nullptr, err_eof);
+    co_return err_eof;
   } else if (res.index() == 3) {
     auto msg = std::get<3>(res);
-    co_return std::make_tuple(msg.channel_id, msg.payload, success());
+    co_return std::make_tuple(msg.channel_id, msg.payload);
   } else {
-    co_return std::make_tuple(0, nullptr, err_unreachable);
+    co_return err_unreachable;
   }
 }
 

@@ -34,7 +34,7 @@ public:
   auto send_message(noir::Chan<std::monostate>& done, ChannelId ch_id, std::shared_ptr<noir::Bytes>& msg)
     -> boost::asio::awaitable<Result<void>>;
   auto receive_message(noir::Chan<std::monostate>& done)
-    -> boost::asio::awaitable<std::tuple<ChannelId, std::shared_ptr<noir::Bytes>, noir::Result<void>>>;
+    -> boost::asio::awaitable<noir::Result<std::tuple<ChannelId, std::shared_ptr<noir::Bytes>>>>;
   auto remote_endpoint() -> std::string;
   auto close() -> noir::Result<void>;
 
