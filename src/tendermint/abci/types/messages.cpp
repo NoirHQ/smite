@@ -5,7 +5,7 @@
 //
 #include <tendermint/abci/types/messages.h>
 
-namespace tendermint::abci {
+namespace noir::abci {
 
 std::unique_ptr<Request> to_request_echo(const std::string& message) {
   auto ret = std::make_unique<Request>();
@@ -25,12 +25,6 @@ std::unique_ptr<Request> to_request_info(const RequestInfo& req) {
   return ret;
 }
 
-std::unique_ptr<Request> to_request_set_option(const RequestSetOption& req) {
-  auto ret = std::make_unique<Request>();
-  ret->mutable_set_option()->CopyFrom(req);
-  return ret;
-}
-
 std::unique_ptr<Request> to_request_deliver_tx(const RequestDeliverTx& req) {
   auto ret = std::make_unique<Request>();
   ret->mutable_deliver_tx()->CopyFrom(req);
@@ -43,9 +37,9 @@ std::unique_ptr<Request> to_request_check_tx(const RequestCheckTx& req) {
   return ret;
 }
 
-std::unique_ptr<Request> to_request_commit(const RequestCommit& req) {
+std::unique_ptr<Request> to_request_commit() {
   auto ret = std::make_unique<Request>();
-  ret->mutable_commit()->CopyFrom(req);
+  ret->mutable_commit()->CopyFrom(RequestCommit{});
   return ret;
 }
 
@@ -97,4 +91,4 @@ std::unique_ptr<Request> to_request_apply_snapshot_chunk(const RequestApplySnaps
   return ret;
 }
 
-} // namespace tendermint::abci
+} // namespace noir::abci

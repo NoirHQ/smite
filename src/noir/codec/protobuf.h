@@ -20,11 +20,17 @@ Bytes encode(const T& v) {
   v.SerializeToArray(buffer.data(), buffer.size());
   return buffer;
 }
+
 template<typename T>
 T decode(std::span<const unsigned char> s) {
   T v{};
   v.ParseFromArray(s.data(), s.size());
   return v;
+}
+
+template<typename T>
+void decode(std::span<const unsigned char> s, T& v) {
+  v.ParseFromArray(s.data(), s.size());
 }
 
 } // namespace noir::codec::protobuf
