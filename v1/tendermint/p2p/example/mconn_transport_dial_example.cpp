@@ -24,7 +24,7 @@ int main() {
       auto transport = MConnTransport::new_mconn_transport(io_context, config, options);
 
       auto dial_res = co_await transport->dial("127.0.0.1:26658");
-      if (dial_res.has_error()) {
+      if (!dial_res) {
         std::cout << dial_res.error().message() << std::endl;
         co_return;
       }
@@ -40,7 +40,7 @@ int main() {
       Bytes priv_key(priv_str.begin(), priv_str.end());
       NodeInfo node_info{.node_id = "dial_node"};
       auto handshake_res = co_await conn->handshake(done, node_info, priv_key);
-      if (handshake_res.has_error()) {
+      if (!handshake_res) {
         std::cout << handshake_res.error().message() << std::endl;
         co_return;
       }

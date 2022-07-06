@@ -322,11 +322,12 @@ auto Router::filter_peers_id(Chan<std::monostate>& done, const NodeId& id) -> Re
 
 auto Router::handshake_peer(Chan<std::monostate>& done, std::shared_ptr<MConnConnection>& conn, const NodeId& expect_id)
   -> asio::awaitable<Result<NodeInfo>> {
-  auto [peer_info, peer_key, handshake_res] = co_await conn->handshake(done, node_info, priv_key);
+  auto handshake_res = co_await conn->handshake(done, node_info, priv_key);
 
   if (!handshake_res) {
     co_return handshake_res.error();
   }
+  auto [peer_info, peer_key] = handshake_res.value();
   auto validate_res = peer_info.validate();
   if (!validate_res) {
     co_return Error::format("invalid handshake NodeInfo: {}", validate_res.error());

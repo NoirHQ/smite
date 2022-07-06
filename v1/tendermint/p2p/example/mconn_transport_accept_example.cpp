@@ -24,14 +24,14 @@ int main() {
       auto transport = MConnTransport::new_mconn_transport(io_context, config, options);
 
       auto listen_res = co_await transport->listen("127.0.0.1:26658");
-      if (listen_res.has_error()) {
+      if (!listen_res) {
         std::cout << listen_res.error().message() << std::endl;
         co_return;
       }
 
       Chan<std::monostate> done{io_context, 1};
       auto conn_res = co_await transport->accept(done);
-      if (conn_res.has_error()) {
+      if (!conn_res) {
         std::cout << conn_res.error().message() << std::endl;
         co_return;
       }
@@ -46,7 +46,7 @@ int main() {
 
       NodeInfo node_info{.node_id = "accept_node"};
       auto handshake_res = co_await conn->handshake(done, node_info, priv_key);
-      if (handshake_res.has_error()) {
+      if (!handshake_res) {
         std::cout << handshake_res.error().message() << std::endl;
         co_return;
       }

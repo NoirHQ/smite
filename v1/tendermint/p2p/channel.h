@@ -55,9 +55,9 @@ class Channel {
 public:
   static auto new_channel(asio::io_context& io_context,
     ChannelId id,
-    std::shared_ptr<Chan<EnvelopePtr>>& in_ch,
-    std::shared_ptr<Chan<EnvelopePtr>>& out_ch,
-    std::shared_ptr<Chan<PeerErrorPtr>>& err_ch) -> std::shared_ptr<Channel> {
+    const std::shared_ptr<Chan<EnvelopePtr>>& in_ch,
+    const std::shared_ptr<Chan<EnvelopePtr>>& out_ch,
+    const std::shared_ptr<Chan<PeerErrorPtr>>& err_ch) -> std::shared_ptr<Channel> {
     return std::shared_ptr<Channel>(new Channel(io_context, id, in_ch, out_ch, err_ch));
   }
   auto send(Chan<std::monostate>& done, EnvelopePtr envelope) -> boost::asio::awaitable<Result<void>>;
@@ -79,9 +79,9 @@ public:
 private:
   Channel(asio::io_context& io_context,
     ChannelId id,
-    std::shared_ptr<Chan<EnvelopePtr>>& in_ch,
-    std::shared_ptr<Chan<EnvelopePtr>>& out_ch,
-    std::shared_ptr<Chan<PeerErrorPtr>>& err_ch)
+    const std::shared_ptr<Chan<EnvelopePtr>>& in_ch,
+    const std::shared_ptr<Chan<EnvelopePtr>>& out_ch,
+    const std::shared_ptr<Chan<PeerErrorPtr>>& err_ch)
     : io_context(io_context), id(id), in_ch(in_ch), out_ch(out_ch), err_ch(err_ch) {}
 };
 
@@ -103,7 +103,7 @@ namespace detail {
 } //namespace detail
 
 template<typename... Ts>
-auto merged_channel_iterator(asio::io_context& io_context, Chan<std::monostate>& done, Ts&... chs)
+auto merged_channel_iterator(asio::io_context& io_context, Chan<std::monostate>& done, const Ts&... chs)
   -> ChannelIteratorUptr {
   auto iter = std::make_unique<ChannelIterator>(io_context);
 

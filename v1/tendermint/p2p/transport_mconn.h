@@ -30,7 +30,7 @@ public:
     return std::shared_ptr<MConnConnection>(new MConnConnection(io_context, conn, mconn_config, channel_descs));
   }
   auto handshake(noir::Chan<std::monostate>& done, NodeInfo& node_info, noir::Bytes& priv_key)
-    -> boost::asio::awaitable<std::tuple<NodeInfo, std::shared_ptr<noir::Bytes>, Result<void>>>;
+    -> boost::asio::awaitable<noir::Result<std::tuple<NodeInfo, std::shared_ptr<noir::Bytes>>>>;
   auto send_message(noir::Chan<std::monostate>& done, ChannelId ch_id, std::shared_ptr<noir::Bytes>& msg)
     -> boost::asio::awaitable<Result<void>>;
   auto receive_message(noir::Chan<std::monostate>& done)
