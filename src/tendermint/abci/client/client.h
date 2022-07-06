@@ -48,20 +48,20 @@ concept Client = /* Service<T> && */ requires(T v) {
   v.set_response_callback(Callback{});
   { v.error() } -> std::same_as<Result<void>>;
 
-  { v.echo_async(std::string{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.flush_async() } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.info_async(RequestInfo{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.deliver_tx_async(RequestDeliverTx{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.check_tx_async(RequestCheckTx{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.query_async(RequestQuery{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.commit_async() } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.init_chain_async(RequestInitChain{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.begin_block_async(RequestBeginBlock{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.end_block_async(RequestEndBlock{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.list_snapshots_async(RequestListSnapshots{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.offer_snapshot_async(RequestOfferSnapshot{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.load_snapshot_chunk_async(RequestLoadSnapshotChunk{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
-  { v.apply_snapshot_chunk_async(RequestApplySnapshotChunk{}) } -> std::same_as<func<Result<std::shared_ptr<ReqRes>>>>;
+  { v.echo_async(std::string{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.flush_async() } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.info_async(RequestInfo{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.deliver_tx_async(RequestDeliverTx{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.check_tx_async(RequestCheckTx{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.query_async(RequestQuery{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.commit_async() } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.init_chain_async(RequestInitChain{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.begin_block_async(RequestBeginBlock{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.end_block_async(RequestEndBlock{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.list_snapshots_async(RequestListSnapshots{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.offer_snapshot_async(RequestOfferSnapshot{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.load_snapshot_chunk_async(RequestLoadSnapshotChunk{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
+  { v.apply_snapshot_chunk_async(RequestApplySnapshotChunk{}) } -> std::same_as<Result<std::shared_ptr<ReqRes>>>;
 
   { v.echo_sync(std::string{}) } -> std::same_as<Result<std::unique_ptr<ResponseEcho>>>;
   { v.flush_sync() } -> std::same_as<Result<void>>;
