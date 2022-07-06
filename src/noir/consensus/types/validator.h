@@ -97,6 +97,12 @@ public:
     return validators.size();
   }
 
+  std::shared_ptr<validator_set> copy() {
+    auto copy_ = std::make_shared<validator_set>();
+    *copy_ = *this;
+    return copy_;
+  }
+
   Bytes get_hash();
 
   bool has_address(const Bytes& address) {
@@ -388,10 +394,9 @@ public:
   }
 
   std::shared_ptr<validator_set> copy_increment_proposer_priority(int32_t times) {
-    auto cp = validator_set::new_validator_set({});
-    *cp = *this;
-    cp->increment_proposer_priority(times);
-    return cp;
+    auto copy_ = this->copy();
+    copy_->increment_proposer_priority(times);
+    return copy_;
   }
 
   void increment_proposer_priority(int32_t times) {

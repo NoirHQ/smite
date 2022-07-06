@@ -346,7 +346,7 @@ struct block_executor {
     std::shared_ptr<abci_responses> abci_responses_,
     std::vector<validator>& validator_updates) {
     // Copy val_set so that changes from end_block can be applied
-    auto n_val_set = state_.next_validators;
+    auto n_val_set = state_.next_validators->copy();
 
     auto last_height_vals_changed = state_.last_height_validators_changed;
     if (!validator_updates.empty()) {
@@ -385,8 +385,8 @@ struct block_executor {
     ret.last_block_id = block_id_;
     ret.last_block_time = header_.time;
     ret.next_validators = n_val_set;
-    ret.validators = state_.next_validators;
-    ret.last_validators = state_.validators;
+    ret.validators = state_.next_validators->copy();
+    ret.last_validators = state_.validators->copy();
     ret.last_height_validators_changed = last_height_vals_changed;
     ret.consensus_params_ = next_params;
     ret.last_height_consensus_params_changed = last_height_params_changed;
