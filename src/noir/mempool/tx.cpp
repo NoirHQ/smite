@@ -9,7 +9,7 @@
 
 namespace noir::mempool {
 
-auto WrappedTx::size() const -> size_t {
+auto WrappedTx::size() const -> int {
   return tx.size();
 }
 
@@ -21,7 +21,7 @@ auto WrappedTx::ptr() -> WrappedTx* {
   return this;
 }
 
-auto TxStore::size() -> size_t {
+auto TxStore::size() -> int {
   std::shared_lock g{mtx};
   return txs.size();
 }
@@ -105,7 +105,7 @@ auto TxStore::get_or_set_peer_by_tx_hash(const types::TxKey& hash, uint16_t peer
   return {*wtx, false};
 }
 
-auto WrappedTxList::size() -> size_t {
+auto WrappedTxList::size() -> int {
   std::shared_lock g{mtx};
   return txs.size();
 }

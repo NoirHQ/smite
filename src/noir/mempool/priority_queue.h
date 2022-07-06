@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/scope_exit.h>
 #include <noir/consensus/tx.h>
 #include <noir/mempool/tx.h>
 #include <boost/multi_index_container.hpp>
@@ -40,7 +41,7 @@ public:
     return {};
   }
 
-  auto num_txs() -> size_t {
+  auto num_txs() -> int {
     std::shared_lock g{mtx};
     return txs.size();
   }

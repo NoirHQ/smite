@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/clist/clist.h>
 #include <noir/common/time.h>
 #include <noir/consensus/types/node_id.h>
 #include <tendermint/types/mempool.h>
@@ -35,10 +36,10 @@ struct WrappedTx {
   std::set<uint16_t> peers;
   // XXX: heap_index for priority_queue is handled by boost::multi_index
   // int heap_index;
-  // gossip_el;
+  clist::CElementPtr<std::shared_ptr<WrappedTx>> gossip_el;
   bool removed;
 
-  auto size() const -> size_t;
+  auto size() const -> int;
   auto key() const -> types::TxKey;
 
   auto ptr() -> WrappedTx*;
@@ -46,7 +47,7 @@ struct WrappedTx {
 
 class TxStore {
 public:
-  auto size() -> size_t;
+  auto size() -> int;
   [[nodiscard]] auto get_all_txs() -> std::vector<std::shared_ptr<WrappedTx>>;
   auto get_tx_by_sender(const std::string& sender) -> std::shared_ptr<WrappedTx>;
   auto get_tx_by_hash(const types::TxKey& hash) -> std::shared_ptr<WrappedTx>;
@@ -85,7 +86,7 @@ class WrappedTxList {
 public:
   WrappedTxList(LessFunc less): less(less) {}
 
-  auto size() -> size_t;
+  auto size() -> int;
   void reset();
   void insert(const std::shared_ptr<WrappedTx>& wtx);
   void insert(std::shared_ptr<WrappedTx>&& wtx);
