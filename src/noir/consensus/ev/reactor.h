@@ -18,7 +18,7 @@ struct reactor {
   std::unique_ptr<named_thread_pool> thread_pool{};
 
   std::mutex mtx;
-  std::map<std::string, Chan<std::monostate>> peer_routines;
+  std::map<std::string, chan<>> peer_routines;
   eo::sync::WaitGroup peer_wg;
 
   // Receive an envelope from peers [via p2p]
@@ -67,7 +67,7 @@ struct reactor {
 
   Result<void> process_peer_msg(p2p::envelope_ptr info);
 
-  void broadcast_evidence_loop(const std::string& peer_id, Chan<std::monostate>& closer);
+  void broadcast_evidence_loop(const std::string& peer_id, chan<>& closer);
 };
 
 } // namespace noir::consensus::ev

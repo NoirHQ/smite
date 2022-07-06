@@ -1,9 +1,8 @@
 #pragma once
-#include <boost/asio/experimental/concurrent_channel.hpp>
+#include <eo/chan.h>
 
 namespace noir {
 
-template<typename... Ts>
-using Chan = boost::asio::experimental::concurrent_channel<void(boost::system::error_code, Ts...)>;
+using eo::chan;
 
 } // namespace noir
