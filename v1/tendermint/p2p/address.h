@@ -10,8 +10,18 @@
 namespace tendermint::p2p {
 class NodeAddress {
 public:
-  auto resolve(noir::Chan<std::monostate>& done) -> noir::Result<std::vector<std::string>>;
-  auto to_string() -> std::string;
+  auto resolve(noir::Chan<std::monostate>& done) -> noir::Result<std::vector<std::string>> {
+    if (protocol.empty()) {
+      return noir::Error("address has no protocol");
+    }
+    // TODO: lookup ips
+    auto endpoint = fmt::format("{}://{}:{}/{}", protocol, hostname, port, path);
+    return std::vector<std::string>{endpoint};
+  }
+
+  auto to_string() -> std::string {
+    return fmt::format("{}://{}:{}/{}", protocol, hostname, port, path);
+  }
 
 public:
   NodeId node_id;
