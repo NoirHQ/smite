@@ -92,60 +92,60 @@ public:
     res_cb = cb;
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> echo_async(const std::string& msg) {
-    co_return queue_request_async(to_request_echo(msg));
+  Result<std::shared_ptr<ReqRes>> echo_async(const std::string& msg) {
+    return queue_request_async(to_request_echo(msg));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> flush_async() {
-    co_return queue_request_async(to_request_flush());
+  Result<std::shared_ptr<ReqRes>> flush_async() {
+    return queue_request_async(to_request_flush());
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> info_async(const RequestInfo& req) {
-    co_return queue_request_async(to_request_info(req));
+  Result<std::shared_ptr<ReqRes>> info_async(const RequestInfo& req) {
+    return queue_request_async(to_request_info(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> deliver_tx_async(const RequestDeliverTx& req) {
-    co_return queue_request_async(to_request_deliver_tx(req));
+  Result<std::shared_ptr<ReqRes>> deliver_tx_async(const RequestDeliverTx& req) {
+    return queue_request_async(to_request_deliver_tx(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> check_tx_async(const RequestCheckTx& req) {
-    co_return queue_request_async(to_request_check_tx(req));
+  Result<std::shared_ptr<ReqRes>> check_tx_async(const RequestCheckTx& req) {
+    return queue_request_async(to_request_check_tx(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> query_async(const RequestQuery& req) {
-    co_return queue_request_async(to_request_query(req));
+  Result<std::shared_ptr<ReqRes>> query_async(const RequestQuery& req) {
+    return queue_request_async(to_request_query(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> commit_async() {
-    co_return queue_request_async(to_request_commit());
+  Result<std::shared_ptr<ReqRes>> commit_async() {
+    return queue_request_async(to_request_commit());
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> init_chain_async(const RequestInitChain& req) {
-    co_return queue_request_async(to_request_init_chain(req));
+  Result<std::shared_ptr<ReqRes>> init_chain_async(const RequestInitChain& req) {
+    return queue_request_async(to_request_init_chain(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> begin_block_async(const RequestBeginBlock& req) {
-    co_return queue_request_async(to_request_begin_block(req));
+  Result<std::shared_ptr<ReqRes>> begin_block_async(const RequestBeginBlock& req) {
+    return queue_request_async(to_request_begin_block(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> end_block_async(const RequestEndBlock& req) {
-    co_return queue_request_async(to_request_end_block(req));
+  Result<std::shared_ptr<ReqRes>> end_block_async(const RequestEndBlock& req) {
+    return queue_request_async(to_request_end_block(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> list_snapshots_async(const RequestListSnapshots& req) {
+  Result<std::shared_ptr<ReqRes>> list_snapshots_async(const RequestListSnapshots& req) {
     return queue_request_async(to_request_list_snapshots(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> offer_snapshot_async(const RequestOfferSnapshot& req) {
-    co_return queue_request_async(to_request_offer_snapshot(req));
+  Result<std::shared_ptr<ReqRes>> offer_snapshot_async(const RequestOfferSnapshot& req) {
+    return queue_request_async(to_request_offer_snapshot(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> load_snapshot_chunk_async(const RequestLoadSnapshotChunk& req) {
-    co_return queue_request_async(to_request_load_snapshot_chunk(req));
+  Result<std::shared_ptr<ReqRes>> load_snapshot_chunk_async(const RequestLoadSnapshotChunk& req) {
+    return queue_request_async(to_request_load_snapshot_chunk(req));
   }
 
-  func<Result<std::shared_ptr<ReqRes>>> apply_snapshot_chunk_async(const RequestApplySnapshotChunk& req) {
-    co_return queue_request_async(to_request_apply_snapshot_chunk(req));
+  Result<std::shared_ptr<ReqRes>> apply_snapshot_chunk_async(const RequestApplySnapshotChunk& req) {
+    return queue_request_async(to_request_apply_snapshot_chunk(req));
   }
 
   Result<std::unique_ptr<ResponseEcho>> echo_sync(const std::string& msg) {
@@ -394,11 +394,9 @@ private:
     }
     {
       std::scoped_lock _(mtx);
-      if (!this->err) {
-        this->err = err;
-      }
+      this->err.error() = err;
     }
-    noir_ilog(service_type::logger.get(), "Stopping SocketClient for error: {}", err);
+    noir_ilog(service_type::logger.get(), "Stopping SocketClient for error: {}", this->err.error());
     if (auto ok = service_type::stop(); !ok) {
       noir_elog(service_type::logger.get(), "Error stopping SocketClient: {}", ok.error());
     }
