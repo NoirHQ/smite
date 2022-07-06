@@ -520,6 +520,7 @@ void consensus_state::enter_new_round(int64_t height, int32_t round) {
   // increment validators if necessary
   auto validators = rs.validators;
   if (rs.round < round) {
+    validators = validators->copy();
     validators->increment_proposer_priority(round - rs.round); // todo - safe sub
   }
 
@@ -1047,7 +1048,7 @@ void consensus_state::set_proposal(p2p::proposal_message& msg) {
   // Verify signature
   auto sign_bytes = proposal::proposal_sign_bytes(local_state.chain_id, *proposal::to_proto({msg}));
   if (!rs.validators->get_proposer()->pub_key_.verify_signature(sign_bytes, msg.signature)) {
-    dlog("set_proposal; error invalid proposal signature");
+    elog("set_proposal; error invalid proposal signature");
     return;
   }
 

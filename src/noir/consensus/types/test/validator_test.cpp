@@ -77,7 +77,7 @@ TEST_CASE("validator_set: Proposer Selection 2", "[noir][consensus]") {
       {{validator{addrs[0], {}, 100, 0}}, {validator{addrs[1], {}, 100, 0}}, {validator{addrs[2], {}, 400, 0}}});
     CHECK(vals->get_proposer()->address == addrs[2]);
     vals->increment_proposer_priority(1);
-    CHECK(vals->get_proposer()->address == addrs[0]);
+    CHECK(vals->get_proposer()->address == addrs[2]);
   }
 
   SECTION("one validator has more than others, enough to propose twice in a row") {
