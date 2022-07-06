@@ -5,6 +5,7 @@
 //
 #include <noir/common/defer.h>
 #include <noir/common/wait_group.h>
+#include <tendermint/log/log.h>
 #include <tendermint/p2p/router.h>
 #include <thread>
 
@@ -52,8 +53,7 @@ auto Router::start(Chan<std::monostate>& done) -> asio::awaitable<Result<void>> 
 
 // dial_peers maintains outbound connections to peers by dialing them.
 auto Router::dial_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
-  // TODO: logger
-  // r.logger.Debug("starting dial routine")
+  dlog("starting dial routine");
   Chan<std::shared_ptr<NodeAddress>> addresses(io_context);
   WaitGroup wg(io_context);
 
@@ -113,12 +113,10 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
     if (dial_res.error() == err_canceled) {
       co_return;
     }
-    // TODO: logger
-    // r.logger.Debug("failed to dial peer", "peer", address, "err", err)
+    dlog("failed to dial peer", "peer", address->node_id, "err", dial_res.error());
     auto dial_failed_res = co_await peer_manager->dial_failed(done, address);
     if (!dial_failed_res) {
-      // TODO: logger
-      // r.logger.Error("failed to report dial failure", "peer", address, "err", err)
+      elog("failed to report dial failure", "peer", address->node_id, "err", dial_res.error());
     }
     co_return;
   }
@@ -130,12 +128,10 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
       conn->close();
       co_return;
     } else {
-      // TODO: logger
-      // r.logger.Error("failed to handshake with peer", "peer", address, "err", err)
+      elog("failed to handshake with peer", "peer", address->node_id, "err", handshake_res.error());
       auto dial_failed_res = co_await peer_manager->dial_failed(done, address);
       if (!dial_failed_res) {
-        // TODO: logger
-        // r.logger.Error("failed to report dial failure", "peer", address, "err", err)
+        elog("failed to report dial failure", "peer", address->node_id, "err", handshake_res.error());
       }
       conn->close();
       co_return;
@@ -146,8 +142,7 @@ auto Router::connect_peer(Chan<std::monostate>& done, const std::shared_ptr<Node
   auto run_res = co_await run_with_peer_mutex(
     [&]() -> asio::awaitable<Result<void>> { co_return co_await peer_manager->dialed(address); });
   if (!run_res) {
-    // TODO: logger
-    // r.logger.Error("failed to dial peer", "op", "outgoing/dialing", "peer", address.NodeID, "err", err)
+    elog("failed to dial peer", "op", "outgoing/dialing", "peer", address->node_id, "err", run_res.error());
     co_await peer_manager->dial_waker.wake();
     conn->close();
     co_return;
@@ -176,8 +171,7 @@ auto Router::dial_peer(Chan<std::monostate>& done, const std::shared_ptr<NodeAdd
     // TODO: resolve timeout
   }
 
-  // TODO
-  // r.logger.Debug("resolving peer address", "peer", address)
+  dlog("resolving peer address", "peer", address->node_id);
   auto resolve_res = address->resolve(done);
   if (!resolve_res) {
     co_return Error::format("failed to resolve address {}: {}", address->to_string(), resolve_res.error());
@@ -194,11 +188,9 @@ auto Router::dial_peer(Chan<std::monostate>& done, const std::shared_ptr<NodeAdd
 
     auto dial_res = co_await transport->dial(ep);
     if (!dial_res) {
-      // TODO: logger
-      // r.logger.Debug("failed to dial endpoint", "peer", address.NodeID, "endpoint", endpoint, "err", err)
+      dlog("failed to dial endpoint", "peer", address->node_id, "endpoint", ep, "err", dial_res.error());
     } else {
-      // TODO: logger
-      // r.logger.Debug("dialed peer", "peer", address.NodeID, "endpoint", endpoint)
+      dlog("dialed peer", "peer", address->node_id, "endpoint", ep, "err", dial_res.error());
       co_return dial_res.value();
     }
   }
@@ -217,15 +209,12 @@ auto Router::evict_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
 
   if (!evict_res) {
     if (evict_res.error() != err_canceled) {
-      // TODO: logger
-      // r.logger.Error("failed to find next peer to evict", "err", err)
+      elog("failed to find next peer to evict", "err", evict_res.error());
     }
     co_return;
   }
-  // TODO: logger
-  // r.logger.Info("evicting peer", "peer", peerID)
-
   auto peer_id = evict_res.value();
+  ilog("evicting peer", "peer", peer_id);
 
   std::shared_lock lock(peer_mtx);
   auto ok = peer_queues.contains(peer_id);
@@ -241,23 +230,19 @@ auto Router::evict_peers(Chan<std::monostate>& done) -> asio::awaitable<void> {
 // and spawns coroutines that route messages to/from them.
 auto Router::accept_peers(Chan<std::monostate>& done, std::shared_ptr<MConnTransport>& transport)
   -> boost::asio::awaitable<void> {
-  // TODO: logger
-  // r.logger.Debug("starting accept routine", "transport", transport)
+  dlog("starting accept routine", "transport", "mconn");
   for (;;) {
     auto accept_res = co_await transport->accept(done);
     if (!accept_res) {
       auto err = accept_res.error();
       if (err == err_canceled || err == err_deadline_exceeded) {
-        // TODO: logger
-        // r.logger.Debug("stopping accept routine", "transport", transport, "err", "context canceled")
+        dlog("stopping accept routine", "transport", "mconn", "err", "context canceled");
         co_return;
       } else if (err == err_eof) {
-        // TODO: logger
-        // r.logger.Debug("stopping accept routine", "transport", transport, "err", "EOF")
+        dlog("stopping accept routine", "transport", "mconn", "err", "EOF");
         co_return;
       } else {
-        // TODO: logger
-        // r.logger.Error("failed to accept connection", "transport", transport, "err", err)
+        elog("failed to accept connection", "transport", "mconn", "err", err);
         continue;
       }
     }
@@ -273,8 +258,7 @@ auto Router::open_connection(Chan<std::monostate>& done, std::shared_ptr<MConnCo
 
   auto filter_by_ip_res = filter_peers_ip(done, re);
   if (!filter_by_ip_res) {
-    // TODO: logger
-    // 	r.logger.Debug("peer filtered by IP", "ip", incomingIP.String(), "err", err)
+    dlog("peer filtered by IP", "ip", re, "err", filter_by_ip_res.error());
     co_return;
   }
   // FIXME: The peer manager may reject the peer during Accepted()
@@ -299,8 +283,7 @@ auto Router::open_connection(Chan<std::monostate>& done, std::shared_ptr<MConnCo
     if (handshake_err == err_canceled) {
       co_return;
     } else {
-      // TODO: logger
-      // r.logger.Error("peer handshake failed", "endpoint", conn, "err", err)
+      elog("peer handshake failed", "endpoint", conn->remote_endpoint(), "err", handshake_err);
       co_return;
     }
   }
@@ -308,8 +291,7 @@ auto Router::open_connection(Chan<std::monostate>& done, std::shared_ptr<MConnCo
   auto peer_info = handshake_res.value();
   auto filter_by_id_res = filter_peers_id(done, peer_info.node_id);
   if (!filter_by_id_res) {
-    // TODO: logger
-    // r.logger.Debug("peer filtered by node ID", "node", peerInfo.NodeID, "err", err)
+    dlog("peer filtered by node ID", "node", peer_info.node_id, "err", filter_by_id_res.error());
     co_return;
   }
 
@@ -317,8 +299,7 @@ auto Router::open_connection(Chan<std::monostate>& done, std::shared_ptr<MConnCo
     co_return co_await peer_manager->accepted(node_id);
   });
   if (!run_res) {
-    // TODO: logger
-    // r.logger.Error("failed to accept connection", "op", "incoming/accepted", "peer", peerInfo.NodeID, "err", err)
+    elog("failed to accept connection", "op", "incoming/accepted", "peer", peer_info.node_id, "err", run_res.error());
     co_return;
   }
 
@@ -396,8 +377,7 @@ auto Router::route_peer(
     send_queue->close();
   });
 
-  // TODO: logger
-  // r.logger.Info("peer connected", "peer", peerID, "endpoint", conn)
+  ilog("peer connected", "peer", peer_id, "endpoint", conn->remote_endpoint());
   auto res_ch = std::make_shared<Chan<Result<void>>>(io_context, 2);
 
   co_spawn(
@@ -423,11 +403,9 @@ auto Router::route_peer(
 
   res = co_await res_ch->async_receive(asio::use_awaitable);
   if (res || res.error() == err_eof) {
-    // TODO: logger
-    // r.logger.Info("peer disconnected", "peer", peerID, "endpoint", conn)
+    ilog("peer disconnected", "peer", peer_id, "endpoint", conn->remote_endpoint());
   } else {
-    // TODO: logger
-    // r.logger.Error("peer failure", "peer", peerID, "endpoint", conn, "err", err)
+    elog("peer failure", "peer", peer_id, "endpoint", conn->remote_endpoint(), "err", res.error());
   }
   co_await peer_manager->disconnected(done, peer_id);
 }
@@ -448,15 +426,13 @@ auto Router::receive_peer(Chan<std::monostate>& done, const NodeId& peer_id, std
     lock.release();
 
     if (!contained) {
-      // TODO: logger
-      // r.logger.Debug("dropping message for unknown channel", "peer", peerID, "channel", chID)
+      dlog("dropping message for unknown channel", "peer", peer_id, "channel", ch_id);
       continue;
     }
     auto msg = message_type->New();
     auto parsed = msg->ParseFromArray(bz->data(), bz->size());
     if (!parsed) {
-      // TODO: logger
-      // r.logger.Error("message decoding failed, dropping message", "peer", peerID, "err", err)
+      elog("message decoding failed, dropping message", "peer", peer_id);
       continue;
     }
 
@@ -477,11 +453,9 @@ auto Router::receive_peer(Chan<std::monostate>& done, const NodeId& peer_id, std
         done.async_receive(as_result(asio::use_awaitable)));
 
     if (queue_res.index() == 0) {
-      // TODO: logger
-      // r.logger.Debug("received message", "peer", peerID, "message", msg)
+      dlog("received message", "peer", peer_id, "message", msg);
     } else if (queue_res.index() == 1) {
-      // TODO: logger
-      // r.logger.Debug("channel closed, dropping message", "peer", peerID, "channel", chID)
+      dlog("channel closed, dropping message", "peer", peer_id, "channel", ch_id);
     } else if (queue_res.index() == 2) {
       co_return std::get<2>(queue_res).error();
     } else {
@@ -503,8 +477,7 @@ auto Router::send_peer(Chan<std::monostate>& done,
     if (res.index() == 0) {
       auto envelope = std::get<0>(res);
       if (!envelope->message) {
-        // TODO: logger
-        // r.logger.Error("dropping nil message", "peer", peerID)
+        elog("dropping nil message", "peer", peer_id);
         continue;
       }
 
@@ -516,8 +489,7 @@ auto Router::send_peer(Chan<std::monostate>& done,
       if (!send_res) {
         co_return send_res.error();
       }
-      // TODO: logger
-      // r.logger.Debug("sent message", "peer", envelope.To, "message", envelope.Message)
+      dlog("sent message", "peer", envelope->to, "message", envelope->message->GetTypeName());
     } else if (res.index() == 1) {
       co_return std::get<1>(res).error();
     } else if (res.index() == 2) {
@@ -594,7 +566,7 @@ auto Router::route_channel(Chan<std::monostate>& done,
       //   envelope.Message = msg
       // }
       if (envelope->message->GetTypeName() != wrapper->GetTypeName()) {
-        // r.logger.Error("failed to wrap message", "channel", chID, "err", err)
+        elog("failed to wrap message", "channel", ch_id);
         continue;
       }
 
@@ -621,8 +593,7 @@ auto Router::route_channel(Chan<std::monostate>& done,
         }
         lock.release();
         if (!ok) {
-          // TODO: logger
-          // r.logger.Debug("dropping message for unconnected peer", "peer", envelope.To, "channel", chID)
+          dlog("dropping message for unconnected peer", "peer", envelope->to, "channel", ch_id);
           continue;
         }
 
@@ -644,8 +615,7 @@ auto Router::route_channel(Chan<std::monostate>& done,
 
         if (queue_res.index() == 0) {
         } else if (queue_res.index() == 1) {
-          // TODO: logger
-          // r.logger.Debug("dropping message for unconnected peer", "peer", envelope.To, "channel", chID)
+          dlog("dropping message for unconnected peer", "peer", envelope->to, "channel", ch_id);
         } else if (queue_res.index() == 2) {
           co_return;
         }
@@ -653,12 +623,13 @@ auto Router::route_channel(Chan<std::monostate>& done,
     } else if (res.index() == 1) {
       auto peer_error = std::get<1>(res);
       auto max_peer_capacity = peer_manager->has_max_peer_capacity();
-      // TODO: logger
-      // r.logger.Error("peer error",
-      //   "peer", peerError.NodeID,
-      //   "err", peerError.Err,
-      //   "disconnecting", peerError.Fatal || maxPeerCapacity,
-      // )
+      elog("peer error",
+        "peer",
+        peer_error->node_id,
+        "err",
+        peer_error->err,
+        "disconnecting",
+        peer_error->fatal || max_peer_capacity);
 
       if (peer_error->fatal || max_peer_capacity) {
         // if the error is fatal or all peer slots are in use, we can error (disconnect) from the peer.
