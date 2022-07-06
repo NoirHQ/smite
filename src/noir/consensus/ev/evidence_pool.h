@@ -144,7 +144,7 @@ struct evidence_pool {
     return ev_list->front();
   }
 
-  auto evidence_wait_chan() -> Chan<std::monostate>& {
+  auto evidence_wait_chan() -> chan<>& {
     return ev_list->wait_chan();
   }
 

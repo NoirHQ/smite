@@ -20,7 +20,7 @@ void reactor::process_peer_update(plugin_interface::peer_status_info_ptr info) {
   switch (info->status) {
   case p2p::peer_status::up: {
     if (!peer_routines.contains(info->peer_id)) {
-      auto it = peer_routines.insert(std::make_pair(info->peer_id, Chan<std::monostate>{thread_pool->get_executor()}));
+      auto it = peer_routines.insert(std::make_pair(info->peer_id, chan<>{thread_pool->get_executor()}));
       peer_wg.add(1);
       broadcast_evidence_loop(info->peer_id, it.first->second);
     }
@@ -60,7 +60,7 @@ Result<void> reactor::process_peer_msg(p2p::envelope_ptr info) {
   return success();
 }
 
-void reactor::broadcast_evidence_loop(const std::string& peer_id, Chan<std::monostate>& closer) {
+void reactor::broadcast_evidence_loop(const std::string& peer_id, chan<>& closer) {
   boost::asio::co_spawn(
     thread_pool->get_executor(),
     [&, peer_id]() -> boost::asio::awaitable<void> {
