@@ -9,10 +9,10 @@
 #include <noir/consensus/types/node_id.h>
 #include <tendermint/types/mempool.h>
 #include <tendermint/types/tx.h>
-#include <boost/multi_index_container.hpp>
 #include <boost/multi_index/key.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index_container.hpp>
 #include <cstdint>
 #include <functional>
 #include <set>
@@ -55,7 +55,8 @@ public:
   void set_tx(const std::shared_ptr<WrappedTx>& wtx);
   void remove_tx(const std::shared_ptr<WrappedTx>& wtx);
   auto tx_has_peer(const types::TxKey& hash, uint16_t peer_id) -> bool;
-  auto get_or_set_peer_by_tx_hash(const types::TxKey& hash, uint16_t peer_id) -> std::pair<std::shared_ptr<WrappedTx>, bool>;
+  auto get_or_set_peer_by_tx_hash(const types::TxKey& hash, uint16_t peer_id)
+    -> std::pair<std::shared_ptr<WrappedTx>, bool>;
 
   struct by_key;
   struct by_sender;

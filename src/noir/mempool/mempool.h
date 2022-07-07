@@ -22,8 +22,8 @@ struct ErrMempoolIsFull {
   int64_t max_txs_bytes;
 
   std::string message() const {
-		return fmt::format("mempool is full: number of txs {:d} (max: {:d}), total txs bytes {:d} (max: {:d})",
-      num_txs, max_txs, txs_bytes, max_txs_bytes);
+    return fmt::format("mempool is full: number of txs {:d} (max: {:d}), total txs bytes {:d} (max: {:d})", num_txs,
+      max_txs, txs_bytes, max_txs_bytes);
   }
 };
 
@@ -172,7 +172,7 @@ private:
 
     recheck_cursor = gossip_index.front();
     recheck_end = gossip_index.back();
-    //auto ctx = context::background();
+    // auto ctx = context::background();
 
     for (auto e = gossip_index.front(); e; e = e->next()) {
       if (!tx_store.is_tx_removed(e->value->hash)) {
@@ -194,7 +194,7 @@ private:
     auto num_txs = size();
     auto size_bytes = this->size_bytes();
 
-    if (num_txs >= config->size || int64_t(wtx->size())+ size_bytes > config->max_txs_bytes) {
+    if (num_txs >= config->size || int64_t(wtx->size()) + size_bytes > config->max_txs_bytes) {
       return ErrMempoolIsFull{
         .num_txs = num_txs,
         .max_txs = config->size,
@@ -303,16 +303,13 @@ private:
   struct by_height;
   struct by_timestamp;
 
-  TxPriorityQueue<
-    boost::multi_index::ordered_non_unique<
-      boost::multi_index::tag<by_height>,
-      boost::multi_index::key<&WrappedTx::height>,
-      std::greater_equal<int64_t>>,
-    boost::multi_index::ordered_non_unique<
-      boost::multi_index::tag<by_timestamp>,
+  TxPriorityQueue<boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_height>,
+                    boost::multi_index::key<&WrappedTx::height>,
+                    std::greater_equal<int64_t>>,
+    boost::multi_index::ordered_non_unique<boost::multi_index::tag<by_timestamp>,
       boost::multi_index::key<&WrappedTx::timestamp>,
-      std::greater_equal<tstamp>>
-  > priority_index;
+      std::greater_equal<tstamp>>>
+    priority_index;
 
   std::shared_mutex mtx;
   // mempool::PreCheckFunc pre_check;

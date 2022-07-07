@@ -7,12 +7,12 @@
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/tx.h>
 #include <noir/mempool/tx.h>
-#include <boost/multi_index_container.hpp>
 #include <boost/multi_index/composite_key.hpp>
 #include <boost/multi_index/key.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/random_access_index.hpp>
+#include <boost/multi_index_container.hpp>
 #include <shared_mutex>
 
 namespace noir::mempool {
@@ -20,7 +20,8 @@ namespace noir::mempool {
 template<typename... Indices>
 class TxPriorityQueue {
 public:
-  auto get_evictable_txs(int64_t priority, int64_t tx_size, int64_t total_size, int64_t cap) -> std::vector<std::shared_ptr<WrappedTx>> {
+  auto get_evictable_txs(int64_t priority, int64_t tx_size, int64_t total_size, int64_t cap)
+    -> std::vector<std::shared_ptr<WrappedTx>> {
     std::shared_lock g{mtx};
 
     std::vector<std::shared_ptr<WrappedTx>> to_evict;
@@ -70,9 +71,7 @@ public:
     }
     // erase() doesn't work with reverse iterator
     auto rbegin = --heap.end();
-    auto _ = make_scope_exit([&]() {
-      heap.erase(rbegin);
-    });
+    auto _ = make_scope_exit([&]() { heap.erase(rbegin); });
     return *rbegin;
   }
 
