@@ -176,8 +176,9 @@ private:
 
     for (auto e = gossip_index.front(); e; e = e->next()) {
       if (!tx_store.is_tx_removed(e->value->hash)) {
+        auto& wtx = *e->value;
         abci::RequestCheckTx req{};
-        req.set_tx(e->tx);
+        req.set_tx(std::string(wtx.tx.begin(), wtx.tx.end()));
         req.set_type(abci::CheckTxType::RECHECK);
         if (auto ok = invoke(proxy_app_conn->check_tx_async(req)); !ok) {
           // logger->error(...);
@@ -273,7 +274,7 @@ private:
     if (txs_available_ && !notified_txs_available) {
       notified_txs_available = true;
 
-      txs_available_->try_send(boost::system::error_code{}, std::monostate{});
+      txs_available_->raw().try_send(boost::system::error_code{}, std::monostate{});
     }
   }
 

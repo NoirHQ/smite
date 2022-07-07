@@ -28,7 +28,7 @@ public:
   bool push(const consensus::tx& tx);
   void remove(const consensus::tx& tx);
 
-  LRUTxCache() requires(TxCache<LRUTxCache>) = default;
+  LRUTxCache() = default;
   LRUTxCache(int cache_size): size(cache_size) {}
 
 private:
