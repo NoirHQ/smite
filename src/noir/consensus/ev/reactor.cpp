@@ -81,11 +81,11 @@ void reactor::broadcast_evidence_loop(const std::string& peer_id, chan<>& closer
 
       for (;;) {
         if (!next) {
-          auto res =
-            co_await (evpool->evidence_wait_chan().async_receive(eo::eoroutine) || closer.async_receive(eo::eoroutine)
-              // TODO: implement tendermint::service
-              /* close */
-            );
+          auto res = co_await (
+            evpool->evidence_wait_chan().raw().async_receive(eo::eoroutine) || closer.raw().async_receive(eo::eoroutine)
+            // TODO: implement tendermint::service
+            /* close */
+          );
           switch (res.index()) {
           case 0:
             if (next = evpool->evidence_front(); !next) {
@@ -118,8 +118,8 @@ void reactor::broadcast_evidence_loop(const std::string& peer_id, chan<>& closer
         auto timer =
           boost::asio::steady_timer(thread_pool->get_executor(), std::chrono::seconds(broadcast_evidence_interval_s));
 
-        auto res = co_await (timer.async_wait(eo::eoroutine) || next->next_wait_chan().async_receive(eo::eoroutine) ||
-          closer.async_receive(eo::eoroutine)
+        auto res = co_await (timer.async_wait(eo::eoroutine) ||
+          next->next_wait_chan().raw().async_receive(eo::eoroutine) || closer.raw().async_receive(eo::eoroutine)
           // TODO: implement tendermint::service
           // || close_ch
         );
