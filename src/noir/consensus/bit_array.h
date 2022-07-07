@@ -67,7 +67,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   std::shared_ptr<bit_array> update(const std::shared_ptr<bit_array>& o) {
-    if (o == nullptr)
+    if (this == nullptr || o == nullptr)
       return nullptr;
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     elem = o->elem;
@@ -87,6 +87,10 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
 
   /// \brief returns a bit_array resulting from a bitwise OR of two bit_arrays
   std::shared_ptr<bit_array> or_op(const std::shared_ptr<bit_array>& o) {
+    if (this == nullptr && o == nullptr)
+      return nullptr;
+    if (this == nullptr && o != nullptr)
+      return o->copy();
     if (o == nullptr)
       return copy();
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);

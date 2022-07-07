@@ -43,6 +43,8 @@ Bytes pub_key::address() {
 }
 
 bool pub_key::verify_signature(const Bytes& msg, const Bytes& sig) {
+  if (sig.size() != signature_size)
+    return false;
   return detail::verify(sig, msg, key);
 }
 

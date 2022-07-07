@@ -970,10 +970,10 @@ void connection::start_handshake() {
   std::memcpy(bz.data(), secret_conn->loc_eph_pub.data(), bz.size());
   auto my_msg = consensus::cdc_encode(bz);
   write_msg(my_msg, false); // send; use non-secret connection
-  read_a_message([conn = shared_from_this()](
-                   std::shared_ptr<Bytes> msg) -> void { return conn->shared_eph_pub_key(msg); }); // receive
   cb_current_task = [conn = shared_from_this()](
                       std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_authenticate(msg); };
+  read_a_message([conn = shared_from_this()](
+                   std::shared_ptr<Bytes> msg) -> void { return conn->shared_eph_pub_key(msg); }); // receive
 }
 
 void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) {

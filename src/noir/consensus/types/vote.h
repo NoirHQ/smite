@@ -326,7 +326,7 @@ struct vote_set_reader {
 
   std::shared_ptr<vote> get_by_index(int32_t val_index) {
     if (!votes.empty() && votes.size() > val_index)
-      return std::make_shared<vote>(*votes[val_index]);
+      return votes[val_index];
     return nullptr;
   }
 };
