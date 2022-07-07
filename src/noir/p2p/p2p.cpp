@@ -4,15 +4,14 @@
 // SPDX-License-Identifier: MIT
 //
 #include <noir/codec/protobuf.h>
-#include <noir/common/log.h>
 #include <noir/common/thread_pool.h>
 #include <noir/common/types/varint.h>
 #include <noir/consensus/abci.h>
 #include <noir/consensus/tx.h>
 #include <noir/consensus/types/encoding_helper.h>
 #include <noir/consensus/types/node_info.h>
+#include <noir/net/detail/message_buffer.h>
 #include <noir/p2p/conn/secret_connection.h>
-#include <noir/p2p/message_buffer.h>
 #include <noir/p2p/p2p.h>
 #include <noir/p2p/queued_buffer.h>
 #include <noir/p2p/types.h>
@@ -23,9 +22,6 @@
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/steady_timer.hpp>
-#include <fc/exception/exception.hpp>
-#include <fc/network/ip.hpp>
-
 #include <cppcodec/base64_default_rfc4648.hpp>
 #include <google/protobuf/wrappers.pb.h>
 
@@ -40,9 +36,6 @@ using boost::multi_index_container;
 using boost::asio::ip::address_v4;
 using boost::asio::ip::host_name;
 using boost::asio::ip::tcp;
-
-using fc::time_point;
-using fc::time_point_sec;
 
 class connection : public std::enable_shared_from_this<connection> {
 public:
@@ -78,8 +71,8 @@ public:
   boost::asio::io_context::strand strand;
   std::shared_ptr<tcp::socket> socket; // only accessed through strand after construction
 
-  message_buffer<1024 * 1024> pending_message_buffer;
-  message_buffer<8192> decrypted_message_buffer;
+  net::detail::message_buffer<1024 * 1024> pending_message_buffer;
+  net::detail::message_buffer<8192> decrypted_message_buffer;
   std::atomic<std::size_t> outstanding_read_bytes{0}; // accessed only from strand threads
 
   queued_buffer buffer_queue;
@@ -95,7 +88,6 @@ public:
   std::atomic<go_away_reason> no_retry{no_reason};
 
   mutable std::mutex conn_mtx; //< mtx for last_req .. local_endpoint_port
-  fc::time_point last_close;
   Bytes conn_node_id;
   std::string remote_endpoint_ip;
   std::string remote_endpoint_port;
@@ -187,7 +179,6 @@ public:
   int max_cleanup_time_ms = 0;
   uint32_t max_client_count = 0;
   uint32_t max_nodes_per_host = 1;
-  bool p2p_accept_transactions = true;
 
   consensus::node_info my_node_info;
   Bytes20 node_id;
@@ -295,8 +286,9 @@ void p2p_impl::start_conn_timer(boost::asio::steady_timer::duration du, std::wea
 }
 
 void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, bool reschedule) {
-  auto max_time = fc::time_point::now();
-  max_time += fc::milliseconds(max_cleanup_time_ms);
+  auto max_time = get_time();
+  max_time +=
+    std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::milliseconds(max_cleanup_time_ms)).count();
   auto from = from_connection.lock();
   std::unique_lock<std::shared_mutex> g(connections_mtx);
   auto it = (from ? connections.find(from) : connections.begin());
@@ -304,10 +296,10 @@ void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, boo
     it = connections.begin();
   size_t num_rm = 0, num_clients = 0, num_peers = 0;
   while (it != connections.end()) {
-    if (fc::time_point::now() >= max_time) {
+    if (get_time() >= max_time) {
       connection_wptr wit = *it;
       g.unlock();
-      dlog("Exiting connection monitor early, ran out of time: ${t}", ("t", max_time - fc::time_point::now()));
+      dlog("Exiting connection monitor early, ran out of time: ${t}", ("t", max_time - get_time()));
       if (reschedule) {
         start_conn_timer(std::chrono::milliseconds(1), wit); // avoid exhausting
       }
@@ -333,8 +325,8 @@ void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, boo
   }
   g.unlock();
   if (num_clients > 0 || num_peers > 0)
-    ilog("p2p client connections: ${num}/${max}, peer connections: ${pnum}/${pmax}",
-      ("num", num_clients)("max", max_client_count)("pnum", num_peers)("pmax", supplied_peers.size()));
+    ilog("p2p client connections: {}/{}, peer connections: {}/{}", num_clients, max_client_count, num_peers,
+      supplied_peers.size());
   dlog("connection monitor, removed ${n} connections", ("n", num_rm));
   if (reschedule) {
     start_conn_timer(connector_period, std::weak_ptr<connection>());
@@ -444,8 +436,6 @@ void p2p_impl::ticker() {
 }
 
 void p2p_impl::transmit_message(const envelope_ptr& env) {
-  // dlog(fmt::format("about to transmit message: to='{}' broadcast={} size={}", env->to, env->broadcast,
-  // env->message.size()));
   if (env->broadcast) {
     for_each_connection([env](auto& c) {
       if (c->socket_is_open()) {
@@ -520,36 +510,32 @@ void p2p::set_program_options(CLI::App& config) {
 
 void p2p::plugin_initialize(const CLI::App& config) {
   ilog("Initialize p2p");
-  try {
-    auto p2p_options = config.get_subcommand("p2p");
+  auto p2p_options = config.get_subcommand("p2p");
 
-    my->connector_period = std::chrono::seconds(60); // number of seconds to wait before cleaning up dead connections
-    my->max_cleanup_time_ms = 1000; // max connection cleanup time per cleanup call in millisec
-    my->txn_exp_period = def_txn_expire_wait;
-    my->resp_expected_period = def_resp_expected_wait;
-    my->max_client_count = 5; // maximum number of clients from which connections are accepted, use 0 for no limit
-    my->max_nodes_per_host = 1;
-    my->p2p_accept_transactions = true;
-    my->keepalive_interval = std::chrono::seconds(60);
-    my->heartbeat_timeout = std::chrono::seconds(90);
+  my->connector_period = std::chrono::seconds(60); // number of seconds to wait before cleaning up dead connections
+  my->max_cleanup_time_ms = 1000; // max connection cleanup time per cleanup call in millisec
+  my->txn_exp_period = def_txn_expire_wait;
+  my->resp_expected_period = def_resp_expected_wait;
+  my->max_client_count = 5; // maximum number of clients from which connections are accepted, use 0 for no limit
+  my->max_nodes_per_host = 1;
+  my->keepalive_interval = std::chrono::seconds(60);
+  my->heartbeat_timeout = std::chrono::seconds(90);
 
-    // my->p2p_server_address = "0.0.0.0:9876"; // An externally accessible host:port for identifying this node.
-    // Defaults to p2p-listen-endpoint
-    my->thread_pool_size = 2; // number of threads to use
+  // my->p2p_server_address = "0.0.0.0:9876"; // An externally accessible host:port for identifying this node.
+  // Defaults to p2p-listen-endpoint
+  my->thread_pool_size = 2; // number of threads to use
 
-    // setup node_info
-    auto abci_options = config.get_subcommand("abci");
-    my->my_node_info.protocol_version.p2p = 8;
-    my->my_node_info.protocol_version.block = 11;
-    my->my_node_info.protocol_version.app = 0;
-    my->my_node_info.listen_addr = "tcp://" + my->p2p_address;
-    my->my_node_info.version = "0.35.6";
-    my->my_node_info.channels = Bytes("402021222330386061626300");
-    my->my_node_info.moniker = abci_options->get_option("--moniker")->as<std::string>();
-    my->my_node_info.other.tx_index = "on";
-    my->my_node_info.other.rpc_address = "tcp://0.0.0.0:26657"; // FIXME : properly use other node_info
-  }
-  FC_LOG_AND_RETHROW()
+  // setup node_info
+  auto abci_options = config.get_subcommand("abci");
+  my->my_node_info.protocol_version.p2p = 8;
+  my->my_node_info.protocol_version.block = 11;
+  my->my_node_info.protocol_version.app = 0;
+  my->my_node_info.listen_addr = "tcp://" + my->p2p_address;
+  my->my_node_info.version = "0.35.6";
+  my->my_node_info.channels = Bytes("402021222330386061626300");
+  my->my_node_info.moniker = abci_options->get_option("--moniker")->as<std::string>();
+  my->my_node_info.other.tx_index = "on";
+  my->my_node_info.other.rpc_address = "tcp://0.0.0.0:26657"; // FIXME : properly use other node_info
 }
 
 void p2p::plugin_startup() {
@@ -572,14 +558,6 @@ void p2p::plugin_startup() {
 
     my->thread_pool.emplace("p2p", my->thread_pool_size);
 
-    if (!my->p2p_accept_transactions && my->p2p_address.size()) {
-      ilog("\n"
-           "***********************************\n"
-           "* p2p-accept-transactions = false *\n"
-           "*    Transactions not forwarded   *\n"
-           "***********************************\n");
-    }
-
     tcp::endpoint listen_endpoint;
     if (my->p2p_address.size() > 0) {
       auto host = my->p2p_address.substr(0, my->p2p_address.find(':'));
@@ -597,9 +575,7 @@ void p2p::plugin_startup() {
           boost::system::error_code ec;
           auto host = host_name(ec);
           if (ec.value() != boost::system::errc::success) {
-
-            FC_THROW_EXCEPTION(
-              fc::invalid_arg_exception, "Unable to retrieve host_name. ${msg}", ("msg", ec.message()));
+            throw Error(fmt::format("Unable to retrieve host_name. {}", ec.message()));
           }
           auto port = my->p2p_address.substr(my->p2p_address.find(':'), my->p2p_address.size());
           my->p2p_address = host + port;
@@ -700,55 +676,6 @@ std::vector<connection_status> p2p::connections() const {
 }
 
 //------------------------------------------------------------------------
-// called from connection strand
-struct msg_handler {
-  connection_ptr c;
-
-  explicit msg_handler(const connection_ptr& conn): c(conn) {}
-
-  // template<typename T>
-  // void operator()(const T&) const {
-  //   // Skip the rest
-  // }
-
-  void operator()(envelope& msg) {
-    msg.from = to_hex(c->conn_node_id); // manually set from, overriding original
-    dlog(fmt::format(" <<< envelope : from='{}' size={}", msg.from, msg.message.size()));
-    if (!my_impl->abci_plug) {
-      dlog("abci is not connected; discard envelope");
-      return;
-    }
-    switch (msg.id) {
-    case State:
-    case Data:
-    case Vote:
-    case VoteSetBits:
-      my_impl->cs_reactor_mq_channel.publish( ///< notify consensus reactor to take additional actions
-        appbase::priority::medium, std::make_shared<envelope>(msg));
-      break;
-    case BlockSync:
-      my_impl->bs_reactor_mq_channel.publish( ///< notify block_sync reactor to take additional actions
-        appbase::priority::medium, std::make_shared<envelope>(msg));
-      break;
-    case Evidence:
-      my_impl->es_reactor_mq_channel.publish( ///< notify evidence reactor to take additional actions
-        appbase::priority::medium, std::make_shared<envelope>(msg));
-      break;
-    case Transaction:
-      my_impl->tp_reactor_mq_channel.publish( ///< notify tx_pool reactor to take additional actions
-        appbase::priority::medium, std::make_shared<envelope>(msg));
-    case PeerError:
-      elog(fmt::format(
-        "received peer_error from={} error={}", msg.from, std::string(msg.message.begin(), msg.message.end())));
-      my_impl->disconnect(msg.from);
-      break;
-    default:
-      elog(fmt::format("unsupported channel_id={}", static_cast<int>(msg.id)));
-    }
-  }
-};
-
-//------------------------------------------------------------------------
 // connection
 //------------------------------------------------------------------------
 connection::connection(std::string endpoint)
@@ -785,23 +712,12 @@ bool connection::resolve_and_connect() {
 
   connection_ptr c = shared_from_this();
 
-  if (consecutive_immediate_connection_close > def_max_consecutive_immediate_connection_close ||
-    no_retry == benign_other) {
-    auto connector_period_us = std::chrono::duration_cast<std::chrono::microseconds>(my_impl->connector_period);
-    std::scoped_lock g(c->conn_mtx);
-    if (last_close == fc::time_point() ||
-      last_close > fc::time_point::now() - fc::microseconds(connector_period_us.count())) {
-      return true; // true so doesn't remove from valid connections
-    }
-  }
-
   strand.post([c]() {
     std::string::size_type colon = c->peer_address().find(':');
     std::string::size_type colon2 = c->peer_address().find(':', colon + 1);
     std::string host = c->peer_address().substr(0, colon);
     std::string port =
       c->peer_address().substr(colon + 1, colon2 == std::string::npos ? std::string::npos : colon2 - (colon + 1));
-    idump((host)(port));
 
     auto resolver = std::make_shared<tcp::resolver>(my_impl->thread_pool->get_executor());
     connection_wptr weak_conn = c;
@@ -815,7 +731,7 @@ bool connection::resolve_and_connect() {
           if (!err) {
             c->connect(resolver, endpoints);
           } else {
-            elog("Unable to resolve ${add}: ${error}", ("add", c->peer_name())("error", err.message()));
+            elog("Unable to resolve {}: {}", c->peer_name(), err.message());
             c->connecting = false;
             ++c->consecutive_immediate_connection_close;
           }
@@ -856,7 +772,7 @@ void connection::connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::re
         if (!err && socket->is_open() && socket == c->socket) {
           c->start_session();
         } else {
-          elog("connection failed to ${peer}: ${error}", ("peer", c->peer_name())("error", err.message()));
+          elog("connection failed to {}: {}", c->peer_name(), err.message());
           c->close(false);
         }
       }));
@@ -868,7 +784,7 @@ bool connection::start_session() {
   boost::system::error_code ec;
   socket->set_option(nodelay, ec);
   if (ec) {
-    elog("connection failed (set_option) ${peer}: ${e1}", ("peer", peer_name())("e1", ec.message()));
+    elog("connection failed (set_option) {}: {}", peer_name(), ec.message());
     close();
     return false;
   } else {
@@ -899,10 +815,9 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
   bool has_last_req = false;
   {
     std::scoped_lock g_conn(self->conn_mtx);
-    self->last_close = fc::time_point::now();
     self->conn_node_id = Bytes();
   }
-  ilog("closing '${a}', ${p}", ("a", self->peer_address())("p", self->peer_name()));
+  ilog("closing '{}', {}", self->peer_address(), self->peer_name());
   dlog("canceling wait on ${p}", ("p", self->peer_name())); // peer_name(), do not hold conn_mtx
   self->cancel_wait();
 
@@ -960,8 +875,7 @@ void connection::enqueue_buffer(
       if (ec)
         return;
       if (close_after_send != no_reason) {
-        ilog("sent a go away message: ${r}, closing connection to ${p}",
-          ("r", reason_str(close_after_send))("p", conn->peer_name()));
+        ilog("sent a go away message: {}, closing connection to {}", reason_str(close_after_send), conn->peer_name());
         conn->close();
         return;
       }
@@ -973,8 +887,7 @@ void connection::queue_write(const std::shared_ptr<vector<unsigned char>>& buff,
   std::function<void(boost::system::error_code, std::size_t)> callback,
   bool to_sync_queue) {
   if (!buffer_queue.add_write_queue(buff, callback, to_sync_queue)) {
-    wlog("write_queue full ${s} bytes, giving up on connection ${p}",
-      ("s", buffer_queue.write_queue_size())("p", peer_name()));
+    wlog("write_queue full {} bytes, giving up on connection {}", buffer_queue.write_queue_size(), peer_name());
     close();
     return;
   }
@@ -996,17 +909,17 @@ void connection::do_queue_write() {
           c->buffer_queue.clear_out_queue();
           // May have closed connection and cleared buffer_queue
           if (!c->socket_is_open() || socket != c->socket) {
-            ilog("async write socket ${r} before callback: ${p}",
-              ("r", c->socket_is_open() ? "changed" : "closed")("p", c->peer_name()));
+            ilog(
+              "async write socket {} before callback: {}", c->socket_is_open() ? "changed" : "closed", c->peer_name());
             c->close();
             return;
           }
 
           if (ec) {
             if (ec.value() != boost::asio::error::eof) {
-              elog("Error sending to peer ${p}: ${i}", ("p", c->peer_name())("i", ec.message()));
+              elog("Error sending to peer {}: {}", c->peer_name(), ec.message());
             } else {
-              wlog("connection closure detected on write to ${p}", ("p", c->peer_name()));
+              wlog("connection closure detected on write to {}", c->peer_name());
             }
             c->close();
             return;
@@ -1019,12 +932,10 @@ void connection::do_queue_write() {
           throw;
         } catch (const boost::interprocess::bad_alloc&) {
           throw;
-        } catch (const fc::exception& ex) {
-          elog("Exception in do_queue_write to ${p} ${s}", ("p", c->peer_name())("s", ex.to_string()));
         } catch (const std::exception& ex) {
-          elog("Exception in do_queue_write to ${p} ${s}", ("p", c->peer_name())("s", ex.what()));
+          elog("Exception in do_queue_write to {} {}", c->peer_name(), ex.what());
         } catch (...) {
-          elog("Exception in do_queue_write to ${p}", ("p", c->peer_name()));
+          elog("Exception in do_queue_write to {}", c->peer_name());
         }
       }));
   });
@@ -1034,7 +945,7 @@ void connection::check_heartbeat(tstamp current_time) {
   if (latest_msg_time > 0 && current_time > latest_msg_time + hb_timeout) {
     no_retry = benign_other;
     if (!peer_address().empty()) {
-      wlog("heartbeat timed out for peer address ${adr}", ("adr", peer_address()));
+      wlog("heartbeat timed out for peer address {}", peer_address());
       close(true); // reconnect
     } else {
       {
@@ -1084,7 +995,7 @@ void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) 
         return 0;
       return minimum_read - bytes_transferred;
     };
-    boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read(),
+    boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read().value(),
       completion_handler,
       boost::asio::bind_executor(strand,
         [conn = shared_from_this(), socket = socket, cb](boost::system::error_code ec, std::size_t bytes_transferred) {
@@ -1096,7 +1007,7 @@ void connection::read_a_message(std::function<void(std::shared_ptr<Bytes>)> cb) 
               uint32_t bytes_in_buffer = conn->pending_message_buffer.bytes_to_read();
               try {
                 varuint64 message_length = 0;
-                mb_peek_datastream ds(conn->pending_message_buffer);
+                net::detail::mb_peek_datastream ds(conn->pending_message_buffer);
                 auto message_header_bytes = read_uleb128(ds, message_length);
                 auto total_message_bytes = message_length + message_header_bytes;
                 if (bytes_in_buffer >= total_message_bytes) {
@@ -1143,13 +1054,13 @@ void connection::read_a_secret_message() {
 
     uint32_t write_queue_size = buffer_queue.write_queue_size();
     if (write_queue_size > def_max_write_queue_size) {
-      elog("write queue full ${s} bytes, giving up on connection, closing connection to: ${p}",
-        ("s", write_queue_size)("p", peer_name()));
+      elog(
+        "write queue full {} bytes, giving up on connection, closing connection to: {}", write_queue_size, peer_name());
       close(false);
       return;
     }
 
-    boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read(),
+    boost::asio::async_read(*socket, pending_message_buffer.get_buffer_sequence_for_boost_async_read().value(),
       completion_handler,
       boost::asio::bind_executor(strand,
         [conn = shared_from_this(), socket = socket](boost::system::error_code ec, std::size_t bytes_transferred) {
@@ -1160,8 +1071,8 @@ void connection::read_a_secret_message() {
           try {
             if (!ec) {
               if (bytes_transferred > conn->pending_message_buffer.bytes_to_write()) {
-                elog("async_read_some callback: bytes_transferred = ${bt}, buffer.bytes_to_write = ${btw}",
-                  ("bt", bytes_transferred)("btw", conn->pending_message_buffer.bytes_to_write()));
+                elog("async_read_some callback: bytes_transferred = {}, buffer.bytes_to_write = {}", bytes_transferred,
+                  conn->pending_message_buffer.bytes_to_write());
               }
               conn->pending_message_buffer.advance_write_ptr(bytes_transferred);
               while (conn->pending_message_buffer.bytes_to_read() > 0) {
@@ -1277,7 +1188,7 @@ bool connection::process_next_message() {
   if (bytes_available < 10)
     return true;
   varuint64 message_length = 0;
-  mb_peek_datastream ds(decrypted_message_buffer);
+  net::detail::mb_peek_datastream ds(decrypted_message_buffer);
   auto message_header_bytes = read_uleb128(ds, message_length);
   if (bytes_available < message_header_bytes + message_length)
     return true;
@@ -1356,6 +1267,10 @@ Result<void> connection::task_process_message(std::shared_ptr<Bytes> bz) {
       break;
     case BlockSync:
       my_impl->bs_reactor_mq_channel.publish( ///< notify block_sync reactor to take additional actions
+        appbase::priority::medium, new_envelope);
+      break;
+    case Evidence:
+      my_impl->es_reactor_mq_channel.publish( ///< notify evidence reactor to take additional actions
         appbase::priority::medium, new_envelope);
       break;
     case PeerError:

@@ -368,7 +368,7 @@ public:
     return mb.peek(&c, 1, index);
   }
   inline bool get(char& c) {
-    return mb.peek(&c, 1, index);
+    return !!mb.peek(&c, 1, index);
   }
   inline int get() {
     char c = 0;
