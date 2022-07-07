@@ -24,7 +24,8 @@ void MempoolConfig::bind(CLI::App& root) {
 # Limit the total size of all txs in the mempool.
 # This only accounts for raw transactions (e.g. given 1MB transactions and
 # max-txs-bytes=5MB, mempool will only accept 5 transactions).)");
-  mempool->add_option("--cache-size", cache_size, "Size of the cache (used to filter transactions we saw earlier) in transactions");
+  mempool->add_option(
+    "--cache-size", cache_size, "Size of the cache (used to filter transactions we saw earlier) in transactions");
   mempool->add_option("--keep-invalid-txs-in-chache", keep_invalid_txs_in_cache, R"(
 # Do not remove invalid transactions from the cache (default: false)
 # Set to true if it's not possible for any invalid transaction to become valid

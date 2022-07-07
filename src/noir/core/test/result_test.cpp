@@ -34,10 +34,12 @@ TEST_CASE("Result", "[noir][core]") {
       }
     };
 
-    auto foo = [](int i) -> Result<void, CustomError> { return CustomError{ .code = i, }; };
-    auto bar = [&](int i) -> Result<void> {
-      return foo(i).error();
+    auto foo = [](int i) -> Result<void, CustomError> {
+      return CustomError{
+        .code = i,
+      };
     };
+    auto bar = [&](int i) -> Result<void> { return foo(i).error(); };
 
     auto res = bar(1);
     CHECK(!res);

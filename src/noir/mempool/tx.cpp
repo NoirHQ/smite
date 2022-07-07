@@ -88,7 +88,8 @@ auto TxStore::tx_has_peer(const types::TxKey& hash, uint16_t peer_id) -> bool {
   return (*wtx)->peers.contains(peer_id);
 }
 
-auto TxStore::get_or_set_peer_by_tx_hash(const types::TxKey& hash, uint16_t peer_id) -> std::pair<std::shared_ptr<WrappedTx>, bool> {
+auto TxStore::get_or_set_peer_by_tx_hash(const types::TxKey& hash, uint16_t peer_id)
+  -> std::pair<std::shared_ptr<WrappedTx>, bool> {
   std::unique_lock g{mtx};
 
   auto& hash_txs = txs.get<TxStore::by_key>();
@@ -118,9 +119,7 @@ void WrappedTxList::reset() {
 void WrappedTxList::insert(const std::shared_ptr<WrappedTx>& wtx) {
   std::unique_lock g{mtx};
 
-  auto i = std::find_if(txs.begin(), txs.end(), [&](const auto& v) {
-    return less(v, wtx);
-  });
+  auto i = std::find_if(txs.begin(), txs.end(), [&](const auto& v) { return less(v, wtx); });
 
   txs.insert(i, wtx);
 }
@@ -128,9 +127,7 @@ void WrappedTxList::insert(const std::shared_ptr<WrappedTx>& wtx) {
 void WrappedTxList::insert(std::shared_ptr<WrappedTx>&& wtx) {
   std::unique_lock g{mtx};
 
-  auto i = std::find_if(txs.begin(), txs.end(), [&](const auto& v) {
-    return less(v, wtx);
-  });
+  auto i = std::find_if(txs.begin(), txs.end(), [&](const auto& v) { return less(v, wtx); });
 
   txs.insert(i, std::move(wtx));
 }
@@ -138,9 +135,7 @@ void WrappedTxList::insert(std::shared_ptr<WrappedTx>&& wtx) {
 void WrappedTxList::remove(const std::shared_ptr<WrappedTx>& wtx) {
   std::unique_lock g{mtx};
 
-  auto i = std::find_if(txs.begin(), txs.end(), [&](const auto& v) {
-    return less(v, wtx);
-  });
+  auto i = std::find_if(txs.begin(), txs.end(), [&](const auto& v) { return less(v, wtx); });
 
   while (i != txs.end()) {
     if ((*i).get() == wtx.get()) {

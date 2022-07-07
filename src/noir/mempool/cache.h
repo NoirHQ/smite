@@ -7,10 +7,10 @@
 #include <noir/common/bytes.h>
 #include <noir/common/concepts.h>
 #include <noir/consensus/tx.h>
+#include <tendermint/types/mempool.h>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
-#include <tendermint/types/mempool.h>
 #include <mutex>
 
 namespace noir::mempool {
@@ -28,7 +28,7 @@ public:
   bool push(const consensus::tx& tx);
   void remove(const consensus::tx& tx);
 
-  LRUTxCache() requires (TxCache<LRUTxCache>) = default;
+  LRUTxCache() requires(TxCache<LRUTxCache>) = default;
   LRUTxCache(int cache_size): size(cache_size) {}
 
 private:

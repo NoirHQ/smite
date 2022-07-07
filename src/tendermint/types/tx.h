@@ -17,4 +17,4 @@ struct Tx : public Bytes {
   }
 };
 
-} // namespace noir::type
+} // namespace noir::types

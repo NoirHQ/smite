@@ -36,9 +36,7 @@ TEST_CASE("TxPriorityQueue", "[noir][mempool]") {
 
     std::sort(priorities.begin(), priorities.end(), std::greater<>());
 
-    auto th = std::thread([&]() {
-      io_context.run();
-    });
+    auto th = std::thread([&]() { io_context.run(); });
     io_context.run();
     th.join();
 

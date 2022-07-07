@@ -140,9 +140,7 @@ TEST_CASE("TxStore", "[noir][mempool]") {
 
 TEST_CASE("WrappedTxList", "[noir][mempool]") {
   SECTION("Reset") {
-    auto list = WrappedTxList([](auto wtx1, auto wtx2) -> bool {
-      return wtx1->height >= wtx2->height;
-    });
+    auto list = WrappedTxList([](auto wtx1, auto wtx2) -> bool { return wtx1->height >= wtx2->height; });
 
     CHECK(0 == list.size());
 
@@ -158,9 +156,7 @@ TEST_CASE("WrappedTxList", "[noir][mempool]") {
   }
 
   SECTION("Insert") {
-    auto list = WrappedTxList([](auto wtx1, auto wtx2) -> bool {
-      return wtx1->height >= wtx2->height;
-    });
+    auto list = WrappedTxList([](auto wtx1, auto wtx2) -> bool { return wtx1->height >= wtx2->height; });
 
     auto gen = std::mt19937((std::chrono::steady_clock::now().time_since_epoch().count()));
     auto rng = std::uniform_int_distribution<>(0, 9999);
@@ -191,9 +187,7 @@ TEST_CASE("WrappedTxList", "[noir][mempool]") {
   }
 
   SECTION("Remove") {
-    auto list = WrappedTxList([](auto wtx1, auto wtx2) -> bool {
-      return wtx1->height >= wtx2->height;
-    });
+    auto list = WrappedTxList([](auto wtx1, auto wtx2) -> bool { return wtx1->height >= wtx2->height; });
 
     auto gen = std::mt19937((std::chrono::steady_clock::now().time_since_epoch().count()));
     auto rng = std::uniform_int_distribution<>(0, 9999);
@@ -213,13 +207,13 @@ TEST_CASE("WrappedTxList", "[noir][mempool]") {
       }
     }
 
-	  // remove a tx that does not exist
-    list.remove(std::make_shared<WrappedTx>(WrappedTx{ .height = 20000 }));
+    // remove a tx that does not exist
+    list.remove(std::make_shared<WrappedTx>(WrappedTx{.height = 20000}));
 
-	  // remove a tx that exists (by height) but not referenced
-    list.remove(std::make_shared<WrappedTx>(WrappedTx{ .height = txs[0]->height }));
+    // remove a tx that exists (by height) but not referenced
+    list.remove(std::make_shared<WrappedTx>(WrappedTx{.height = txs[0]->height}));
 
-	  // remove a few existing txs
+    // remove a few existing txs
     for (auto i = 0; i < 25; i++) {
       auto j = std::uniform_int_distribution<>(0, txs.size() - 1)(gen);
       list.remove(txs[j]);
