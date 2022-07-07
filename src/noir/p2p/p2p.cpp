@@ -960,17 +960,9 @@ void connection::check_heartbeat(tstamp current_time) {
 }
 
 void connection::start_handshake() {
-  /// requires node_info and priv_key of local node
-  /// start timeout for handshake, which defaults to 20s (configurable)
-  // loc_priv_key is read from config/node_key.json
-  // auto node_key_str =
-  //   base64::decode("qk7PS9vdekaGFXWR99mvmCN83DPnSjaRmouPiVjzYIwBe1TnvQp+TayvbQBwokzsP96APoYLOeH3bMWEE+8YPg==");
-  // Following is COPIED from tendermint generated node_key.json
+  // TODO : start timeout for handshake, which defaults to 20s (configurable)
   // Generated key must conform to Ed25519 Validation Rules by ZIP-215
-  auto node_key_str =
-    base64::decode("xdxvup1J2+IzkzvspqSUy7rd+OBx5a4I+KAajJlHA5v5GK6EzZ2Su2LcVL3J8wlMzu3a87/3NyeEY3XauD8pYg==");
-  Bytes loc_priv_key(node_key_str.begin(), node_key_str.end());
-
+  Bytes loc_priv_key = my_impl->abci_plug->node_->node_key_->priv_key;
   secret_conn = secret_connection::make_secret_connection(loc_priv_key);
 
   // Exchange loc_eph_pub
@@ -1135,7 +1127,7 @@ void connection::read_a_secret_message() {
 }
 
 void connection::shared_eph_pub_key(std::shared_ptr<Bytes> new_message) {
-  ilog(fmt::format("shared_eph_pub_key = {}", to_hex(*new_message)));
+  dlog(fmt::format("shared_eph_pub_key = {}", to_hex(*new_message)));
   google::protobuf::BytesValue v;
   v.ParseFromArray(new_message->data(), new_message->size());
   Bytes32 received_eph_pub{v.value().begin(), v.value().end()};
