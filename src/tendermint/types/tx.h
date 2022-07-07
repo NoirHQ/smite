@@ -12,6 +12,11 @@
 namespace noir::types {
 
 struct Tx : public Bytes {
+  Tx() = default;
+
+  Tx(const Bytes& bytes): Bytes(bytes) {}
+  Tx(Bytes&& bytes): Bytes(std::forward<Bytes>(bytes)) {}
+
   TxKey key() const {
     return crypto::Sha256()(std::span{data(), size()});
   }

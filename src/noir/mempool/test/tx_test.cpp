@@ -17,8 +17,8 @@ TEST_CASE("TxStore", "[noir][mempool]") {
     auto txs = TxStore();
     auto wtx = std::make_shared<WrappedTx>(WrappedTx{
       .tx = Bytes(std::span("test_tx")),
-      .sender = "foo",
       .priority = 1,
+      .sender = "foo",
       .timestamp = std::chrono::system_clock::now().time_since_epoch().count(),
     });
 
@@ -36,8 +36,8 @@ TEST_CASE("TxStore", "[noir][mempool]") {
     auto txs = TxStore();
     auto wtx = std::make_shared<WrappedTx>(WrappedTx{
       .tx = Bytes(std::span("test_tx")),
-      .sender = "foo",
       .priority = 1,
+      .sender = "foo",
       .timestamp = std::chrono::system_clock::now().time_since_epoch().count(),
     });
 
@@ -127,8 +127,9 @@ TEST_CASE("TxStore", "[noir][mempool]") {
     auto num_txs = 1000;
 
     for (auto i = 0; i < num_txs; i++) {
+      auto tx = fmt::format("test_tx_{:d}", i);
       tx_store.set_tx(std::make_shared<WrappedTx>(WrappedTx{
-        .tx = Bytes(std::span(fmt::format("test_tx_{:d}", i))),
+        .tx = Bytes(std::span(tx)),
         .priority = i,
         .timestamp = std::chrono::system_clock::now().time_since_epoch().count(),
       }));
