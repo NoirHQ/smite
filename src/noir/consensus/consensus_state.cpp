@@ -394,7 +394,6 @@ void consensus_state::new_step() {
   // newStep is called by updateToState in NewState before the eventBus is set!
   event_bus_->publish_event_new_round_step(event);
 
-  // todo - notify consensus_reactor about rs
   event_switch_mq_channel.publish(appbase::priority::medium,
     std::make_shared<plugin_interface::event_info>(plugin_interface::event_info{EventNewRoundStep, round_state{rs}}));
 }

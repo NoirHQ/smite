@@ -51,6 +51,8 @@ struct height_vote_set {
     std::scoped_lock g(mtx);
     height = height_;
     val_set = val_set_;
+    round_vote_sets.clear();
+    peer_catchup_rounds.clear();
     add_round(0);
     round = 0;
   }
@@ -121,14 +123,22 @@ struct height_vote_set {
       return std::make_pair(false, Error{});
     auto vote_set_ = get_vote_set(vote_->round, vote_->type);
     if (vote_set_ == nullptr) {
-      auto it = peer_catchup_rounds.find(peer_id);
-      if (it == peer_catchup_rounds.end() || it->second.size() >= 2) {
-        // punish peer
+      bool is_add{false};
+      if (auto it = peer_catchup_rounds.find(peer_id); it == peer_catchup_rounds.end()) {
+        peer_catchup_rounds[peer_id] = {vote_->round};
+        is_add = true;
+      } else {
+        if (it->second.size() < 2) {
+          it->second.push_back(vote_->round);
+          is_add = true;
+        }
+      }
+      if (is_add) {
+        add_round(vote_->round);
+        vote_set_ = get_vote_set(vote_->round, vote_->type);
+      } else {
         return std::make_pair(false, ErrGotVoteFromUnwantedRound);
       }
-      add_round(vote_->round);
-      vote_set_ = get_vote_set(vote_->round, vote_->type);
-      it->second.push_back(vote_->round);
     }
     return vote_set_->add_vote(vote_);
   }
