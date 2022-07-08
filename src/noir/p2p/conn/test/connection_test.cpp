@@ -22,7 +22,7 @@ using namespace noir;
 TEST_CASE("secret_connection: derive_secrets", "[noir][p2p]") {
   auto priv_key_str =
     base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
-  Bytes loc_priv_key(priv_key_str.begin(), priv_key_str.end());
+  std::vector<unsigned char> loc_priv_key(priv_key_str.begin(), priv_key_str.end());
   auto c = p2p::secret_connection::make_secret_connection(loc_priv_key);
 
   auto tests = std::to_array<std::tuple<std::string, std::string, std::string, std::string>>({
@@ -51,12 +51,12 @@ TEST_CASE("secret_connection: derive_secrets", "[noir][p2p]") {
 TEST_CASE("secret_connection: verify key exchanges", "[noir][p2p]") {
   auto priv_key_str_peer1 =
     base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
-  Bytes loc_priv_key_peer1(priv_key_str_peer1.begin(), priv_key_str_peer1.end());
+  std::vector<unsigned char> loc_priv_key_peer1(priv_key_str_peer1.begin(), priv_key_str_peer1.end());
   auto c_peer1 = p2p::secret_connection::make_secret_connection(loc_priv_key_peer1);
 
   auto priv_key_str_peer2 =
     base64::decode("x1eX2WKe+mhZwO7PLVgLdMZ4Ucr4NfdBxMtD/59mOfmk8GO0T1p8YNpObegcTLZmqnK6ffVtjvWjDSSVgVwGAw==");
-  Bytes loc_priv_key_peer2(priv_key_str_peer2.begin(), priv_key_str_peer2.end());
+  std::vector<unsigned char> loc_priv_key_peer2(priv_key_str_peer2.begin(), priv_key_str_peer2.end());
   auto c_peer2 = p2p::secret_connection::make_secret_connection(loc_priv_key_peer2);
 
   Bytes32 eph_pub_key_peer1 = c_peer1->loc_eph_pub;
@@ -106,7 +106,7 @@ TEST_CASE("secret_connection: libsodium - derive pub_key from priv_key", "[noir]
   unsigned char sk[crypto_sign_SECRETKEYBYTES];
   auto priv_key =
     base64::decode("q4BNZ9LFQw60L4UzkwkmRB2x2IPJGKwUaFXzbDTAXD5RezWnXQynrSHrYj602Dt6u6ga7T5Uc1pienw7b5JAbQ==");
-  Bytes raw(priv_key.begin(), priv_key.end());
+  std::vector<unsigned char> raw(priv_key.begin(), priv_key.end());
   auto rec_pub_key = crypto_sign_recover_public_key(raw.data());
   CHECK(rec_pub_key == "UXs1p10Mp60h62I+tNg7eruoGu0+VHNaYnp8O2+SQG0=");
 }

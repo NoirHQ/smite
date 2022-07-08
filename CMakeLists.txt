@@ -8,7 +8,7 @@ endif(CCACHE_FOUND)
 
 project(noir)
 
-option(NOIR_BUILD_TESTS "Build tests" ON)
+option(NOIR_BUILD_TESTS "Build tests" OFF)
 option(NOIR_UNITY_BUILD "Enable unity build" OFF)
 option(USE_CONAN "Use conan to setup build dependencies" ON)
 option(CHECK_CONNECTION "Check the network connection status" ON)

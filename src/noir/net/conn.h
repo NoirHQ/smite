@@ -29,10 +29,8 @@ protected:
   requires(ExecutionContext<std::decay_t<Executor>>) Conn(Executor&& ex, std::string_view address = {})
     : address(address), strand(ex.get_executor()) {}
 
-  std::string address;
-
 public:
-  auto write(boost::asio::const_buffer& buffers) -> boost::asio::awaitable<Result<void>> {
+  auto write(boost::asio::const_buffer& buffers) -> boost::asio::awaitable<Result<std::size_t>> {
     if (!buffers.size())
       co_return success();
 
@@ -40,15 +38,14 @@ public:
       *static_cast<Derived*>(this)->socket, buffers, as_result(boost::asio::use_awaitable));
     if (!bytes_transferred)
       co_return bytes_transferred.error();
-    co_return success();
+    co_return bytes_transferred;
   }
 
   template<ByteSequence T>
-  auto write(T&& buffer) -> boost::asio::awaitable<Result<void>>
+  auto write(T&& buffer) -> boost::asio::awaitable<Result<std::size_t>>
   requires(!std::is_same_v<T, boost::asio::const_buffer>) {
     auto buf = boost::asio::const_buffer(buffer.data(), buffer.size());
-    auto res = co_await write(buf);
-    co_return res;
+    co_return co_await write(buf);
   }
 
   auto read(std::span<unsigned char> buffer) -> boost::asio::awaitable<Result<void>> {
@@ -116,6 +113,7 @@ public:
 
   boost::asio::strand<boost::asio::any_io_executor> strand;
   detail::message_buffer<1024 * 1024> message_buffer;
+  std::string address;
 };
 
 } // namespace noir::net
