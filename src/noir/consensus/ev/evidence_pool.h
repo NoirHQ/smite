@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/clist/clist.h>
+#include <noir/common/log.h>
 #include <noir/consensus/common.h>
 #include <noir/consensus/state.h>
 #include <noir/consensus/store/block_store.h>

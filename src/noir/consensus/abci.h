@@ -74,10 +74,6 @@ public:
     config_->priv_validator.root_dir = config_->base.root_dir;
 
     node_ = node::new_default_node(app, config_);
-
-    // Setup callbacks // TODO: is this right place to setup callback?
-    node_->bs_reactor->set_callback_switch_to_cs_sync(std::bind(
-      &consensus_reactor::switch_to_consensus, node_->cs_reactor, std::placeholders::_1, std::placeholders::_2));
   }
 
   void plugin_startup() {

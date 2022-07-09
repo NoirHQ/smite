@@ -5,6 +5,7 @@
 //
 #include <noir/codec/basic_datastream.h>
 #include <noir/codec/protobuf.h>
+#include <noir/common/log.h>
 #include <noir/common/varint.h>
 #include <noir/consensus/bit_array.h>
 #include <noir/consensus/types/canonical.h>

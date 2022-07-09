@@ -6,7 +6,7 @@
 #pragma once
 #include <noir/core/core.h>
 
-#include <noir/log/log.h>
+//#include <noir/log/log.h>
 #include <boost/asio/buffer.hpp>
 #include <boost/pool/singleton_pool.hpp>
 #include <fmt/core.h>
@@ -115,9 +115,9 @@ public:
     // this seems to be related to some sort of memory overrun possibly. By forcing an exit here, an
     // external watchdog can be used to restart the process and avoid hanging.
     if (buffers.size() != sanity_check || buffers.size() > 1000000) {
-      elog("read_ind = {}, {} write_ind = {}, {}, buff.size = {}, sanity = {}", read_ind.first, read_ind.second,
-        write_ind.first, write_ind.second, buffers.size(), sanity_check);
-      elog("Buffer manager overwrite detected. Terminating to allow external restart");
+      // elog("read_ind = {}, {} write_ind = {}, {}, buff.size = {}, sanity = {}", read_ind.first, read_ind.second,
+      //   write_ind.first, write_ind.second, buffers.size(), sanity_check);
+      // elog("Buffer manager overwrite detected. Terminating to allow external restart");
       exit(1);
     }
     while (buffers.size() > 1) {

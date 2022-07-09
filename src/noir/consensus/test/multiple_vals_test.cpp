@@ -68,9 +68,6 @@ public:
 
     node_ = node::make_node(*app_, cfg, priv_val, node_key::gen_node_key(), gen_doc, session);
 
-    node_->bs_reactor->set_callback_switch_to_cs_sync([cs_reactor = node_->cs_reactor](auto&& arg1, auto&& arg2) {
-      cs_reactor->switch_to_consensus(std::forward<decltype(arg1)>(arg1), std::forward<decltype(arg2)>(arg2));
-    });
     monitor = status_monitor(node_name_, node_->event_bus_, node_->cs_reactor->cs_state);
     monitor.subscribe_filtered_msg([](const events::message&) { return false; }); // event is not used yet
 

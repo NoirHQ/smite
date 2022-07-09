@@ -10,7 +10,6 @@
 #include <noir/consensus/crypto.h>
 #include <noir/consensus/types/priv_validator.h>
 #include <noir/p2p/protocol.h>
-#include <fc/io/json.hpp>
 #include <filesystem>
 
 namespace noir::consensus::privval {

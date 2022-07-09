@@ -4,15 +4,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
-#include <noir/common/hex.h>
 #include <noir/common/scope_exit.h>
 #include <noir/consensus/common.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/types/canonical.h>
 #include <noir/consensus/types/proposal.h>
-#include <noir/core/codec.h>
 #include <noir/crypto/rand.h>
 #include <filesystem>
+
+#include <fc/io/json.hpp>
 
 namespace {
 using namespace noir::consensus::privval;

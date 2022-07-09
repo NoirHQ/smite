@@ -278,7 +278,7 @@ void p2p_impl::start_conn_timer(boost::asio::steady_timer::duration du, std::wea
       if (num_in_flight == 0) {
         if (my->in_shutdown)
           return;
-        elog("Error from connection check monitor: {}", ec.message());
+        elog(fmt::format("Error from connection check monitor: {}", ec.message()));
         my->start_conn_timer(my->connector_period, std::weak_ptr<connection>());
       }
     }
@@ -299,7 +299,7 @@ void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, boo
     if (get_time() >= max_time) {
       connection_wptr wit = *it;
       g.unlock();
-      dlog("Exiting connection monitor early, ran out of time: {}", max_time - get_time());
+      dlog(fmt::format("Exiting connection monitor early, ran out of time: {}", max_time - get_time()));
       if (reschedule) {
         start_conn_timer(std::chrono::milliseconds(1), wit); // avoid exhausting
       }
@@ -325,9 +325,9 @@ void p2p_impl::connection_monitor(std::weak_ptr<connection> from_connection, boo
   }
   g.unlock();
   if (num_clients > 0 || num_peers > 0)
-    ilog("p2p client connections: {}/{}, peer connections: {}/{}", num_clients, max_client_count, num_peers,
-      supplied_peers.size());
-  dlog("connection monitor, removed {} connections", num_rm);
+    ilog(fmt::format("p2p client connections: {}/{}, peer connections: {}/{}", num_clients, max_client_count, num_peers,
+      supplied_peers.size()));
+  dlog(fmt::format("connection monitor, removed {} connections", num_rm));
   if (reschedule) {
     start_conn_timer(connector_period, std::weak_ptr<connection>());
   }
@@ -356,7 +356,7 @@ void p2p_impl::start_listen_loop() {
             const auto& paddr_add = socket->remote_endpoint(rec).address();
             std::string paddr_str;
             if (rec) {
-              elog("Error getting remote endpoint: {}", rec.message());
+              elog(fmt::format("Error getting remote endpoint: {}", rec.message()));
             } else {
               paddr_str = paddr_add.to_string();
               for_each_connection([&visitors, &from_addr, &paddr_str](auto& conn) {
@@ -372,7 +372,7 @@ void p2p_impl::start_listen_loop() {
                 return true;
               });
               if (from_addr < max_nodes_per_host && (max_client_count == 0 || visitors < max_client_count)) {
-                ilog("Accepted new connection: " + paddr_str);
+                ilog(fmt::format("Accepted new connection: {}", paddr_str));
                 new_connection->set_heartbeat_timeout(heartbeat_timeout);
                 if (new_connection->start_session()) {
                   std::scoped_lock<std::shared_mutex> g_unique(connections_mtx);
@@ -381,10 +381,10 @@ void p2p_impl::start_listen_loop() {
 
               } else {
                 if (from_addr >= max_nodes_per_host) {
-                  dlog("Number of connections ({}) from {} exceeds limit {}", from_addr + 1, paddr_str,
-                    max_nodes_per_host);
+                  dlog(fmt::format("Number of connections ({}) from {} exceeds limit {}", from_addr + 1, paddr_str,
+                    max_nodes_per_host));
                 } else {
-                  dlog("max_client_count {} exceeded", max_client_count);
+                  dlog(fmt::format("max_client_count {} exceeded", max_client_count));
                 }
                 // new_connection never added to connections and start_session not called, lifetime will end
                 boost::system::error_code ec;
@@ -393,7 +393,7 @@ void p2p_impl::start_listen_loop() {
               }
             }
           } else {
-            elog("Error accepting connection: {}", ec.message());
+            elog(fmt::format("Error accepting connection: {}", ec.message()));
             // For the listed error codes below, recall start_listen_loop()
             switch (ec.value()) {
             case ECONNABORTED:
@@ -422,7 +422,7 @@ void p2p_impl::ticker() {
     if (ec) {
       if (my->in_shutdown)
         return;
-      wlog("Peer keepalive ticked sooner than expected: {}", ec.message());
+      wlog(fmt::format("Peer keepalive ticked sooner than expected: {}", ec.message()));
     }
 
     tstamp current_time = get_time();
@@ -554,7 +554,7 @@ void p2p::plugin_startup() {
       ilog("abci_plugin is not running; will be simply testing p2p activities");
       crypto::rand_bytes({my->node_id.data(), my->node_id.size()});
     }
-    ilog("my node_id is {}", my->node_id.to_string());
+    ilog(fmt::format("my node_id is {}", my->node_id.to_string()));
 
     my->thread_pool.emplace("p2p", my->thread_pool_size);
 
@@ -590,10 +590,10 @@ void p2p::plugin_startup() {
         my->acceptor->bind(listen_endpoint);
         my->acceptor->listen();
       } catch (const std::exception& e) {
-        elog("p2p::plugin_startup failed to bind to port {}", listen_endpoint.port());
+        elog(fmt::format("p2p::plugin_startup failed to bind to port {}", listen_endpoint.port()));
         throw e;
       }
-      ilog("starting listener, max clients is {}", my->max_client_count);
+      ilog(fmt::format("starting listener, max clients is {}", my->max_client_count));
       my->start_listen_loop();
     }
 
@@ -639,9 +639,9 @@ std::string p2p::connect(const std::string& host) {
     return "already connected";
 
   connection_ptr c = std::make_shared<connection>(host);
-  dlog("calling active connector: {}", host);
+  dlog(fmt::format("calling active connector: {}", host));
   if (c->resolve_and_connect()) {
-    dlog("adding new connection to the list: {}", c->peer_name());
+    dlog(fmt::format("adding new connection to the list: {}", c->peer_name()));
     c->set_heartbeat_timeout(my->heartbeat_timeout);
     my->connections.insert(c);
   }
@@ -652,7 +652,7 @@ std::string p2p::disconnect(const std::string& host) {
   std::scoped_lock<std::shared_mutex> g(my->connections_mtx);
   for (auto itr = my->connections.begin(); itr != my->connections.end(); ++itr) {
     if ((*itr)->peer_address() == host) {
-      ilog("disconnecting: {}", (*itr)->peer_name());
+      ilog(fmt::format("disconnecting: {}", (*itr)->peer_name()));
       (*itr)->close();
       my->connections.erase(itr);
       return "connection removed";
@@ -683,7 +683,7 @@ connection::connection(std::string endpoint)
     strand(my_impl->thread_pool->get_executor()),
     socket(new tcp::socket(my_impl->thread_pool->get_executor())),
     response_expected_timer(my_impl->thread_pool->get_executor()) {
-  ilog("creating connection to {}", endpoint);
+  ilog(fmt::format("creating connection to {}", endpoint));
   latest_msg_time =
     get_time() + std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(20)).count();
 }
@@ -704,13 +704,13 @@ bool connection::resolve_and_connect() {
   case benign_other:
     break;
   default:
-    dlog("Skipping connect due to go_away reason {}", reason_str(no_retry));
+    dlog(fmt::format("Skipping connect due to go_away reason {}", reason_str(no_retry)));
     return false;
   }
 
   std::string::size_type colon = peer_address().find(':');
   if (colon == std::string::npos || colon == 0) {
-    elog("Invalid peer address. must be \"host:port[:<blk>|<trx>]\": {}", peer_address());
+    elog(fmt::format("Invalid peer address. must be \"host:port[:<blk>|<trx>]\": {}", peer_address()));
     return false;
   }
 
@@ -735,7 +735,7 @@ bool connection::resolve_and_connect() {
           if (!err) {
             c->connect(resolver, endpoints);
           } else {
-            elog("Unable to resolve {}: {}", c->peer_name(), err.message());
+            elog(fmt::format("Unable to resolve {}: {}", c->peer_name(), err.message()));
             c->connecting = false;
             ++c->consecutive_immediate_connection_close;
           }
@@ -776,7 +776,7 @@ void connection::connect(const std::shared_ptr<tcp::resolver>& resolver, tcp::re
         if (!err && socket->is_open() && socket == c->socket) {
           c->start_session();
         } else {
-          elog("connection failed to {}: {}", c->peer_name(), err.message());
+          elog(fmt::format("connection failed to {}: {}", c->peer_name(), err.message()));
           c->close(false);
         }
       }));
@@ -788,11 +788,11 @@ bool connection::start_session() {
   boost::system::error_code ec;
   socket->set_option(nodelay, ec);
   if (ec) {
-    elog("connection failed (set_option) {}: {}", peer_name(), ec.message());
+    elog(fmt::format("connection failed (set_option) {}: {}", peer_name(), ec.message()));
     close();
     return false;
   } else {
-    dlog("connected to {}", peer_name());
+    dlog(fmt::format("connected to {}", peer_name()));
     socket_open = true;
     start_handshake();
     return true;
@@ -821,8 +821,8 @@ void connection::_close(connection* self, bool reconnect, bool shutdown) {
     std::scoped_lock g_conn(self->conn_mtx);
     self->conn_node_id = Bytes();
   }
-  ilog("closing '{}', {}", self->peer_address(), self->peer_name());
-  dlog("canceling wait on {}", self->peer_name()); // peer_name(), do not hold conn_mtx
+  ilog(fmt::format("closing '{}', {}", self->peer_address(), self->peer_name()));
+  dlog(fmt::format("canceling wait on {}", self->peer_name())); // peer_name(), do not hold conn_mtx
   self->cancel_wait();
 
   if (reconnect && !shutdown) {
@@ -879,7 +879,8 @@ void connection::enqueue_buffer(
       if (ec)
         return;
       if (close_after_send != no_reason) {
-        ilog("sent a go away message: {}, closing connection to {}", reason_str(close_after_send), conn->peer_name());
+        ilog(fmt::format(
+          "sent a go away message: {}, closing connection to {}", reason_str(close_after_send), conn->peer_name()));
         conn->close();
         return;
       }
@@ -891,7 +892,8 @@ void connection::queue_write(const std::shared_ptr<vector<unsigned char>>& buff,
   std::function<void(boost::system::error_code, std::size_t)> callback,
   bool to_sync_queue) {
   if (!buffer_queue.add_write_queue(buff, callback, to_sync_queue)) {
-    wlog("write_queue full {} bytes, giving up on connection {}", buffer_queue.write_queue_size(), peer_name());
+    wlog(fmt::format(
+      "write_queue full {} bytes, giving up on connection {}", buffer_queue.write_queue_size(), peer_name()));
     close();
     return;
   }
@@ -913,17 +915,17 @@ void connection::do_queue_write() {
           c->buffer_queue.clear_out_queue();
           // May have closed connection and cleared buffer_queue
           if (!c->socket_is_open() || socket != c->socket) {
-            ilog(
-              "async write socket {} before callback: {}", c->socket_is_open() ? "changed" : "closed", c->peer_name());
+            ilog(fmt::format(
+              "async write socket {} before callback: {}", c->socket_is_open() ? "changed" : "closed", c->peer_name()));
             c->close();
             return;
           }
 
           if (ec) {
             if (ec.value() != boost::asio::error::eof) {
-              elog("Error sending to peer {}: {}", c->peer_name(), ec.message());
+              elog(fmt::format("Error sending to peer {}: {}", c->peer_name(), ec.message()));
             } else {
-              wlog("connection closure detected on write to {}", c->peer_name());
+              wlog(fmt::format("connection closure detected on write to {}", c->peer_name()));
             }
             c->close();
             return;
@@ -937,9 +939,9 @@ void connection::do_queue_write() {
         } catch (const boost::interprocess::bad_alloc&) {
           throw;
         } catch (const std::exception& ex) {
-          elog("Exception in do_queue_write to {} {}", c->peer_name(), ex.what());
+          elog(fmt::format("Exception in do_queue_write to {} {}", c->peer_name(), ex.what()));
         } catch (...) {
-          elog("Exception in do_queue_write to {}", c->peer_name());
+          elog(fmt::format("Exception in do_queue_write to {}", c->peer_name()));
         }
       }));
   });
@@ -949,7 +951,7 @@ void connection::check_heartbeat(tstamp current_time) {
   if (latest_msg_time > 0 && current_time > latest_msg_time + hb_timeout) {
     no_retry = benign_other;
     if (!peer_address().empty()) {
-      wlog("heartbeat timed out for peer address {}", peer_address());
+      wlog(fmt::format("heartbeat timed out for peer address {}", peer_address()));
       close(true); // reconnect
     } else {
       {
@@ -1050,8 +1052,8 @@ void connection::read_a_secret_message() {
 
     uint32_t write_queue_size = buffer_queue.write_queue_size();
     if (write_queue_size > def_max_write_queue_size) {
-      elog(
-        "write queue full {} bytes, giving up on connection, closing connection to: {}", write_queue_size, peer_name());
+      elog(fmt::format("write queue full {} bytes, giving up on connection, closing connection to: {}",
+        write_queue_size, peer_name()));
       close(false);
       return;
     }
@@ -1067,8 +1069,8 @@ void connection::read_a_secret_message() {
           try {
             if (!ec) {
               if (bytes_transferred > conn->pending_message_buffer.bytes_to_write()) {
-                elog("async_read_some callback: bytes_transferred = {}, buffer.bytes_to_write = {}", bytes_transferred,
-                  conn->pending_message_buffer.bytes_to_write());
+                elog(fmt::format("async_read_some callback: bytes_transferred = {}, buffer.bytes_to_write = {}",
+                  bytes_transferred, conn->pending_message_buffer.bytes_to_write()));
               }
               conn->pending_message_buffer.advance_write_ptr(bytes_transferred);
               while (conn->pending_message_buffer.bytes_to_read() > 0) {
@@ -1099,7 +1101,7 @@ void connection::read_a_secret_message() {
 
             } else {
               if (ec.value() != boost::asio::error::eof)
-                elog("Error reading message: {}", ec.message());
+                elog(fmt::format("Error reading message: {}", ec.message()));
               else
                 ilog("Peer closed connection");
               close_connection = true;
@@ -1109,14 +1111,14 @@ void connection::read_a_secret_message() {
           } catch (const boost::interprocess::bad_alloc&) {
             throw;
           } catch (const std::exception& ex) {
-            elog("Exception in handling read data: {}", ex.what());
+            elog(fmt::format("Exception in handling read data: {}", ex.what()));
             close_connection = true;
           } catch (...) {
             elog("Undefined exception handling read data");
             close_connection = true;
           }
           if (close_connection) {
-            elog("Closing connection to: {}", conn->peer_name());
+            elog(fmt::format("Closing connection to: {}", conn->peer_name()));
             conn->close();
             ///< notify consensus of peer down
             my_impl->update_peer_status_channel.publish(appbase::priority::medium,
@@ -1125,13 +1127,13 @@ void connection::read_a_secret_message() {
           }
         }));
   } catch (...) {
-    elog("Undefined exception in start_read_message, closing connection to: {}", peer_name());
+    elog(fmt::format("Undefined exception in start_read_message, closing connection to: {}", peer_name()));
     close();
   }
 }
 
 void connection::shared_eph_pub_key(std::shared_ptr<Bytes> new_message) {
-  dlog(fmt::format("shared_eph_pub_key = {}", to_hex(*new_message)));
+  dlog(fmt::format(fmt::format("shared_eph_pub_key = {}", to_hex(*new_message))));
   google::protobuf::BytesValue v;
   v.ParseFromArray(new_message->data(), new_message->size());
   Bytes32 received_eph_pub{v.value().begin(), v.value().end()};
@@ -1192,7 +1194,7 @@ bool connection::process_next_message() {
   std::memcpy(bz->data(), decrypted_message_buffer.read_ptr() + message_header_bytes, message_length);
   decrypted_message_buffer.advance_read_ptr(message_header_bytes + message_length);
   if (auto ok = cb_current_task(bz); !ok) {
-    elog(ok.error().message());
+    elog(fmt::format("{}", ok.error().message()));
     return false;
   }
   return process_next_message();

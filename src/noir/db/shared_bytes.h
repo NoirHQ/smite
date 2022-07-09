@@ -4,20 +4,19 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
+#include <boost/endian/detail/intrinsic.hpp>
+#include <fmt/core.h>
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
+#include <iomanip>
 #include <memory>
 #include <numeric>
 #include <string_view>
 #include <vector>
-
-#include <boost/endian/detail/intrinsic.hpp>
-
-#include <fc/io/datastream.hpp>
-#include <fc/io/raw.hpp>
-#include <fmt/core.h>
 
 namespace noir::db::session {
 
@@ -384,26 +383,9 @@ inline shared_bytes shared_bytes::truncate_key(const shared_bytes& key) {
 
 inline std::ostream& operator<<(std::ostream& os, const shared_bytes& bytes) {
   for (const auto c : bytes) {
-    std::cout << std::hex << std::setfill('0') << std::setw(2) << std::uppercase << (0xFF & static_cast<int>(c));
+    os << std::hex << std::setfill('0') << std::setw(2) << std::uppercase << (0xFF & static_cast<int>(c));
   }
   return os;
-}
-
-template<typename Stream>
-inline Stream& operator<<(Stream& ds, const shared_bytes& b) {
-  fc::raw::pack(ds, b.size());
-  ds.write(b.data(), b.size());
-  return ds;
-}
-
-template<typename Stream>
-inline Stream& operator>>(Stream& ds, shared_bytes& b) {
-  std::size_t sz;
-  fc::raw::unpack(ds, sz);
-  shared_bytes tmp = {sz};
-  ds.read(tmp.data(), tmp.size());
-  b = tmp;
-  return ds;
 }
 
 inline shared_bytes shared_bytes::from_hex_string(const std::string& str) {
@@ -534,7 +516,7 @@ typename shared_bytes::shared_bytes_iterator<Iterator_traits>::difference_type
 shared_bytes::shared_bytes_iterator<Iterator_traits>::operator-(const shared_bytes_iterator& other) {
   auto left_index = m_index == -1 ? m_end + 1 : m_index;
   auto right_index = other.m_index == -1 ? other.m_end + 1 : other.m_index;
-  return std::abs<int64_t>(left_index - right_index);
+  return std::abs(left_index - right_index);
 }
 
 template<typename Iterator_traits>
