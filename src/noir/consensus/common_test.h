@@ -13,10 +13,6 @@
 #include <noir/consensus/ev/test/evidence_test_common.h>
 
 #include <appbase/application.hpp>
-#include <fc/crypto/base58.hpp>
-#include <fc/crypto/private_key.hpp>
-#include <fc/crypto/public_key.hpp>
-#include <fc/crypto/signature.hpp>
 
 #include <stdlib.h>
 
