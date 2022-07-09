@@ -5,21 +5,22 @@
 //
 #pragma once
 #include <noir/application/app.h>
+//#include <noir/common/log.h>
 
 namespace noir::application {
 
 class noop_app : public base_application {
 
   virtual consensus::response_begin_block& begin_block() override {
-    ilog("!!! BeginBlock !!!");
+    // ilog("!!! BeginBlock !!!");
     return response_begin_block_;
   }
   virtual consensus::req_res<consensus::response_deliver_tx>& deliver_tx_async() override {
-    ilog("!!! DeliverTx !!!");
+    // ilog("!!! DeliverTx !!!");
     return req_res_deliver_tx_;
   }
   virtual consensus::response_end_block& end_block() override {
-    ilog("!!! EndBlock !!!");
+    // ilog("!!! EndBlock !!!");
     return response_end_block_;
   }
 };

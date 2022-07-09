@@ -230,12 +230,7 @@ struct bp_peer {
     return peer;
   }
 
-  void on_timeout() {
-    std::string err("peer did not send us anything for a while");
-    pool->send_error(err, id);
-    elog("send_timeout: reason=${reason} sender=${sender}", ("reason", err)("sender", id));
-    did_timeout = true;
-  }
+  void on_timeout();
 
   void incr_pending() {
     if (num_pending == 0) {

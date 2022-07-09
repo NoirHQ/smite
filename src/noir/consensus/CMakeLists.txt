@@ -4,6 +4,7 @@ add_library(noir_consensus STATIC
   consensus_reactor.cpp
   consensus_state.cpp
   crypto.cpp
+  node.cpp
   ev/evidence_pool.cpp
   ev/reactor.cpp
   indexer/sink/psql/psql.cpp

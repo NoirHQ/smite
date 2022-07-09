@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/codec/protobuf.h>
+#include <noir/common/log.h>
 #include <noir/common/overloaded.h>
 #include <noir/consensus/block_sync/block_pool.h>
 #include <tendermint/blocksync/types.pb.h>
@@ -256,6 +257,16 @@ void bp_requester::request_routine() {
   } else {
     wlog(fmt::format("bp_requester failed: unable to find a peer, height={}", height));
   }
+}
+
+//------------------------------------------------------------------------
+// bp_peer
+//------------------------------------------------------------------------
+void bp_peer::on_timeout() {
+  std::string err("peer did not send us anything for a while");
+  pool->send_error(err, id);
+  elog("send_timeout: reason=${reason} sender=${sender}", ("reason", err)("sender", id));
+  did_timeout = true;
 }
 
 } // namespace noir::consensus::block_sync

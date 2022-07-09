@@ -4,9 +4,8 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
-#include <noir/codec/datastream.h>
 #include <noir/common/hex.h>
-#include <noir/consensus/common.h>
+#include <noir/core/result.h>
 #include <regex>
 
 namespace noir::consensus {
@@ -33,22 +32,18 @@ struct node_id {
     return hex::decode(id);
   }
 
-  bool validate() {
+  Result<void> validate() {
     switch (id.length()) {
     case 0:
-      dlog("Empty node ID");
-      return false;
+      return Error::format("Empty node ID");
 
     case 2 * node_id_byte_length:
-      if (std::regex_search(id, regex_node_id)) {
-        return true;
-      }
-      dlog("Node ID can only contain 40 lowercased hex digits");
-      return false;
+      if (std::regex_search(id, regex_node_id))
+        return success();
+      return Error::format("Node ID can only contain 40 lowercased hex digits");
 
     default:
-      dlog("Invalid node ID length ${len}", ("len", id.length()));
-      return false;
+      return Error::format("Invalid node ID length {}", id.length());
     }
   }
 

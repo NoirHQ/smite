@@ -15,8 +15,6 @@ struct app_connection {
 
   std::shared_ptr<application::base_application> application;
 
-  // set_response_callback(callback) // todo - skip for now; maybe not needed for noir
-
   response_init_chain& init_chain_sync(request_init_chain req) {
     std::scoped_lock g(mtx);
     auto& res = application->init_chain();
@@ -78,8 +76,6 @@ struct app_connection {
     } else if (proxy_app.empty()) {
       application = std::make_shared<application::base_application>();
       return;
-    } else {
-      elog("unsupported proxy_app : ${app}", ("app", proxy_app));
     }
     check(false, "failed to load application");
   }

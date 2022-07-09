@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <noir/common/log.h>
 #include <noir/consensus/crypto.h>
 #include <noir/core/result.h>
 #include <noir/p2p/protocol.h>
@@ -259,9 +258,9 @@ public:
    * If an error is detected during verification steps, it is returned and the validator set
    * is not changed.
    */
-  void update_with_change_set(const std::vector<validator>& changes, bool allow_deletes) {
+  Result<void> update_with_change_set(const std::vector<validator>& changes, bool allow_deletes) {
     if (changes.empty())
-      return;
+      return success();
 
     // Check for duplicates within changes, split in 'updates' and 'deletes' lists (sorted).
     std::vector<validator> changesCopy(changes);
@@ -269,17 +268,13 @@ public:
     std::vector<validator> updates, deletes;
     Bytes prevAddr;
     for (auto val_update : changesCopy) {
-      if (val_update.address == prevAddr) {
-        elog("duplicate entry ${val_update} in changes", ("val_update", val_update.address));
-        return;
-      }
+      if (val_update.address == prevAddr)
+        return Error::format("duplicate entry {} in changes", to_hex(val_update.address));
       if (val_update.voting_power < 0) {
-        elog("voting power can't be negative: ${v_power)", ("v_power", val_update.voting_power));
-        return;
+        return Error::format("voting power can't be negative: {}", val_update.voting_power);
       } else if (val_update.voting_power > max_total_voting_power) {
-        elog("to prevent clipping/overflow, voting power can't be higher than max allowed: $(v_power)",
-          ("v_power", val_update.voting_power));
-        return;
+        return Error::format(
+          "to prevent clipping/overflow, voting power can't be higher than max allowed: {}", val_update.voting_power);
       } else if (val_update.voting_power == 0) {
         deletes.push_back(val_update);
       } else {
@@ -288,10 +283,8 @@ public:
       prevAddr = val_update.address;
     }
 
-    if (!allow_deletes && !deletes.empty()) {
-      elog("cannot process validators with voting power 0");
-      return;
-    }
+    if (!allow_deletes && !deletes.empty())
+      return Error::format("cannot process validators with voting power 0");
 
     // Check that the resulting set will not be empty.
     auto num_new_validators = 0;
@@ -299,10 +292,8 @@ public:
       if (!has_address(val_update.address))
         num_new_validators++;
     }
-    if (num_new_validators == 0 && validators.size() == deletes.size()) {
-      elog("applying the validator changes would result in empty set");
-      return;
-    }
+    if (num_new_validators == 0 && validators.size() == deletes.size())
+      return Error::format("applying the validator changes would result in empty set");
 
     // Verify that applying the 'deletes' against 'vals' will not result in error.
     // Get the voting power that is going to be removed.
@@ -310,10 +301,8 @@ public:
     for (auto& val_update : deletes) {
       auto address = val_update.address;
       auto val = get_by_address(address);
-      if (!val.has_value()) {
-        elog("failed to find validator ${addr} to remove", ("addr", address));
-        return;
-      }
+      if (!val.has_value())
+        return Error::format("failed to find validator {} to remove", to_hex(address));
       removed_voting_power += val->voting_power;
     }
     if (deletes.size() > validators.size()) {
@@ -334,10 +323,8 @@ public:
     auto tvp_after_removals = total_voting_power - removed_voting_power;
     for (auto& val_update : updatesCopy) {
       tvp_after_removals += delta(val_update, shared_from_this());
-      if (tvp_after_removals > max_total_voting_power) {
-        elog("total voting power of resulting valset exceeds max");
-        return;
-      }
+      if (tvp_after_removals > max_total_voting_power)
+        return Error::format("total voting power of resulting valset exceeds max");
     }
     auto tvp_after_updates_before_removals = tvp_after_removals + removed_voting_power;
 
@@ -359,6 +346,7 @@ public:
         return a.address < b.address;
       return a.voting_power > b.voting_power;
     });
+    return success();
   }
 
   /** \brief computes the proposer priority for the validators not present in the set based on

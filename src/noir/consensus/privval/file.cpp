@@ -13,6 +13,7 @@
 #include <noir/core/codec.h>
 
 #include <cppcodec/base64_default_rfc4648.hpp>
+#include <fc/io/json.hpp>
 #include <fc/variant_object.hpp>
 
 namespace noir::consensus::privval {

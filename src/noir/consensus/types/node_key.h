@@ -4,7 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
+#include <noir/common/check.h>
 #include <noir/common/hex.h>
+#include <noir/common/refl.h>
 #include <noir/consensus/common.h>
 #include <filesystem>
 

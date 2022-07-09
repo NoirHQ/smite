@@ -4,11 +4,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/codec/protobuf.h>
+#include <noir/common/log.h>
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/encoding_helper.h>
 #include <noir/consensus/types/evidence.h>
 #include <noir/consensus/types/vote.h>
-#include <noir/core/codec.h>
 #include <fmt/core.h>
 
 namespace noir::consensus {
