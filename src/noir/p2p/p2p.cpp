@@ -438,7 +438,7 @@ void p2p_impl::ticker() {
 void p2p_impl::transmit_message(const envelope_ptr& env) {
   if (env->broadcast) {
     for_each_connection([env](auto& c) {
-      if (c->socket_is_open()) {
+      if (c->socket_is_open() && c->conn_node_id.size() > 0) {
         c->strand.post([c, env]() { c->enqueue(*env); });
       }
       return true;
@@ -684,6 +684,8 @@ connection::connection(std::string endpoint)
     socket(new tcp::socket(my_impl->thread_pool->get_executor())),
     response_expected_timer(my_impl->thread_pool->get_executor()) {
   ilog("creating connection to {}", endpoint);
+  latest_msg_time =
+    get_time() + std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(20)).count();
 }
 
 connection::connection()
@@ -692,6 +694,8 @@ connection::connection()
     socket(new tcp::socket(my_impl->thread_pool->get_executor())),
     response_expected_timer(my_impl->thread_pool->get_executor()) {
   dlog("new connection object created");
+  latest_msg_time =
+    get_time() + std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::seconds(20)).count();
 }
 
 bool connection::resolve_and_connect() {
@@ -1088,7 +1092,7 @@ void connection::read_a_secret_message() {
                   conn->latest_msg_time = get_time();
 
                   if (!conn->process_next_message())
-                    throw;
+                    conn->close();
                 }
               }
               conn->read_a_secret_message();
@@ -1205,12 +1209,13 @@ Result<void> connection::task_authenticate(std::shared_ptr<Bytes> bz) {
   if (!secret_conn->is_authorized)
     return Error::format("failed to establish a secret_connection");
 
+  cb_current_task = [conn = shared_from_this()](
+                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_node_info(msg); };
+
   // Exchange node_info
   auto pb_my_node_info = consensus::node_info::to_proto(my_impl->my_node_info);
   auto bz_my_node_info = noir::codec::protobuf::encode(*pb_my_node_info);
   write_msg(bz_my_node_info); // send
-  cb_current_task = [conn = shared_from_this()](
-                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_node_info(msg); };
   return success();
 }
 
@@ -1221,13 +1226,13 @@ Result<void> connection::task_node_info(std::shared_ptr<Bytes> bz) {
   ilog(fmt::format("node_info: peer={}", peer_info->node_id));
   conn_node_id = from_hex(peer_info->node_id.id);
 
+  cb_current_task = [conn = shared_from_this()](
+                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_process_message(msg); };
+
   ///< notify consensus of peer up
   my_impl->update_peer_status_channel.publish(appbase::priority::medium,
     std::make_shared<plugin_interface::peer_status_info>(
       plugin_interface::peer_status_info{to_hex(conn_node_id), peer_status::up}));
-
-  cb_current_task = [conn = shared_from_this()](
-                      std::shared_ptr<Bytes> msg) -> Result<void> { return conn->task_process_message(msg); };
   return success();
 }
 
@@ -1270,7 +1275,7 @@ Result<void> connection::task_process_message(std::shared_ptr<Bytes> bz) {
       my_impl->disconnect(new_envelope->from);
       break;
     default:
-      elog(fmt::format("unsupported channel_id={}", static_cast<int>(new_envelope->id)));
+      wlog(fmt::format("unsupported channel_id={}", static_cast<int>(new_envelope->id)));
     }
   } else {
     ilog("UNKNOWN");
