@@ -11,6 +11,7 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/steady_timer.hpp>
+#include <eo/core.h>
 
 namespace noir {
 
@@ -45,14 +46,14 @@ public:
 
 public:
   std::string name;
-  Chan<noir::Done> event_ch;
+  eo::chan<std::monostate> event_ch;
 
 private:
   boost::asio::io_context& io_context;
 
-  Chan<noir::Done> quit_ch;
+  eo::chan<std::monostate> quit_ch;
   std::chrono::milliseconds dur;
   Timer timer;
   bool is_set{false};
 };
-} //namespace noir
+} // namespace noir

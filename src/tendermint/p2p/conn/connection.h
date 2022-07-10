@@ -134,7 +134,7 @@ public:
   auto get_last_message_at() -> std::time_t;
   auto stop_services() -> bool;
   void stop();
-  auto string() -> std::string;
+  auto to_string() -> std::string;
   auto flush() -> boost::asio::awaitable<void>;
   auto send(ChannelId ch_id, std::shared_ptr<std::vector<unsigned char>> msg_bytes)
     -> boost::asio::awaitable<noir::Result<bool>>;
