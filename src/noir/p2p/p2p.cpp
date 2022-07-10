@@ -1133,7 +1133,7 @@ void connection::read_a_secret_message() {
 }
 
 void connection::shared_eph_pub_key(std::shared_ptr<Bytes> new_message) {
-  dlog(fmt::format(fmt::format("shared_eph_pub_key = {}", to_hex(*new_message))));
+  dlog(fmt::format("shared_eph_pub_key = {}", to_hex(*new_message)));
   google::protobuf::BytesValue v;
   v.ParseFromArray(new_message->data(), new_message->size());
   Bytes32 received_eph_pub{v.value().begin(), v.value().end()};
@@ -1225,7 +1225,7 @@ Result<void> connection::task_node_info(std::shared_ptr<Bytes> bz) {
   ::tendermint::p2p::NodeInfo pb;
   pb.ParseFromArray(bz->data(), bz->size());
   auto peer_info = consensus::node_info::from_proto(pb);
-  ilog(fmt::format("node_info: peer={}", peer_info->node_id));
+  ilog(fmt::format("node_info: peer={}", peer_info->node_id.id));
   conn_node_id = from_hex(peer_info->node_id.id);
 
   cb_current_task = [conn = shared_from_this()](

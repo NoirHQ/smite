@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT
 //
 #pragma once
+#include <noir/common/bytes.h>
 #include <noir/common/hex.h>
 #include <noir/core/result.h>
 #include <regex>
@@ -57,20 +58,3 @@ struct node_id {
 };
 
 } // namespace noir::consensus
-
-#include <fmt/core.h>
-
-namespace fmt {
-template<>
-struct formatter<noir::consensus::node_id> {
-  template<typename ParseContext>
-  constexpr auto parse(ParseContext& ctx) {
-    return ctx.begin();
-  }
-  template<typename FormatContext>
-  auto format(noir::consensus::node_id const& v, FormatContext& ctx) {
-    return format_to(ctx.out(), "{}", v.id);
-  }
-};
-
-} // namespace fmt

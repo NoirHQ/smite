@@ -5,10 +5,10 @@
 //
 #include <catch2/catch_all.hpp>
 
+#include <tendermint/abci/client/socket_client.h>
+
 #include <noir/mempool/mempool.h>
 #include <noir/net/tcp_conn.h>
-#include <tendermint/abci/client/socket_client.h>
-#include <tendermint/abci/types.pb.h>
 
 using namespace noir;
 using namespace noir::mempool;

@@ -1201,7 +1201,7 @@ std::pair<bool, Error> consensus_state::add_vote(const std::shared_ptr<vote>& vo
   // Not necessarily a bad peer, but not favorable behavior.
   if (vote_->height != rs.height) {
     dlog(fmt::format(
-      "vote ignored and not added: vote_height={} cs_height={} peer_id={}", vote_->height, rs.height, peer_id));
+      "vote ignored and not added: vote_height={} cs_height={} peer_id={}", vote_->height, rs.height, peer_id.id));
     return {false, Error{}};
   }
 
