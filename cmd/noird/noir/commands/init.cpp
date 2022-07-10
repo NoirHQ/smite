@@ -4,12 +4,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/commands/commands.h>
+#include <noir/common/log.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/types/genesis.h>
 #include <noir/consensus/types/node_key.h>
 #include <noir/consensus/types/priv_validator.h>
-#include <noir/log/log.h>
 
 static std::string mode;
 static std::string key_type;
@@ -24,8 +24,8 @@ CLI::App* init(CLI::App& root) {
     auto config_ = config::get_default();
     auto home_dir = app.home_dir();
     auto config_dir = home_dir / default_config_dir;
-    ilog("home_dir = {}", home_dir.string());
-    ilog("config_dir = {}", config_dir.string());
+    ilog("home_dir = ${dir}", ("dir", home_dir.string()));
+    ilog("config_dir = ${config_dir}", ("config_dir", config_dir.string()));
 
     auto init_options = root.get_subcommand("init");
     mode = init_options->get_option("mode")->as<std::string>();
