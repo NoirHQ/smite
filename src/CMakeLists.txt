@@ -16,16 +16,16 @@ function(add_noir_test TARGET)
   endif()
 endfunction()
 
-add_library(noir STATIC)
-target_link_libraries(noir
+add_library(noir INTERFACE)
+target_link_libraries(noir INTERFACE
   noir::common
   noir::consensus
   noir::core
   noir::crypto
   noir::jmt
   noir::p2p
-  noir::rpc
-  noir::tx_pool
+  #noir::rpc
+  #noir::tx_pool
   softfloat
 )
 

@@ -27,10 +27,11 @@ target_link_libraries(noir_consensus
   RocksDB::rocksdb # Must come before proto
   libpqxx::pqxx
   noir::clist
+  noir::codec
   noir::common
+  noir::core
   noir::crypto
   noir::proto
-  noir::tx_pool
   tendermint::log
   sodium
 )
