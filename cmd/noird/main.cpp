@@ -6,11 +6,6 @@
 #include <noir/commands/commands.h>
 #include <noir/common/backtrace.h>
 #include <noir/common/log.h>
-#include <noir/eth/rpc/rpc.h>
-#include <noir/rpc/jsonrpc.h>
-#include <noir/rpc/rpc.h>
-#include <noir/tendermint/rpc/rpc.h>
-#include <noir/tx_pool/tx_pool.h>
 #include <appbase/application.hpp>
 #include <signal.h>
 
@@ -43,13 +38,6 @@ int main(int argc, char** argv) {
   commands::add_command(app.config(), &commands::start);
   commands::add_command(app.config(), &commands::unsafe_reset_all);
   commands::add_command(app.config(), &commands::version);
-
-  // register plugins
-  app.register_plugin<noir::tx_pool::tx_pool>();
-  app.register_plugin<noir::rpc::rpc>();
-  app.register_plugin<noir::rpc::jsonrpc>();
-  app.register_plugin<noir::eth::rpc::rpc>();
-  app.register_plugin<noir::tendermint::rpc::rpc>();
 
   return app.run(argc, argv);
 }

@@ -23,6 +23,7 @@ protected:
   consensus::req_res<consensus::response_check_tx> req_res_check_tx_;
 
 public:
+  base_application() {}
   virtual void info() {}
   virtual void query() {}
 

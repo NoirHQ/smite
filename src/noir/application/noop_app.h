@@ -10,6 +10,8 @@
 namespace noir::application {
 
 class noop_app : public base_application {
+public:
+  noop_app() {}
 
   virtual consensus::response_begin_block& begin_block() override {
     // ilog("!!! BeginBlock !!!");
