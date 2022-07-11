@@ -8,5 +8,6 @@ extern const Error err_unreachable;
 extern const Error err_eof;
 extern const Error err_canceled;
 extern const Error err_deadline_exceeded;
+extern const Error err_context_done;
 
 } // namespace noir

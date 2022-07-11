@@ -24,8 +24,8 @@ auto MConnConnection::handshake_inner(tendermint::type::NodeInfo& node_info, std
   if (mconn) {
     co_return Error("connection is already handshaked");
   }
-  eo::chan<std::monostate> sent_ch{io_context, 1};
-  eo::chan<std::monostate> rcvd_ch{io_context, 1};
+  auto sent_ch = eo::make_chan(1);
+  auto rcvd_ch = eo::make_chan(1);
 
   auto secret_conn = conn::SecretConnection::make_secret_connection(priv_key, conn);
 
@@ -37,7 +37,7 @@ auto MConnConnection::handshake_inner(tendermint::type::NodeInfo& node_info, std
       msg.set_value(std::string(secret_conn->loc_eph_pub.begin(), secret_conn->loc_eph_pub.end()));
       auto buf = ProtoReadWrite::write_msg<BytesValue, unsigned char>(msg);
       co_await conn->write(std::span<const unsigned char>(buf));
-      co_await sent_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
+      co_await *(sent_ch << std::monostate{});
     },
     detached);
   co_spawn(
@@ -46,11 +46,10 @@ auto MConnConnection::handshake_inner(tendermint::type::NodeInfo& node_info, std
       auto msg = co_await ProtoReadWrite::read_msg_async<BytesValue, std::shared_ptr<Conn<TcpConn>>>(conn);
       Bytes32 rem_eph_pub(std::span(msg.value().data(), 32));
       secret_conn->shared_eph_pub_key(rem_eph_pub);
-      co_await rcvd_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
+      co_await *(rcvd_ch << std::monostate{});
     },
     detached);
-  co_await (
-    sent_ch.async_receive(as_result(asio::use_awaitable)) && rcvd_ch.async_receive(as_result(asio::use_awaitable)));
+  co_await (sent_ch.async_receive(asio::use_awaitable) && rcvd_ch.async_receive(asio::use_awaitable));
 
   // share sig
   co_spawn(
@@ -62,7 +61,7 @@ auto MConnConnection::handshake_inner(tendermint::type::NodeInfo& node_info, std
 
       auto buf = ProtoReadWrite::write_msg<AuthSigMessage, unsigned char>(msg);
       co_await conn->write(std::span<const unsigned char>(buf));
-      co_await sent_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
+      co_await *(sent_ch << std::monostate{});
     },
     detached);
   co_spawn(
@@ -73,11 +72,10 @@ auto MConnConnection::handshake_inner(tendermint::type::NodeInfo& node_info, std
         .key = std::vector<unsigned char>(msg.pub_key().ed25519().begin(), msg.pub_key().ed25519().end()),
         .sig = std::vector<unsigned char>(msg.sig().begin(), msg.sig().end())};
       secret_conn->shared_auth_sig(sig_msg);
-      co_await rcvd_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
+      co_await *(rcvd_ch << std::monostate{});
     },
     detached);
-  co_await (
-    sent_ch.async_receive(as_result(asio::use_awaitable)) && rcvd_ch.async_receive(as_result(asio::use_awaitable)));
+  co_await (sent_ch.async_receive(asio::use_awaitable) && rcvd_ch.async_receive(asio::use_awaitable));
 
   // share node info using secret_conn
   co_spawn(
@@ -86,7 +84,7 @@ auto MConnConnection::handshake_inner(tendermint::type::NodeInfo& node_info, std
       auto loc_node = node_info.to_proto();
       auto buf = ProtoReadWrite::write_msg<tendermint::p2p::NodeInfo, unsigned char>(loc_node);
       co_await secret_conn->write(std::span<const unsigned char>(buf));
-      co_await sent_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
+      co_await *(sent_ch << std::monostate{});
     },
     detached);
 
@@ -99,23 +97,35 @@ auto MConnConnection::handshake_inner(tendermint::type::NodeInfo& node_info, std
       codec::Datastream<const unsigned char> ds(buf);
       auto dni = ProtoReadWrite::read_msg<p2p::NodeInfo, codec::Datastream<const unsigned char>>(ds);
       peer_info = tendermint::type::NodeInfo::from_proto(dni);
-      co_await rcvd_ch.async_send(boost::system::error_code{}, {}, asio::use_awaitable);
+      co_await *(rcvd_ch << std::monostate{});
     },
     detached);
-  co_await (
-    sent_ch.async_receive(as_result(asio::use_awaitable)) && rcvd_ch.async_receive(as_result(asio::use_awaitable)));
+  co_await (sent_ch.async_receive(asio::use_awaitable) && rcvd_ch.async_receive(asio::use_awaitable));
 
   auto on_receive = [&](ChannelId channel_id,
                       std::shared_ptr<std::vector<unsigned char>> payload) -> asio::awaitable<void> {
-    auto msg = MConnMessage{.channel_id = channel_id, .payload = payload};
-    co_await (receive_ch.async_send(boost::system::error_code{}, msg, asio::use_awaitable) ||
-      close_ch.async_receive(as_result(asio::use_awaitable)));
+    auto select = eo::Select{receive_ch << MConnMessage{.channel_id = channel_id, .payload = payload}, *close_ch};
+    switch (co_await select.index()) {
+    case 0:
+      co_await select.process<0>();
+      break;
+    case 1:
+      co_await select.process<1>();
+      break;
+    }
   };
 
   auto on_error = [&](noir::Error err) -> asio::awaitable<void> {
     close();
-    co_await (error_ch.async_send(boost::system::error_code{}, err, asio::use_awaitable) ||
-      close_ch.async_receive(as_result(asio::use_awaitable)));
+    auto select = eo::Select{error_ch << err, *close_ch};
+    switch (co_await select.index()) {
+    case 0:
+      co_await select.process<0>();
+      break;
+    case 1:
+      co_await select.process<1>();
+      break;
+    }
   };
 
   auto new_mconn = conn::MConnection::new_mconnection_with_config(
@@ -140,28 +150,29 @@ auto MConnConnection::handshake(
         mconn_ptr = std::get<0>(tup);
         peer_info = std::get<1>(tup);
         peer_key = std::get<2>(tup);
-        co_await err_ch.async_send(boost::system::error_code{}, nullptr, asio::use_awaitable);
+        co_await *(err_ch << nullptr);
       } else {
-        co_await err_ch.async_send(
-          boost::system::error_code{}, std::make_shared<noir::Error>(res.error()), asio::use_awaitable);
+        co_await *(err_ch << std::make_shared<noir::Error>(res.error()));
       }
     },
     detached);
 
-  auto res = co_await (done.async_receive(as_result(asio::use_awaitable)) || err_ch.async_receive(asio::use_awaitable));
-  if (res.index() == 0) {
+  auto select = eo::Select{*done, *err_ch};
+  switch (co_await select.index()) {
+  case 0:
+    co_await select.process<0>();
     close();
-    co_return std::get<0>(res).error();
-  } else if (res.index() == 1) {
-    auto err_res = std::get<1>(res);
-    if (!err_res) {
-      co_return *err_res;
-    } else {
-      co_return std::make_tuple(peer_info, std::make_shared<std::vector<unsigned char>>(peer_key));
+    co_return err_context_done;
+  case 1:
+    auto err = co_await select.process<1>();
+    if (err) {
+      co_return *err;
     }
-  } else {
-    co_return err_unreachable;
+    mconn = mconn_ptr;
+    mconn->start(done);
+    co_return std::make_tuple(peer_info, std::make_shared<std::vector<unsigned char>>(peer_key));
   }
+  co_return err_unreachable;
 }
 
 auto MConnConnection::send_message(
@@ -170,39 +181,41 @@ auto MConnConnection::send_message(
   if (ch_id > std::numeric_limits<uint8_t>::max()) {
     co_return Error::format("MConnection only supports 1-byte channel IDs (got {})", ch_id);
   }
-  auto res =
-    co_await (error_ch.async_receive(use_awaitable) || done.async_receive(use_awaitable) || mconn->send(ch_id, msg));
-  if (res.index() == 0) {
-    co_return std::get<0>(res);
-  } else if (res.index() == 1) {
+
+  auto select = eo::Select{*error_ch, *done, eo::CaseDefault()};
+  switch (co_await select.index()) {
+  case 0:
+    co_return co_await select.process<0>();
+  case 1:
+    co_await select.process<1>();
     co_return err_eof;
-  } else if (res.index() == 2) {
-    auto send_res = std::get<2>(res);
-    if (!send_res) {
+  default:
+    auto res = co_await mconn->send(ch_id, msg);
+    if (!res) {
       co_return Error("sending message timed out");
-    } else {
-      co_return success();
     }
-  } else {
-    co_return err_unreachable;
+    co_return success();
   }
 }
 
 auto MConnConnection::receive_message(eo::chan<std::monostate>& done)
   -> asio::awaitable<Result<std::tuple<ChannelId, std::shared_ptr<std::vector<unsigned char>>>>> {
-  auto res = co_await (error_ch.async_receive(use_awaitable) || close_ch.async_receive(use_awaitable) ||
-    done.async_receive(use_awaitable) || receive_ch.async_receive(use_awaitable));
+  auto select = eo::Select{*error_ch, *close_ch, *done, *receive_ch};
 
-  if (res.index() == 0) {
-    co_return std::get<0>(res);
-  } else if (res.index() == 1 || res.index() == 2) {
+  switch (co_await select.index()) {
+  case 0:
+    co_return co_await select.process<0>();
+  case 1:
+    co_await select.process<1>();
     co_return err_eof;
-  } else if (res.index() == 3) {
-    auto msg = std::get<3>(res);
+  case 2:
+    co_await select.process<2>();
+    co_return err_eof;
+  case 3:
+    auto msg = co_await select.process<3>();
     co_return std::make_tuple(msg.channel_id, msg.payload);
-  } else {
-    co_return err_unreachable;
   }
+  co_return err_unreachable;
 }
 
 auto MConnConnection::remote_endpoint() -> std::string {
@@ -239,37 +252,53 @@ auto MConnTransport::accept(eo::chan<std::monostate>& done)
     co_return Error("transport is not listening");
   }
 
-  auto con_ch = eo::chan<std::shared_ptr<Conn<TcpConn>>>{io_context};
-  auto err_ch = eo::chan<Error>{io_context};
+  auto con_ch = eo::make_chan<std::shared_ptr<Conn<TcpConn>>>();
+  auto err_ch = eo::make_chan<Error>();
 
   co_spawn(
     io_context,
     [&]() -> asio::awaitable<void> {
       auto res = co_await listener->accept();
       if (!res) {
-        co_await (done.async_receive(use_awaitable) ||
-          err_ch.async_send(boost::system::error_code{}, res.error(), use_awaitable));
-      } else {
-        co_await (done.async_receive(use_awaitable) ||
-          con_ch.async_send(boost::system::error_code{}, res.value(), use_awaitable));
+        auto select = eo::Select{err_ch << res.error(), *done};
+        switch (co_await select.index()) {
+        case 0:
+          co_await select.process<0>();
+          break;
+        case 1:
+          co_await select.process<1>();
+          break;
+        }
+      }
+      auto select = eo::Select{con_ch << res.value(), *done};
+      switch (co_await select.index()) {
+      case 0:
+        co_await select.process<0>();
+        break;
+      case 1:
+        co_await select.process<1>();
+        break;
       }
     },
     detached);
 
-  auto res = co_await (done.async_receive(use_awaitable) || done_ch.async_receive(use_awaitable) ||
-    err_ch.async_receive(use_awaitable) || con_ch.async_receive(use_awaitable));
-
-  if (res.index() == 0 || res.index() == 1) {
+  auto select = eo::Select{*done, *done_ch, *err_ch, *con_ch};
+  switch (co_await select.index()) {
+  case 0:
+    co_await select.process<0>();
     listener->close();
     co_return err_eof;
-  } else if (res.index() == 2) {
-    co_return std::get<2>(res);
-  } else if (res.index() == 3) {
-    auto tcp_conn = std::get<3>(res);
+  case 1:
+    co_await select.process<1>();
+    listener->close();
+    co_return err_eof;
+  case 2:
+    co_return co_await select.process<2>();
+  case 3:
+    auto tcp_conn = co_await select.process<3>();
     co_return MConnConnection::new_mconn_connection(io_context, tcp_conn, mconn_config, channel_descs);
-  } else {
-    co_return err_unreachable;
   }
+  co_return err_unreachable;
 }
 
 auto MConnTransport::dial(const std::string& endpoint) -> asio::awaitable<Result<std::shared_ptr<MConnConnection>>> {

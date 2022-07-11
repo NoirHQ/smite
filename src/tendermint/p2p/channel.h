@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <eo/core.h>
 #include <tendermint/p2p/types.h>
 #include <tendermint/types/node_id.h>
+#include <eo/core.h>
 #include <cstdint>
 #include <memory>
 
@@ -89,7 +89,7 @@ using ChannelIdSet = std::set<ChannelId>;
 
 namespace detail {
   auto iterator_worker(eo::chan<std::monostate>& done, Channel& ch, eo::chan<EnvelopePtr>& pipe)
-    -> asio::awaitable<Result<void>>;
+    -> boost::asio::awaitable<void>;
 
   template<typename T>
   auto merge(asio::io_context& io_context, eo::chan<std::monostate>& done, eo::chan<EnvelopePtr>& pipe, T& ch) {
@@ -97,10 +97,11 @@ namespace detail {
   }
 
   template<typename T, typename... Ts>
-  auto merge(asio::io_context& io_context, eo::chan<std::monostate>& done, eo::chan<EnvelopePtr>& pipe, T& ch, Ts&... chs) {
+  auto merge(
+    asio::io_context& io_context, eo::chan<std::monostate>& done, eo::chan<EnvelopePtr>& pipe, T& ch, Ts&... chs) {
     return merge(io_context, done, pipe, ch) && merge(io_context, done, pipe, chs...);
   }
-} //namespace detail
+} // namespace detail
 
 template<typename... Ts>
 auto merged_channel_iterator(asio::io_context& io_context, eo::chan<std::monostate>& done, const Ts&... chs)

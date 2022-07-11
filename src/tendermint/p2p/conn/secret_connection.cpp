@@ -167,7 +167,7 @@ auto SecretConnection::read(std::span<unsigned char> data) -> asio::awaitable<Re
   // read off the conn
   std::vector<unsigned char> sealed_frame(total_frame_size + aead_size_overhead);
   auto res = co_await conn->read(std::span(sealed_frame.data(), sealed_frame.size()));
-  if (res.has_error()) {
+  if (!res) {
     co_return res.error();
   }
 
@@ -238,7 +238,7 @@ auto SecretConnection::write(std::span<const unsigned char> data)
     send_nonce.increment();
 
     auto res = co_await conn->write(std::span<const unsigned char>(sealed_frame.data(), sealed_frame.size()));
-    if (res.has_error()) {
+    if (!res) {
       co_return std::make_tuple(n, res.error());
     }
     n += chunk->size();

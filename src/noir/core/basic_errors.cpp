@@ -7,5 +7,6 @@ const Error err_unreachable = user_error_registry().register_error("MUST not rea
 const Error err_eof = user_error_registry().register_error("EOF");
 const Error err_canceled = user_error_registry().register_error("context canceled");
 const Error err_deadline_exceeded = user_error_registry().register_error("context deadline exceeded");
+const Error err_context_done = user_error_registry().register_error("context done");
 
 } // namespace noir
