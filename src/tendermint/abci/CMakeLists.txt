@@ -15,5 +15,5 @@ target_link_libraries(tendermint_abci
 
 add_library(tendermint::abci ALIAS tendermint_abci)
 
-#add_executable(socket_client_test client/test/socket_client_test.cpp)
-#target_link_libraries(socket_client_test tendermint::abci)
+add_executable(socket_client_test client/test/socket_client_test.cpp)
+target_link_libraries(socket_client_test tendermint::abci)

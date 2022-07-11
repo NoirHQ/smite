@@ -12,7 +12,6 @@
 #include <noir/consensus/store/state_store.h>
 #include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/types/events.h>
-#include <noir/tx_pool/tx_pool.h>
 
 #include <utility>
 

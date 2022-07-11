@@ -1,4 +1,5 @@
 add_library(noir_consensus STATIC
+  app_connection.cpp
   block_sync/block_pool.cpp
   block_sync/reactor.cpp
   consensus_reactor.cpp
@@ -26,11 +27,11 @@ add_library(noir_consensus STATIC
 target_link_libraries(noir_consensus
   RocksDB::rocksdb # Must come before proto
   libpqxx::pqxx
+  noir::app
   noir::clist
   noir::common
   noir::crypto
   noir::proto
-  noir::tx_pool
   tendermint::log
   sodium
 )
