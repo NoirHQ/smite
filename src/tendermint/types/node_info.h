@@ -81,7 +81,33 @@ public:
   // CONTRACT: two nodes are compatible if the Block version and network match
   // and they have at least one channel in common.
   auto compatible_with(const NodeInfo& other) -> noir::Result<void> {
-    // TODO
+    if (protocol_version.block != other.protocol_version.block) {
+      return noir::Error::format("peer is on a different Block version. Got {}, expected {}",
+        other.protocol_version.block, protocol_version.block);
+    }
+    if (network != other.network) {
+      return noir::Error::format("peer is on a different network. Got {}, expected {}", other.network, network);
+    }
+
+    if (channels.size() == 0) {
+      return noir::success();
+    }
+
+    auto found = false;
+    auto outer_loop = true;
+    for (auto ch1 = channels.begin(); ch1 != channels.end() && outer_loop; ++ch1) {
+      for (auto& ch2 : other.channels) {
+        if (*ch1 == ch2) {
+          found = true;
+          outer_loop = false;
+          break;
+        }
+      }
+    }
+    if (!found) {
+      return noir::Error::format("peer has no common channels. Our channels: {} ; Peer channels: {}",
+        hex::encode(channels), hex::encode(other.channels));
+    }
     return noir::success();
   }
 
@@ -96,4 +122,4 @@ public:
   NodeInfoOther other;
 };
 
-} // namespace tendermint
+} // namespace tendermint::type
