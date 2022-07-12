@@ -9,7 +9,6 @@ target_link_libraries(noir_rpc
   noir_crypto
   websocketpp
 )
-set_target_properties(noir_rpc PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
 add_library(noir::rpc ALIAS noir_rpc)
 

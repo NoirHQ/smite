@@ -12,8 +12,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
   target_link_libraries(noir_core Threads::Threads)
 endif()
 
-set_target_properties(noir_core PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
-
 add_library(noir::core ALIAS noir_core)
 
 add_noir_test(error_test test/error_test.cpp DEPENDS noir::core)

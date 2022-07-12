@@ -35,7 +35,6 @@ target_link_libraries(noir_consensus
   tendermint::log
   sodium
 )
-set_target_properties(noir_consensus PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
 add_library(noir::consensus ALIAS noir_consensus)
 

@@ -8,7 +8,6 @@ target_link_libraries(noir_clist
   noir::core
   eo::eo
 )
-set_target_properties(noir_clist PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
 add_library(noir::clist ALIAS noir_clist)
 

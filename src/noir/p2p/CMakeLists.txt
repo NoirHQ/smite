@@ -12,7 +12,6 @@ target_link_libraries(noir_p2p
   noir::proto
   sodium
 )
-set_target_properties(noir_p2p PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
 add_library(noir::p2p ALIAS noir_p2p)
 

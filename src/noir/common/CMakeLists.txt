@@ -16,7 +16,6 @@ target_link_libraries(noir_common
   range-v3::range-v3
   date::date
 )
-set_target_properties(noir_common PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
 add_library(noir::common ALIAS noir_common)
 

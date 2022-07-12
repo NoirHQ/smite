@@ -7,7 +7,6 @@ target_link_libraries(noir_jmt
   noir::common
   noir::crypto
 )
-set_target_properties(noir_jmt PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
 add_library(noir::jmt ALIAS noir_jmt)
 

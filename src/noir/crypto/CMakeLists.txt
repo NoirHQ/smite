@@ -16,7 +16,6 @@ target_link_libraries(noir_crypto
   XKCP
   xxHash::xxhash
 )
-set_target_properties(noir_crypto PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
 
 add_library(noir::crypto ALIAS noir_crypto)
 
