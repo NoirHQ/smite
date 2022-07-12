@@ -214,6 +214,17 @@ struct handshaker {
   }
 
   Result<void> handshake(const std::shared_ptr<app_connection>& proxy_app) {
+    if (proxy_app->is_socket) {
+      tendermint::abci::RequestInfo req;
+      req.set_version("0.35.6");
+      req.set_block_version(11);
+      req.set_p2p_version(8);
+      req.set_abci_version("0.17.0");
+      auto res = proxy_app->application->info_sync(req);
+      if (res)
+        ilog(fmt::format("ABCI Handshake App Info: height={} hash={} software-version={} protocol-version={}",
+          res->last_block_height(), res->last_block_app_hash(), res->version(), res->app_version()));
+    }
     return success();
   }
 };

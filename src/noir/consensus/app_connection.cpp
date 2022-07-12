@@ -15,6 +15,7 @@ app_connection::app_connection(const std::string& proxy_app) {
     return;
   } else if (proxy_app == "socket") {
     application = std::make_shared<application::socket_app>();
+    is_socket = true;
     return;
   } else if (proxy_app.empty()) {
     application = std::make_shared<application::base_application>();

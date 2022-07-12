@@ -26,6 +26,13 @@ socket_app::socket_app() {
   my_cli = std::make_shared<cli_impl>();
 }
 
+std::unique_ptr<ResponseInfo> socket_app::info_sync(const RequestInfo& req) {
+  auto res = my_cli->conn->info_sync(req);
+  if (!res)
+    return {};
+  return std::move(res.value());
+}
+
 consensus::response_init_chain& socket_app::init_chain() {
   RequestInitChain init_req;
   my_cli->conn->init_chain_sync(init_req); /// called by replay_block(), which is not implemented yet
