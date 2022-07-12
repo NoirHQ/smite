@@ -240,7 +240,7 @@ auto MConnTransport::listen(const std::string& endpoint) -> asio::awaitable<Resu
   if (!endpoint_res) {
     co_return endpoint_res.error();
   }
-  listener = TcpListener::create(io_context);
+  listener = new_tcp_listener(io_context);
   co_await listener->listen(endpoint);
 
   co_return success();
@@ -306,7 +306,7 @@ auto MConnTransport::dial(const std::string& endpoint) -> asio::awaitable<Result
   if (!endpoint_res) {
     co_return endpoint_res.error();
   }
-  std::shared_ptr<Conn<TcpConn>> tcp_conn = TcpConn::create(io_context, endpoint);
+  std::shared_ptr<Conn<TcpConn>> tcp_conn = new_tcp_conn(io_context, endpoint);
   auto res = co_await reinterpret_cast<std::shared_ptr<TcpConn>&>(tcp_conn)->connect();
   if (!res) {
     co_return res.error();
