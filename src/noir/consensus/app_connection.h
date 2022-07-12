@@ -10,6 +10,9 @@ namespace noir::consensus {
 
 struct app_connection {
   app_connection(const std::string& proxy_app = "");
+
+  Result<void> start();
+
   response_init_chain init_chain_sync(const request_init_chain& req);
   response_prepare_proposal& prepare_proposal_sync(request_prepare_proposal req);
   response_begin_block begin_block_sync(request_begin_block req);

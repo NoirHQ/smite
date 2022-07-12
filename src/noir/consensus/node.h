@@ -52,6 +52,8 @@ struct node {
     const std::shared_ptr<genesis_doc>& new_genesis_doc,
     const std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>& session);
 
+  static std::shared_ptr<app_connection> create_and_start_proxy_app(const std::string& app_name);
+
   static void log_node_startup_info(state& state_, pub_key& pub_key_, node_mode mode);
 
   static std::shared_ptr<block_sync::reactor> create_block_sync_reactor(appbase::application& app,

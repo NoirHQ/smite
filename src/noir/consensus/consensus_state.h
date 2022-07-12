@@ -121,6 +121,10 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
 
   ///< no need for peer_mq; we have one at consensus_reactor which handles all messages from peers
 
+  ///-- directly implemented decide_proposal
+  ///-- directly implemented do_prevote
+  ///-- directly implemented set_proposal
+
   plugin_interface::egress::channels::event_switch_message_queue::channel_type& event_switch_mq_channel;
 
   // internalMsgQueue chan msgInfo
@@ -135,6 +139,8 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   uint16_t thread_pool_size = 2;
   std::optional<named_thread_pool> thread_pool;
   timeout_info_ptr old_ti;
+
+  int n_steps{}; // for tests where we want to limit the number of transitions the state makes
 
   // we use eventBus to trigger msg broadcasts in the reactor,
   // and to notify external subscribers, eg. through a websocket
@@ -178,14 +184,38 @@ struct consensus_state : public std::enable_shared_from_this<consensus_state> {
   /// \param[in] msg
   /// \return true on success, false otherwise
   bool read_replay_message(const timed_wal_message& msg);
+};
 
-  // for tests where we want to limit the number of transitions the state makes
-  int n_steps;
+/// //---------------------------------------------------
+/// // 2. Recover from failure while applying the block.
+/// // (by handshaking with the app to figure out where
+/// //  we were last, and using the WAL to recover there)
+/// //---------------------------------------------------
+struct handshaker {
+  std::shared_ptr<block_store> block_store_{};
+  state& initial_state;
+  std::shared_ptr<noir::consensus::db_store> state_store{};
+  std::shared_ptr<events::event_bus> event_bus_{};
+  std::shared_ptr<genesis_doc> gen_doc{};
 
-  // some functions can be overwritten for testing
-  ///-- directly implemented decide_proposal
-  ///-- directly implemented do_prevote
-  ///-- directly implemented set_proposal
+  int n_blocks{};
+
+  static std::shared_ptr<handshaker> new_handshaker(const std::shared_ptr<block_store>& b_store_,
+    state& i_state,
+    const std::shared_ptr<noir::consensus::db_store>& s_store,
+    const std::shared_ptr<events::event_bus>& e_bus_,
+    const std::shared_ptr<genesis_doc>& g_doc) {
+    return std::make_shared<handshaker>(handshaker{.block_store_ = b_store_,
+      .initial_state = i_state,
+      .state_store = s_store,
+      .event_bus_ = e_bus_,
+      .gen_doc = g_doc,
+      .n_blocks = 0});
+  }
+
+  Result<void> handshake(const std::shared_ptr<app_connection>& proxy_app) {
+    return success();
+  }
 };
 
 /// \brief repair wal file until first error is encountered

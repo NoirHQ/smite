@@ -15,11 +15,17 @@ app_connection::app_connection(const std::string& proxy_app) {
     return;
   } else if (proxy_app == "socket") {
     application = std::make_shared<application::socket_app>();
+    return;
   } else if (proxy_app.empty()) {
     application = std::make_shared<application::base_application>();
     return;
   }
   check(false, "failed to load application");
+}
+
+Result<void> app_connection::start() {
+  // not much to do
+  return success();
 }
 
 response_init_chain app_connection::init_chain_sync(const request_init_chain& req) {

@@ -16,7 +16,7 @@ using namespace tendermint::abci;
 
 struct cli_impl {
   cli_impl() {
-    conn = std::make_shared<abci::SocketClient<net::TcpConn>>("127.0.0.1:26658", true);
+    conn = std::make_shared<abci::SocketClient<net::TcpConn>>("127.0.0.1:26658", true); // TODO : read from config
     conn->start();
   }
   std::shared_ptr<abci::SocketClient<net::TcpConn>> conn;
@@ -34,7 +34,7 @@ consensus::response_init_chain& socket_app::init_chain() {
 }
 
 consensus::response_begin_block& socket_app::begin_block() {
-  // ilog("!!! BeginBlock !!!");
+  ilog("!!! BeginBlock !!!");
   request_begin_block req;
 
   RequestBeginBlock b_req;
@@ -50,16 +50,16 @@ consensus::response_begin_block& socket_app::begin_block() {
     new_val->set_address({v.validator_.address.begin(), v.validator_.address.end()});
     new_val->set_power(v.validator_.voting_power);
   }
-  Result<std::unique_ptr<ResponseBeginBlock>> res = my_cli->conn->begin_block_sync(b_req);
+  // Result<std::unique_ptr<ResponseBeginBlock>> res = my_cli->conn->begin_block_sync(b_req);
 
   return response_begin_block_;
 }
 consensus::req_res<consensus::response_deliver_tx>& socket_app::deliver_tx_async() {
-  // ilog("!!! DeliverTx !!!");
+  ilog("!!! DeliverTx !!!");
   return req_res_deliver_tx_;
 }
 consensus::response_end_block& socket_app::end_block() {
-  // ilog("!!! EndBlock !!!");
+  ilog("!!! EndBlock !!!");
   return response_end_block_;
 }
 
