@@ -52,7 +52,7 @@ std::unique_ptr<node> node::make_node(appbase::application& app,
   const std::shared_ptr<noir::db::session::session<noir::db::session::rocksdb_t>>& session) {
 
   auto dbs = std::make_shared<noir::consensus::db_store>(session);
-  auto proxyApp = std::make_shared<app_connection>(new_config->base.proxy_app);
+  auto proxy_app = create_and_start_proxy_app(new_config->base.proxy_app);
   auto bls = std::make_shared<noir::consensus::block_store>(session);
   auto ev_bus = std::make_shared<noir::consensus::events::event_bus>(app);
 
@@ -83,6 +83,10 @@ std::unique_ptr<node> node::make_node(appbase::application& app,
   // Setup block_sync
   bool block_sync = new_config->base.fast_sync_mode;
 
+  // Create handshaker
+  auto handshaker_ = handshaker::new_handshaker(bls, state_, dbs, event_bus_, new_genesis_doc);
+  handshaker_->handshake(proxy_app);
+
   log_node_startup_info(state_, pub_key_, new_config->base.mode);
 
   auto ok_ev_reactor = create_evidence_reactor(app, new_config, session, bls);
@@ -90,7 +94,7 @@ std::unique_ptr<node> node::make_node(appbase::application& app,
     check(false, fmt::format("unable to start node: {}", ok_ev_reactor.error().message()));
   auto [new_ev_reactor, new_ev_pool] = ok_ev_reactor.value();
 
-  auto block_exec = block_executor::new_block_executor(dbs, proxyApp, new_ev_pool, bls, ev_bus);
+  auto block_exec = block_executor::new_block_executor(dbs, proxy_app, new_ev_pool, bls, ev_bus);
 
   auto [new_cs_reactor, new_cs_state] = create_consensus_reactor(app, new_config, std::make_shared<state>(state_),
     block_exec, bls, new_ev_pool, new_priv_validator, event_bus_, block_sync);
@@ -116,6 +120,13 @@ std::unique_ptr<node> node::make_node(appbase::application& app,
   node_->cs_reactor = new_cs_reactor;
   node_->ev_reactor = new_ev_reactor;
   return node_;
+}
+
+std::shared_ptr<app_connection> node::create_and_start_proxy_app(const std::string& app_name) {
+  auto proxy_app = std::make_shared<app_connection>(app_name);
+  // handle all errors here; if fails throw exception
+  proxy_app->start();
+  return proxy_app;
 }
 
 void node::log_node_startup_info(state& state_, pub_key& pub_key_, node_mode mode) {
