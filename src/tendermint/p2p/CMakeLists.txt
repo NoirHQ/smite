@@ -18,4 +18,4 @@ target_link_libraries(tendermint_p2p
 add_library(tendermint::p2p ALIAS tendermint_p2p)
 
 add_noir_test(tendermint_secret_connection_test conn/test/secret_connection_test.cpp DEPENDS tendermint::p2p)
-add_noir_test(waker_test test/waker_test.cpp DEPENDS tendermint::p2p)
+add_noir_test(node_id_test test/node_id_test.cpp DEPENDS tendermint::p2p)
