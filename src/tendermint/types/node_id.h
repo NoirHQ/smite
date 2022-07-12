@@ -1,6 +1,6 @@
 #pragma once
-#include <noir/crypto/hash/sha2.h>
 #include <noir/common/hex.h>
+#include <noir/crypto/hash/sha2.h>
 #include <string>
 
 namespace tendermint {
@@ -11,13 +11,9 @@ static auto node_id_from_pubkey(const std::vector<unsigned char>& pub_key) -> No
   if (pub_key.size() != 32) {
     throw std::runtime_error("pubkey is incorrect size");
   }
-  auto& d = noir::crypto::Sha256().init();
-  d = d.update(std::span(pub_key.data(), pub_key.size()));
-  std::vector<unsigned char> out(32);
-  d.update(std::span(out.data(), out.size()));
-  std::vector<unsigned char> address(out.begin(), out.begin() + 20);
-  auto hex_str = noir::hex::encode(address.data(), address.size());
-  return hex_str;
+  auto sah256_sum = noir::crypto::Sha256()(pub_key);
+  std::vector<unsigned char> address(sah256_sum.begin(), sah256_sum.begin() + 20);
+  return noir::hex::encode(address.data(), 20);
 }
 
 } // namespace tendermint

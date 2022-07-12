@@ -4,9 +4,7 @@ add_library(tendermint_p2p STATIC
   conn/secret_connection.cpp
   channel.cpp
   lib.cpp
-  peermanager.cpp
   transport_mconn.cpp
-  router.cpp
 )
 target_include_directories(tendermint_p2p PUBLIC ${PROJECT_SOURCE_DIR}/src ${Boost_INCLUDE_DIR})
 target_link_libraries(tendermint_p2p
@@ -14,6 +12,7 @@ target_link_libraries(tendermint_p2p
   noir::common
   noir::net
   noir::proto
+  noir::crypto
 )
 
 add_library(tendermint::p2p ALIAS tendermint_p2p)
