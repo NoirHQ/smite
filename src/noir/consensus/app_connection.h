@@ -25,6 +25,7 @@ struct app_connection {
   void flush_sync();
 
   std::shared_ptr<application::base_application> application;
+  bool is_socket{}; // FIXME: remove later; for now it's used for ease
 
 private:
   std::mutex mtx;

@@ -5,8 +5,11 @@
 //
 #pragma once
 #include <noir/consensus/abci_types.h>
+#include <tendermint/abci/types.pb.h>
 
 namespace noir::application {
+
+using namespace tendermint::abci;
 
 class base_application {
 protected:
@@ -24,8 +27,12 @@ protected:
 
 public:
   base_application() {}
-  virtual void info() {}
-  virtual void query() {}
+  // virtual void info() {}
+  // virtual void query() {}
+
+  virtual std::unique_ptr<ResponseInfo> info_sync(const RequestInfo& req) {
+    return {};
+  }
 
   virtual consensus::response_init_chain& init_chain() {
     return response_init_chain_;

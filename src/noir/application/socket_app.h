@@ -11,6 +11,9 @@ namespace noir::application {
 class socket_app : public base_application {
 public:
   socket_app();
+
+  virtual std::unique_ptr<ResponseInfo> info_sync(const RequestInfo& req) override;
+
   virtual consensus::response_init_chain& init_chain() override;
   virtual consensus::response_begin_block& begin_block() override;
   virtual consensus::req_res<consensus::response_deliver_tx>& deliver_tx_async() override;
