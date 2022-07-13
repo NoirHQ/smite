@@ -172,18 +172,15 @@ public:
       got_resp.close();
     });
 
-    return invoke([&]() -> func<Result<void>> {
+    invoke([&]() -> func<> {
       auto select = Select{*got_resp};
       switch (co_await select.index()) {
       case 0:
-        co_await select.process<0>();
-        co_return error();
-        /*
-        case 1:
-        */
+        co_await select.template process<0>();
       }
-      co_return success();
+      co_return;
     });
+    return success();
   }
 
   Result<std::unique_ptr<ResponseInfo>> info_sync(const RequestInfo& req) {
