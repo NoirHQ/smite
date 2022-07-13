@@ -34,9 +34,10 @@ public:
     return {};
   }
 
-  virtual consensus::response_init_chain& init_chain() {
-    return response_init_chain_;
+  virtual std::unique_ptr<ResponseInitChain> init_chain(const RequestInitChain& req) {
+    return {};
   }
+
   virtual consensus::response_prepare_proposal& prepare_proposal() {
     return response_prepare_proposal_;
   }

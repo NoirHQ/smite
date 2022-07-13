@@ -14,6 +14,7 @@
 #include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/types/node_id.h>
 #include <noir/consensus/types/priv_validator.h>
+#include <noir/consensus/types/protobuf.h>
 #include <noir/consensus/types/round_state.h>
 #include <noir/consensus/wal.h>
 
@@ -221,11 +222,102 @@ struct handshaker {
       req.set_p2p_version(8);
       req.set_abci_version("0.17.0");
       auto res = proxy_app->application->info_sync(req);
-      if (res)
-        ilog(fmt::format("ABCI Handshake App Info: height={} hash={} software-version={} protocol-version={}",
-          res->last_block_height(), res->last_block_app_hash(), res->version(), res->app_version()));
+      if (!res)
+        return Error::format("ABCI failed: info_sync");
+
+      auto block_height = res->last_block_height();
+      if (block_height < 0)
+        return Error::format("got a negative last_block_height from app");
+      auto app_hash = to_hex(res->last_block_app_hash());
+      ilog(fmt::format("ABCI Handshake App Info: height={} hash={} software-version={} protocol-version={}",
+        block_height, app_hash, res->version(), res->app_version()));
+
+      if (initial_state.last_block_height == 0)
+        initial_state.version.cs.app = res->app_version();
+
+      // Replay blocks up to latest in block_store
+      replay_blocks(initial_state, from_hex(app_hash), block_height, proxy_app);
+
+      ilog(fmt::format(
+        "Completed ABCI Handshake - Tendermint and App are synced: app_height={} app_hash={}", block_height, app_hash));
     }
     return success();
+  }
+
+  Result<Bytes> replay_blocks(
+    state& state_, const Bytes& app_hash, int64_t app_block_height, const std::shared_ptr<app_connection>& proxy_app) {
+    auto store_block_base = block_store_->base();
+    auto store_block_height = block_store_->height();
+    auto state_block_height = state_.last_block_height;
+    ilog(fmt::format("ABCI Replay Blocks : app_height={} store_height={} state_height={}", app_block_height,
+      store_block_height, state_block_height));
+
+    if (app_block_height == 0) {
+      std::vector<validator> validators;
+      for (auto& v : gen_doc->validators)
+        validators.push_back(validator::new_validator(v.pub_key, v.power));
+      auto val_set = validator_set::new_validator_set(validators);
+      auto next_vals = tm2pb::validator_updates(val_set);
+      auto pb_params = consensus_params::to_proto(gen_doc->cs_params.value());
+      tendermint::abci::RequestInitChain req;
+      *req.mutable_time() = ::google::protobuf::util::TimeUtil::MicrosecondsToTimestamp(gen_doc->genesis_time);
+      req.set_chain_id(gen_doc->chain_id);
+      req.set_initial_height(gen_doc->initial_height);
+      req.set_allocated_consensus_params(pb_params.release());
+      req.mutable_validators()->Add(next_vals.begin(), next_vals.end());
+      req.set_app_state_bytes({gen_doc->app_state.begin(), gen_doc->app_state.end()});
+
+      auto res = proxy_app->application->init_chain(req);
+      if (!res)
+        return Error::format("ABCI failed: init_chain");
+      auto new_app_hash = from_hex(to_hex(res->app_hash()));
+
+      if (state_block_height == 0) {
+        if (!new_app_hash.empty())
+          state_.app_hash = new_app_hash;
+        if (!res->validators().empty()) {
+          std::vector<::tendermint::abci::ValidatorUpdate> pb_vals;
+          for (auto& v : res->validators())
+            pb_vals.push_back(v);
+          auto vals = pb2tm::validator_updates(pb_vals).value();
+          state_.validators = validator_set::new_validator_set(vals);
+          state_.next_validators = validator_set::new_validator_set(vals)->copy_increment_proposer_priority(1);
+        } else if (gen_doc->validators.empty()) {
+          return Error::format("validator set is nil in genesis and still empty after InitChain");
+        }
+        if (res->consensus_params().IsInitialized()) {
+          // TODO : implement
+        }
+
+        // Update last_result_hash with empty hash, conforming to RFC-6962
+        state_.last_result_hash = merkle::get_empty_hash();
+        if (!state_store->save(state_))
+          return Error::format("replay_blocks failed: could not save");
+      }
+    }
+
+    if (store_block_height == 0)
+      return app_hash;
+    if (app_block_height == 0 && state_.initial_height < store_block_base)
+      return Error::format("app_block_height is too low");
+    if (app_block_height > 0 && app_block_height < store_block_base - 1)
+      return Error::format("app_block_height is too low");
+    if (store_block_height < app_block_height)
+      return Error::format("app_block_height is too low");
+    if (store_block_height < state_block_height)
+      check(false, "state_block_height > store_block_height");
+    if (store_block_height > state_block_height + 1)
+      check(false, "store_block_height > state_block_height + 1");
+
+    if (store_block_height == state_block_height) {
+      if (app_block_height < store_block_height) {
+        // return replay_blocks_internal(); // TODO : implement
+      } else if (app_block_height == store_block_height) {
+        return app_hash;
+      }
+    }
+
+    return app_hash; // TODO : remove this and continue implementation
   }
 };
 

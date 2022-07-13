@@ -9,6 +9,7 @@
 #include <noir/p2p/types.h>
 #include <tendermint/types/params.pb.h>
 
+#include <google/protobuf/util/time_util.h>
 #include <optional>
 
 namespace noir::consensus {
@@ -81,6 +82,23 @@ struct consensus_params {
     pb.set_block_max_gas(block.max_gas);
     auto bz = codec::protobuf::encode(pb);
     return crypto::Sha256()(bz);
+  }
+
+  static std::unique_ptr<::tendermint::types::ConsensusParams> to_proto(const consensus_params& v) {
+    auto ret = std::make_unique<::tendermint::types::ConsensusParams>();
+    auto block_ = ret->mutable_block();
+    block_->set_max_bytes(v.block.max_bytes);
+    block_->set_max_gas(v.block.max_gas);
+    auto ev_ = ret->mutable_evidence();
+    ev_->set_max_age_num_blocks(v.evidence.max_age_num_blocks);
+    *ev_->mutable_max_age_duration() =
+      ::google::protobuf::util::TimeUtil::NanosecondsToDuration(v.evidence.max_age_duration);
+    ev_->set_max_bytes(v.evidence.max_bytes);
+    auto val = ret->mutable_validator()->mutable_pub_key_types();
+    val->Add(v.validator.pub_key_types.begin(), v.validator.pub_key_types.end());
+    auto version = ret->mutable_version();
+    version->set_app_version(v.version.app_version);
+    return ret;
   }
 };
 

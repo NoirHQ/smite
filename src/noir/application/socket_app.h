@@ -14,7 +14,8 @@ public:
 
   virtual std::unique_ptr<ResponseInfo> info_sync(const RequestInfo& req) override;
 
-  virtual consensus::response_init_chain& init_chain() override;
+  virtual std::unique_ptr<ResponseInitChain> init_chain(const RequestInitChain& req) override;
+
   virtual consensus::response_begin_block& begin_block() override;
   virtual consensus::req_res<consensus::response_deliver_tx>& deliver_tx_async() override;
   virtual consensus::response_end_block& end_block() override;
