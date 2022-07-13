@@ -29,12 +29,6 @@ Result<void> app_connection::start() {
   return success();
 }
 
-response_init_chain app_connection::init_chain_sync(const request_init_chain& req) {
-  std::scoped_lock g(mtx);
-  auto& res = application->init_chain();
-  return {};
-}
-
 response_prepare_proposal& app_connection::prepare_proposal_sync(request_prepare_proposal req) {
   std::scoped_lock g(mtx);
   auto& res = application->prepare_proposal();

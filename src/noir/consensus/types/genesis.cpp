@@ -29,14 +29,18 @@ Result<std::shared_ptr<genesis_doc>> genesis_doc::genesis_doc_from_file(const st
       gen_doc->genesis_time = ok.value();
       ilog(fmt::format("genesis_time: {}", tstamp_to_str(gen_doc->genesis_time)));
     }
-    std::vector<json::genesis_validator_json_obj> vals;
-    fc::from_variant(obj["validators"], vals);
-    for (auto& val : vals) {
-      auto addr = from_hex(val.address);
-      auto pub_key_str = base64::decode(val.pub_key.value);
-      ::noir::consensus::pub_key pub_key_{.key = Bytes{pub_key_str.begin(), pub_key_str.end()}};
-      gen_doc->validators.push_back(genesis_validator{
-        .address = Bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});
+    try {
+      std::vector<json::genesis_validator_json_obj> vals;
+      fc::from_variant(obj["validators"], vals);
+      for (auto& val : vals) {
+        auto addr = from_hex(val.address);
+        auto pub_key_str = base64::decode(val.pub_key.value);
+        ::noir::consensus::pub_key pub_key_{.key = Bytes{pub_key_str.begin(), pub_key_str.end()}};
+        gen_doc->validators.push_back(genesis_validator{
+          .address = Bytes{addr.begin(), addr.end()}, .pub_key = pub_key_, .power = val.power, .name = val.name});
+      }
+    } catch (std::exception const& ex) {
+      dlog("genesis.json: missing validators");
     }
     try {
       consensus_params params;
@@ -44,6 +48,12 @@ Result<std::shared_ptr<genesis_doc>> genesis_doc::genesis_doc_from_file(const st
       gen_doc->cs_params = params;
     } catch (std::exception const& ex) {
       dlog("genesis.json: missing consensus_params");
+    }
+    try {
+      auto app_state_str = fc::json::to_string(obj["app_state"], fc::json::yield_function_t());
+      gen_doc->app_state = {app_state_str.begin(), app_state_str.end()};
+    } catch (std::exception const& ex) {
+      dlog("genesis.json: missing app_state");
     }
   } catch (std::exception const& ex) {
     return Error::format("error reading genesis from {}: {}", gen_doc_file, ex.what());

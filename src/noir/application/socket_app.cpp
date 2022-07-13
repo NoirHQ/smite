@@ -33,11 +33,11 @@ std::unique_ptr<ResponseInfo> socket_app::info_sync(const RequestInfo& req) {
   return std::move(res.value());
 }
 
-consensus::response_init_chain& socket_app::init_chain() {
-  RequestInitChain init_req;
-  my_cli->conn->init_chain_sync(init_req); /// called by replay_block(), which is not implemented yet
-
-  return response_init_chain_;
+std::unique_ptr<ResponseInitChain> socket_app::init_chain(const RequestInitChain& req) {
+  auto res = my_cli->conn->init_chain_sync(req);
+  if (!res)
+    return {};
+  return std::move(res.value());
 }
 
 consensus::response_begin_block& socket_app::begin_block() {
