@@ -11,9 +11,9 @@
 namespace noir::consensus::indexer {
 
 struct tx_indexer {
-  virtual Result<void> index(std::vector<std::shared_ptr<tx_result>>) = 0;
-  virtual Result<std::shared_ptr<tx_result>> get(Bytes hash) = 0;
-  virtual Result<std::vector<std::shared_ptr<tx_result>>> search(std::string query) = 0;
+  virtual Result<void> index(std::vector<std::shared_ptr<tendermint::abci::TxResult>>) = 0;
+  virtual Result<std::shared_ptr<tendermint::abci::TxResult>> get(Bytes hash) = 0;
+  virtual Result<std::vector<std::shared_ptr<tendermint::abci::TxResult>>> search(std::string query) = 0;
 };
 
 struct block_indexer {
