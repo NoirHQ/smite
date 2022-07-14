@@ -16,9 +16,9 @@ public:
 
   virtual std::unique_ptr<ResponseInitChain> init_chain(const RequestInitChain& req) override;
 
-  virtual consensus::response_begin_block& begin_block() override;
-  virtual consensus::req_res<consensus::response_deliver_tx>& deliver_tx_async() override;
-  virtual consensus::response_end_block& end_block() override;
+  virtual std::unique_ptr<ResponseBeginBlock> begin_block(const RequestBeginBlock& req) override;
+  virtual std::unique_ptr<ResponseEndBlock> end_block(const RequestEndBlock& req) override;
+  virtual std::unique_ptr<ResponseDeliverTx> deliver_tx_async(const RequestDeliverTx& req) override;
 
 private:
   std::shared_ptr<struct cli_impl> my_cli;

@@ -36,7 +36,7 @@ public:
   /// \param[in] height
   /// \param[out] abci_rsp
   /// \return true on success, false otherwise
-  virtual bool load_abci_responses(int64_t height, abci_responses& abci_rsp) const = 0;
+  virtual bool load_abci_responses(int64_t height, tendermint::state::ABCIResponses& abci_rsp) const = 0;
   /// \brief LoadConsensusParams loads the consensus params for a given height
   /// \param[in] height
   /// \param[out] cs_param
@@ -50,7 +50,7 @@ public:
   /// \param[in] height
   /// \param[in] abci_rsp
   /// \return true on success, false otherwise
-  virtual bool save_abci_responses(int64_t height, const abci_responses& abci_rsp) = 0;
+  virtual bool save_abci_responses(int64_t height, const tendermint::state::ABCIResponses& abci_rsp) = 0;
   /// \brief SaveValidatorSet saves the validator set at a given height
   /// \param[in] lower_height
   /// \param[in] upper_height
@@ -123,7 +123,7 @@ public:
     return true;
   }
 
-  bool load_abci_responses(int64_t height, abci_responses& rsp) const override {
+  bool load_abci_responses(int64_t height, tendermint::state::ABCIResponses& rsp) const override {
     return load_abci_response_internal(height, rsp);
   }
 
@@ -149,7 +149,7 @@ public:
     return save_internal(st);
   }
 
-  bool save_abci_responses(int64_t height, const abci_responses& rsp) override {
+  bool save_abci_responses(int64_t height, const tendermint::state::ABCIResponses& rsp) override {
     return save_abci_responses_internal(height, rsp);
   }
 
@@ -313,19 +313,20 @@ private:
     return true;
   }
 
-  bool save_abci_responses_internal(int64_t height, const abci_responses& rsp) {
-    auto buf = encode(rsp);
+  bool save_abci_responses_internal(int64_t height, const tendermint::state::ABCIResponses& rsp) {
+    Bytes buf(rsp.ByteSizeLong());
+    rsp.SerializeToArray(buf.data(), rsp.ByteSizeLong());
     db_session_->write_from_bytes(encode_key<prefix::abci_response>(height), buf);
     db_session_->commit();
     return true;
   }
 
-  bool load_abci_response_internal(int64_t height, abci_responses& rsp) const {
+  bool load_abci_response_internal(int64_t height, tendermint::state::ABCIResponses& rsp) const {
     auto ret = db_session_->read_from_bytes(encode_key<prefix::abci_response>(height));
     if (ret == std::nullopt || ret->size() == 0) {
       return false;
     }
-    rsp = decode<abci_responses>(ret.value());
+    rsp.ParseFromArray(ret.value().data(), ret.value().size());
     return true;
   }
 

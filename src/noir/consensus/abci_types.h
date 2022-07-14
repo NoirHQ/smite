@@ -134,11 +134,11 @@ struct response_deliver_tx {
   std::string codespace;
 };
 
-struct abci_responses {
-  std::vector<response_deliver_tx> deliver_txs;
-  response_end_block end_block;
-  response_begin_block begin_block;
-};
+// struct abci_responses {
+//   std::vector<response_deliver_tx> deliver_txs;
+//   response_end_block end_block;
+//   std::unique_ptr<tendermint::abci::ResponseBeginBlock> begin_block;
+// };
 
 enum class check_tx_type {
   new_check = 0,
@@ -192,7 +192,7 @@ NOIR_REFLECT(noir::consensus::request_prepare_proposal, block_data, block_data_s
 NOIR_REFLECT(noir::consensus::response_prepare_proposal, block_data);
 NOIR_REFLECT(noir::consensus::request_deliver_tx, tx);
 NOIR_REFLECT(noir::consensus::response_deliver_tx, code, data, log, info, gas_wanted, gas_used, events, codespace);
-NOIR_REFLECT(noir::consensus::abci_responses, deliver_txs, end_block, begin_block);
+// NOIR_REFLECT(noir::consensus::abci_responses, deliver_txs, end_block, begin_block);
 NOIR_REFLECT(noir::consensus::request_check_tx, tx, type);
 NOIR_REFLECT(noir::consensus::response_check_tx, code, data, log, info, gas_wanted, gas_used, events, codespace, sender,
   priority, mempool_error, nonce);

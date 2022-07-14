@@ -263,7 +263,7 @@ TEST_CASE("event_bus: pub/sub prepopulated events", "[noir][consensus][events]")
                         ++i) {
                      auto str = string_from_event_value(static_cast<event_value>(i));
                      // TODO: hard coded test logic
-                     if (msg.events[0].attributes[0].value == str) {
+                     if (msg.events[0].attributes(0).value() == str) {
                        result = static_cast<event_value>(i);
                        break;
                      }

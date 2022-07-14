@@ -84,6 +84,30 @@ struct consensus_params {
     return crypto::Sha256()(bz);
   }
 
+  consensus_params update_consensus_params(const ::tendermint::types::ConsensusParams& params2) {
+    auto res = *this;
+
+    if (params2.has_block()) {
+      res.block.max_bytes = params2.block().max_bytes();
+      res.block.max_gas = params2.block().max_gas();
+    }
+    if (params2.has_evidence()) {
+      res.evidence.max_age_num_blocks = params2.evidence().max_age_num_blocks();
+      res.evidence.max_age_duration =
+        ::google::protobuf::util::TimeUtil::DurationToNanoseconds(params2.evidence().max_age_duration());
+      res.evidence.max_bytes = params2.evidence().max_bytes();
+    }
+    if (params2.has_validator()) {
+      res.validator.pub_key_types.clear();
+      for (auto& t : params2.validator().pub_key_types())
+        res.validator.pub_key_types.push_back(t);
+    }
+    if (params2.has_version()) {
+      res.version.app_version = params2.version().app_version();
+    }
+    return res;
+  }
+
   static std::unique_ptr<::tendermint::types::ConsensusParams> to_proto(const consensus_params& v) {
     auto ret = std::make_unique<::tendermint::types::ConsensusParams>();
     auto block_ = ret->mutable_block();

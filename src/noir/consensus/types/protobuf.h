@@ -35,7 +35,8 @@ struct tm2pb {
 };
 
 struct pb2tm {
-  static Result<std::vector<validator>> validator_updates(std::vector<::tendermint::abci::ValidatorUpdate>& vals) {
+  static Result<std::vector<validator>> validator_updates(
+    const google::protobuf::RepeatedPtrField<::tendermint::abci::ValidatorUpdate>& vals) {
     std::vector<validator> tm_vals;
     for (auto& v : vals) {
       auto pub = pub_key::from_proto(v.pub_key());

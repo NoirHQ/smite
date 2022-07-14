@@ -13,13 +13,15 @@ struct app_connection {
 
   Result<void> start();
 
+  std::unique_ptr<tendermint::abci::ResponseBeginBlock> begin_block_sync(
+    const tendermint::abci::RequestBeginBlock& req);
+  response_end_block end_block_sync(request_end_block req);
+  req_res<response_deliver_tx> deliver_tx_async(request_deliver_tx req);
+  response_commit commit_sync();
+
   response_prepare_proposal& prepare_proposal_sync(request_prepare_proposal req);
-  response_begin_block begin_block_sync(request_begin_block req);
-  req_res<response_deliver_tx>& deliver_tx_async(request_deliver_tx req);
   response_check_tx& check_tx_sync(request_check_tx req);
   req_res<response_check_tx>& check_tx_async(request_check_tx req);
-  response_end_block& end_block_sync(request_end_block req);
-  response_commit& commit_sync();
   void flush_async();
   void flush_sync();
 

@@ -276,10 +276,7 @@ struct handshaker {
         if (!new_app_hash.empty())
           state_.app_hash = new_app_hash;
         if (!res->validators().empty()) {
-          std::vector<::tendermint::abci::ValidatorUpdate> pb_vals;
-          for (auto& v : res->validators())
-            pb_vals.push_back(v);
-          auto vals = pb2tm::validator_updates(pb_vals).value();
+          auto vals = pb2tm::validator_updates(res->validators()).value();
           state_.validators = validator_set::new_validator_set(vals);
           state_.next_validators = validator_set::new_validator_set(vals)->copy_increment_proposer_priority(1);
         } else if (gen_doc->validators.empty()) {

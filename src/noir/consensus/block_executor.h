@@ -12,6 +12,8 @@
 #include <noir/consensus/store/state_store.h>
 #include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/types/events.h>
+#include <noir/consensus/types/protobuf.h>
+#include <tendermint/state/types.pb.h>
 
 #include <utility>
 
@@ -185,13 +187,13 @@ struct block_executor {
       return {};
     }
 
-    auto abci_val_updates = abci_responses_->end_block.validator_updates;
+    auto abci_val_updates = abci_responses_->end_block().validator_updates();
     if (!validate_validator_update(abci_val_updates, state_.consensus_params_.validator)) {
       elog("apply block failed: error in validator updates");
       return {};
     }
 
-    auto validator_updates = validator_update::validator_updates(abci_val_updates);
+    auto validator_updates = pb2tm::validator_updates(abci_val_updates);
     if (!validator_updates.has_value()) {
       elog("apply block failed: error in validator updates conversion");
       return {};
@@ -248,15 +250,16 @@ struct block_executor {
     return new_state_.value();
   }
 
-  std::shared_ptr<abci_responses> exec_block_on_proxy_app(std::shared_ptr<app_connection> proxyAppConn,
+  std::shared_ptr<tendermint::state::ABCIResponses> exec_block_on_proxy_app(
+    std::shared_ptr<app_connection> proxyAppConn,
     std::shared_ptr<block> block_,
     std::shared_ptr<db_store> db_store,
     int64_t initial_height) {
     uint valid_txs = 0, invalid_txs = 0;
-    auto abci_responses_ = std::make_shared<abci_responses>();
-    std::vector<response_deliver_tx> dtxs;
-    dtxs.resize(block_->data.txs.size());
-    abci_responses_->deliver_txs = dtxs;
+    auto abci_responses_ = std::make_shared<tendermint::state::ABCIResponses>();
+    //    std::vector<tendermint::abci::ResponseDeliverTx> dtxs;
+    //    dtxs.resize(block_->data.txs.size());
+    auto dtxs = abci_responses_->mutable_deliver_txs();
 
     // todo - use get_begin_block_validator_info() below, right now it throws a panic
     // auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
@@ -270,26 +273,44 @@ struct block_executor {
       }
     }
 
-    // begin block
-    abci_responses_->begin_block =
-      proxyAppConn->begin_block_sync(request_begin_block{block_->get_hash(), block_->header, commit_info, byz_vals});
-
-    // run txs of block
-    for (const auto& tx : block_->data.txs) {
-      auto& deliver_res_req = proxyAppConn->deliver_tx_async(request_deliver_tx{tx});
-      /* todo - verify if implementation is correct;
-       *        basically removed the original callback func and directly applied it here */
-      auto deliver_res = deliver_res_req.res;
-      if (deliver_res.code == code_type_ok) {
-        valid_txs++;
-      } else {
-        dlog(fmt::format("invalid tx: code=", deliver_res.code));
-        invalid_txs++;
+    // Begin_block
+    {
+      tendermint::abci::RequestBeginBlock begin_block_req;
+      begin_block_req.set_hash({block_->get_hash().begin(), block_->get_hash().end()});
+      begin_block_req.set_allocated_header(block_header::to_proto(block_->header).release());
+      auto last_commit_info = begin_block_req.mutable_last_commit_info();
+      last_commit_info->set_round(commit_info.round);
+      auto votes = last_commit_info->mutable_votes();
+      for (auto& v : commit_info.votes) {
+        auto new_vote = votes->Add();
+        new_vote->set_signed_last_block(v.signed_last_block);
+        auto new_val = new_vote->mutable_validator();
+        new_val->set_address({v.validator_.address.begin(), v.validator_.address.end()});
+        new_val->set_power(v.validator_.voting_power);
       }
-      abci_responses_->deliver_txs.push_back(deliver_res);
+      auto pb_byz_vals = begin_block_req.mutable_byzantine_validators();
+      for (auto& byz_val : byz_vals)
+        *pb_byz_vals->Add() = *byz_val;
+      abci_responses_->set_allocated_begin_block(proxyAppConn->begin_block_sync(begin_block_req).release());
     }
 
-    abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_->header.height});
+    // run txs of block
+    //    for (const auto& tx : block_->data.txs) {
+    //      auto deliver_res_req = proxyAppConn->deliver_tx_async(request_deliver_tx{tx});
+    //      /* todo - verify if implementation is correct;
+    //       *        basically removed the original callback func and directly applied it here */
+    //      auto deliver_res = deliver_res_req.res;
+    //      if (deliver_res.code == code_type_ok) {
+    //        valid_txs++;
+    //      } else {
+    //        dlog(fmt::format("invalid tx: code=", deliver_res.code));
+    //        invalid_txs++;
+    //      }
+    //      abci_responses_->deliver_txs.push_back(deliver_res);
+    //    }
+
+    // End_block
+    // abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_->header.height});
 
     ilog(fmt::format(
       "executed block: height={} num_valid_txs={} num_invalid_txs={}", block_->header.height, valid_txs, invalid_txs));
@@ -326,12 +347,14 @@ struct block_executor {
     return last_commit_info{block_.last_commit->round, vote_infos};
   }
 
-  bool validate_validator_update(std::vector<validator_update>& abci_updates, validator_params& params) {
+  bool validate_validator_update(
+    const google::protobuf::RepeatedPtrField<::tendermint::abci::ValidatorUpdate>& abci_updates,
+    validator_params& params) {
     for (auto& val_update : abci_updates) {
-      if (val_update.power < 0) {
+      if (val_update.power() < 0) {
         elog("voting power can't be negative");
         return false;
-      } else if (val_update.power == 0) {
+      } else if (val_update.power() == 0) {
         continue;
       }
       // todo - implement rest
@@ -342,7 +365,7 @@ struct block_executor {
   std::optional<state> update_state(state& state_,
     p2p::block_id block_id_,
     block_header& header_,
-    std::shared_ptr<abci_responses> abci_responses_,
+    std::shared_ptr<tendermint::state::ABCIResponses> abci_responses_,
     std::vector<validator>& validator_updates) {
     // Copy val_set so that changes from end_block can be applied
     auto n_val_set = state_.next_validators->copy();
@@ -359,9 +382,10 @@ struct block_executor {
     // Update params with latest abci_responses
     auto next_params = state_.consensus_params_;
     auto last_height_params_changed = state_.last_height_validators_changed;
-    if (abci_responses_->end_block.consensus_param_updates.has_value()) {
+    if (abci_responses_->end_block().has_consensus_param_updates()) {
       // Note: must not mutate consensus_params
-      next_params = abci_responses_->end_block.consensus_param_updates.value(); // todo - check if this is correct
+      next_params =
+        state_.consensus_params_.update_consensus_params(abci_responses_->end_block().consensus_param_updates());
       auto err = next_params.validate_consensus_params();
       if (err.has_value()) {
         elog(fmt::format("error updating consensus_params: {}", err.value()));
@@ -374,24 +398,20 @@ struct block_executor {
       last_height_vals_changed = header_.height + 1;
     }
 
-    auto next_version = state_.version;
-
-    state ret{};
-    ret.version = next_version;
-    ret.chain_id = state_.chain_id;
-    ret.initial_height = state_.initial_height;
-    ret.last_block_height = header_.height;
-    ret.last_block_id = block_id_;
-    ret.last_block_time = header_.time;
-    ret.next_validators = n_val_set;
-    ret.validators = state_.next_validators->copy();
-    ret.last_validators = state_.validators->copy();
-    ret.last_height_validators_changed = last_height_vals_changed;
-    ret.consensus_params_ = next_params;
-    ret.last_height_consensus_params_changed = last_height_params_changed;
-    ret.last_result_hash = merkle::get_empty_hash(); // TODO : use abci_response_result_hash
-    ret.app_hash.clear();
-    return ret;
+    return state{.version = state_.version,
+      .chain_id = state_.chain_id,
+      .initial_height = state_.initial_height,
+      .last_block_height = header_.height,
+      .last_block_id = block_id_,
+      .last_block_time = header_.time,
+      .next_validators = n_val_set,
+      .validators = state_.next_validators->copy(),
+      .last_validators = state_.validators->copy(),
+      .last_height_validators_changed = last_height_vals_changed,
+      .consensus_params_ = next_params,
+      .last_height_consensus_params_changed = last_height_params_changed,
+      .last_result_hash = merkle::get_empty_hash(), // TODO : use abci_response_result_hash
+      .app_hash = Bytes{}};
   }
 
   /// Fire NewBlock, NewBlockHeader.
@@ -399,20 +419,20 @@ struct block_executor {
   /// \note if Tendermint crashes before commit, some or all of these events may be published again.
   void fire_events(const block& block_,
     const p2p::block_id& block_id_,
-    const abci_responses& abci_rsp,
-    const std::vector<validator> val_updates) {
+    const tendermint::state::ABCIResponses& abci_rsp,
+    const std::vector<validator>& val_updates) {
     event_bus_->publish_event_new_block(events::event_data_new_block{
       .block = block_,
       .block_id = block_id_,
-      .result_begin_block = abci_rsp.begin_block,
-      .result_end_block = abci_rsp.end_block,
+      .result_begin_block = abci_rsp.begin_block(),
+      .result_end_block = abci_rsp.end_block(),
     });
 
     event_bus_->publish_event_new_block_header(events::event_data_new_block_header{
       .header = block_.header,
       .num_txs = static_cast<int64_t>(block_.data.txs.size()),
-      .result_begin_block = abci_rsp.begin_block,
-      .result_end_block = abci_rsp.end_block,
+      .result_begin_block = abci_rsp.begin_block(),
+      .result_end_block = abci_rsp.end_block(),
     });
 
     if (block_.evidence.evs && !block_.evidence.evs->list.empty()) {
@@ -425,15 +445,13 @@ struct block_executor {
     }
 
     for (uint32_t i = 0; auto tx : block_.data.txs) {
-      event_bus_->publish_event_tx(events::event_data_tx{
-        .tx_result =
-          tx_result{
-            .height = block_.header.height,
-            .index = i,
-            .tx = tx,
-            .result = abci_rsp.deliver_txs[i],
-          },
-      });
+      events::event_data_tx ev_tx;
+      ev_tx.tx_result.set_height(block_.header.height);
+      ev_tx.tx_result.set_index(i);
+      ev_tx.tx_result.set_tx({tx.begin(), tx.end()});
+      if (i < abci_rsp.deliver_txs_size())
+        *ev_tx.tx_result.mutable_result() = abci_rsp.deliver_txs(i);
+      event_bus_->publish_event_tx(ev_tx);
       ++i;
     }
 

@@ -40,34 +40,26 @@ std::unique_ptr<ResponseInitChain> socket_app::init_chain(const RequestInitChain
   return std::move(res.value());
 }
 
-consensus::response_begin_block& socket_app::begin_block() {
+std::unique_ptr<ResponseBeginBlock> socket_app::begin_block(const RequestBeginBlock& req) {
   ilog("!!! BeginBlock !!!");
-  request_begin_block req;
-
-  RequestBeginBlock b_req;
-  b_req.set_hash({req.hash.begin(), req.hash.end()});
-  b_req.set_allocated_header(block_header::to_proto(req.header_).release());
-  auto last_commit_info = b_req.mutable_last_commit_info();
-  last_commit_info->set_round(req.last_commit_info_.round);
-  auto votes = last_commit_info->mutable_votes();
-  for (auto& v : req.last_commit_info_.votes) {
-    auto new_vote = votes->Add();
-    new_vote->set_signed_last_block(v.signed_last_block);
-    auto new_val = new_vote->mutable_validator();
-    new_val->set_address({v.validator_.address.begin(), v.validator_.address.end()});
-    new_val->set_power(v.validator_.voting_power);
-  }
-  // Result<std::unique_ptr<ResponseBeginBlock>> res = my_cli->conn->begin_block_sync(b_req);
-
-  return response_begin_block_;
+  auto res = my_cli->conn->begin_block_sync(req);
+  if (!res)
+    return {};
+  return std::move(res.value());
 }
-consensus::req_res<consensus::response_deliver_tx>& socket_app::deliver_tx_async() {
-  ilog("!!! DeliverTx !!!");
-  return req_res_deliver_tx_;
-}
-consensus::response_end_block& socket_app::end_block() {
+std::unique_ptr<ResponseEndBlock> socket_app::end_block(const RequestEndBlock& req) {
   ilog("!!! EndBlock !!!");
-  return response_end_block_;
+  auto res = my_cli->conn->end_block_sync(req);
+  if (!res)
+    return {};
+  return std::move(res.value());
+}
+std::unique_ptr<ResponseDeliverTx> socket_app::deliver_tx_async(const RequestDeliverTx& req) {
+  ilog("!!! DeliverTx !!!");
+  auto res = my_cli->conn->deliver_tx_sync(req);
+  if (!res)
+    return {};
+  return std::move(res.value());
 }
 
 } // namespace noir::application

@@ -127,14 +127,14 @@ constexpr std::string_view event_type_end_block = "end_block";
 
 // Pre-populated ABCI Tendermint-reserved events
 template<event_value e>
-event prepopulated_event() {
-  return {
-    .type = "tm", // TODO: check tokenizing `event_type_key`
-    .attributes = {event_attribute{
-      .key = "event", // TODO: check tokenizing event_type_key
-      .value = string_from_event_value(e),
-    }},
-  };
+::tendermint::abci::Event prepopulated_event() {
+  ::tendermint::abci::Event ev;
+  ev.set_type("tm");
+  auto attrs = ev.mutable_attributes();
+  auto attr = attrs->Add();
+  attr->set_key("event");
+  attr->set_value(string_from_event_value(e));
+  return ev;
 }
 
 // Most event messages are basic types (a block, a transaction)
@@ -142,15 +142,15 @@ event prepopulated_event() {
 struct event_data_new_block {
   noir::consensus::block block;
   p2p::block_id block_id;
-  response_begin_block result_begin_block;
-  response_end_block result_end_block;
+  tendermint::abci::ResponseBeginBlock result_begin_block;
+  tendermint::abci::ResponseEndBlock result_end_block;
 };
 
 struct event_data_new_block_header {
   block_header header;
   int64_t num_txs;
-  response_begin_block result_begin_block;
-  response_end_block result_end_block;
+  tendermint::abci::ResponseBeginBlock result_begin_block;
+  tendermint::abci::ResponseEndBlock result_end_block;
 };
 
 struct event_data_new_evidence {
@@ -159,7 +159,7 @@ struct event_data_new_evidence {
 };
 
 struct event_data_tx {
-  noir::consensus::tx_result tx_result;
+  tendermint::abci::TxResult tx_result;
 };
 
 struct event_data_round_state {

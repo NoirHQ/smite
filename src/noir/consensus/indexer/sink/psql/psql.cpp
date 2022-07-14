@@ -29,28 +29,28 @@ struct psql_event_sink_impl {
         return Error::format("indexing block header: {}", block_id.error());
 
       // Insert special block meta-event
-      if (auto ok = insert_events(tx, block_id.value(), 0,
-            {make_indexed_event(std::string(events::block_height_key), std::to_string(h.header.height))});
-          !ok)
+      google::protobuf::RepeatedPtrField<::tendermint::abci::Event> evts;
+      evts.Add({make_indexed_event(std::string(events::block_height_key), std::to_string(h.header.height))});
+      if (auto ok = insert_events(tx, block_id.value(), 0, evts); !ok)
         return Error::format("block meta-events: {}", ok.error());
       // Insert all block events
-      if (auto ok = insert_events(tx, block_id.value(), 0, h.result_begin_block.events); !ok)
+      if (auto ok = insert_events(tx, block_id.value(), 0, h.result_begin_block.events()); !ok)
         return Error::format("begin-block events: {}", ok.error());
-      if (auto ok = insert_events(tx, block_id.value(), 0, h.result_end_block.events); !ok)
+      if (auto ok = insert_events(tx, block_id.value(), 0, h.result_end_block.events()); !ok)
         return Error::format("end-block events: {}", ok.error());
       return success();
     });
   }
 
-  Result<void> index_tx_events(const std::vector<tx_result>& txrs) {
+  Result<void> index_tx_events(const std::vector<tendermint::abci::TxResult>& txrs) {
     auto ts = get_utc_ts();
     for (const auto& txr : txrs) {
       crypto::Sha3_256 hash;
-      auto tx_hash = hash(txr.tx);
+      auto tx_hash = hash(txr.tx());
 
       auto ok = run_in_transaction([this, &txr, &ts, &tx_hash](pqxx::work& tx) -> Result<void> {
-        auto block_id = query_with_id(
-          tx, "SELECT rowid FROM blocks WHERE height = $1 AND chain_id = $2;", {std::to_string(txr.height), chain_id});
+        auto block_id = query_with_id(tx, "SELECT rowid FROM blocks WHERE height = $1 AND chain_id = $2;",
+          {std::to_string(txr.height()), chain_id});
         if (!block_id)
           return Error::format("finding block_id: {}", block_id.error());
 
@@ -59,22 +59,22 @@ struct psql_event_sink_impl {
         query.append("VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING rowid;");
         pqxx::params args;
         args.append(std::to_string(block_id.value()));
-        args.append(std::to_string(txr.index));
+        args.append(std::to_string(txr.index()));
         args.append(ts);
         args.append(to_hex(tx_hash));
-        args.append(to_string(encode(txr)));
+        args.append(/*to_string(encode(txr))*/ ""); // FIXME : properly encode txr
         auto tx_id = query_with_id(tx, query, args);
         if (!tx_id)
           return Error::format("indexing tx_result: {}", tx_id.error());
 
         // Insert special transaction meta-events
-        if (auto ok = insert_events(tx, block_id.value(), tx_id.value(),
-              {make_indexed_event(std::string(events::tx_hash_key), to_hex(tx_hash)),
-                make_indexed_event(std::string(events::tx_height_key), std::to_string(txr.height))});
-            !ok)
+        google::protobuf::RepeatedPtrField<::tendermint::abci::Event> evts;
+        evts.Add({make_indexed_event(std::string(events::tx_hash_key), to_hex(tx_hash))});
+        evts.Add({make_indexed_event(std::string(events::tx_height_key), std::to_string(txr.height()))});
+        if (auto ok = insert_events(tx, block_id.value(), tx_id.value(), evts); !ok)
           return Error::format("indexing transaction meta-events: {}", ok.error());
         // Insert events packaged with transaction
-        if (auto ok = insert_events(tx, block_id.value(), tx_id.value(), txr.result.events); !ok)
+        if (auto ok = insert_events(tx, block_id.value(), tx_id.value(), txr.result().events()); !ok)
           return Error::format("indexing transaction events: {}", ok.error());
         return success();
       });
@@ -106,28 +106,31 @@ private:
     return success();
   }
 
-  Result<void> insert_events(pqxx::work& tx, uint32_t block_id, uint32_t tx_id, const std::vector<event>& evts) {
+  Result<void> insert_events(pqxx::work& tx,
+    uint32_t block_id,
+    uint32_t tx_id,
+    const google::protobuf::RepeatedPtrField<::tendermint::abci::Event>& evts) {
     for (const auto& evt : evts) {
-      if (evt.type.empty())
+      if (evt.type().empty())
         continue;
 
       std::string query = "INSERT INTO events (block_id, tx_id, type) VALUES ($1, $2, $3) RETURNING rowid;";
       pqxx::params args;
       args.append(std::to_string(block_id));
       tx_id > 0 ? args.append(std::to_string(tx_id)) : args.append();
-      args.append(evt.type);
+      args.append(evt.type());
       auto eid = query_with_id(tx, query, args);
       if (!eid)
         return eid.error();
 
       // Add any attributes flagged for indexing
-      for (const auto& attr : evt.attributes) {
+      for (const auto& attr : evt.attributes()) {
         try {
-          if (!attr.index)
+          if (!attr.index())
             continue;
-          auto composite_key = evt.type + "." + attr.key;
+          auto composite_key = evt.type() + "." + attr.key();
           tx.exec_params("INSERT INTO attributes (event_id, key, composite_key, value) VALUES ($1, $2, $3, $4)",
-            eid.value(), attr.key, composite_key, attr.value);
+            eid.value(), attr.key(), composite_key, attr.value());
         } catch (std::exception const& e) {
           return Error::format("{}", e.what());
         }
@@ -147,11 +150,23 @@ private:
     return id;
   }
 
-  event make_indexed_event(const std::string& composite_key, std::string value) {
+  ::tendermint::abci::Event make_indexed_event(const std::string& composite_key, std::string value) {
+    ::tendermint::abci::Event ev;
+
     auto pos = composite_key.find('.');
-    if (pos == std::string::npos)
-      return {composite_key};
-    return {composite_key.substr(0, pos), {{composite_key.substr(pos + 1), value, true}}};
+    if (pos == std::string::npos) {
+      ev.set_type(composite_key);
+      return ev;
+    }
+
+    ev.set_type(composite_key.substr(0, pos));
+    auto attrs = ev.mutable_attributes();
+    auto attr = attrs->Add();
+    attr->set_key(composite_key.substr(pos + 1));
+    attr->set_value(value);
+    attr->set_index(true);
+
+    return ev;
   }
 
   std::string get_utc_ts() const {
@@ -187,7 +202,7 @@ Result<void> psql_event_sink::index_block_events(const events::event_data_new_bl
   return my->index_block_events(h);
 }
 
-Result<void> psql_event_sink::index_tx_events(const std::vector<tx_result>& txrs) {
+Result<void> psql_event_sink::index_tx_events(const std::vector<tendermint::abci::TxResult>& txrs) {
   return my->index_tx_events(txrs);
 }
 

@@ -13,7 +13,7 @@ struct null_event_sink : public event_sink {
   Result<void> index_block_events(const events::event_data_new_block_header&) override {
     return success();
   }
-  Result<void> index_tx_events(const std::vector<tx_result>&) override {
+  Result<void> index_tx_events(const std::vector<tendermint::abci::TxResult>&) override {
     return success();
   }
   Result<std::vector<int64_t>> search_block_events(std::string query) override {
