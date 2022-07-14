@@ -62,4 +62,12 @@ std::unique_ptr<ResponseDeliverTx> socket_app::deliver_tx_async(const RequestDel
   return std::move(res.value());
 }
 
+std::unique_ptr<ResponseCommit> socket_app::commit() {
+  ilog("!!! Commit !!!");
+  auto res = my_cli->conn->commit_sync();
+  if (!res)
+    return {};
+  return std::move(res.value());
+}
+
 } // namespace noir::application

@@ -20,6 +20,8 @@ public:
   virtual std::unique_ptr<ResponseEndBlock> end_block(const RequestEndBlock& req) override;
   virtual std::unique_ptr<ResponseDeliverTx> deliver_tx_async(const RequestDeliverTx& req) override;
 
+  virtual std::unique_ptr<ResponseCommit> commit() override;
+
 private:
   std::shared_ptr<struct cli_impl> my_cli;
 };

@@ -44,10 +44,9 @@ std::unique_ptr<tendermint::abci::ResponseDeliverTx> app_connection::deliver_tx_
   std::scoped_lock g(mtx);
   return std::move(application->deliver_tx_async(req));
 }
-response_commit app_connection::commit_sync() {
+std::unique_ptr<tendermint::abci::ResponseCommit> app_connection::commit_sync() {
   std::scoped_lock g(mtx);
-  //  auto& res = application->commit();
-  return {};
+  return std::move(application->commit());
 }
 
 std::unique_ptr<tendermint::abci::ResponseCheckTx> app_connection::check_tx_sync(request_check_tx req) {

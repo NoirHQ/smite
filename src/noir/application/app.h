@@ -37,7 +37,7 @@ public:
   virtual std::unique_ptr<ResponseDeliverTx> deliver_tx_async(const RequestDeliverTx& req) {
     return {};
   }
-  virtual std::unique_ptr<ResponseCommit> commit(const RequestCommit& req) {
+  virtual std::unique_ptr<ResponseCommit> commit() {
     return {};
   }
 

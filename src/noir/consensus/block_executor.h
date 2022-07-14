@@ -215,13 +215,13 @@ struct block_executor {
     auto commit_res = proxyApp_->commit_sync();
 
     ilog(fmt::format(
-      "committed state: height={}, num_txs... app_hash={}", block_->header.height, hex::encode(commit_res.data)));
+      "committed state: height={}, num_txs... app_hash={}", block_->header.height, hex::encode(commit_res->data())));
 
     // Update mempool
     std::vector<consensus::tx> block_txs;
 
-    Bytes app_hash = commit_res.data;
-    int64_t retain_height = commit_res.retain_height;
+    Bytes app_hash = commit_res->data();
+    int64_t retain_height = commit_res->retain_height();
     /// commit() ends
 
     // Update evpool with latest state
@@ -257,9 +257,8 @@ struct block_executor {
     int64_t initial_height) {
     uint valid_txs = 0, invalid_txs = 0;
     auto abci_responses_ = std::make_shared<tendermint::state::ABCIResponses>();
-    //    std::vector<tendermint::abci::ResponseDeliverTx> dtxs;
-    //    dtxs.resize(block_->data.txs.size());
-    auto dtxs = abci_responses_->mutable_deliver_txs();
+    std::vector<tendermint::abci::ResponseDeliverTx> dtxs;
+    dtxs.resize(block_->data.txs.size());
 
     // todo - use get_begin_block_validator_info() below, right now it throws a panic
     // auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
@@ -291,12 +290,12 @@ struct block_executor {
       auto pb_byz_vals = begin_block_req.mutable_byzantine_validators();
       for (auto& byz_val : byz_vals)
         *pb_byz_vals->Add() = *byz_val;
-      abci_responses_->set_allocated_begin_block(proxyAppConn->begin_block_sync(begin_block_req).release());
+      if (auto res = proxyAppConn->begin_block_sync(begin_block_req); res)
+        abci_responses_->set_allocated_begin_block(res.release());
     }
 
     // Deliver Tx
-    auto txs = abci_responses_->mutable_deliver_txs();
-    for (const auto& tx : block_->data.txs) {
+    for (int idx = 0; const auto& tx : block_->data.txs) {
       tendermint::abci::RequestDeliverTx deliver_tx_req;
       deliver_tx_req.set_tx({tx.begin(), tx.end()});
       auto deliver_res = proxyAppConn->deliver_tx_async(deliver_tx_req);
@@ -305,18 +304,24 @@ struct block_executor {
       if (!deliver_res || deliver_res->code() != code_type_ok) {
         dlog("invalid tx");
         invalid_txs++;
-        txs->Add(); // TODO : store code
+        if (deliver_res)
+          dtxs[idx].set_code(deliver_res->code());
       } else {
         valid_txs++;
-        *txs->Add() = *deliver_res;
+        dtxs[idx] = *deliver_res;
       }
+      idx++;
     }
+    auto txs = abci_responses_->mutable_deliver_txs();
+    for (auto& dtx : dtxs)
+      *txs->Add() = dtx;
 
     // End_block
     {
       tendermint::abci::RequestEndBlock end_block_req;
       end_block_req.set_height(block_->header.height);
-      abci_responses_->set_allocated_end_block(proxyAppConn->end_block_sync(end_block_req).release());
+      if (auto res = proxyAppConn->end_block_sync(end_block_req); res)
+        abci_responses_->set_allocated_end_block(res.release());
     }
 
     ilog(fmt::format(

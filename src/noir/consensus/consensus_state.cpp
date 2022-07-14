@@ -1000,7 +1000,7 @@ void consensus_state::finalize_commit(int64_t height) {
 
   auto state_copy = local_state;
 
-  // Apply block // todo - make it work; some operations are commented out now
+  // Apply block
   auto result = block_exec->apply_block(state_copy, p2p::block_id{block_->get_hash(), block_parts_->header()}, block_);
   if (!result.has_value()) {
     elog("failed to apply block");
