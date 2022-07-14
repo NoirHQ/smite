@@ -27,8 +27,6 @@ protected:
 
 public:
   base_application() {}
-  // virtual void info() {}
-  // virtual void query() {}
 
   virtual std::unique_ptr<ResponseInfo> info_sync(const RequestInfo& req) {
     return {};
@@ -38,26 +36,27 @@ public:
     return {};
   }
 
+  virtual std::unique_ptr<ResponseBeginBlock> begin_block(const RequestBeginBlock& req) {
+    return {};
+  }
+  virtual std::unique_ptr<ResponseEndBlock> end_block(const RequestEndBlock& req) {
+    return {};
+  }
+  virtual std::unique_ptr<ResponseDeliverTx> deliver_tx_async(const RequestDeliverTx& req) {
+    return {};
+  }
+  virtual std::unique_ptr<ResponseCommit> commit(const RequestCommit& req) {
+    return {};
+  }
+
   virtual consensus::response_prepare_proposal& prepare_proposal() {
     return response_prepare_proposal_;
-  }
-  virtual consensus::response_begin_block& begin_block() {
-    return response_begin_block_;
-  }
-  virtual consensus::req_res<consensus::response_deliver_tx>& deliver_tx_async() {
-    return req_res_deliver_tx_;
   }
   virtual consensus::response_check_tx& check_tx_sync() {
     return response_check_tx_;
   }
   virtual consensus::req_res<consensus::response_check_tx>& check_tx_async() {
     return req_res_check_tx_;
-  }
-  virtual consensus::response_end_block& end_block() {
-    return response_end_block_;
-  }
-  virtual consensus::response_commit& commit() {
-    return response_commit_;
   }
 
   virtual void list_snapshots() {}

@@ -57,7 +57,7 @@ TEST_CASE("db_store: save/load consensus_param", "[noir][consensus]") {
 
 TEST_CASE("db_store: save/load abci_response", "[noir][consensus]") {
   noir::consensus::db_store dbs(make_session());
-  noir::consensus::abci_responses rsp{};
+  tendermint::state::ABCIResponses rsp{};
 
   bool ret;
   CHECK_NOTHROW(ret = dbs.save_abci_responses(0, rsp));
@@ -147,7 +147,9 @@ TEST_CASE("db_store: prune_state", "[noir][consensus]") {
           st.last_validators = st.validators;
         }
 
-        noir::consensus::abci_responses abci_rsp{};
+        tendermint::state::ABCIResponses abci_rsp;
+        auto tx = abci_rsp.mutable_deliver_txs()->Add();
+        tx->set_data(""); // enter junk data
         CHECK(dbs.save(st) == true);
         CHECK(dbs.save_abci_responses(height, abci_rsp) == true);
       }
@@ -171,7 +173,7 @@ TEST_CASE("db_store: prune_state", "[noir][consensus]") {
         CHECK(dbs.load_consensus_params(height, cs_param) == true);
         // CHECK(cs_param != noir::consensus::consensus_params{}); // nil check
 
-        noir::consensus::abci_responses abci_ret{};
+        tendermint::state::ABCIResponses abci_ret{};
         CHECK(dbs.load_abci_responses(height, abci_ret) == true);
       }
 
@@ -201,7 +203,7 @@ TEST_CASE("db_store: prune_state", "[noir][consensus]") {
           }
         }
 
-        noir::consensus::abci_responses abci_ret{};
+        tendermint::state::ABCIResponses abci_ret{};
         CHECK_NOTHROW(dbs.load_abci_responses(height, abci_ret));
       }
     }

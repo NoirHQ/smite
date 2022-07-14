@@ -16,7 +16,7 @@ struct psql_event_sink : public event_sink {
 
   Result<void> index_block_events(const events::event_data_new_block_header& h) override;
 
-  Result<void> index_tx_events(const std::vector<tx_result>& txrs) override;
+  Result<void> index_tx_events(const std::vector<tendermint::abci::TxResult>& txrs) override;
 
   Result<std::vector<int64_t>> search_block_events(std::string query) override {
     return Error::format("search_block_events is not supported for postgres event_sink");

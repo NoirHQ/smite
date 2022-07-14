@@ -17,7 +17,7 @@ namespace noir::consensus::events {
 struct message {
   std::string sub_id;
   tm_event_data data;
-  std::vector<event> events;
+  std::vector<::tendermint::abci::Event> events;
 };
 
 class event_bus {
@@ -122,25 +122,28 @@ public:
   }
 
   void publish(const std::string& event_value, const tm_event_data& data) {
-    publish_with_events(data,
-      {{.type = "tm", // TODO: check tokenizing event_type_key
-        .attributes = {event_attribute{
-          .key = "event", // TODO: check tokenizing event_type_key
-          .value = event_value,
-        }}}});
+    ::tendermint::abci::Event ev;
+    ev.set_type("tm");
+    auto attrs = ev.mutable_attributes();
+    auto attr = attrs->Add();
+    attr->set_key("event");
+    attr->set_value(event_value);
+    publish_with_events(data, {{ev}});
   }
 
   void publish_event_new_block(const event_data_new_block& data) {
-    std::vector<event> events = data.result_begin_block.events;
-    events.insert(events.end(), data.result_end_block.events.begin(), data.result_end_block.events.end());
+    std::vector<::tendermint::abci::Event> events;
+    events.insert(events.end(), data.result_begin_block.events().begin(), data.result_begin_block.events().end());
+    events.insert(events.end(), data.result_end_block.events().begin(), data.result_end_block.events().end());
     // add Tendermint-reserved new block event
-    events.insert(events.end(), prepopulated_event<event_value::new_block>());
+    events.push_back(prepopulated_event<event_value::new_block>());
     publish_with_events(data, events);
   }
 
   void publish_event_new_block_header(const event_data_new_block_header& data) {
-    std::vector<event> events = data.result_begin_block.events;
-    events.insert(events.end(), data.result_end_block.events.begin(), data.result_end_block.events.end());
+    std::vector<::tendermint::abci::Event> events;
+    events.insert(events.end(), data.result_begin_block.events().begin(), data.result_begin_block.events().end());
+    events.insert(events.end(), data.result_end_block.events().begin(), data.result_end_block.events().end());
     // add Tendermint-reserved new block event
     events.push_back(prepopulated_event<event_value::new_block_header>());
     publish_with_events(data, events);
@@ -171,22 +174,26 @@ public:
   /// will be overwritten.
   /// \param[in] data
   void publish_event_tx(const event_data_tx& data) {
-    std::vector<event> events = data.tx_result.result.events;
+    std::vector<::tendermint::abci::Event> events;
+    events.insert(events.end(), data.tx_result.result().events().begin(), data.tx_result.result().events().end());
 
     // add Tendermint-reserved events
     events.push_back(prepopulated_event<event_value::tx>());
 
-    events.push_back({.type = "tx", // TODO: check tokenizing tx_hash_key
-      .attributes = {event_attribute{
-        .key = "hash", // TODO: check tokenizing tx_hash_key
-        .value = get_tx_hash(data.tx_result.tx).to_string(),
-      }}});
+    ::tendermint::abci::Event ev_hash;
+    ev_hash.set_type("tx");
+    auto attr_hash = ev_hash.mutable_attributes()->Add();
+    attr_hash->set_key("hash");
+    attr_hash->set_value(get_tx_hash(data.tx_result.tx()).to_string());
+    events.push_back({ev_hash});
 
-    events.push_back({.type = "tx", // TODO: check tokenizing tx_height_key
-      .attributes = {event_attribute{
-        .key = "height", // TODO: check tokenizing tx_height_key
-        .value = std::to_string(data.tx_result.height),
-      }}});
+    ::tendermint::abci::Event ev_height;
+    ev_height.set_type("tx");
+    auto attr_height = ev_height.mutable_attributes()->Add();
+    attr_height->set_key("height");
+    attr_height->set_value(std::to_string(data.tx_result.height()));
+    events.push_back({ev_height});
+
     publish_with_events(data, events);
   }
 
@@ -228,7 +235,7 @@ private:
   tm_pub_sub::channel_type& event_bus_channel_;
   std::shared_ptr<subscription_map_type_> subscription_map_;
 
-  inline void publish_with_events(const tm_event_data& data, const std::vector<event> events) {
+  inline void publish_with_events(const tm_event_data& data, const std::vector<::tendermint::abci::Event>& events) {
     message msg{
       // .sub_id,
       .data = data,

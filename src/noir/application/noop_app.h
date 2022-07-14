@@ -13,17 +13,17 @@ class noop_app : public base_application {
 public:
   noop_app() {}
 
-  virtual consensus::response_begin_block& begin_block() override {
+  virtual std::unique_ptr<ResponseBeginBlock> begin_block(const RequestBeginBlock& req) override {
     // ilog("!!! BeginBlock !!!");
-    return response_begin_block_;
+    return {};
   }
-  virtual consensus::req_res<consensus::response_deliver_tx>& deliver_tx_async() override {
-    // ilog("!!! DeliverTx !!!");
-    return req_res_deliver_tx_;
-  }
-  virtual consensus::response_end_block& end_block() override {
+  virtual std::unique_ptr<ResponseEndBlock> end_block(const RequestEndBlock& req) override {
     // ilog("!!! EndBlock !!!");
-    return response_end_block_;
+    return {};
+  }
+  virtual std::unique_ptr<ResponseDeliverTx> deliver_tx_async(const RequestDeliverTx& req) override {
+    // ilog("!!! DeliverTx !!!");
+    return {};
   }
 };
 

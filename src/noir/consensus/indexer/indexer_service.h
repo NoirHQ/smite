@@ -41,7 +41,7 @@ struct indexer_service {
   std::shared_ptr<event_sink> sink;
   std::shared_ptr<events::event_bus> bus;
   events::event_bus::subscription handle{};
-  std::vector<consensus::tx_result> txs;
+  std::vector<tendermint::abci::TxResult> txs;
   int64_t required_num_txs{};
 };
 
