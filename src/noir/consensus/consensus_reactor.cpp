@@ -300,8 +300,10 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
     int index{0};
     bool ok{false};
     if (rs->proposal_block_parts && rs->proposal_block_parts->has_header(prs->proposal_block_part_set_header)) {
-      std::tie(index, ok) =
-        rs->proposal_block_parts->get_bit_array()->sub(bit_array::copy(prs->proposal_block_parts))->pick_random();
+      auto pbp_bit_array = rs->proposal_block_parts->get_bit_array();
+      auto [index, ok] = pbp_bit_array && prs->proposal_block_parts
+        ? pbp_bit_array->sub(bit_array::copy(prs->proposal_block_parts))->pick_random()
+        : std::make_tuple(0, false);
     }
     if (ok) {
       // Send proposal_block_parts
@@ -363,7 +365,9 @@ void consensus_reactor::gossip_data_routine(std::shared_ptr<peer_state> ps) {
 void consensus_reactor::gossip_data_for_catchup(const std::shared_ptr<round_state>& rs,
   const std::shared_ptr<peer_round_state>& prs,
   const std::shared_ptr<peer_state>& ps) {
-  if (auto [index, ok] = prs->proposal_block_parts->not_op()->pick_random(); ok) {
+  auto [index, ok] =
+    prs->proposal_block_parts ? prs->proposal_block_parts->not_op()->pick_random() : std::make_tuple(0, false);
+  if (ok) {
     // Verify peer's part_set_header
     block_meta block_meta_;
     if (!cs_state->block_store_->load_block_meta(prs->height, block_meta_)) {

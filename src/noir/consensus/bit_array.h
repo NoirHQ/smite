@@ -39,16 +39,10 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   int size() const {
-    if (this == nullptr) { ///< NOT a very nice way of coding; need to refactor later
-      return 0;
-    }
     return bits;
   }
 
   bool get_index(int i) {
-    if (this == nullptr) { ///< NOT a very nice way of coding; need to refactor later
-      return false;
-    }
     std::scoped_lock g(mtx);
     if (i >= bits)
       return false;
@@ -56,9 +50,6 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   bool set_index(int i, bool v) {
-    if (this == nullptr) { ///< NOT a very nice way of coding; need to refactor later
-      return false;
-    }
     std::scoped_lock g(mtx);
     if (i >= bits)
       return false;
@@ -67,7 +58,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   std::shared_ptr<bit_array> update(const std::shared_ptr<bit_array>& o) {
-    if (this == nullptr || o == nullptr)
+    if (o == nullptr)
       return nullptr;
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     elem = o->elem;
@@ -75,7 +66,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   std::shared_ptr<bit_array> sub(const std::shared_ptr<bit_array>& o) {
-    if (this == nullptr || o == nullptr) ///< NOT a very nice way of coding; need to refactor later
+    if (o == nullptr)
       return nullptr;
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
     auto c = copy_bits(bits);
@@ -87,10 +78,6 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
 
   /// \brief returns a bit_array resulting from a bitwise OR of two bit_arrays
   std::shared_ptr<bit_array> or_op(const std::shared_ptr<bit_array>& o) {
-    if (this == nullptr && o == nullptr)
-      return nullptr;
-    if (this == nullptr && o != nullptr)
-      return o->copy();
     if (o == nullptr)
       return copy();
     std::scoped_lock<std::mutex, std::mutex> g(mtx, o->mtx);
@@ -102,8 +89,6 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   std::shared_ptr<bit_array> not_op() {
-    if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
-      return nullptr;
     std::scoped_lock g(mtx);
     auto c = copy();
     for (auto&& e : c->elem)
@@ -112,8 +97,6 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
   }
 
   std::shared_ptr<bit_array> copy() const {
-    if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
-      return nullptr;
     auto copy = std::make_shared<bit_array>();
     copy->bits = bits;
     copy->elem = elem;
@@ -163,7 +146,7 @@ struct bit_array : public std::enable_shared_from_this<bit_array> {
 
   /// \brief returns a random index for a bit. If there is no value, returns 0, false
   std::tuple<int, bool> pick_random() {
-    if (this == nullptr || elem.empty())
+    if (elem.empty())
       return {0, false};
     std::scoped_lock g(mtx);
     auto true_indices = get_true_indices();

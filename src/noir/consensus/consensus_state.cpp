@@ -856,7 +856,7 @@ void consensus_state::enter_precommit(int64_t height, int32_t round) {
   rs.locked_block = {};
   rs.locked_block_parts = {};
 
-  if (!rs.proposal_block_parts->has_header(block_id_->parts)) {
+  if (!rs.proposal_block_parts || !rs.proposal_block_parts->has_header(block_id_->parts)) {
     rs.proposal_block = {};
     rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
   }
@@ -925,7 +925,7 @@ void consensus_state::enter_commit(int64_t height, int32_t round) {
 
   // If we don't have the block being committed, set up to get it.
   if (!rs.proposal_block->hashes_to(block_id_->hash)) {
-    if (!rs.proposal_block_parts->has_header(block_id_->parts)) {
+    if (!rs.proposal_block_parts || !rs.proposal_block_parts->has_header(block_id_->parts)) {
       ilog("commit is for a block we do not know about; set ProposalBlock=nil");
       // We're getting the wrong block.
       // Set up ProposalBlockParts and keep waiting.
@@ -969,7 +969,7 @@ void consensus_state::finalize_commit(int64_t height) {
 
   if (!block_id_.has_value())
     throw std::runtime_error("panic: cannot finalize commit; commit does not have 2/3 majority");
-  if (!block_parts_->has_header(block_id_->parts))
+  if (!block_parts_ || !block_parts_->has_header(block_id_->parts))
     throw std::runtime_error("panic: expected ProposalBlockParts header to be commit header");
   if (!block_->hashes_to(block_id_->hash))
     throw std::runtime_error("panic: cannot finalize commit; proposal block does not hash to commit hash");
@@ -1255,7 +1255,7 @@ std::pair<bool, Error> consensus_state::add_vote(const std::shared_ptr<vote>& vo
           rs.proposal_block = {};
         }
 
-        if (!rs.proposal_block_parts->has_header(block_id_->parts)) {
+        if (!rs.proposal_block_parts || !rs.proposal_block_parts->has_header(block_id_->parts)) {
           rs.proposal_block_parts = part_set::new_part_set_from_header(block_id_->parts);
         }
 
