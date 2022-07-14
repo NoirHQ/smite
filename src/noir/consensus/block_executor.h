@@ -294,23 +294,30 @@ struct block_executor {
       abci_responses_->set_allocated_begin_block(proxyAppConn->begin_block_sync(begin_block_req).release());
     }
 
-    // run txs of block
-    //    for (const auto& tx : block_->data.txs) {
-    //      auto deliver_res_req = proxyAppConn->deliver_tx_async(request_deliver_tx{tx});
-    //      /* todo - verify if implementation is correct;
-    //       *        basically removed the original callback func and directly applied it here */
-    //      auto deliver_res = deliver_res_req.res;
-    //      if (deliver_res.code == code_type_ok) {
-    //        valid_txs++;
-    //      } else {
-    //        dlog(fmt::format("invalid tx: code=", deliver_res.code));
-    //        invalid_txs++;
-    //      }
-    //      abci_responses_->deliver_txs.push_back(deliver_res);
-    //    }
+    // Deliver Tx
+    auto txs = abci_responses_->mutable_deliver_txs();
+    for (const auto& tx : block_->data.txs) {
+      tendermint::abci::RequestDeliverTx deliver_tx_req;
+      deliver_tx_req.set_tx({tx.begin(), tx.end()});
+      auto deliver_res = proxyAppConn->deliver_tx_async(deliver_tx_req);
+      /* todo - verify if implementation is correct;
+       *        basically removed the original callback func and directly applied it here */
+      if (!deliver_res || deliver_res->code() != code_type_ok) {
+        dlog("invalid tx");
+        invalid_txs++;
+        txs->Add(); // TODO : store code
+      } else {
+        valid_txs++;
+        *txs->Add() = *deliver_res;
+      }
+    }
 
     // End_block
-    // abci_responses_->end_block = proxyAppConn->end_block_sync(request_end_block{block_->header.height});
+    {
+      tendermint::abci::RequestEndBlock end_block_req;
+      end_block_req.set_height(block_->header.height);
+      abci_responses_->set_allocated_end_block(proxyAppConn->end_block_sync(end_block_req).release());
+    }
 
     ilog(fmt::format(
       "executed block: height={} num_valid_txs={} num_invalid_txs={}", block_->header.height, valid_txs, invalid_txs));

@@ -34,16 +34,15 @@ std::unique_ptr<tendermint::abci::ResponseBeginBlock> app_connection::begin_bloc
   std::scoped_lock g(mtx);
   return std::move(application->begin_block(req));
 }
-response_end_block app_connection::end_block_sync(request_end_block req) {
+std::unique_ptr<tendermint::abci::ResponseEndBlock> app_connection::end_block_sync(
+  const tendermint::abci::RequestEndBlock& req) {
   std::scoped_lock g(mtx);
-  //  auto& res = application->end_block();
-  return {};
+  return std::move(application->end_block(req));
 }
-req_res<response_deliver_tx> app_connection::deliver_tx_async(request_deliver_tx req) {
+std::unique_ptr<tendermint::abci::ResponseDeliverTx> app_connection::deliver_tx_async(
+  const tendermint::abci::RequestDeliverTx& req) {
   std::scoped_lock g(mtx);
-  // TODO : use async
-  //  auto& res = application->deliver_tx_async();
-  return {};
+  return std::move(application->deliver_tx_async(req));
 }
 response_commit app_connection::commit_sync() {
   std::scoped_lock g(mtx);
@@ -51,21 +50,19 @@ response_commit app_connection::commit_sync() {
   return {};
 }
 
+std::unique_ptr<tendermint::abci::ResponseCheckTx> app_connection::check_tx_sync(request_check_tx req) {
+  std::scoped_lock g(mtx);
+  return {};
+}
+
+std::unique_ptr<tendermint::abci::ResponseCheckTx> app_connection::check_tx_async(request_check_tx req) {
+  std::scoped_lock g(mtx);
+  return {};
+}
+
 response_prepare_proposal& app_connection::prepare_proposal_sync(request_prepare_proposal req) {
   std::scoped_lock g(mtx);
   auto& res = application->prepare_proposal();
-  return res;
-}
-
-response_check_tx& app_connection::check_tx_sync(request_check_tx req) {
-  std::scoped_lock g(mtx);
-  auto& res = application->check_tx_sync();
-  return res;
-}
-
-req_res<response_check_tx>& app_connection::check_tx_async(request_check_tx req) {
-  std::scoped_lock g(mtx);
-  auto& res = application->check_tx_async();
   return res;
 }
 

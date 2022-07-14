@@ -22,11 +22,11 @@ struct psql_event_sink : public event_sink {
     return Error::format("search_block_events is not supported for postgres event_sink");
   }
 
-  Result<std::vector<std::shared_ptr<tx_result>>> search_tx_events(std::string query) override {
+  Result<std::vector<std::shared_ptr<tendermint::abci::TxResult>>> search_tx_events(std::string query) override {
     return Error::format("search_tx_events is not supported for postgres event_sink");
   }
 
-  Result<std::shared_ptr<tx_result>> get_tx_by_hash(Bytes hash) override {
+  Result<std::shared_ptr<tendermint::abci::TxResult>> get_tx_by_hash(Bytes hash) override {
     return Error::format("get_tx_by_hash is not supported for postgres event_sink");
   }
 
