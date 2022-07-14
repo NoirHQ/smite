@@ -275,7 +275,8 @@ struct block_executor {
     // Begin_block
     {
       tendermint::abci::RequestBeginBlock begin_block_req;
-      begin_block_req.set_hash({block_->get_hash().begin(), block_->get_hash().end()});
+      auto blk_hash_ = block_->get_hash();
+      begin_block_req.set_hash({blk_hash_.begin(), blk_hash_.end()});
       begin_block_req.set_allocated_header(block_header::to_proto(block_->header).release());
       auto last_commit_info = begin_block_req.mutable_last_commit_info();
       last_commit_info->set_round(commit_info.round);

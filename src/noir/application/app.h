@@ -38,7 +38,7 @@ public:
     return {};
   }
   virtual std::unique_ptr<ResponseCommit> commit() {
-    return {};
+    return std::make_unique<ResponseCommit>();
   }
 
   virtual std::unique_ptr<ResponseCheckTx> check_tx_sync() {
