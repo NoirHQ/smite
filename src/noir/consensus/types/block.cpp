@@ -134,14 +134,10 @@ bool part_set::add_part(std::shared_ptr<part> part_) {
 }
 
 Bytes part_set::get_hash() {
-  if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
-    return merkle::hash_from_bytes_list({});
   return hash;
 }
 
 Bytes block_data::get_hash() {
-  if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
-    return merkle::hash_from_bytes_list({});
   if (hash.empty()) {
     merkle::bytes_list items;
     for (const auto& tx : txs)

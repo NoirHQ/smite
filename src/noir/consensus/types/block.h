@@ -239,8 +239,6 @@ struct part_set {
   }
 
   bool has_header(p2p::part_set_header header_) {
-    if (this == nullptr) ///< NOT a very nice way of coding; need to refactor later
-      return false;
     return header() == header_;
   }
 
@@ -523,8 +521,6 @@ struct block {
   std::shared_ptr<part_set> make_part_set(uint32_t part_size);
 
   Bytes get_hash() {
-    if (this == nullptr)
-      return {};
     std::scoped_lock g(mtx);
     if (!last_commit)
       return {};

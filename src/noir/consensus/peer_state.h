@@ -149,7 +149,9 @@ struct peer_state {
     std::scoped_lock g(mtx);
     if (prs.height != height || prs.round != round)
       return;
-    prs.proposal_block_parts->set_index(index, true);
+    if (prs.proposal_block_parts) {
+      prs.proposal_block_parts->set_index(index, true);
+    }
   }
 
 private:
@@ -296,7 +298,8 @@ public:
     if (!ps_votes)
       return {nullptr, false};
 
-    if (auto [index, ok] = votes.bit_array_->sub(ps_votes)->pick_random(); ok) {
+    auto [index, ok] = votes.bit_array_ ? votes.bit_array_->sub(ps_votes)->pick_random() : std::make_tuple(0, false);
+    if (ok) {
       if (!votes.get_by_index(index))
         return {nullptr, false};
       return {votes.get_by_index(index), true};
