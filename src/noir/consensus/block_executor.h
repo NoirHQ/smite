@@ -13,6 +13,7 @@
 #include <noir/consensus/types/event_bus.h>
 #include <noir/consensus/types/events.h>
 #include <noir/consensus/types/protobuf.h>
+#include <noir/consensus/types/results.h>
 #include <tendermint/state/types.pb.h>
 
 #include <utility>
@@ -423,7 +424,7 @@ struct block_executor {
       .last_height_validators_changed = last_height_vals_changed,
       .consensus_params_ = next_params,
       .last_height_consensus_params_changed = last_height_params_changed,
-      .last_result_hash = merkle::get_empty_hash(), // TODO : use abci_response_result_hash
+      .last_result_hash = abci_results::new_results(abci_responses_->deliver_txs()).get_hash(),
       .app_hash = Bytes{}};
   }
 
