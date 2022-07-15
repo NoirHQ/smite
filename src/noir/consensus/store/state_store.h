@@ -75,16 +75,9 @@ private:
   using batch_type = std::vector<std::pair<Bytes, Bytes>>;
 
   // TEMP struct for encoding
-  struct validators_info {
-    int64_t last_height_changed;
-    std::shared_ptr<validator_set> v_set{};
-  };
   struct consensus_params_info {
     int64_t last_height_changed;
     std::optional<consensus_params> cs_param;
-  };
-  struct response_deliver_tx {
-    Bytes data; // dummy
   };
 
 public:
@@ -104,22 +97,23 @@ public:
   }
 
   bool load_validators(int64_t height, std::shared_ptr<validator_set>& v_set) const override {
-    validators_info v_info{};
-    if (!load_validators_info(height, v_info)) {
+    tendermint::state::ValidatorsInfo v_info;
+    if (!load_validators_info(height, v_info))
       return false;
-    }
-
-    if (v_info.v_set == nullptr) {
-      int64_t last_stored_height = last_stored_height_for(height, v_info.last_height_changed);
-
-      if (bool ret = load_validators_info(last_stored_height, v_info); (!ret) || (v_info.v_set == nullptr)) {
+    if (!v_info.has_validator_set()) {
+      int64_t last_stored_height = last_stored_height_for(height, v_info.last_height_changed());
+      tendermint::state::ValidatorsInfo v_info2;
+      if (!load_validators_info(last_stored_height, v_info2))
         return false;
-      }
-      v_info.v_set->increment_proposer_priority(
-        static_cast<int32_t>(height - v_info.last_height_changed)); // safe_convert_int?
+      if (!v_info2.has_validator_set())
+        return false;
+      auto vs = validator_set::from_proto(v_info2.validator_set());
+      // check(vs, "load_validators failed");
+      v_set = vs.value();
+      v_set->increment_proposer_priority(static_cast<int32_t>(height - v_info2.last_height_changed()));
+    } else {
+      v_set = validator_set::from_proto(v_info.validator_set()).value();
     }
-    v_set = v_info.v_set;
-
     return true;
   }
 
@@ -267,24 +261,27 @@ private:
 
   bool save_validators_info(
     int64_t height, int64_t last_height_changed, const std::shared_ptr<validator_set>& v_set, batch_type& batch) {
-    if (last_height_changed > height) {
+    if (last_height_changed > height)
       return false;
+    tendermint::state::ValidatorsInfo val_info;
+    val_info.set_last_height_changed(last_height_changed);
+    if (height == last_height_changed || height % val_set_checkpoint_interval == 0) {
+      if (!v_set)
+        val_info.mutable_validator_set(); // set empty validator_set
+      else if (!v_set->validators.empty())
+        val_info.set_allocated_validator_set(validator_set::to_proto(v_set).release());
     }
-    validators_info v_info{
-      .last_height_changed = last_height_changed,
-      .v_set = (height == last_height_changed || height % val_set_checkpoint_interval == 0) ? v_set : nullptr,
-    };
-    auto buf = encode(v_info);
-    batch.emplace_back(encode_key<prefix::validators>(height), buf);
+    Bytes bz(val_info.ByteSizeLong());
+    val_info.SerializeToArray(bz.data(), val_info.ByteSizeLong());
+    batch.emplace_back(encode_key<prefix::validators>(height), bz);
     return true;
   } // namespace noir::consensus
 
-  bool load_validators_info(int64_t height, validators_info& v_info) const {
+  bool load_validators_info(int64_t height, tendermint::state::ValidatorsInfo& val_info) const {
     auto ret = db_session_->read_from_bytes(encode_key<prefix::validators>(height));
-    if (ret == std::nullopt || ret->size() == 0) {
+    if (ret == std::nullopt || ret->size() == 0)
       return false;
-    }
-    v_info = decode<validators_info>(ret.value());
+    val_info.ParseFromArray(ret.value().data(), ret.value().size());
     return true;
   }
 
@@ -350,23 +347,18 @@ private:
   }
 
   bool prune_validator_sets(int64_t retain_height) {
-    validators_info val_info{};
-    if (!load_validators_info(retain_height, val_info)) {
+    tendermint::state::ValidatorsInfo val_info{};
+    if (!load_validators_info(retain_height, val_info))
       return false;
-    }
-    int64_t last_recorded_height = last_stored_height_for(retain_height, val_info.last_height_changed);
-    if (val_info.v_set == nullptr) {
-      if (auto ret = load_validators_info(last_recorded_height, val_info); !ret || (val_info.v_set == nullptr)) {
+    int64_t last_recorded_height = last_stored_height_for(retain_height, val_info.last_height_changed());
+    if (!val_info.has_validator_set()) {
+      if (auto ret = load_validators_info(last_recorded_height, val_info); !ret || (!val_info.has_validator_set()))
         return false;
-      }
-
       if (last_recorded_height < retain_height) {
-        if (!prune_range<prefix::validators>(last_recorded_height + 1, retain_height)) {
+        if (!prune_range<prefix::validators>(last_recorded_height + 1, retain_height))
           return false;
-        }
       }
     }
-
     return prune_range<prefix::validators>(1, last_recorded_height);
   }
 

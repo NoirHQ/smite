@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <catch2/catch_all.hpp>
+#include <noir/common/log.h>
 #include <noir/consensus/store/state_store.h>
 #include <noir/consensus/store/store_test.h>
 
@@ -32,6 +33,7 @@ TEST_CASE("db_store: save/load validator_set", "[noir][consensus]") {
   std::vector<noir::consensus::validator> validator_list;
   validator_list.push_back(noir::consensus::validator{
     .address = gen_random_bytes(32),
+    .pub_key_ = {.key = gen_random_bytes(32)},
     .voting_power = 1,
   });
   auto v_set = noir::consensus::validator_set::new_validator_set(validator_list);
@@ -40,10 +42,12 @@ TEST_CASE("db_store: save/load validator_set", "[noir][consensus]") {
   CHECK(dbs.save_validator_sets(1, 2, v_set) == true);
   CHECK(dbs.load_validators(1, ret) == true);
   CHECK(v_set->validators[0].address == ret->validators[0].address);
+  CHECK(v_set->validators[0].pub_key_.key == ret->validators[0].pub_key_.key);
   CHECK(v_set->validators[0].voting_power == ret->validators[0].voting_power);
   CHECK(v_set->validators[0].proposer_priority == ret->validators[0].proposer_priority);
   CHECK(dbs.load_validators(2, ret) == true);
   CHECK(v_set->validators[0].address == ret->validators[0].address);
+  CHECK(v_set->validators[0].pub_key_.key == ret->validators[0].pub_key_.key);
   CHECK(v_set->validators[0].voting_power == ret->validators[0].voting_power);
   CHECK(v_set->validators[0].proposer_priority == ret->validators[0].proposer_priority);
 }
@@ -66,10 +70,16 @@ TEST_CASE("db_store: save/load abci_response", "[noir][consensus]") {
 
 TEST_CASE("db_store: save/load state", "[noir][consensus]") {
   noir::consensus::db_store dbs(make_session());
-  noir::consensus::state st{};
+  std::vector<noir::consensus::validator> validator_list;
+  validator_list.push_back(noir::consensus::validator{
+    .address = gen_random_bytes(32),
+    .pub_key_ = {.key = gen_random_bytes(32)},
+    .voting_power = 1,
+  });
+  noir::consensus::state st{.validators = noir::consensus::validator_set::new_validator_set(validator_list),
+    .next_validators = noir::consensus::validator_set::new_validator_set(validator_list)};
   st.last_height_validators_changed = 0;
   noir::consensus::state ret{};
-
   CHECK(dbs.save(st) == true);
   CHECK(dbs.load(ret) == true);
   check_state_equal(st, ret);
@@ -117,6 +127,7 @@ TEST_CASE("db_store: prune_state", "[noir][consensus]") {
       std::vector<noir::consensus::validator> validator_list;
       validator_list.push_back(noir::consensus::validator{
         .address = gen_random_bytes(32),
+        .pub_key_ = {.key = gen_random_bytes(32)},
         .voting_power = 1,
       });
       auto v_set = noir::consensus::validator_set::new_validator_set(validator_list);

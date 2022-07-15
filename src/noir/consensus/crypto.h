@@ -30,10 +30,12 @@ struct pub_key {
 
   static Result<std::unique_ptr<::tendermint::crypto::PublicKey>> to_proto(const pub_key& p) {
     auto ret = std::make_unique<::tendermint::crypto::PublicKey>();
-    if (p.get_type() == "ed25519")
-      ret->set_ed25519({p.get_bytes().begin(), p.get_bytes().end()});
-    else
+    if (p.get_type() == "ed25519") {
+      Bytes bz = p.get_bytes();
+      ret->set_ed25519({bz.begin(), bz.end()});
+    } else {
       return Error::format("to_proto failed: key_type '{}' is not supported", p.get_type());
+    }
     return ret;
   }
 

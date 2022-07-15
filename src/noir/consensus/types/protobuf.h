@@ -13,7 +13,8 @@ namespace noir::consensus {
 struct tm2pb {
   static ::tendermint::abci::Validator to_validator(const std::shared_ptr<validator>& val) {
     ::tendermint::abci::Validator ret;
-    *ret.mutable_address() = std::string(val->pub_key_.address().begin(), val->pub_key_.address().end());
+    Bytes addr = val->pub_key_.address();
+    ret.set_address({addr.begin(), addr.end()});
     ret.set_power(val->voting_power);
     return ret;
   }
