@@ -261,9 +261,7 @@ struct block_executor {
     std::vector<tendermint::abci::ResponseDeliverTx> dtxs;
     dtxs.resize(block_->data.txs.size());
 
-    // todo - use get_begin_block_validator_info() below, right now it throws a panic
-    // auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
-    last_commit_info commit_info; // todo - remove later
+    auto commit_info = get_begin_block_validator_info(block_, store_, initial_height);
 
     std::vector<std::shared_ptr<::tendermint::abci::Evidence>> byz_vals;
     if (block_->evidence.evs) {
@@ -279,19 +277,12 @@ struct block_executor {
       auto blk_hash_ = block_->get_hash();
       begin_block_req.set_hash({blk_hash_.begin(), blk_hash_.end()});
       begin_block_req.set_allocated_header(block_header::to_proto(block_->header).release());
-      auto last_commit_info = begin_block_req.mutable_last_commit_info();
-      last_commit_info->set_round(commit_info.round);
-      auto votes = last_commit_info->mutable_votes();
-      for (auto& v : commit_info.votes) {
-        auto new_vote = votes->Add();
-        new_vote->set_signed_last_block(v.signed_last_block);
-        auto new_val = new_vote->mutable_validator();
-        new_val->set_address({v.validator_.address.begin(), v.validator_.address.end()});
-        new_val->set_power(v.validator_.voting_power);
+      begin_block_req.set_allocated_last_commit_info(commit_info.release());
+      if (!byz_vals.empty()) {
+        auto pb_byz_vals = begin_block_req.mutable_byzantine_validators();
+        for (auto& byz_val : byz_vals)
+          *pb_byz_vals->Add() = *byz_val;
       }
-      auto pb_byz_vals = begin_block_req.mutable_byzantine_validators();
-      for (auto& byz_val : byz_vals)
-        *pb_byz_vals->Add() = *byz_val;
       if (auto res = proxyAppConn->begin_block_sync(begin_block_req); res)
         abci_responses_->set_allocated_begin_block(res.release());
     }
@@ -331,34 +322,41 @@ struct block_executor {
     return abci_responses_;
   }
 
-  last_commit_info get_begin_block_validator_info(
-    block& block_, std::shared_ptr<db_store> store_, int64_t initial_height) {
-    std::vector<vote_info> vote_infos;
-    if (!block_.last_commit) {
+  std::unique_ptr<tendermint::abci::LastCommitInfo> get_begin_block_validator_info(
+    const std::shared_ptr<block>& block_, const std::shared_ptr<db_store>& store_, int64_t initial_height) {
+    std::vector<tendermint::abci::VoteInfo> vote_infos;
+    if (!block_->last_commit) {
       elog("get_begin_block_validator_info failed: no last_commit");
       return {};
     }
-    vote_infos.resize(block_.last_commit->size());
-    if (block_.header.height > initial_height) {
+    vote_infos.resize(block_->last_commit->size());
+
+    if (block_->header.height > initial_height) {
       auto last_val_set = validator_set::new_validator_set({});
-      if (!store_->load_validators(block_.header.height - 1, last_val_set)) {
-        throw std::runtime_error(
-          fmt::format("panic: unable to load validator for height={}", block_.header.height - 1));
-      }
-
+      if (!store_->load_validators(block_->header.height - 1, last_val_set))
+        check(false, fmt::format("panic: unable to load validator for height={}", block_->header.height - 1));
       // Check if commit_size matches validator_set size
-      auto commit_size = block_.last_commit->size();
+      auto commit_size = block_->last_commit->size();
       auto val_set_len = last_val_set->validators.size();
-      if (commit_size != val_set_len) {
-        throw std::runtime_error("panic: commit_size doesn't match val_set length");
-      }
-
+      if (commit_size != val_set_len)
+        check(false, "panic: commit_size doesn't match val_set length");
       for (auto i = 0; i < last_val_set->validators.size(); i++) {
-        auto commit_sig = block_.last_commit->signatures[i];
-        vote_infos[i] = vote_info{last_val_set->validators[i], !commit_sig.absent()};
+        tendermint::abci::VoteInfo v;
+        *v.mutable_validator() = tm2pb::to_validator(std::make_shared<validator>(last_val_set->validators[i]));
+        auto commit_sig = block_->last_commit->signatures[i];
+        v.set_signed_last_block(!commit_sig.absent());
+        vote_infos[i] = v;
       }
     }
-    return last_commit_info{block_.last_commit->round, vote_infos};
+
+    auto ret = std::make_unique<tendermint::abci::LastCommitInfo>();
+    ret->set_round(block_->last_commit->round);
+    if (!vote_infos.empty()) {
+      auto pb_votes = ret->mutable_votes();
+      for (auto& v : vote_infos)
+        *pb_votes->Add() = v;
+    }
+    return ret;
   }
 
   bool validate_validator_update(
@@ -409,7 +407,7 @@ struct block_executor {
       state_.version.cs.app = next_params.version.app_version;
 
       // Change results from this height
-      last_height_vals_changed = header_.height + 1;
+      last_height_params_changed = header_.height + 1;
     }
 
     return state{.version = state_.version,
