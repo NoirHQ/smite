@@ -30,7 +30,7 @@ struct psql_event_sink_impl {
 
       // Insert special block meta-event
       google::protobuf::RepeatedPtrField<::tendermint::abci::Event> evts;
-      evts.Add({make_indexed_event(std::string(events::block_height_key), std::to_string(h.header.height))});
+      *evts.Add() = make_indexed_event(std::string(events::block_height_key), std::to_string(h.header.height));
       if (auto ok = insert_events(tx, block_id.value(), 0, evts); !ok)
         return Error::format("block meta-events: {}", ok.error());
       // Insert all block events
@@ -69,8 +69,8 @@ struct psql_event_sink_impl {
 
         // Insert special transaction meta-events
         google::protobuf::RepeatedPtrField<::tendermint::abci::Event> evts;
-        evts.Add({make_indexed_event(std::string(events::tx_hash_key), to_hex(tx_hash))});
-        evts.Add({make_indexed_event(std::string(events::tx_height_key), std::to_string(txr.height()))});
+        *evts.Add() = make_indexed_event(std::string(events::tx_hash_key), to_hex(tx_hash));
+        *evts.Add() = make_indexed_event(std::string(events::tx_height_key), std::to_string(txr.height()));
         if (auto ok = insert_events(tx, block_id.value(), tx_id.value(), evts); !ok)
           return Error::format("indexing transaction meta-events: {}", ok.error());
         // Insert events packaged with transaction

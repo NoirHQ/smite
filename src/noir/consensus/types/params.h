@@ -119,7 +119,8 @@ struct consensus_params {
       ::google::protobuf::util::TimeUtil::NanosecondsToDuration(v.evidence.max_age_duration);
     ev_->set_max_bytes(v.evidence.max_bytes);
     auto val = ret->mutable_validator()->mutable_pub_key_types();
-    val->Add(v.validator.pub_key_types.begin(), v.validator.pub_key_types.end());
+    for (auto& t : v.validator.pub_key_types)
+      *val->Add() = t;
     auto version = ret->mutable_version();
     version->set_app_version(v.version.app_version);
     return ret;

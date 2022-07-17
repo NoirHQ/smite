@@ -264,7 +264,9 @@ struct handshaker {
       req.set_chain_id(gen_doc->chain_id);
       req.set_initial_height(gen_doc->initial_height);
       req.set_allocated_consensus_params(pb_params.release());
-      req.mutable_validators()->Add(next_vals.begin(), next_vals.end());
+      auto pb_vals = req.mutable_validators();
+      for (auto& val : next_vals)
+        *req.mutable_validators()->Add() = val;
       req.set_app_state_bytes({gen_doc->app_state.begin(), gen_doc->app_state.end()});
 
       auto res = proxy_app->application->init_chain(req);
