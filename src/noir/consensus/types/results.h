@@ -20,7 +20,7 @@ struct abci_results {
     const google::protobuf::RepeatedPtrField<tendermint::abci::ResponseDeliverTx>& responses) {
     abci_dtxs new_res(responses.size());
     for (auto i = 0; i < responses.size(); i++)
-      new_res[i] = deterministic_response_deliver_tx(responses.at(i));
+      new_res[i] = deterministic_response_deliver_tx(responses[i]);
     return {.results = new_res};
   }
 
