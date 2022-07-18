@@ -11,25 +11,25 @@
 
 namespace noir::consensus {
 
-std::optional<std::string> verify_basic_vals_and_commit(const std::shared_ptr<validator_set>& vals,
+noir::Result<void> verify_basic_vals_and_commit(const std::shared_ptr<validator_set>& vals,
   std::shared_ptr<commit> commit_,
   int64_t height,
   p2p::block_id block_id_) {
   if (!vals)
-    return "verification failed: validator_set is not set";
+    return noir::Error("verification failed: validator_set is not set");
   if (!commit_)
-    return "verification failed: commit is not set";
+    return noir::Error("verification failed: commit is not set");
   if (vals->size() != commit_->signatures.size())
-    return "verification failed: not enough signatures prepared";
+    return noir::Error("verification failed: not enough signatures prepared");
   if (height != commit_->height)
-    return "verification failed: incorrect height";
+    return noir::Error("verification failed: incorrect height");
   if (block_id_ != commit_->my_block_id)
-    return "verification failed: wrong block_id";
-  return {};
+    return noir::Error("verification failed: wrong block_id");
+  return success();
 }
 
 /// \brief check all signatures included in a commit
-std::optional<std::string> verify_commit_single(const std::string& chain_id_,
+noir::Result<void> verify_commit_single(const std::string& chain_id_,
   const std::shared_ptr<validator_set>& vals,
   const std::shared_ptr<commit>& commit_,
   int64_t voting_power_needed,
@@ -59,7 +59,7 @@ std::optional<std::string> verify_commit_single(const std::string& chain_id_,
       // Check if same validator committed twice
       if (auto it = seen_vals.find(val_index); it != seen_vals.end()) {
         auto second_index = i;
-        return "verification failed: double vote detected";
+        return noir::Error("verification failed: double vote detected");
       }
       seen_vals[val_index] = i;
     }
@@ -67,28 +67,28 @@ std::optional<std::string> verify_commit_single(const std::string& chain_id_,
     auto vote_ = commit_->get_vote(i);
     vote_sign_bytes = vote::vote_sign_bytes(chain_id_, *vote::to_proto(*vote_));
     if (!val.pub_key_.verify_signature(vote_sign_bytes, commit_sig_.signature))
-      return fmt::format("verification failed: wrong signature - index={}", i);
+      return noir::Error::format("verification failed: wrong signature - index={}", i);
 
     tallied_voting_power += val.voting_power;
     if (!count_all_signatures && tallied_voting_power > voting_power_needed)
-      return {};
+      return success();
   }
 
   if (tallied_voting_power <= voting_power_needed)
-    return "verification failed: not enough votes were signed";
-  return {};
+    return noir::Error("verification failed: not enough votes were signed");
+  return success();
 }
 
 /// \brief verifies +2/3 of set has signed given commit
 /// Used by the light client and does not check all signatures
-std::optional<std::string> verify_commit_light(const std::string& chain_id_,
+noir::Result<void> verify_commit_light(const std::string& chain_id_,
   const std::shared_ptr<validator_set>& vals,
   const p2p::block_id& block_id_,
   int64_t height,
   const std::shared_ptr<commit>& commit_) {
   // Validate params
-  if (auto err = verify_basic_vals_and_commit(vals, commit_, height, block_id_); err.has_value())
-    return err;
+  if (auto ok = verify_basic_vals_and_commit(vals, commit_, height, block_id_); !ok)
+    return ok.error();
 
   // Calculate required voting power
   auto voting_power_needed = vals->total_voting_power * 2 / 3;

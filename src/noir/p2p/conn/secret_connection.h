@@ -80,9 +80,9 @@ struct secret_connection {
 
   static std::shared_ptr<secret_connection> make_secret_connection(Bytes& loc_priv_key);
 
-  std::optional<std::string> shared_eph_pub_key(Bytes32& received_pub_key);
+  noir::Result<void> shared_eph_pub_key(Bytes32& received_pub_key);
 
-  std::optional<std::string> shared_auth_sig(auth_sig_message& received_msg);
+  noir::Result<void> shared_auth_sig(auth_sig_message& received_msg);
 
   Bytes derive_secrets(Bytes32& dh_secret);
 

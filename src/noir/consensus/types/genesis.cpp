@@ -70,9 +70,8 @@ bool genesis_doc::validate_and_complete() {
   if (!cs_params.has_value()) {
     cs_params = consensus_params::get_default();
   } else {
-    auto err = cs_params->validate_consensus_params();
-    if (err.has_value()) {
-      elog(err.value());
+    if (auto ok = cs_params->validate_consensus_params(); !ok) {
+      elog(ok.error().message());
       return false;
     }
   }

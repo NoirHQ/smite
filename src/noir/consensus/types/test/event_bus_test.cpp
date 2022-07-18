@@ -31,8 +31,8 @@ TEST_CASE("event_bus: subscribe/unsubscribe", "[noir][consensus][events]") {
     invalid_subscription.subscriber = "invalid_subscriber";
     invalid_subscription.id = "invalid_id";
 
-    CHECK(ev_bus.unsubscribe(invalid_subscription) != std::nullopt);
-    CHECK(ev_bus.unsubscribe_all("invalid_id") != std::nullopt);
+    CHECK(ev_bus.unsubscribe(invalid_subscription).has_error());
+    CHECK(ev_bus.unsubscribe_all("invalid_id").has_error());
 
     {
       auto handle = ev_bus.subscribe("test", [&](const message msg) {});
@@ -62,19 +62,19 @@ TEST_CASE("event_bus: subscribe/unsubscribe", "[noir][consensus][events]") {
     }
     SECTION("unsubscribe") {
       for (size_t i = 9; i > 0; --i) {
-        CHECK(ev_bus.unsubscribe(handles[i]) == std::nullopt);
+        CHECK(!ev_bus.unsubscribe(handles[i]).has_error());
         CHECK(ev_bus.has_subscribers() == true);
         CHECK(ev_bus.num_clients() == 1);
         CHECK(ev_bus.num_client_subscription("test") == i);
       }
       // unsubscribe last element
-      CHECK(ev_bus.unsubscribe(handles[0]) == std::nullopt);
+      CHECK(!ev_bus.unsubscribe(handles[0]).has_error());
       CHECK(ev_bus.has_subscribers() == false);
       CHECK(ev_bus.num_clients() == 0);
       CHECK(ev_bus.num_client_subscription("test") == 0);
     }
     SECTION("unsubscribe_all") {
-      CHECK(ev_bus.unsubscribe_all("test") == std::nullopt);
+      CHECK(!ev_bus.unsubscribe_all("test").has_error());
       CHECK(ev_bus.has_subscribers() == false);
       CHECK(ev_bus.num_clients() == 0);
       CHECK(ev_bus.num_client_subscription("test") == 0);
@@ -93,13 +93,13 @@ TEST_CASE("event_bus: subscribe/unsubscribe", "[noir][consensus][events]") {
     SECTION("unsubscribe") {
       for (size_t i = 9; i > 0; --i) {
         auto subscriber = "test" + std::to_string(i);
-        CHECK(ev_bus.unsubscribe(handles[i]) == std::nullopt);
+        CHECK(!ev_bus.unsubscribe(handles[i]).has_error());
         CHECK(ev_bus.has_subscribers() == true);
         CHECK(ev_bus.num_clients() == i);
         CHECK(ev_bus.num_client_subscription(subscriber) == 0);
       }
       // unsubscribe last element
-      CHECK(ev_bus.unsubscribe(handles[0]) == std::nullopt);
+      CHECK(!ev_bus.unsubscribe(handles[0]).has_error());
       CHECK(ev_bus.has_subscribers() == false);
       CHECK(ev_bus.num_clients() == 0);
       CHECK(ev_bus.num_client_subscription("test0") == 0);
@@ -107,13 +107,13 @@ TEST_CASE("event_bus: subscribe/unsubscribe", "[noir][consensus][events]") {
     SECTION("unsubscribe_all") {
       for (size_t i = 9; i > 0; --i) {
         auto subscriber = "test" + std::to_string(i);
-        CHECK(ev_bus.unsubscribe_all(subscriber) == std::nullopt);
+        CHECK(!ev_bus.unsubscribe_all(subscriber).has_error());
         CHECK(ev_bus.has_subscribers() == true);
         CHECK(ev_bus.num_clients() == i);
         CHECK(ev_bus.num_client_subscription(subscriber) == 0);
       }
       // unsubscribe last subscriber
-      CHECK(ev_bus.unsubscribe_all("test0") == std::nullopt);
+      CHECK(!ev_bus.unsubscribe_all("test0").has_error());
       CHECK(ev_bus.has_subscribers() == false);
       CHECK(ev_bus.num_clients() == 0);
       CHECK(ev_bus.num_client_subscription("test0") == 0);

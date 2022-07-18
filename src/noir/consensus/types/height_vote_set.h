@@ -7,6 +7,7 @@
 #include <noir/consensus/types/node_id.h>
 #include <noir/consensus/types/validator.h>
 #include <noir/consensus/types/vote.h>
+#include <noir/core/result.h>
 #include <noir/p2p/types.h>
 
 namespace noir::consensus {
@@ -79,14 +80,14 @@ struct height_vote_set {
     round = round_;
   }
 
-  std::optional<std::string> set_peer_maj23(
+  noir::Result<void> set_peer_maj23(
     int32_t round, p2p::signed_msg_type vote_type, std::string peer_id, p2p::block_id block_id_) {
     std::scoped_lock g(mtx);
     if (vote_type != p2p::Prevote && vote_type != p2p::Precommit)
-      return "setPeerMaj23: Invalid vote type";
+      return noir::Error("setPeerMaj23: Invalid vote type");
     auto vote_set_ = get_vote_set(round, vote_type);
     if (vote_set_ == nullptr)
-      return {};
+      return success();
     return vote_set_->set_peer_maj23(peer_id, block_id_);
   }
 

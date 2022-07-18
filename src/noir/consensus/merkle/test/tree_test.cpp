@@ -70,20 +70,20 @@ TEST_CASE("merkle_tree: Verify proof", "[noir][consensus]") {
     CHECK(proof->index == i);
     CHECK(proof->total == total);
 
-    auto err = proof->verify(root_hash, items[i]);
-    CHECK(!err.has_value());
+    auto ok = proof->verify(root_hash, items[i]);
+    CHECK(!ok.has_error());
 
     // Trail too long should fail
     auto orig_aunts = proof->aunts;
     proof->aunts.push_back({static_cast<unsigned char>(i % 256)});
-    err = proof->verify(root_hash, items[i]);
-    CHECK(err.value() == "invalid root hash");
+    ok = proof->verify(root_hash, items[i]);
+    CHECK(ok.error().message() == "invalid root hash");
     proof->aunts = orig_aunts;
 
     // Trail too short should fail
     proof->aunts.pop_back();
-    err = proof->verify(root_hash, items[i]);
-    CHECK(err.value() == "invalid root hash");
+    ok = proof->verify(root_hash, items[i]);
+    CHECK(ok.error().message() == "invalid root hash");
     proof->aunts = orig_aunts;
   }
 }

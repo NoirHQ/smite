@@ -68,8 +68,8 @@ TEST_CASE("secret_connection: verify key exchanges", "[noir][p2p]") {
 
   auto auth_sig_msg1 = p2p::auth_sig_message{c_peer1->loc_pub_key, c_peer1->loc_signature};
   auto auth_sig_msg2 = p2p::auth_sig_message{c_peer2->loc_pub_key, c_peer2->loc_signature};
-  CHECK(!c_peer1->shared_auth_sig(auth_sig_msg2).has_value());
-  CHECK(!c_peer2->shared_auth_sig(auth_sig_msg1).has_value());
+  CHECK(!c_peer1->shared_auth_sig(auth_sig_msg2).has_error());
+  CHECK(!c_peer2->shared_auth_sig(auth_sig_msg1).has_error());
 }
 
 std::string crypto_box_recover_public_key(uint8_t secret_key[]) {

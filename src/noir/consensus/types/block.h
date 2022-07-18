@@ -12,6 +12,7 @@
 #include <noir/consensus/merkle/proof.h>
 #include <noir/consensus/tx.h>
 #include <noir/consensus/version.h>
+#include <noir/core/result.h>
 #include <noir/crypto/rand.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
@@ -327,19 +328,19 @@ struct block_header {
     proposer_address = proposer_address_;
   }
 
-  std::optional<std::string> validate_basic() {
+  noir::Result<void> validate_basic() {
     if (chain_id.length() > 50)
-      return "chain_id is too long";
+      return noir::Error("chain_id is too long");
     if (height < 0)
-      return "negative height";
+      return noir::Error("negative height");
     else if (height == 0)
-      return "zero height";
+      return noir::Error("zero height");
     // last_block_id->validate_basic();
     // validate_hash(last_commit_hash);
     // validate_hash(data_hash);
     // validate_hash(evidence_hash);
     // todo - add more
-    return {};
+    return success();
   }
 
   static Result<block_header> make_header(block_header&& h) {
@@ -369,8 +370,8 @@ struct block_header {
       h.evidence_hash = random_hash();
     if (h.proposer_address.empty())
       h.proposer_address = random_address();
-    if (auto r = h.validate_basic(); r.has_value())
-      return Error::format("{}", r.value());
+    if (auto ok = h.validate_basic(); !ok)
+      return ok.error();
     return h;
   }
 
@@ -478,11 +479,11 @@ struct block {
 
   static std::shared_ptr<block> new_block_from_part_set(const std::shared_ptr<part_set>& ps);
 
-  std::optional<std::string> validate_basic() {
+  noir::Result<void> validate_basic() {
     std::scoped_lock g(mtx);
 
-    if (auto err = header.validate_basic(); err.has_value())
-      return "invalid header: " + err.value();
+    if (auto ok = header.validate_basic(); !ok)
+      return noir::Error::format("invalid header: {}", ok.error());
 
     // Validate last commit
     // if (last_commit.height == 0)
@@ -491,7 +492,7 @@ struct block {
     // if (last_commit.get_hash() != header.last_commit_hash)
     //  return "wrong last_commit_hash";
 
-    return {};
+    return success();
   }
 
   void fill_header() {
