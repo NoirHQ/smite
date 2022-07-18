@@ -193,11 +193,10 @@ TEST_CASE("priv_val_file: test file_pv", "[noir][consensus]") {
           auto data_vote1 = vote::vote_sign_bytes(test_chain_id, *vote::to_proto(vote_));
           // std::cout << "data_vote1=" << to_hex(data_vote1) << std::endl;
           // std::cout << "digest1=" << fc::Sha256::hash(data_vote1).str() << std::endl;
-          std::optional<std::string> sig_org;
           if (st.expect_throw) {
             CHECK_THROWS(file_pv_ptr->sign_vote(test_chain_id, vote_));
           } else {
-            CHECK_NOTHROW(sig_org = file_pv_ptr->sign_vote(test_chain_id, vote_));
+            CHECK_NOTHROW(file_pv_ptr->sign_vote(test_chain_id, vote_));
             // std::cout << "sig=" << std::string(vote_.signature.begin(), vote_.signature.end()) << std::endl;
 
             auto data_vote2 = vote::vote_sign_bytes(test_chain_id, *vote::to_proto(vote_));

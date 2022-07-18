@@ -6,6 +6,7 @@
 #pragma once
 
 #include <noir/consensus/types/events.h>
+#include <noir/core/result.h>
 #include <appbase/application.hpp>
 #include <appbase/channel.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -49,27 +50,27 @@ public:
     subscription(const subscription&) = delete;
     subscription& operator=(const subscription&) = delete;
 
-    std::optional<std::string> unsubscribe() {
+    noir::Result<void> unsubscribe() {
       auto handle_ptr = handle_.lock();
       auto map_ptr = map_.lock();
       if (!handle_ptr || !map_ptr) {
-        return "invalid subscription";
+        return noir::Error("invalid subscription");
       }
       handle_ptr->unsubscribe();
 
       auto it = map_ptr->find(subscriber);
       if (it == map_ptr->end()) {
-        return fmt::format("invalid subscriber:{}", subscriber);
+        return noir::Error::format("invalid subscriber:{}", subscriber);
       }
       auto it2 = it->second.find(id);
       if (it2 == it->second.end()) {
-        return fmt::format("invalid subscription id: {}", id);
+        return noir::Error::format("invalid subscription id: {}", id);
       }
       it->second.erase(id);
       if (it->second.size() == 0) { // if all elements are deleted
         map_ptr->erase(subscriber);
       }
-      return {};
+      return success();
     }
 
   private:
@@ -105,20 +106,20 @@ public:
     return std::move(ret);
   }
 
-  std::optional<std::string> unsubscribe(subscription& handle) {
+  noir::Result<void> unsubscribe(subscription& handle) {
     return handle.unsubscribe();
   }
 
-  std::optional<std::string> unsubscribe_all(const std::string& subscriber) {
+  noir::Result<void> unsubscribe_all(const std::string& subscriber) {
     auto it = subscription_map_->find(subscriber);
     if (it == subscription_map_->end()) {
-      return fmt::format("invalid subscriber:{}", subscriber);
+      return noir::Error::format("invalid subscriber:{}", subscriber);
     }
     for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
       it2->second->unsubscribe();
     }
     subscription_map_->erase(subscriber);
-    return {};
+    return success();
   }
 
   void publish(const std::string& event_value, const tm_event_data& data) {

@@ -92,8 +92,8 @@ struct block_executor {
       return true;
 
     /// Validate block
-    if (auto err = block_->validate_basic(); err.has_value()) {
-      elog(fmt::format("invalid header: {}", err.value()));
+    if (auto ok = block_->validate_basic(); !ok) {
+      elog(fmt::format("invalid header: {}", ok.error()));
       return false;
     }
 
@@ -363,9 +363,8 @@ struct block_executor {
     if (abci_responses_->end_block.consensus_param_updates.has_value()) {
       // Note: must not mutate consensus_params
       next_params = abci_responses_->end_block.consensus_param_updates.value(); // todo - check if this is correct
-      auto err = next_params.validate_consensus_params();
-      if (err.has_value()) {
-        elog(fmt::format("error updating consensus_params: {}", err.value()));
+      if (auto ok = next_params.validate_consensus_params(); !ok) {
+        elog(fmt::format("error updating consensus_params: {}", ok.error()));
         return {};
       }
 

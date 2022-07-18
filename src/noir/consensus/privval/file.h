@@ -9,6 +9,7 @@
 #include <noir/common/types.h>
 #include <noir/consensus/crypto.h>
 #include <noir/consensus/types/priv_validator.h>
+#include <noir/core/result.h>
 #include <noir/p2p/protocol.h>
 #include <filesystem>
 
@@ -172,22 +173,21 @@ struct file_pv : public noir::consensus::priv_validator {
   /// \brief signs a canonical representation of the vote, along with the chainID
   /// \param[in] vote_
   /// \return
-  std::optional<std::string> sign_vote(const std::string& chain_id, noir::consensus::vote& vote) override {
+  noir::Result<void> sign_vote(const std::string& chain_id, noir::consensus::vote& vote) override {
     if (auto ok = sign_vote_internal(chain_id, vote); !ok) {
-      return "error signing vote" + ok.error().message();
+      return noir::Error::format("error signing vote {}", ok.error());
     }
-    return {};
+    return success();
   }
 
   /// \brief signs a canonical representation of the proposal, along with the chainID
   /// \param[in] proposal_
   /// \return
-  std::optional<std::string> sign_proposal(
-    const std::string& chain_id, noir::p2p::proposal_message& proposal) override {
+  noir::Result<void> sign_proposal(const std::string& chain_id, noir::p2p::proposal_message& proposal) override {
     if (auto ok = sign_proposal_internal(chain_id, proposal); !ok) {
-      return "error signing proposal" + ok.error().message();
+      return noir::Error::format("error signing proposal {}", ok.error());
     }
-    return {};
+    return success();
   }
 
   Result<Bytes> sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) override {

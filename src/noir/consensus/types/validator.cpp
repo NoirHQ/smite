@@ -32,9 +32,8 @@ Bytes validator_set::get_hash() {
 Result<void> validator_set::verify_commit_light(
   const std::string& chain_id_, p2p::block_id block_id_, int64_t height, const std::shared_ptr<commit>& commit_) {
   auto vals = std::make_shared<validator_set>(*this);
-  auto err = noir::consensus::verify_commit_light(chain_id_, vals, block_id_, height, commit_);
-  if (err.has_value())
-    return Error::format("{}", err.value());
+  if (auto ok = noir::consensus::verify_commit_light(chain_id_, vals, block_id_, height, commit_); !ok)
+    return ok.error();
   return success();
 }
 

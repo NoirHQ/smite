@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/common/for_each.h>
 #include <noir/consensus/merkle/tree.h>
+#include <noir/core/result.h>
 #include <tendermint/crypto/proof.pb.h>
 
 #include <optional>
@@ -18,18 +19,18 @@ struct proof {
   Bytes leaf_hash{};
   bytes_list aunts{};
 
-  std::optional<std::string> verify(const Bytes& root_hash, const Bytes& leaf) {
+  noir::Result<void> verify(const Bytes& root_hash, const Bytes& leaf) {
     if (total < 0)
-      return "proof total must be positive";
+      return noir::Error("proof total must be positive");
     if (index < 0)
-      return "proof index must be positive";
+      return noir::Error("proof index must be positive");
     auto leaf_hash_ = leaf_hash_opt(leaf);
     if (leaf_hash_ != leaf_hash)
-      return "invalid leaf hash";
+      return noir::Error("invalid leaf hash");
     auto computed_hash = compute_root_hash();
     if (computed_hash != root_hash)
-      return "invalid root hash";
-    return {};
+      return noir::Error("invalid root hash");
+    return success();
   }
 
   Bytes compute_root_hash() const {

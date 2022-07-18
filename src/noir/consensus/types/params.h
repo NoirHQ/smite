@@ -5,6 +5,7 @@
 //
 #pragma once
 #include <noir/codec/protobuf.h>
+#include <noir/core/result.h>
 #include <noir/crypto/hash.h>
 #include <noir/p2p/types.h>
 #include <tendermint/types/params.pb.h>
@@ -56,18 +57,18 @@ struct consensus_params {
   validator_params validator;
   version_params version;
 
-  std::optional<std::string> validate_consensus_params() const {
+  noir::Result<void> validate_consensus_params() const {
     if (block.max_bytes <= 0)
-      return "block.MaxBytes must be greater than 0.";
+      return noir::Error("block.MaxBytes must be greater than 0.");
     if (block.max_bytes > max_block_size_bytes)
-      return "block.MaxBytes is too big.";
+      return noir::Error("block.MaxBytes is too big.");
     if (block.max_gas < -1)
-      return "block.MaxGas must be greater or equal to -1.";
+      return noir::Error("block.MaxGas must be greater or equal to -1.");
     // check evidence // todo - necessary?
     // if (validator.pub_key_types.empty())
     //  return "validator.pub_key_types must not be empty.";
     // check if key_type is known // todo
-    return {};
+    return success();
   }
 
   static consensus_params get_default() {

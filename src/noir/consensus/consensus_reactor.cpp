@@ -112,8 +112,8 @@ void consensus_reactor::process_peer_msg(p2p::envelope_ptr info) {
           return;
 
         // Peer claims to have a maj23 for some block_id
-        if (auto err = votes->set_peer_maj23(msg.round, msg.type, ps->peer_id, msg.block_id_); err.has_value()) {
-          elog("${err}", ("err", err));
+        if (auto ok = votes->set_peer_maj23(msg.round, msg.type, ps->peer_id, msg.block_id_); !ok) {
+          elog(ok.error().message());
           return;
         }
 

@@ -9,22 +9,22 @@
 
 namespace noir::consensus {
 
-std::optional<std::string> mock_pv::sign_vote(const std::string& chain_id, vote& vote_) {
+noir::Result<void> mock_pv::sign_vote(const std::string& chain_id, vote& vote_) {
   // TODO: add some validation checks
 
   auto vote_sign_bytes = vote::vote_sign_bytes(chain_id, *vote::to_proto(vote_));
   auto sig = priv_key_.sign(vote_sign_bytes);
   vote_.signature = sig;
-  return {};
+  return success();
 }
 
-std::optional<std::string> mock_pv::sign_proposal(const std::string& chain_id, noir::p2p::proposal_message& msg) {
+noir::Result<void> mock_pv::sign_proposal(const std::string& chain_id, noir::p2p::proposal_message& msg) {
   // TODO: add some validation checks
 
   auto sign_bytes = proposal::proposal_sign_bytes(chain_id, *proposal::to_proto({msg}));
   auto sig = priv_key_.sign(sign_bytes);
   msg.signature = sig;
-  return {};
+  return success();
 }
 
 Result<Bytes> mock_pv::sign_vote_pb(const std::string& chain_id, const ::tendermint::types::Vote& v) {

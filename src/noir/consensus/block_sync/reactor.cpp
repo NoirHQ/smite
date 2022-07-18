@@ -136,16 +136,16 @@ void reactor::try_sync_ticker() {
       auto first_id = p2p::block_id{first->get_hash(), first_part_set_header};
 
       // Verify the first block using the second's commit
-      if (auto err = verify_commit_light(chain_id, latest_state.validators, first_id, first->header.height,
+      if (auto ok = verify_commit_light(chain_id, latest_state.validators, first_id, first->header.height,
             std::make_shared<commit>(*second->last_commit));
-          err.has_value()) {
-        elog(fmt::format("invalid last commit: height={} err={}", first->header.height, err.value()));
+          !ok) {
+        elog(fmt::format("invalid last commit: height={} err={}", first->header.height, ok.error()));
 
         // We already removed peer request, but we need to clean up the rest
         auto peer_id1 = pool->redo_request(first->header.height);
-        pool->send_error(err.value(), peer_id1);
+        pool->send_error(ok.error().message(), peer_id1);
         auto peer_id2 = pool->redo_request(second->header.height);
-        pool->send_error(err.value(), peer_id2);
+        pool->send_error(ok.error().message(), peer_id2);
       } else {
         pool->pop_request();
 

@@ -6,6 +6,7 @@
 #pragma once
 #include <noir/consensus/types/block.h>
 #include <noir/consensus/types/validator.h>
+#include <noir/core/result.h>
 #include <noir/p2p/protocol.h>
 #include <noir/p2p/types.h>
 
@@ -191,7 +192,7 @@ struct vote_set {
     return {};
   }
 
-  std::optional<std::string> set_peer_maj23(std::string peer_id, p2p::block_id block_id_) {
+  noir::Result<void> set_peer_maj23(std::string peer_id, p2p::block_id block_id_) {
     std::scoped_lock g(mtx);
 
     auto block_key = block_id_.key();
@@ -199,8 +200,8 @@ struct vote_set {
     // Make sure peer has not sent us something yet
     if (auto it = peer_maj23s.find(peer_id); it != peer_maj23s.end()) {
       if (it->second == block_id_)
-        return {}; // nothing to do
-      return "setPeerMaj23: Received conflicting blockID";
+        return success(); // nothing to do
+      return noir::Error("setPeerMaj23: Received conflicting blockID");
     }
     peer_maj23s[peer_id] = block_id_;
 
@@ -208,13 +209,13 @@ struct vote_set {
     auto it = votes_by_block.find(block_key);
     if (it != votes_by_block.end()) {
       if (it->second->peer_maj23)
-        return {}; // nothing to do
+        return success(); // nothing to do
       it->second->peer_maj23 = true;
     } else {
       auto new_votes_by_block = block_votes::new_block_votes(true, val_set->size());
       votes_by_block[block_key] = new_votes_by_block;
     }
-    return {};
+    return success();
   }
 
   bool has_two_thirds_majority() {

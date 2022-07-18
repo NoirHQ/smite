@@ -31,7 +31,7 @@ std::shared_ptr<secret_connection> secret_connection::make_secret_connection(Byt
   return sc;
 }
 
-std::optional<std::string> secret_connection::shared_eph_pub_key(Bytes32& received_pub_key) {
+noir::Result<void> secret_connection::shared_eph_pub_key(Bytes32& received_pub_key) {
   // By here, we have already exchanged eph_pub_keys with the other
   rem_eph_pub = received_pub_key;
 
@@ -49,13 +49,13 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(Bytes32& receiv
   if (crypto_scalarmult(reinterpret_cast<unsigned char*>(dh_secret.data()),
         reinterpret_cast<const unsigned char*>(loc_eph_priv.data()),
         reinterpret_cast<const unsigned char*>(rem_eph_pub.data())) != 0) {
-    return "unable to compute dh_secret";
+    return noir::Error("unable to compute dh_secret");
   }
 
   // Generate secret keys used for receiving, sending, challenging via HKDF-SHA2
   auto key = derive_secrets(dh_secret);
   if (key.size() < 96)
-    return "unable to derive secrets";
+    return noir::Error("unable to derive secrets");
 
   if (loc_is_least) {
     recv_secret = Bytes32(std::span(key.data(), 32));
@@ -85,12 +85,12 @@ std::optional<std::string> secret_connection::shared_eph_pub_key(Bytes32& receiv
         reinterpret_cast<const unsigned char*>(chal_secret.data()), chal_secret.size(),
         reinterpret_cast<const unsigned char*>(loc_priv_key.data())) == 0) {
     loc_signature = sig;
-    return {};
+    return success();
   }
-  return "unable to sign challenge";
+  return noir::Error("unable to sign challenge");
 }
 
-std::optional<std::string> secret_connection::shared_auth_sig(auth_sig_message& received_msg) {
+noir::Result<void> secret_connection::shared_auth_sig(auth_sig_message& received_msg) {
   // By here, we have already exchanged auth_sig_message with the other
   rem_pub_key = received_msg.key;
 
@@ -99,9 +99,9 @@ std::optional<std::string> secret_connection::shared_auth_sig(auth_sig_message& 
         reinterpret_cast<const unsigned char*>(chal_secret.data()), chal_secret.size(),
         reinterpret_cast<const unsigned char*>(rem_pub_key.data())) == 0) {
     is_authorized = true;
-    return {};
+    return success();
   }
-  return "unable to verify challenge";
+  return noir::Error("unable to verify challenge");
 }
 
 Bytes secret_connection::derive_secrets(Bytes32& dh_secret) {

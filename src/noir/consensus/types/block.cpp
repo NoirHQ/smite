@@ -120,7 +120,7 @@ bool part_set::add_part(std::shared_ptr<part> part_) {
   }
 
   // Check hash proof
-  if (auto err = part_->proof_.verify(get_hash(), part_->bytes_); err.has_value()) {
+  if (auto ok = part_->proof_.verify(get_hash(), part_->bytes_); !ok) {
     elog("error part set invalid proof");
     return false;
   }

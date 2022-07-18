@@ -71,7 +71,7 @@ TEST_CASE("vote: verify signature", "[noir][consensus]") {
   CHECK(bz_sign_bytes.size() == 125);
 
   // Sign
-  CHECK(!val.sign_vote("test_chain_id", vote_).has_value());
+  CHECK(!val.sign_vote("test_chain_id", vote_).has_error());
 
   // Verify
   CHECK(val.get_pub_key().verify_signature(bz_sign_bytes, vote_.signature));
