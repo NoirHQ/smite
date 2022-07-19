@@ -19,6 +19,7 @@ endfunction()
 add_library(noir INTERFACE)
 target_link_libraries(noir INTERFACE
   noir::common
+  noir::config
   noir::consensus
   noir::core
   noir::crypto

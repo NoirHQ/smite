@@ -4,27 +4,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #pragma once
-#include <appbase/application.hpp>
-#include <functional>
-
-// forward declaration
-namespace CLI {
-class App;
-}
-
-extern appbase::application app;
+#include <noir/config/config.h>
+#include <CLI/CLI11.hpp>
 
 namespace noir::commands {
 
-using add_command_callback = std::function<CLI::App*(CLI::App&)>;
+auto config() -> std::shared_ptr<config::Config>;
 
-CLI::App* add_command(CLI::App& root, add_command_callback cb);
+extern std::shared_ptr<CLI::App> init_files_cmd;
+extern std::shared_ptr<CLI::App> reset_all_cmd;
+extern std::shared_ptr<CLI::App> root_cmd;
+extern std::shared_ptr<CLI::App> version_cmd;
 
-CLI::App* consensus_test(CLI::App&);
-CLI::App* debug(CLI::App&);
-CLI::App* init(CLI::App&);
-CLI::App* start(CLI::App&);
-CLI::App* unsafe_reset_all(CLI::App&);
-CLI::App* version(CLI::App&);
+void prepare_base_cmd(CLI::App& cmd, std::filesystem::path default_home);
+void parse_config(int argc, char** argv);
 
 } // namespace noir::commands

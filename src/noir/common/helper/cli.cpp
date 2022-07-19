@@ -20,4 +20,10 @@ bool lexical_conversion<noir::Bytes32, noir::Bytes32>(const std::vector<std::str
   return true;
 }
 
+template<>
+bool lexical_conversion<noir::node::Mode, noir::node::Mode>(const std::vector<std::string>& strings, noir::node::Mode& output) {
+  output = noir::node::into<noir::node::Mode>(strings[0]);
+  return true;
+}
+
 } // namespace CLI::detail

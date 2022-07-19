@@ -4,21 +4,46 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include <noir/commands/commands.h>
+#include <noir/core/core.h>
+/*
 #include <noir/common/log.h>
 #include <noir/consensus/config.h>
 #include <noir/consensus/privval/file.h>
 #include <noir/consensus/types/genesis.h>
 #include <noir/consensus/types/node_key.h>
 #include <noir/consensus/types/priv_validator.h>
+*/
 
-static std::string mode;
-static std::string key_type;
-
-using namespace noir;
-using namespace noir::consensus;
+//using namespace noir::consensus;
 
 namespace noir::commands {
 
+std::string key_type;
+
+auto init_files_with_config(const config::Config& config) -> Result<void> {
+  return success();
+}
+
+auto init_files_cmd = []() {
+  auto cmd = std::make_shared<CLI::App>("Initializes a Smite node", "init");
+  cmd->final_callback([&self{*cmd}]() {
+    auto& cfg = *config();
+    cfg.mode = self.get_option("mode")->as<std::string>();
+    init_files_with_config(cfg);
+
+    auto opt = self.get_parent()->get_option_no_throw("--home");
+    std::cout << opt->as<std::filesystem::path>() << std::endl;
+  });
+  cmd->fallthrough();
+  cmd->add_option("mode", "Initialization mode")->required()->check(CLI::IsMember({"full", "validator", "seed"}));
+  cmd->add_option("--key", key_type, "Key type to generate privval file with.")
+    ->check(CLI::IsMember({"ed25519"}))
+    ->default_str("ed25519")
+    ->run_callback_for_default();
+  return cmd;
+}();
+
+/*
 CLI::App* init(CLI::App& root) {
   auto cmd = root.add_subcommand("init", "Initialize a NOIR node")->final_callback([&root]() {
     auto config_ = config::get_default();
@@ -72,5 +97,6 @@ CLI::App* init(CLI::App& root) {
     ->run_callback_for_default();
   return cmd;
 }
+*/
 
 } // namespace noir::commands

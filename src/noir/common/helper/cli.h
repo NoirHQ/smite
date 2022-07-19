@@ -6,7 +6,8 @@
 #pragma once
 #include <noir/common/bytes.h>
 #include <noir/common/inttypes.h>
-#include <appbase/CLI11.hpp>
+#include <noir/config/defaults.h>
+#include <CLI/CLI11.hpp>
 
 namespace CLI::detail {
 
@@ -26,5 +27,13 @@ struct expected_count<noir::Bytes32> {
 
 template<>
 bool lexical_conversion<noir::Bytes32, noir::Bytes32>(const std::vector<std::string>& strings, noir::Bytes32& output);
+
+template<>
+struct expected_count<noir::node::Mode> {
+  static constexpr int value = 1;
+};
+
+template<>
+bool lexical_conversion<noir::node::Mode, noir::node::Mode>(const std::vector<std::string>& strings, noir::node::Mode& output);
 
 } // namespace CLI::detail

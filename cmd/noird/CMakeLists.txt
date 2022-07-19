@@ -1,13 +1,10 @@
 add_executable(noird
   main.cpp
-  noir/commands/command.cpp
-  noir/commands/consensus_test.cpp
-  noir/commands/debug.cpp
+  noir/commands/cli.cpp
   noir/commands/init.cpp
-  noir/commands/start.cpp
-  noir/commands/unsafe_reset_all.cpp
+  noir/commands/reset.cpp
+  noir/commands/root.cpp
   noir/commands/version.cpp
 )
 target_include_directories(noird PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(noird noir)
-set_target_properties(noird PROPERTIES UNITY_BUILD ${NOIR_UNITY_BUILD})
+target_link_libraries(noird noir tendermint::log)
