@@ -15,15 +15,15 @@ using namespace consensus;
 using namespace tendermint::abci;
 
 struct cli_impl {
-  cli_impl() {
-    conn = std::make_shared<abci::SocketClient<net::TcpConn>>("127.0.0.1:26658", true); // TODO : read from config
+  cli_impl(std::string_view address) {
+    conn = std::make_shared<abci::SocketClient<net::TcpConn>>(address, true);
     conn->start();
   }
   std::shared_ptr<abci::SocketClient<net::TcpConn>> conn;
 };
 
-socket_app::socket_app() {
-  my_cli = std::make_shared<cli_impl>();
+socket_app::socket_app(std::string_view address) {
+  my_cli = std::make_shared<cli_impl>(address);
 }
 
 std::unique_ptr<ResponseInfo> socket_app::info_sync(const RequestInfo& req) {

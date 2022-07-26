@@ -10,7 +10,7 @@ namespace noir::application {
 
 class socket_app : public base_application {
 public:
-  socket_app();
+  socket_app(std::string_view address);
 
   virtual std::unique_ptr<ResponseInfo> info_sync(const RequestInfo& req) override;
 

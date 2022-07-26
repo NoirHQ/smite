@@ -13,8 +13,9 @@ app_connection::app_connection(const std::string& proxy_app) {
   if (proxy_app == "noop") {
     application = std::make_shared<application::noop_app>();
     return;
-  } else if (proxy_app == "socket") {
-    application = std::make_shared<application::socket_app>();
+  } else if (proxy_app.starts_with("tcp://")) {
+    auto address = proxy_app.substr(proxy_app.find("tcp://") + 6);
+    application = std::make_shared<application::socket_app>(address);
     is_socket = true;
     return;
   } else if (proxy_app.empty()) {
@@ -57,12 +58,6 @@ std::unique_ptr<tendermint::abci::ResponseCheckTx> app_connection::check_tx_sync
 std::unique_ptr<tendermint::abci::ResponseCheckTx> app_connection::check_tx_async(request_check_tx req) {
   std::scoped_lock g(mtx);
   return {};
-}
-
-response_prepare_proposal& app_connection::prepare_proposal_sync(request_prepare_proposal req) {
-  std::scoped_lock g(mtx);
-  auto& res = application->prepare_proposal();
-  return res;
 }
 
 void app_connection::flush_async() {
