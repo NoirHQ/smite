@@ -21,7 +21,6 @@ struct app_connection {
   std::unique_ptr<tendermint::abci::ResponseCheckTx> check_tx_sync(request_check_tx req);
   std::unique_ptr<tendermint::abci::ResponseCheckTx> check_tx_async(request_check_tx req);
 
-  response_prepare_proposal& prepare_proposal_sync(request_prepare_proposal req);
   void flush_async();
   void flush_sync();
 

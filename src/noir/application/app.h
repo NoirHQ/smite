@@ -12,11 +12,6 @@ namespace noir::application {
 using namespace tendermint::abci;
 
 class base_application {
-protected:
-  // TODO : these variables are temporary. need to change to queue and need to be moved to another class.
-  consensus::response_prepare_proposal response_prepare_proposal_;
-  consensus::response_commit response_commit_;
-
 public:
   base_application() {}
 
@@ -46,10 +41,6 @@ public:
   }
   virtual std::unique_ptr<ResponseCheckTx> check_tx_async() {
     return {};
-  }
-
-  virtual consensus::response_prepare_proposal& prepare_proposal() {
-    return response_prepare_proposal_;
   }
 
   virtual void list_snapshots() {}
