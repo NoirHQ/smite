@@ -1,8 +1,8 @@
-# NOIR
+# Smite
 
-A reference C++ implementation of NOIR protocol.
+An experimental C++ implementation of Tendermint.
 
-NOIR is an acronym for "Network Of Interplanetary Replicated state machines".
+Smite is an acronym for "State Machine Interoperator compatible with Tendermint Engine".
 
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/noir-protocol/noir/Build?event=push)](https://github.com/noir-protocol/noir)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/noir-protocol/smite/Build?event=push)](https://github.com/noir-protocol/smite)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](./LICENSE)
