@@ -1,4 +1,4 @@
-boost/1.78.0
+boost/1.79.0
 catch2/3.0.1
 cppcodec/0.2
 date/3.0.1

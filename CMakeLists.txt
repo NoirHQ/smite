@@ -30,6 +30,8 @@ compiler_minimum_required("AppleClang" 10.0)
 setup_conan()
 setup_macos_path()
 
+set(Boost_USE_STATIC_LIBS ON)
+
 find_package(Catch2)
 find_package(Boost REQUIRED)
 find_package(cppcodec REQUIRED)

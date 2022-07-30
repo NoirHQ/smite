@@ -5,7 +5,6 @@
 //
 #pragma once
 #include <noir/core/result.h>
-#include <boost/asio/awaitable.hpp>
 #include <compare>
 
 namespace noir {
