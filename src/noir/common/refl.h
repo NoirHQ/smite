@@ -50,7 +50,15 @@ FieldType<I, T>& get(T&);
 
 /// \breif gets the constant field reference of T by index
 template<size_t I, typename T>
-const FieldType<I, T>& get(const T&);
+const FieldType<I, T>& get(const T& v) {
+  return get<I, T>(const_cast<T&>(v));
+}
+
+template<size_t I, typename T>
+requires (std::is_const_v<std::remove_reference_t<FieldType<I, T>>>)
+FieldType<I, T>& get(const T& v) {
+  return get<I, T>(const_cast<T&>(v));
+}
 
 /// \brief base class of T, when T is derived class
 template<typename T>
@@ -118,11 +126,7 @@ concept Reflected = refl::has_refl_v<T>;
 #define NOIR_REFLECT_FIELD_GET(r, TYPE, INDEX, FIELD) \
   namespace noir::refl { \
     template<> \
-    inline FieldType<INDEX, TYPE>& get<INDEX>(TYPE & v) { \
-      return v.FIELD; \
-    } \
-    template<> \
-    inline const FieldType<INDEX, TYPE>& get<INDEX>(const TYPE& v) { \
+    inline FieldType<INDEX, TYPE>& get<INDEX>(TYPE& v) { \
       return v.FIELD; \
     } \
   }
