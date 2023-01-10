@@ -12,33 +12,30 @@ jobs:
     name: Linux
     runs-on: ubuntu-latest
     steps:
-      - uses: egor-tensin/setup-gcc@v1
-        with:
-          version: 11
       # install conan
       - uses: turtlebrowser/get-conan@main
       # setup build dependencies
       - run: sudo apt install -y libgflags-dev libprotobuf-dev libsodium-dev protobuf-compiler xsltproc
       # checkout
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       # restore cache (conan)
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: /home/runner/.conan
-          key: ${{ runner.os }}-conan-${{ hashFiles('packages.txt') }}
+          key: ${{ runner.os }}-conan-v2-${{ hashFiles('packages.txt') }}
       # restore cache (appbase)
       - id: appbase-cache
-        run: echo "::set-output name=version::$(git submodule status | awk '/appbase/{ print $1 }')"
-      - uses: actions/cache@v2
+        run: echo "version=$(git submodule status | awk '/appbase/{ print $1 }')" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
         with:
           path: build/libs/appbase/libappbase.a
           key: ${{ runner.os }}-appbase-${{ steps.appbase-cache.outputs.version }}
       # restore cache (softfloat)
       - id: softfloat-cache
-        run: echo "::set-output name=version::$(git submodule status | awk '/softfloat/{ print $1 }')"
-      - uses: actions/cache@v2
+        run: echo "version=$(git submodule status | awk '/softfloat/{ print $1 }')" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
         with:
           path: build/libs/softfloat/libsoftfloat.a
           key: ${{ runner.os }}-softfloat-${{ steps.softfloat-cache.outputs.version }}
@@ -59,25 +56,25 @@ jobs:
       # setup build dependencies
       - run: brew install boost gflags libsodium openssl@3 protobuf
       # checkout
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       # restore cache (conan)
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: /home/runner/.conan
-          key: ${{ runner.os }}-conan-${{ hashFiles('packages_macos.txt') }}
+          key: ${{ runner.os }}-conan-v2-${{ hashFiles('packages_macos.txt') }}
       # restore cache (appbase)
       - id: appbase-cache
-        run: echo "::set-output name=version::$(git submodule status | awk '/appbase/{ print $1 }')"
-      - uses: actions/cache@v2
+        run: echo "version=$(git submodule status | awk '/appbase/{ print $1 }')" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
         with:
           path: build/libs/appbase/libappbase.a
           key: ${{ runner.os }}-appbase-${{ steps.appbase-cache.outputs.version }}
       # restore cache (softfloat)
       - id: softfloat-cache
-        run: echo "::set-output name=version::$(git submodule status | awk '/softfloat/{ print $1 }')"
-      - uses: actions/cache@v2
+        run: echo "version=$(git submodule status | awk '/softfloat/{ print $1 }')" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v3
         with:
           path: build/libs/softfloat/libsoftfloat.a
           key: ${{ runner.os }}-softfloat-${{ steps.softfloat-cache.outputs.version }}
